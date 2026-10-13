@@ -1,0 +1,13 @@
+# Place files
+/*.rbxl
+/*.rbxlx
+/*.rbxl.lock
+/*.rbxlx.lock
+
+# Wally packages (reinstall with `wally install`)
+/Packages
+/ServerPackages
+/DevPackages
+
+sourcemap.json
+roblox.yml
