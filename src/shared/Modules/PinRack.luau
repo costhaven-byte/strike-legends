@@ -64,7 +64,8 @@ local function buildPin(baseCFrame: CFrame): Model
 end
 
 -- Standard triangle: row 0 has the head pin, row 3 has four pins.
-local function pinOffsets(): { Vector3 }
+-- Offsets are relative to the head pin; -Z points down the lane.
+function PinRack.Offsets(): { Vector3 }
 	local offsets = {}
 	local rowDepth = LANE.PinSpacing * math.sqrt(3) / 2
 	for row = 0, 3 do
@@ -88,41 +89,41 @@ function PinRack.new(headPinCFrame: CFrame, parent: Instance)
 	return self
 end
 
+-- Puts all 10 pins back, standing and anchored (they only move when knocked).
 function PinRack:Reset()
 	self.Folder:ClearAllChildren()
 	table.clear(self.Pins)
 
-	for index, offset in pinOffsets() do
+	for index, offset in PinRack.Offsets() do
 		local spot = self.HeadPinCFrame * CFrame.new(offset)
 		local pin = buildPin(spot)
 		pin.Name = "Pin" .. index
+		pin.PrimaryPart.Anchored = true
 		pin.Parent = self.Folder
-		if pin.PrimaryPart:CanSetNetworkOwnership() then
-			pin.PrimaryPart:SetNetworkOwner(nil) -- server simulates, so everyone sees the same thing
-		end
-		table.insert(self.Pins, { Model = pin, Home = spot.Position })
+		self.Pins[index] = pin
 	end
 end
 
-function PinRack:IsFallen(entry): boolean
-	local body = entry.Model.PrimaryPart
-	if not body or not body.Parent then
-		return true
+-- Sends one pin flying away from the ball's path.
+function PinRack:Knock(index: number, ballPosition: Vector3, laneDirection: Vector3)
+	local pin = self.Pins[index]
+	local body = pin and pin.PrimaryPart
+	if not body or not body.Anchored then
+		return
 	end
-	-- Body is rotated 90 degrees, so its RightVector is the pin's "up".
-	local upright = body.CFrame.RightVector.Y
-	local moved = (Vector3.new(body.Position.X, 0, body.Position.Z) - Vector3.new(entry.Home.X, 0, entry.Home.Z)).Magnitude
-	return upright < LANE.FallenUprightThreshold or moved > LANE.FallenMoveDistance
-end
 
-function PinRack:CountFallen(): number
-	local count = 0
-	for _, entry in self.Pins do
-		if self:IsFallen(entry) then
-			count += 1
-		end
+	local away = body.Position - ballPosition
+	away = Vector3.new(away.X, 0, away.Z)
+	if away.Magnitude < 0.01 then
+		away = laneDirection
 	end
-	return count
+	local direction = (away.Unit + laneDirection * 1.5).Unit
+	local speed = LANE.PinKnockSpeedMin + math.random() * (LANE.PinKnockSpeedMax - LANE.PinKnockSpeedMin)
+
+	body.Anchored = false
+	body.AssemblyLinearVelocity = direction * speed
+		+ Vector3.new(0, LANE.PinKnockUpSpeed * (0.6 + math.random() * 0.8), 0)
+	body.AssemblyAngularVelocity = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * 30
 end
 
 function PinRack:Destroy()
