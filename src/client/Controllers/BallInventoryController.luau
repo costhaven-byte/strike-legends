@@ -8,29 +8,13 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
+local UiFx = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("UiFx"))
 
 local player = Players.LocalPlayer
 
 local LOCKED_COLOR = Color3.fromRGB(70, 60, 100)
 
 local BallInventoryController = {}
-
-local function pressFeedback(button: GuiButton)
-	local scale = button:FindFirstChildOfClass("UIScale")
-	if not scale then
-		return
-	end
-	button.MouseButton1Down:Connect(function()
-		TweenService:Create(scale, TweenInfo.new(0.08), { Scale = 0.9 }):Play()
-	end)
-	local function release()
-		TweenService:Create(scale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Scale = 1,
-		}):Play()
-	end
-	button.MouseButton1Up:Connect(release)
-	button.MouseLeave:Connect(release)
-end
 
 -- Fills one tile (used here and by the crate reel)
 function BallInventoryController.FillTile(tile: GuiObject, ball, owned: boolean)
@@ -66,7 +50,6 @@ function BallInventoryController:Start()
 	local ballsButton = menu:WaitForChild("BallsButton") :: TextButton
 	local buttonSwatch = ballsButton:WaitForChild("Swatch") :: Frame
 	local panel = gui:WaitForChild("Inventory") :: Frame
-	local panelScale = panel:WaitForChild("UIScale") :: UIScale
 	local grid = panel:WaitForChild("Grid") :: ScrollingFrame
 	local countLabel = panel:WaitForChild("Count") :: TextLabel
 	local template = panel:WaitForChild("TileTemplate") :: TextButton
@@ -80,7 +63,6 @@ function BallInventoryController:Start()
 		tile.Visible = true
 		tile.Parent = grid
 		tiles[ball.Id] = tile
-		pressFeedback(tile)
 		tile.Activated:Connect(function()
 			if Balls.DecodeOwned(player:GetAttribute("OwnedBalls"))[ball.Id] then
 				equipRemote:FireServer(ball.Id)
@@ -131,17 +113,12 @@ function BallInventoryController:Start()
 	local function setOpen(open: boolean)
 		if open then
 			gui.Shop.Visible = false
-			panel.Visible = true
-			panelScale.Scale = 0.6
-			TweenService:Create(panelScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-				Scale = 1,
-			}):Play()
+			UiFx.Open(panel)
 		else
-			panel.Visible = false
+			UiFx.Close(panel)
 		end
 	end
 
-	pressFeedback(ballsButton)
 	ballsButton.Activated:Connect(function()
 		setOpen(not panel.Visible)
 	end)

@@ -86,14 +86,15 @@ Config.Data = {
 }
 
 -- Strike streaks: the highest row you have reached sets the coin multiplier. A non-strike resets to 0.
+-- Color tints the streak display and the player's alley lights.
 Config.Streaks = {
-	{ Streak = 1, Multiplier = 1.0, Name = "" },
-	{ Streak = 2, Multiplier = 1.5, Name = "DOUBLE" },
-	{ Streak = 3, Multiplier = 2.0, Name = "TURKEY" },
-	{ Streak = 4, Multiplier = 2.5, Name = "HAMBONE" },
-	{ Streak = 5, Multiplier = 3.0, Name = "WILD TURKEY" },
-	{ Streak = 7, Multiplier = 4.0, Name = "STREAK MASTER" },
-	{ Streak = 10, Multiplier = 5.0, Name = "PERFECT RUN" },
+	{ Streak = 1, Multiplier = 1.0, Name = "", Color = Color3.fromRGB(255, 255, 255) },
+	{ Streak = 2, Multiplier = 1.5, Name = "DOUBLE", Color = Color3.fromRGB(60, 230, 255) },
+	{ Streak = 3, Multiplier = 2.0, Name = "TURKEY", Color = Color3.fromRGB(120, 255, 120) },
+	{ Streak = 4, Multiplier = 2.5, Name = "HAMBONE", Color = Color3.fromRGB(255, 200, 40) },
+	{ Streak = 5, Multiplier = 3.0, Name = "WILD TURKEY", Color = Color3.fromRGB(255, 130, 30) },
+	{ Streak = 7, Multiplier = 4.0, Name = "STREAK MASTER", Color = Color3.fromRGB(255, 60, 210) },
+	{ Streak = 10, Multiplier = 5.0, Name = "PERFECT RUN", Color = Color3.fromRGB(255, 240, 90) },
 }
 
 -- Pro Tiers, unlocked by lifetime XP. Coin multiplier is permanent; gems are a one-time rank-up reward.
@@ -133,6 +134,47 @@ Config.Camera = {
 	LookAhead = 20,
 	StopBeforePins = 16, -- camera stops this far before the head pin
 	Smoothness = 8, -- higher = snappier
+}
+
+-- Effects ("juice"). Only changes how things look and sound, never rewards.
+Config.Juice = {
+	SlowMoScale = 0.25, -- strike slow-motion speed (1 = normal speed)
+	SlowMoTime = 0.3, -- seconds of slow-motion when your ball hits the pins for a strike
+	SlowMoFov = 58, -- the camera zooms in a little during slow-motion (normal is 70)
+
+	ShakePerPin = 0.05, -- camera shake strength for each pin knocked
+	ShakeStrikeBonus = 0.35, -- extra shake on a strike
+	ShakeDecay = 3, -- how fast the shake dies down (higher = shorter)
+
+	ConfettiAmount = 60, -- confetti pieces in the alley on a strike
+	PerfectFireworks = 3, -- firework bursts on a Perfect Strike
+
+	CoinIconsMin = 3, -- coins that fly to the counter after a throw...
+	CoinIconsMax = 14,
+	CoinsPerIcon = 30, -- ...one icon per this many coins earned, between Min and Max
+	CoinPitchStep = 0.05, -- each coin's "ding" is this much higher than the last
+
+	StreakSparkleRate = 4, -- sparkles per second on your alley's light strips, per streak tier from Turkey up
+}
+
+-- Sound effects. Placeholders from the Creator Store: change an Id to swap a sound.
+Config.Sounds = {
+	Click = { Id = 114782931135220, Volume = 0.4 }, -- any UI button
+	Tap = { Id = 127036696152728, Volume = 0.7 }, -- locking aim / power
+	Throw = { Id = 9114156499, Volume = 0.5 }, -- ball released
+	Roll = { Id = 9118661490, Volume = 0.6 }, -- ball rolling down the lane
+	PinHit = { Id = 9113559266, Volume = 0.9 },
+	StrikeCrash = { Id = 4692687595, Volume = 1 },
+	PerfectSting = { Id = 1840076509, Volume = 0.6 },
+	Cheer = { Id = 9120974378, Volume = 0.45 },
+	Firework = { Id = 134947109312227, Volume = 0.6 },
+	Coin = { Id = 135483737426662, Volume = 0.3 },
+	StreakUp = { Id = 112485797063762, Volume = 0.6 },
+	StreakLost = { Id = 97861773515321, Volume = 0.45 },
+	RankUp = { Id = 1841488866, Volume = 0.8 },
+	ReelTick = { Id = 88442833509532, Volume = 0.6 },
+	Reveal = { Id = 6079105785, Volume = 0.6 },
+	RevealBig = { Id = 128460880879263, Volume = 0.8 },
 }
 
 -- Ball rarities, lowest first. SellCoins = coins paid when a crate gives a ball you already own.

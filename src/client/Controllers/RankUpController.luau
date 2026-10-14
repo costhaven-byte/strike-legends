@@ -8,18 +8,16 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Progression = require(Shared.Modules.Progression)
+local LaneUtil = require(Shared.Modules.LaneUtil)
+local Modules = script.Parent.Parent:WaitForChild("Modules")
+local LaneFx = require(Modules.LaneFx)
+local Sfx = require(Modules.Sfx)
+local UiFx = require(Modules.UiFx)
 
 local player = Players.LocalPlayer
 
 local SHOW_TIME = 4 -- seconds before the screen closes by itself
 local CONFETTI_COUNT = 40
-local CONFETTI_COLORS = {
-	Color3.fromRGB(255, 60, 210),
-	Color3.fromRGB(60, 230, 255),
-	Color3.fromRGB(255, 240, 90),
-	Color3.fromRGB(120, 255, 120),
-	Color3.fromRGB(255, 255, 255),
-}
 
 local RankUpController = {}
 
@@ -44,27 +42,6 @@ local function announce(data)
 	end)
 	if ok and channel then
 		channel:DisplaySystemMessage(('<font color="#%s">%s</font>'):format(rank.Color:ToHex(), message))
-	end
-end
-
-local function spawnConfetti(container: Frame)
-	for _ = 1, CONFETTI_COUNT do
-		local piece = Instance.new("Frame")
-		piece.BorderSizePixel = 0
-		piece.BackgroundColor3 = CONFETTI_COLORS[math.random(#CONFETTI_COLORS)]
-		piece.Size = UDim2.fromOffset(math.random(8, 14), math.random(14, 22))
-		piece.AnchorPoint = Vector2.new(0.5, 0.5)
-		piece.Position = UDim2.new(math.random(), 0, -0.05, -math.random(0, 200))
-		piece.Rotation = math.random(0, 360)
-		piece.ZIndex = 2
-		piece.Parent = container
-
-		local fallTime = 1.8 + math.random() * 1.4
-		TweenService:Create(piece, TweenInfo.new(fallTime, Enum.EasingStyle.Linear), {
-			Position = UDim2.fromScale(piece.Position.X.Scale + (math.random() - 0.5) * 0.2, 1.1),
-			Rotation = piece.Rotation + math.random(-540, 540),
-		}):Play()
-		task.delay(fallTime, piece.Destroy, piece)
 	end
 end
 
@@ -118,7 +95,13 @@ function RankUpController:Start()
 		TweenService:Create(contentScale, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 			Scale = 1,
 		}):Play()
-		spawnConfetti(confetti)
+		UiFx.Confetti(confetti, CONFETTI_COUNT)
+		Sfx.Play("RankUp")
+		Sfx.Play("Cheer", 1.1)
+		local lane = LaneUtil.GetOwnedLane(player.UserId)
+		if lane then
+			LaneFx.Fireworks(lane, 4)
+		end
 
 		canDismiss = false
 		task.delay(0.8, function()

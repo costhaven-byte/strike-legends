@@ -3,12 +3,16 @@
 -- The server picks the ball; the reel only shows what the server already decided.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local BallInventoryController = require(script.Parent.BallInventoryController)
+local Modules = script.Parent.Parent:WaitForChild("Modules")
+local Sfx = require(Modules.Sfx)
+local UiFx = require(Modules.UiFx)
 
 local player = Players.LocalPlayer
 
@@ -20,6 +24,7 @@ local SPIN_TIME = 4.5
 local CAN_AFFORD = Color3.fromRGB(90, 230, 110)
 local CANT_AFFORD = Color3.fromRGB(110, 100, 130)
 local EPIC_INDEX = 4 -- Epic and better get the extra-special reveal
+local LEGENDARY_INDEX = 5 -- Legendary and better get even more
 
 local CrateController = {}
 
@@ -30,23 +35,6 @@ local function formatNumber(n: number): string
 		text, count = text:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
 	until count == 0
 	return text
-end
-
-local function pressFeedback(button: GuiButton)
-	local scale = button:FindFirstChildOfClass("UIScale")
-	if not scale then
-		return
-	end
-	button.MouseButton1Down:Connect(function()
-		TweenService:Create(scale, TweenInfo.new(0.08), { Scale = 0.9 }):Play()
-	end)
-	local function release()
-		TweenService:Create(scale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Scale = 1,
-		}):Play()
-	end
-	button.MouseButton1Up:Connect(release)
-	button.MouseLeave:Connect(release)
 end
 
 -- A random ball using the crate's odds, for the filler tiles on the reel
@@ -73,7 +61,6 @@ function CrateController:Start()
 	local gui = player:WaitForChild("PlayerGui"):WaitForChild("BallsUI")
 	local shopButton = gui:WaitForChild("Menu"):WaitForChild("ShopButton") :: TextButton
 	local panel = gui:WaitForChild("Shop") :: Frame
-	local panelScale = panel:WaitForChild("UIScale") :: UIScale
 	local cards = panel:WaitForChild("Cards") :: ScrollingFrame
 	local cardTemplate = panel:WaitForChild("CardTemplate") :: Frame
 	local pityLabel = panel:WaitForChild("Pity") :: TextLabel
@@ -114,13 +101,9 @@ function CrateController:Start()
 	local function setOpen(open: boolean)
 		if open then
 			gui.Inventory.Visible = false
-			panel.Visible = true
-			panelScale.Scale = 0.6
-			TweenService:Create(panelScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-				Scale = 1,
-			}):Play()
+			UiFx.Open(panel)
 		else
-			panel.Visible = false
+			UiFx.Close(panel)
 		end
 	end
 
@@ -160,8 +143,10 @@ function CrateController:Start()
 		status.TextColor3 = crate.Color
 		window.UIStroke.Color = crate.Color
 
-		-- Line the winning tile up under the marker, landing a little off-centre so it feels natural
+		-- Line the winning tile up under the marker, landing a little off-centre so it feels natural.
+		-- Measured before the pop-in below, which briefly shrinks the window and would throw this off.
 		local center = window.AbsoluteSize.X / 2
+		UiFx.Pop(window, 0.6, 0.3)
 		local winCenter = (REEL_WIN_INDEX - 1) * (TILE_WIDTH + TILE_GAP) + TILE_WIDTH / 2
 		local jitter = (math.random() - 0.5) * TILE_WIDTH * 0.7
 		strip.Position = UDim2.fromOffset(center - TILE_WIDTH * 2, 0)
@@ -171,8 +156,21 @@ function CrateController:Start()
 			})
 		spin:Play()
 
-		-- Anticipation: the window shakes harder as the reel slows down
+		-- A tick every time a tile passes the marker, slightly higher as it slows down
+		local lastTile = nil
+		local tick = RunService.RenderStepped:Connect(function()
+			local tile = math.floor((center - strip.Position.X.Offset) / (TILE_WIDTH + TILE_GAP))
+			if tile ~= lastTile then
+				lastTile = tile
+				Sfx.Play("ReelTick", 0.9 + math.clamp(tile / REEL_WIN_INDEX, 0, 1) * 0.4)
+			end
+		end)
+
+		-- Anticipation: the window shakes harder and glows brighter as the reel slows down
+		local stroke = window.UIStroke :: UIStroke
+		local normalThickness = stroke.Thickness
 		task.delay(SPIN_TIME * 0.6, function()
+			TweenService:Create(stroke, TweenInfo.new(SPIN_TIME * 0.4), { Thickness = normalThickness * 3 }):Play()
 			for i = 1, 10 do
 				window.Rotation = (if i % 2 == 0 then 1 else -1) * (0.4 + i * 0.08)
 				task.wait(0.05)
@@ -180,7 +178,9 @@ function CrateController:Start()
 			window.Rotation = 0
 		end)
 		spin.Completed:Wait()
+		tick:Disconnect()
 		task.wait(0.35)
+		stroke.Thickness = normalThickness
 
 		-- Reveal
 		window.Visible = false
@@ -203,6 +203,21 @@ function CrateController:Start()
 		continueButton.Visible = false
 
 		local big = rarityIndex >= EPIC_INDEX
+		Sfx.Play(if big then "RevealBig" else "Reveal")
+		if big then
+			UiFx.Confetti(
+				opening,
+				if rarityIndex >= LEGENDARY_INDEX then 80 else 40,
+				{ rarity.Color, Color3.new(1, 1, 1) }
+			)
+		end
+		if rarityIndex >= LEGENDARY_INDEX then
+			-- Legendary and Mythic: a second flash and a firework bang
+			task.delay(0.4, function()
+				UiFx.Flash(rarity.Color, 0.5, 0.6)
+				Sfx.Play("Firework")
+			end)
+		end
 		flash.BackgroundColor3 = if big then rarity.Color else Color3.new(1, 1, 1)
 		flash.BackgroundTransparency = if big then 0 else 0.5
 		TweenService:Create(flash, TweenInfo.new(if big then 0.9 else 0.4), { BackgroundTransparency = 1 }):Play()
@@ -237,6 +252,8 @@ function CrateController:Start()
 			pulse:Cancel()
 			reveal.Glow.BackgroundTransparency = 0.5
 		end
+		UiFx.Close(reveal)
+		task.wait(0.15)
 		opening.Visible = false
 		strip:ClearAllChildren()
 	end
@@ -295,7 +312,6 @@ function CrateController:Start()
 
 		local buyButton = card.Buy :: TextButton
 		buyButton.Price.Text = formatNumber(crate.Price)
-		pressFeedback(buyButton)
 		buyButton.Activated:Connect(function()
 			buy(crate)
 		end)
@@ -315,7 +331,6 @@ function CrateController:Start()
 	end
 	refreshPity()
 
-	pressFeedback(shopButton)
 	shopButton.Activated:Connect(function()
 		setOpen(not panel.Visible)
 	end)

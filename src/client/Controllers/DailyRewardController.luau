@@ -11,6 +11,9 @@ local Config = require(Shared.Config)
 local Calendar = require(Shared.Modules.Calendar)
 local Balls = require(Shared.Modules.Balls)
 local CrateController = require(script.Parent.CrateController)
+local Modules = script.Parent.Parent:WaitForChild("Modules")
+local Sfx = require(Modules.Sfx)
+local UiFx = require(Modules.UiFx)
 
 local player = Players.LocalPlayer
 
@@ -29,23 +32,6 @@ local function formatNumber(n: number): string
 		text, count = text:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
 	until count == 0
 	return text
-end
-
-local function pressFeedback(button: GuiButton)
-	local scale = button:FindFirstChildOfClass("UIScale")
-	if not scale then
-		return
-	end
-	button.MouseButton1Down:Connect(function()
-		TweenService:Create(scale, TweenInfo.new(0.08), { Scale = 0.9 }):Play()
-	end)
-	local function release()
-		TweenService:Create(scale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Scale = 1,
-		}):Play()
-	end
-	button.MouseButton1Up:Connect(release)
-	button.MouseLeave:Connect(release)
 end
 
 -- "1,000 coins" / "5 gems" / "Neon Crate + 15 gems"
@@ -69,7 +55,6 @@ function DailyRewardController:Start()
 	local openButton = gui:WaitForChild("DailyButton") :: TextButton
 	local dot = openButton:WaitForChild("Dot") :: Frame
 	local popup = gui:WaitForChild("Popup") :: Frame
-	local popupScale = popup:WaitForChild("UIScale") :: UIScale
 	local days = popup:WaitForChild("Days") :: Frame
 	local tileTemplate = popup:WaitForChild("TileTemplate") :: Frame
 	local claimButton = popup:WaitForChild("Claim") :: TextButton
@@ -135,13 +120,9 @@ function DailyRewardController:Start()
 	local function setOpen(open: boolean)
 		if open then
 			refresh()
-			popup.Visible = true
-			popupScale.Scale = 0.6
-			TweenService:Create(popupScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-				Scale = 1,
-			}):Play()
+			UiFx.Open(popup)
 		else
-			popup.Visible = false
+			UiFx.Close(popup)
 		end
 	end
 
@@ -179,22 +160,22 @@ function DailyRewardController:Start()
 
 		refresh()
 		celebrate(result.Day)
+		Sfx.Play("Reveal")
+		UiFx.Confetti(nil, 30)
 		local crate = Balls.GetCrate(result.CrateId)
 		if crate and result.Crate and CrateController.PlayOpening then
 			task.wait(0.8)
-			popup.Visible = false
+			UiFx.Close(popup)
 			openButton.Visible = false -- don't sit on top of the crate screen
 			CrateController.PlayOpening(crate, result.Crate)
 			openButton.Visible = true
 		else
 			task.wait(1.2)
-			popup.Visible = false
+			UiFx.Close(popup)
 		end
 		busy = false
 	end
 
-	pressFeedback(openButton)
-	pressFeedback(claimButton)
 	openButton.Activated:Connect(function()
 		setOpen(not popup.Visible)
 	end)

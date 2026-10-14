@@ -29,6 +29,17 @@ function Progression.GetStreakTier(streak: number)
 	return tier
 end
 
+-- Position of that tier in Config.Streaks (1 = first tier), or 0 at streak 0.
+function Progression.GetStreakTierIndex(streak: number): number
+	local index = 0
+	for i, entry in Config.Streaks do
+		if streak >= entry.Streak then
+			index = i
+		end
+	end
+	return index
+end
+
 function Progression.GetStreakMultiplier(streak: number): number
 	local tier = Progression.GetStreakTier(streak)
 	return if tier then tier.Multiplier else 1

@@ -1,5 +1,4 @@
--- Builds a rack of 10 pins, counts knocked-down pins, and resets them.
--- Used by the server for now; the client will reuse it for visuals in Milestone 2.
+-- Builds a rack of 10 pins, knocks them flying and resets them. Used by the client for throw visuals.
 local Config = require(script.Parent.Parent.Config)
 
 local LANE = Config.Lane
@@ -104,8 +103,28 @@ function PinRack:Reset()
 	end
 end
 
+-- A short glowing streak behind a flying pin
+local function addTrail(body: BasePart)
+	local a0 = Instance.new("Attachment")
+	a0.Position = Vector3.new(0, 0.3, 0)
+	a0.Parent = body
+	local a1 = Instance.new("Attachment")
+	a1.Position = Vector3.new(0, -0.3, 0)
+	a1.Parent = body
+	local trail = Instance.new("Trail")
+	trail.Attachment0 = a0
+	trail.Attachment1 = a1
+	trail.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 40, 120))
+	trail.Transparency = NumberSequence.new(0.2, 1)
+	trail.LightEmission = 0.6
+	trail.Lifetime = 0.25
+	trail.FaceCamera = true
+	trail.Parent = body
+end
+
 -- Sends one pin flying away from the ball's path.
-function PinRack:Knock(index: number, ballPosition: Vector3, laneDirection: Vector3)
+-- timeScale below 1 starts it in slow motion (see ScaleMotion to speed it back up).
+function PinRack:Knock(index: number, ballPosition: Vector3, laneDirection: Vector3, timeScale: number?)
 	local pin = self.Pins[index]
 	local body = pin and pin.PrimaryPart
 	if not body or not body.Anchored then
@@ -120,10 +139,26 @@ function PinRack:Knock(index: number, ballPosition: Vector3, laneDirection: Vect
 	local direction = (away.Unit + laneDirection * 1.5).Unit
 	local speed = LANE.PinKnockSpeedMin + math.random() * (LANE.PinKnockSpeedMax - LANE.PinKnockSpeedMin)
 
+	local scale = timeScale or 1
+	addTrail(body)
 	body.Anchored = false
-	body.AssemblyLinearVelocity = direction * speed
-		+ Vector3.new(0, LANE.PinKnockUpSpeed * (0.6 + math.random() * 0.8), 0)
-	body.AssemblyAngularVelocity = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * 30
+	body.AssemblyLinearVelocity = (
+		direction * speed + Vector3.new(0, LANE.PinKnockUpSpeed * (0.6 + math.random() * 0.8), 0)
+	) * scale
+	body.AssemblyAngularVelocity = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5)
+		* 30
+		* scale
+end
+
+-- Speeds up (factor > 1) or slows down (factor < 1) every pin that is already flying
+function PinRack:ScaleMotion(factor: number)
+	for _, pin in self.Pins do
+		local body = pin.PrimaryPart
+		if body and not body.Anchored then
+			body.AssemblyLinearVelocity *= factor
+			body.AssemblyAngularVelocity *= factor
+		end
+	end
 end
 
 function PinRack:Destroy()

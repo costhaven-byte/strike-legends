@@ -10,6 +10,9 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local LaneUtil = require(Shared.Modules.LaneUtil)
+local Modules = script.Parent.Parent:WaitForChild("Modules")
+local Sfx = require(Modules.Sfx)
+local UiFx = require(Modules.UiFx)
 
 local THROW = Config.Throw
 local player = Players.LocalPlayer
@@ -58,6 +61,8 @@ function ThrowController:Start()
 	local resultText = gui:WaitForChild("ResultText")
 	local resultScale = resultText:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
 	resultScale.Parent = resultText
+	local resultStroke = resultText:FindFirstChildOfClass("UIStroke")
+	local resultToken = 0
 
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
 	local throwRequest = remotes:WaitForChild("ThrowRequest")
@@ -92,8 +97,12 @@ function ThrowController:Start()
 			if currentLane and not laneReady(currentLane) then
 				return
 			end
+			Sfx.Play("Tap", 1)
+			UiFx.Pop(aimBar, 1.08, 0.25)
 			setState("Power")
 		elseif state == "Power" then
+			Sfx.Play("Tap", 1.25)
+			UiFx.Pop(powerBar, 1.12, 0.25)
 			sentAt = os.clock()
 			setState("Waiting")
 			throwRequest:FireServer(aimValue, powerValue)
@@ -104,16 +113,41 @@ function ThrowController:Start()
 		local entry = RESULT_TEXT[data.Tier]
 		resultText.Text = if data.Count == 1 then "1 PIN" else entry[1]:format(data.Count)
 		resultText.TextColor3 = entry[2]
+		resultText.TextTransparency = 0
+		if resultStroke then
+			resultStroke.Transparency = 0
+		end
 		resultText.Visible = true
-		resultScale.Scale = 0.3
-		TweenService
-			:Create(resultScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
-			:Play()
-		task.delay(1.2, function()
-			resultText.Visible = false
+
+		-- Strikes slam in from huge with a twist and stay up longer; everything else pops in
+		local isStrike = data.Tier == "Strike" or data.Tier == "PerfectStrike"
+		resultScale.Scale = if isStrike then 2.8 else 0.3
+		resultText.Rotation = if isStrike then -12 else 0
+		local slam = TweenInfo.new(if isStrike then 0.45 else 0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+		TweenService:Create(resultScale, slam, { Scale = 1 }):Play()
+		TweenService:Create(resultText, slam, { Rotation = if isStrike then -3 else 0 }):Play()
+
+		resultToken += 1
+		local token = resultToken
+		task.delay(if isStrike then 1.6 else 1.1, function()
+			if token ~= resultToken then
+				return
+			end
+			-- Grow and fade away
+			local out = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+			TweenService:Create(resultScale, out, { Scale = 1.4 }):Play()
+			TweenService:Create(resultText, out, { TextTransparency = 1 }):Play()
+			if resultStroke then
+				TweenService:Create(resultStroke, out, { Transparency = 1 }):Play()
+			end
+			task.wait(0.25)
+			if token == resultToken then
+				resultText.Visible = false
+			end
 		end)
 	end
 
+	UiFx.Press(button, true) -- silent: press() plays its own tap sound
 	button.Activated:Connect(press)
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if processed then

@@ -1,30 +1,27 @@
 -- Shows coins, gems, the rank/XP bar and the streak panel, and a "+coins +XP" popup after each throw.
+-- After a throw, coin (and gem) icons fly from the pins into the counters with a rising "ding".
 -- The UI itself (StarterGui.HUD) is built in Studio; this script only fills it in.
 -- Values come from Player attributes, which only the server sets.
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Progression = require(Shared.Modules.Progression)
+local Modules = script.Parent.Parent:WaitForChild("Modules")
+local Sfx = require(Modules.Sfx)
+local UiFx = require(Modules.UiFx)
 
 local player = Players.LocalPlayer
 
 local STATS = { "Coins", "Gems" }
 local COUNT_TIME = 0.6 -- seconds for a number to tick up to its new value
 
--- Streak panel colour for each streak tier (same order as Config.Streaks)
+local JUICE = Config.Juice
 local NO_STREAK_COLOR = Color3.fromRGB(120, 110, 150)
-local STREAK_COLORS = {
-	Color3.fromRGB(255, 255, 255),
-	Color3.fromRGB(60, 230, 255),
-	Color3.fromRGB(120, 255, 120),
-	Color3.fromRGB(255, 200, 40),
-	Color3.fromRGB(255, 130, 30),
-	Color3.fromRGB(255, 60, 210),
-	Color3.fromRGB(255, 240, 90),
-}
 local BROKEN_COLOR = Color3.fromRGB(255, 60, 70)
 
 local HudController = {}
@@ -102,15 +99,7 @@ local function bindRankBar(rankBar: Frame)
 	refresh()
 end
 
-local function tierIndex(streak: number): number
-	local index = 0
-	for i, entry in Config.Streaks do
-		if streak >= entry.Streak then
-			index = i
-		end
-	end
-	return index
-end
+local tierIndex = Progression.GetStreakTierIndex
 
 local function bindStreak(panel: Frame)
 	local count = panel:WaitForChild("Count") :: TextLabel
@@ -123,7 +112,7 @@ local function bindStreak(panel: Frame)
 	local function show(streak: number)
 		local index = tierIndex(streak)
 		local tier = Config.Streaks[index]
-		local color = if index == 0 then NO_STREAK_COLOR else STREAK_COLORS[math.min(index, #STREAK_COLORS)]
+		local color = if tier then tier.Color else NO_STREAK_COLOR
 		count.Text = tostring(streak)
 		count.TextColor3 = color
 		tierName.Text = if tier and tier.Name ~= "" then tier.Name elseif streak == 0 then "STRIKE TO START" else ""
@@ -166,6 +155,61 @@ local function bindStreak(panel: Frame)
 	show(previous)
 end
 
+-- Icons copied from a counter's own icon fly from `from` (screen position) into that counter
+local function flyIcons(pill: Frame, count: number, from: Vector2)
+	local icon = pill:FindFirstChild("Icon") :: Frame?
+	if not icon then
+		return
+	end
+	local layer = UiFx.Layer()
+	local target = icon.AbsolutePosition + icon.AbsoluteSize / 2
+	for i = 1, count do
+		task.delay((i - 1) * 0.05, function()
+			local flyer = icon:Clone()
+			flyer.AnchorPoint = Vector2.new(0.5, 0.5)
+			flyer.Position = UDim2.fromOffset(from.X, from.Y)
+			flyer.Size = UDim2.fromOffset(28, 28)
+			flyer.ZIndex = 10
+			flyer.Parent = layer
+
+			-- Burst outward a little, then swoop into the counter
+			local angle = math.random() * math.pi * 2
+			local burst = from + Vector2.new(math.cos(angle), math.sin(angle)) * math.random(40, 110)
+			local out = TweenService:Create(
+				flyer,
+				TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+				{ Position = UDim2.fromOffset(burst.X, burst.Y), Size = UDim2.fromOffset(34, 34) }
+			)
+			out:Play()
+			out.Completed:Wait()
+			local home = TweenService:Create(
+				flyer,
+				TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+				{ Position = UDim2.fromOffset(target.X, target.Y), Size = UDim2.fromOffset(24, 24) }
+			)
+			home:Play()
+			home.Completed:Wait()
+			flyer:Destroy()
+			Sfx.Play("Coin", 1 + (i - 1) * JUICE.CoinPitchStep)
+			bump(pill:FindFirstChildOfClass("UIScale") :: UIScale)
+		end)
+	end
+end
+
+-- Where a lane's pins are on screen (in HUD coordinates); the middle of the screen if they're off-screen
+local function pinsOnScreen(lane: Model): Vector2
+	local camera = Workspace.CurrentCamera
+	local inset = GuiService:GetGuiInset()
+	local pinSpot = lane:FindFirstChild("PinSpot") :: BasePart?
+	if pinSpot then
+		local point, visible = camera:WorldToViewportPoint(pinSpot.Position + Vector3.new(0, 2, 0))
+		if visible then
+			return Vector2.new(point.X, point.Y) - inset
+		end
+	end
+	return camera.ViewportSize / 2 - inset
+end
+
 function HudController:Start()
 	local gui = player:WaitForChild("PlayerGui"):WaitForChild("HUD")
 	local bar = gui:WaitForChild("Bar")
@@ -196,6 +240,7 @@ function HudController:Start()
 		end
 		popup.Text = table.concat(parts, "   ")
 		popup.Visible = true
+		popup.TextTransparency = 0
 		popupScale.Scale = 0.4
 		TweenService:Create(popupScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 			Scale = 1,
@@ -204,6 +249,11 @@ function HudController:Start()
 		popupToken += 1
 		local token = popupToken
 		task.delay(1.4, function()
+			if token ~= popupToken then
+				return
+			end
+			TweenService:Create(popup, TweenInfo.new(0.25), { TextTransparency = 1 }):Play()
+			task.wait(0.25)
 			if token == popupToken then
 				popup.Visible = false
 			end
@@ -213,7 +263,17 @@ function HudController:Start()
 	local throwResult = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ThrowResult")
 	throwResult.OnClientEvent:Connect(function(data)
 		if data.UserId == player.UserId and data.Reward then
-			task.delay(data.RollTime, showReward, data.Reward)
+			task.delay(data.RollTime, function()
+				showReward(data.Reward)
+				local from = pinsOnScreen(data.Lane)
+				if data.Reward.Coins > 0 then
+					local icons = math.floor(data.Reward.Coins / JUICE.CoinsPerIcon)
+					flyIcons(bar.Coins, math.clamp(icons, JUICE.CoinIconsMin, JUICE.CoinIconsMax), from)
+				end
+				if data.Reward.Gems > 0 then
+					flyIcons(bar.Gems, math.min(data.Reward.Gems, 5), from)
+				end
+			end)
 		end
 	end)
 end
