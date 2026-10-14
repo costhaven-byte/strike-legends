@@ -39,6 +39,11 @@ local function powerWave(p: number): number
 	return 1 - math.abs((p % 1) * 2 - 1)
 end
 
+-- Meters get a little faster at higher ranks
+local function meterSpeedScale(): number
+	return 1 + THROW.MeterSpeedPerRank * ((player:GetAttribute("Rank") or 1) - 1)
+end
+
 local function laneReady(lane: Model): boolean
 	return Workspace:GetServerTimeNow() >= (lane:GetAttribute("ReadyAt") or 0)
 end
@@ -140,13 +145,13 @@ function ThrowController:Start()
 		if state == "Hidden" then
 			setState("Aim")
 		elseif state == "Aim" then
-			phase += dt * THROW.AimMeterSpeed
+			phase += dt * THROW.AimMeterSpeed * meterSpeedScale()
 			aimValue = aimWave(phase)
 			aimBar.Needle.Position = UDim2.fromScale((aimValue + 1) / 2, 0.5)
 			local ready = laneReady(currentLane)
 			hint.Text = if ready then "TAP TO LOCK AIM" else "WAIT..."
 		elseif state == "Power" then
-			phase += dt * THROW.PowerMeterSpeed
+			phase += dt * THROW.PowerMeterSpeed * meterSpeedScale()
 			powerValue = powerWave(phase)
 			powerBar.Fill.Size = UDim2.fromScale(1, powerValue)
 			powerBar.Needle.Position = UDim2.fromScale(0.5, 1 - powerValue)

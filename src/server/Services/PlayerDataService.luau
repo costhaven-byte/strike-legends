@@ -10,6 +10,7 @@ local Config = require(Shared.Config)
 local PlayerDataService = {}
 
 local profiles: { [Player]: { [string]: number } } = {}
+local loadedCallbacks: { (Player) -> () } = {}
 
 local function onPlayerAdded(player: Player)
 	if profiles[player] then
@@ -19,6 +20,17 @@ local function onPlayerAdded(player: Player)
 	profiles[player] = data
 	for key, value in data do
 		player:SetAttribute(key, value)
+	end
+	for _, callback in loadedCallbacks do
+		task.spawn(callback, player)
+	end
+end
+
+-- Runs callback for every player whose data is ready, now and in the future.
+function PlayerDataService.OnLoaded(callback: (Player) -> ())
+	table.insert(loadedCallbacks, callback)
+	for player in profiles do
+		task.spawn(callback, player)
 	end
 end
 
@@ -35,6 +47,16 @@ function PlayerDataService.Add(player: Player, key: string, amount: number): boo
 	end
 	data[key] += amount
 	player:SetAttribute(key, data[key])
+	return true
+end
+
+function PlayerDataService.Set(player: Player, key: string, value: number): boolean
+	local data = profiles[player]
+	if not data or data[key] == nil then
+		return false
+	end
+	data[key] = value
+	player:SetAttribute(key, value)
 	return true
 end
 

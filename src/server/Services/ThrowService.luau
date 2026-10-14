@@ -5,7 +5,9 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local LaneUtil = require(Shared.Modules.LaneUtil)
+local Progression = require(Shared.Modules.Progression)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local ProgressionService = require(script.Parent.ProgressionService)
 local ThrowResolver = require(script.Parent.Parent.Modules.ThrowResolver)
 local RewardResolver = require(script.Parent.Parent.Modules.RewardResolver)
 
@@ -28,13 +30,13 @@ local function setStatus(lane: Model, text: string)
 	end
 end
 
--- Every coin multiplier for this player. Milestone 4 fills in Rank and Streak, Milestone 6 the Ball.
+-- Every coin multiplier for this player. Milestone 6 fills in the Ball.
 -- Future gamepasses and boosts get added here as new entries.
-local function getCoinMultipliers(_player: Player): { [string]: number }
+local function getCoinMultipliers(player: Player, streak: number): { [string]: number }
 	return {
 		Ball = 1,
-		Rank = 1,
-		Streak = 1,
+		Rank = Progression.GetRank(ProgressionService.GetCurrentRankIndex(player)).Multiplier,
+		Streak = Progression.GetStreakMultiplier(streak),
 	}
 end
 
@@ -66,7 +68,9 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 	end
 
 	local result = ThrowResolver.Resolve(aim, power)
-	local reward = RewardResolver.Calculate(result.Count, result.Tier, getCoinMultipliers(player))
+	local isStrike = result.Tier == "Strike" or result.Tier == "PerfectStrike"
+	local streak = ProgressionService.NextStreak(player, isStrike)
+	local reward = RewardResolver.Calculate(result.Count, result.Tier, getCoinMultipliers(player, streak))
 	lane:SetAttribute("ReadyAt", now + result.RollTime + Config.Lane.PinResetDelay + Config.Throw.CooldownBuffer)
 
 	ThrowService.Remotes.ThrowResult:FireAllClients({
@@ -81,17 +85,19 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 		Gutter = result.Gutter,
 		RollTime = result.RollTime,
 		Reward = reward,
+		Streak = streak,
 	})
 
 	setStatus(lane, "ROLLING...")
 	task.delay(result.RollTime, function()
 		-- Paid when the ball reaches the pins, so the HUD ticks up in sync with the hit
 		if player.Parent then
-			for key, amount in reward do
-				if amount > 0 then
-					PlayerDataService.Add(player, key, amount)
-				end
+			PlayerDataService.Add(player, "Coins", reward.Coins)
+			if reward.Gems > 0 then
+				PlayerDataService.Add(player, "Gems", reward.Gems)
 			end
+			ProgressionService.ShowStreak(player, streak)
+			ProgressionService.AddXP(player, reward.XP)
 		end
 		setStatus(lane, if result.Count == 1 then "1 PIN" else TIER_TEXT[result.Tier]:format(result.Count))
 	end)
