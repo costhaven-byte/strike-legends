@@ -296,7 +296,18 @@ function CrateController:Start()
 		card.CrateName.TextColor3 = crate.Color
 		card.UIStroke.Color = crate.Color
 
+		-- Rows share the odds box evenly (20px tall at most) so every rarity fits on small screens too
 		local rowTemplate = card.OddsRowTemplate
+		rowTemplate.Size = UDim2.new(1, 0, 1 / #Config.Rarities, -2)
+		local rowLimit = Instance.new("UISizeConstraint")
+		rowLimit.MaxSize = Vector2.new(math.huge, 20)
+		rowLimit.Parent = rowTemplate
+		for _, label in { rowTemplate.Rarity, rowTemplate.Chance } do
+			local textLimit = Instance.new("UITextSizeConstraint")
+			textLimit.MaxTextSize = label.TextSize
+			textLimit.Parent = label
+			label.TextScaled = true
+		end
 		for index, rarity in Config.Rarities do
 			local row = rowTemplate:Clone()
 			row.Name = rarity.Name

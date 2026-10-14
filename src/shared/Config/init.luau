@@ -157,6 +157,11 @@ Config.Juice = {
 	StreakSparkleRate = 4, -- sparkles per second on your alley's light strips, per streak tier from Turkey up
 }
 
+-- Screen layout
+Config.Ui = {
+	CompactHeight = 500, -- screens shorter than this (phones held sideways) use the compact phone layout
+}
+
 -- Sound effects. Placeholders from the Creator Store: change an Id to swap a sound.
 Config.Sounds = {
 	Click = { Id = 114782931135220, Volume = 0.4 }, -- any UI button

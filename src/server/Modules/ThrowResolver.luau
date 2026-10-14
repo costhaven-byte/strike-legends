@@ -60,7 +60,7 @@ end
 function ThrowResolver.Resolve(aim: number, power: number, forgiveness: number?): Result
 	local rollTime = THROW.RollTimeSlow + (THROW.RollTimeFast - THROW.RollTimeSlow) * power
 
-	if math.abs(aim) >= THROW.GutterAim then
+	local function gutterBall(): Result
 		return {
 			Count = 0,
 			Tier = "Gutter",
@@ -71,6 +71,10 @@ function ThrowResolver.Resolve(aim: number, power: number, forgiveness: number?)
 		}
 	end
 
+	if math.abs(aim) >= THROW.GutterAim then
+		return gutterBall()
+	end
+
 	local quality = aimQuality(aim, forgiveness or 0) * powerQuality(power)
 	local count
 	if quality >= 0.999 then
@@ -78,6 +82,9 @@ function ThrowResolver.Resolve(aim: number, power: number, forgiveness: number?)
 	else
 		local variance = (math.random() * 2 - 1) * THROW.RandomVariance
 		count = math.clamp(math.round(10 * quality ^ THROW.QualityCurve * (1 + variance)), 0, 10)
+	end
+	if count == 0 then
+		return gutterBall() -- missing every pin always reads (and rolls) as a gutter ball
 	end
 
 	local perfect = count == 10
