@@ -9,6 +9,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local PinRack = require(Shared.Modules.PinRack)
 local LaneUtil = require(Shared.Modules.LaneUtil)
+local Balls = require(Shared.Modules.Balls)
 
 local LANE = Config.Lane
 local CAMERA = Config.Camera
@@ -17,17 +18,38 @@ local LaneVisuals = {}
 
 local racks: { [Model]: any } = {}
 
-local function makeBall(): Part
+-- The thrower's equipped ball, with its colour, material and trail
+-- The trail hangs off the spin axis so it stays steady while the ball rolls.
+local function makeBall(ballId: string?, spinAxis: Vector3): Part
+	local info = Balls.Get(ballId) or Config.Balls[1]
 	local ball = Instance.new("Part")
 	ball.Name = "Ball"
 	ball.Shape = Enum.PartType.Ball
 	ball.Size = Vector3.one * LANE.BallDiameter
-	ball.Color = Color3.fromRGB(0, 220, 255)
-	ball.Material = Enum.Material.Neon
+	ball.Color = info.Color
+	ball.Material = info.Material
 	ball.Anchored = true
 	ball.CanCollide = false
 	ball.CanQuery = false
 	ball.CanTouch = false
+
+	local reach = LANE.BallDiameter * 0.35
+	local top = Instance.new("Attachment")
+	top.Position = spinAxis * reach
+	top.Parent = ball
+	local bottom = Instance.new("Attachment")
+	bottom.Position = -spinAxis * reach
+	bottom.Parent = ball
+
+	local trail = Instance.new("Trail")
+	trail.Attachment0 = top
+	trail.Attachment1 = bottom
+	trail.Color = ColorSequence.new(info.Trail)
+	trail.Transparency = NumberSequence.new(0.1, 1)
+	trail.LightEmission = 0.25 -- low, so bright lanes don't wash every trail out to white
+	trail.Lifetime = 0.35
+	trail.FaceCamera = true
+	trail.Parent = ball
 	return ball
 end
 
@@ -59,7 +81,7 @@ local function playThrow(data)
 	-- Gutter balls slide off the lane partway down
 	local gutterAt = if data.Gutter then 0.3 + math.random() * 0.3 else nil
 
-	local ball = makeBall()
+	local ball = makeBall(data.BallId, spinAxis)
 	ball.CFrame = ballStart.CFrame
 	ball.Parent = lane
 

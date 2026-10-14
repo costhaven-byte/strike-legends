@@ -1,5 +1,6 @@
--- Holds each player's coins, gems, XP and best streak on the server, and saves them with SaveStore.
--- Values are mirrored to Player attributes so the HUD can read them; only the server changes them.
+-- Holds each player's coins, gems, XP, balls and more on the server, and saves them with SaveStore.
+-- Number and text values are mirrored to Player attributes so the HUD can read them; only the server changes them.
+-- Table values (like OwnedBalls) are not mirrored; the service that owns them publishes them itself.
 -- Saves: when the player leaves, every Config.Data.AutosaveInterval seconds, and when the server shuts down.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,7 +13,7 @@ local SaveStore = require(script.Parent.Parent.Modules.SaveStore)
 local PlayerDataService = {}
 
 type Profile = {
-	Data: { [string]: number },
+	Data: { [string]: any },
 	Saving: boolean, -- a save is in progress
 	Released: boolean, -- final save started; no more changes
 }
@@ -56,7 +57,7 @@ local function onPlayerAdded(player: Player)
 			return
 		end
 		warn("[PlayerDataService] Saving is OFF in Studio. Publish the place and turn on Studio API access.")
-		data = table.clone(Config.StartingData)
+		data = SaveStore.DefaultData()
 	end
 
 	if player.Parent == nil then
@@ -67,7 +68,9 @@ local function onPlayerAdded(player: Player)
 
 	profiles[player] = { Data = data, Saving = false, Released = false }
 	for key, value in data do
-		player:SetAttribute(key, value)
+		if type(value) ~= "table" then
+			player:SetAttribute(key, value)
+		end
 	end
 	player:SetAttribute("DataLoaded", true)
 	for _, callback in loadedCallbacks do
@@ -88,7 +91,8 @@ function PlayerDataService.IsLoaded(player: Player): boolean
 	return profile ~= nil and not profile.Released
 end
 
-function PlayerDataService.Get(player: Player, key: string): number?
+-- Returns the live value. Table values are the real table: change them, then publish to the client yourself.
+function PlayerDataService.Get(player: Player, key: string): any
 	local profile = profiles[player]
 	return profile and profile.Data[key]
 end
@@ -104,7 +108,7 @@ function PlayerDataService.Add(player: Player, key: string, amount: number): boo
 	return true
 end
 
-function PlayerDataService.Set(player: Player, key: string, value: number): boolean
+function PlayerDataService.Set(player: Player, key: string, value: number | string): boolean
 	local profile = profiles[player]
 	if not profile or profile.Released or profile.Data[key] == nil then
 		return false

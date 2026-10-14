@@ -6,6 +6,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Progression = require(Shared.Modules.Progression)
+local BallService = require(script.Parent.BallService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionService = require(script.Parent.ProgressionService)
 local ThrowResolver = require(script.Parent.Parent.Modules.ThrowResolver)
@@ -30,11 +31,11 @@ local function setStatus(lane: Model, text: string)
 	end
 end
 
--- Every coin multiplier for this player. Milestone 6 fills in the Ball.
+-- Every coin multiplier for this player.
 -- Future gamepasses and boosts get added here as new entries.
-local function getCoinMultipliers(player: Player, streak: number): { [string]: number }
+local function getCoinMultipliers(player: Player, ball, streak: number): { [string]: number }
 	return {
-		Ball = 1,
+		Ball = ball.Multiplier,
 		Rank = Progression.GetRank(ProgressionService.GetCurrentRankIndex(player)).Multiplier,
 		Streak = Progression.GetStreakMultiplier(streak),
 	}
@@ -72,15 +73,17 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 		return
 	end
 
-	local result = ThrowResolver.Resolve(aim, power)
+	local ball = BallService.GetEquipped(player)
+	local result = ThrowResolver.Resolve(aim, power, ball.Forgiveness)
 	local isStrike = result.Tier == "Strike" or result.Tier == "PerfectStrike"
 	local streak = ProgressionService.NextStreak(player, isStrike)
-	local reward = RewardResolver.Calculate(result.Count, result.Tier, getCoinMultipliers(player, streak))
+	local reward = RewardResolver.Calculate(result.Count, result.Tier, getCoinMultipliers(player, ball, streak))
 	lane:SetAttribute("ReadyAt", now + result.RollTime + Config.Lane.PinResetDelay + Config.Throw.CooldownBuffer)
 
 	ThrowService.Remotes.ThrowResult:FireAllClients({
 		Lane = lane,
 		UserId = player.UserId,
+		BallId = ball.Id,
 		Aim = aim,
 		Power = power,
 		Count = result.Count,

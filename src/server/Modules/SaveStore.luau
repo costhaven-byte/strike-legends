@@ -1,6 +1,6 @@
 -- Loads and saves one player's data in a DataStore, safely.
 -- Each save holds a "session lock" naming the server using it, so two servers never overwrite each other.
--- Saved record: { Version = number, Data = { Coins = ..., ... }, Lock = { JobId = string, Time = number }? }
+-- Saved record: { Version = number, Data = { Coins = ..., OwnedBalls = { ... }, ... }, Lock = { JobId = string, Time = number }? }
 local DataStoreService = game:GetService("DataStoreService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -16,6 +16,23 @@ local okStore, store = pcall(function()
 end)
 -- False in Studio when the place is not published; then nothing is saved.
 SaveStore.Enabled = okStore
+
+-- Copies nested tables too, so players never share a table and saves never see later changes
+local function deepCopy<T>(value: T): T
+	if type(value) ~= "table" then
+		return value
+	end
+	local copy = {}
+	for key, inner in value :: any do
+		copy[key] = deepCopy(inner)
+	end
+	return copy :: any
+end
+
+-- Fresh starting data for a new player
+function SaveStore.DefaultData(): { [string]: any }
+	return deepCopy(Config.StartingData)
+end
 
 local function keyFor(userId: number): string
 	return "Player_" .. userId
@@ -43,10 +60,11 @@ local function withRetries(label: string, fn: () -> ()): boolean
 end
 
 -- Turns a saved record (any version, or nil for a new player) into current-format data.
-local function migrate(saved: any): { [string]: number }
-	local data = table.clone(Config.StartingData)
+-- Keys missing from an old save get their starting value, so new fields need no upgrade step.
+local function migrate(saved: any): { [string]: any }
+	local data = SaveStore.DefaultData()
 	if type(saved) == "table" and type(saved.Data) == "table" then
-		-- Upgrade steps go here when SchemaVersion changes, e.g. if saved.Version < 2 then ... end
+		-- Upgrade steps go here when a field changes meaning, e.g. if saved.Version < 3 then ... end
 		for key, value in saved.Data do
 			data[key] = value
 		end
@@ -55,7 +73,7 @@ local function migrate(saved: any): { [string]: number }
 end
 
 -- Returns the player's data and takes the session lock, or nil if the DataStore could not be reached.
-function SaveStore.Load(userId: number): { [string]: number }?
+function SaveStore.Load(userId: number): { [string]: any }?
 	if not SaveStore.Enabled then
 		return nil
 	end
@@ -92,11 +110,11 @@ end
 
 -- Saves data. release = true also gives up the session lock (player left or server closing).
 -- Returns false if saving failed or another server has taken over this player.
-function SaveStore.Save(userId: number, data: { [string]: number }, release: boolean): boolean
+function SaveStore.Save(userId: number, data: { [string]: any }, release: boolean): boolean
 	if not SaveStore.Enabled then
 		return false
 	end
-	local snapshot = table.clone(data)
+	local snapshot = deepCopy(data)
 	local lostLock = false
 	local ok = withRetries("Save " .. userId, function()
 		store:UpdateAsync(keyFor(userId), function(saved)
