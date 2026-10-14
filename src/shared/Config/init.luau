@@ -64,6 +64,18 @@ Config.StartingData = {
 	BestStreak = 0,
 }
 
+-- Saving (DataStore)
+Config.Data = {
+	StoreName = "PlayerData",
+	SchemaVersion = 1, -- bump when the save format changes, and add an upgrade step in SaveStore
+	AutosaveInterval = 90, -- seconds between automatic saves
+	MaxRetries = 5, -- attempts per load/save before giving up
+	RetryDelay = 2, -- seconds; waits longer after each failed attempt
+	LockTimeout = 300, -- a session lock older than this belongs to a crashed server and can be taken
+	LockWaitTries = 6, -- if another server still holds the lock, wait and retry this many times...
+	LockWaitDelay = 5, -- ...this many seconds apart, then take over
+}
+
 -- Strike streaks: the highest row you have reached sets the coin multiplier. A non-strike resets to 0.
 Config.Streaks = {
 	{ Streak = 1, Multiplier = 1.0, Name = "" },

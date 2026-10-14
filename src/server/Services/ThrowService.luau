@@ -51,6 +51,11 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 	aim = math.clamp(aim, -1, 1)
 	power = math.clamp(power, 0, 1)
 
+	-- No throws until the player's save has loaded, so rewards always have somewhere to go
+	if not PlayerDataService.IsLoaded(player) then
+		return
+	end
+
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not root then
 		return
