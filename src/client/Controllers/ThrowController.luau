@@ -127,7 +127,8 @@ function ThrowController:Start()
 
 	RunService.RenderStepped:Connect(function(dt)
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-		currentLane = root and LaneUtil.GetLaneAt(root.Position)
+		local ownLane = LaneUtil.GetOwnedLane(player.UserId)
+		currentLane = if root and ownLane and LaneUtil.IsInThrowZone(ownLane, root.Position) then ownLane else nil
 
 		if not currentLane then
 			if state ~= "Hidden" then

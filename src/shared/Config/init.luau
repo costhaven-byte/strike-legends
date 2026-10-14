@@ -22,7 +22,7 @@ Config.Lane = {
 	PinResetDelay = 1.4,
 
 	-- How far (studs) a player can be from the lane's approach and still throw
-	ThrowZoneMargin = 3,
+	ThrowZoneMargin = 0.7, -- small, so it never reaches a neighbouring lane
 }
 
 Config.Throw = {

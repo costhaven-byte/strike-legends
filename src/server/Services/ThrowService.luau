@@ -41,8 +41,9 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 	if not root then
 		return
 	end
-	local lane = LaneUtil.GetLaneAt(root.Position)
-	if not lane then
+	-- Players can only throw on their own lane, while standing on it
+	local lane = LaneUtil.GetOwnedLane(player.UserId)
+	if not lane or not LaneUtil.IsInThrowZone(lane, root.Position) then
 		return
 	end
 
