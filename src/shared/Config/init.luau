@@ -347,7 +347,7 @@ Config.LaneModifiers = {
 		{
 			Id = "MovingPins",
 			Name = "MOVING PINS",
-			Text = "The pins slide side to side. Time your aim!",
+			Text = "Pins slide! Lock power, then tap when they line up",
 			Color = Color3.fromRGB(60, 230, 255),
 			Weight = 1,
 			PinSway = 1.6,
@@ -705,6 +705,21 @@ Config.Leaderboards = {
 			Store = "LB_WeeklyCoins",
 			Weekly = true,
 		},
+	},
+}
+
+-- Playtest analytics (Roblox AnalyticsService, results in the Creator Dashboard → Analytics).
+-- OnboardingSteps is the first-session funnel, in order; Roblox counts each step once per player.
+Config.Analytics = {
+	Enabled = true,
+	OnboardingSteps = {
+		"Joined",
+		"First Throw",
+		"First Strike",
+		"Double Strike",
+		"Opened Crate",
+		"Equipped Ball",
+		"Ranked Up",
 	},
 }
 

@@ -53,6 +53,9 @@ end
 
 function BallInventoryController:Start()
 	local gui = player:WaitForChild("PlayerGui"):WaitForChild("BallsUI")
+	-- Balls, crates and crate openings draw above the DAILY, trial and event layers
+	-- (on phones these screens fill the display, so nothing should poke through)
+	gui.DisplayOrder = 8
 	local menu = gui:WaitForChild("Menu")
 	local ballsButton = menu:WaitForChild("BallsButton") :: TextButton
 	local buttonSwatch = ballsButton:WaitForChild("Swatch") :: Frame

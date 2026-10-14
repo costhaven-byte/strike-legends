@@ -8,6 +8,7 @@ local Balls = require(Shared.Modules.Balls)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modifiers = require(Shared.Modules.Modifiers)
 local Progression = require(Shared.Modules.Progression)
+local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
 local GoldenPinService = require(script.Parent.GoldenPinService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
@@ -173,6 +174,17 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 			end
 			if golden.Crate then
 				BallService.GiveFreeCrate(player)
+			end
+
+			Analytics.Currency(player, "Coins", reward.Coins, "Gameplay", "Throw")
+			Analytics.Currency(player, "Gems", reward.Gems, "Gameplay", "Throw")
+			Analytics.Event(player, "Throw", result.Count, { result.Tier, ball.Id })
+			Analytics.Step(player, "First Throw")
+			if isStrike then
+				Analytics.Step(player, "First Strike")
+			end
+			if streak >= 2 then
+				Analytics.Step(player, "Double Strike")
 			end
 		end
 		setStatus(lane, if result.Count == 1 then "1 PIN" else TIER_TEXT[result.Tier]:format(result.Count))

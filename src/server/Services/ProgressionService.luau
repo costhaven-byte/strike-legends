@@ -8,6 +8,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local Progression = require(Shared.Modules.Progression)
+local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
 local ProgressionService = {}
@@ -111,7 +112,10 @@ function ProgressionService.PromoteRank(player: Player)
 	local rank = Progression.GetRank(index)
 	if rank.Gems > 0 then
 		PlayerDataService.Add(player, "Gems", rank.Gems)
+		Analytics.Currency(player, "Gems", rank.Gems, "Gameplay", "RankUp")
 	end
+	Analytics.Event(player, "RankUp", index, { rank.Name })
+	Analytics.Step(player, "Ranked Up")
 	updateBadge(player)
 	rankUpEvent:FireAllClients({
 		UserId = player.UserId,

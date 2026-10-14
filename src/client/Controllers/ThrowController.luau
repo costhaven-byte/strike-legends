@@ -35,6 +35,8 @@ local phase = 0
 local aimValue, powerValue = 0, 0
 local currentLane: Model? = nil
 local sentAt = 0
+-- Moving Pins turn: power first, then the needle stays centred and you tap when the sliding pins line up
+local timingMode = false
 
 -- Triangle waves: aim sweeps -1..1, power goes 0..1..0
 local function aimWave(p: number): number
@@ -51,6 +53,11 @@ end
 
 local function laneReady(lane: Model): boolean
 	return Workspace:GetServerTimeNow() >= (lane:GetAttribute("ReadyAt") or 0)
+end
+
+-- Seconds the ball takes to reach the pins at this power (same maths as the server's ThrowResolver)
+local function rollTime(power: number): number
+	return THROW.RollTimeSlow + (THROW.RollTimeFast - THROW.RollTimeSlow) * power
 end
 
 function ThrowController:Start()
@@ -113,11 +120,13 @@ function ThrowController:Start()
 	Workspace:GetAttributeChangedSignal("LaneModifier"):Connect(refreshZones)
 	refreshZones()
 
-	-- Moving Pins: the green zones slide to where the pins will be when a well-powered ball arrives
-	local typicalRoll = THROW.RollTimeSlow
-		+ (THROW.RollTimeFast - THROW.RollTimeSlow) * (THROW.PowerSweetMin + THROW.PowerSweetMax) / 2
+	-- Moving Pins: the green zones slide to where the pins will be when the ball arrives
+	-- (using the locked power once it's picked, plus the time the tap takes to reach the server)
+	local typicalRoll = rollTime((THROW.PowerSweetMin + THROW.PowerSweetMax) / 2)
 	RunService.RenderStepped:Connect(function()
-		local offset = Modifiers.RackOffset(Modifiers.Current(), Workspace:GetServerTimeNow() + typicalRoll)
+		local roll = if timingMode and state == "Aim" then rollTime(powerValue) else typicalRoll
+		local arrival = Workspace:GetServerTimeNow() + roll + player:GetNetworkPing() / 2
+		local offset = Modifiers.RackOffset(Modifiers.Current(), arrival)
 		-- studs -> share of the aim bar (the bar spans aim -1..1, aim GutterAim = 90% of the lane half-width)
 		local shift = offset / (Config.Lane.LaneHalfWidth * 0.9) * THROW.GutterAim / 2
 		aimBar.SweetZone.Position = sweetBase + UDim2.fromScale(shift, 0)
@@ -161,31 +170,56 @@ function ThrowController:Start()
 		powerBar.Visible = newState == "Power"
 		if newState == "Aim" then
 			phase = math.random()
-			hint.Text = "TAP TO LOCK AIM"
+			hint.Text = if timingMode then "TAP WHEN THE PINS LINE UP!" else "TAP TO LOCK AIM"
 			button.Text = "TAP!"
+			if timingMode then
+				aimValue = 0
+				aimBar.Needle.Position = UDim2.fromScale(0.5, 0.5)
+			end
 		elseif newState == "Power" then
 			phase = 0
 			hint.Text = "TAP TO LOCK POWER"
+			button.Text = "TAP!"
 		elseif newState == "Waiting" then
 			hint.Text = "ROLLING..."
 			button.Text = "..."
 		end
 	end
 
+	-- A new throw: Moving Pins flips the order to power first, then timing
+	local function startThrow()
+		local modifier = Modifiers.Current()
+		timingMode = modifier ~= nil and modifier.PinSway ~= nil
+		setState(if timingMode then "Power" else "Aim")
+	end
+
+	local function send()
+		sentAt = os.clock()
+		setState("Waiting")
+		throwRequest:FireServer(aimValue, powerValue)
+	end
+
 	local function press()
+		local firstStep = (state == "Aim" and not timingMode) or (state == "Power" and timingMode)
+		if firstStep and currentLane and not laneReady(currentLane) then
+			return
+		end
 		if state == "Aim" then
-			if currentLane and not laneReady(currentLane) then
-				return
-			end
 			Sfx.Play("Tap", 1)
 			UiFx.Pop(aimBar, 1.08, 0.25)
-			setState("Power")
+			if timingMode then
+				send()
+			else
+				setState("Power")
+			end
 		elseif state == "Power" then
 			Sfx.Play("Tap", 1.25)
 			UiFx.Pop(powerBar, 1.12, 0.25)
-			sentAt = os.clock()
-			setState("Waiting")
-			throwRequest:FireServer(aimValue, powerValue)
+			if timingMode then
+				setState("Aim")
+			else
+				send()
+			end
 		end
 	end
 
@@ -268,23 +302,27 @@ function ThrowController:Start()
 		end
 
 		if state == "Hidden" then
-			setState("Aim")
+			startThrow()
 		elseif state == "Aim" then
-			phase += dt * THROW.AimMeterSpeed * meterSpeedScale()
-			aimValue = aimWave(phase)
-			aimBar.Needle.Position = UDim2.fromScale((aimValue + 1) / 2, 0.5)
-			local ready = laneReady(currentLane)
-			hint.Text = if ready then "TAP TO LOCK AIM" else "WAIT..."
+			if not timingMode then
+				phase += dt * THROW.AimMeterSpeed * meterSpeedScale()
+				aimValue = aimWave(phase)
+				aimBar.Needle.Position = UDim2.fromScale((aimValue + 1) / 2, 0.5)
+				hint.Text = if laneReady(currentLane) then "TAP TO LOCK AIM" else "WAIT..."
+			end
 		elseif state == "Power" then
 			phase += dt * THROW.PowerMeterSpeed * meterSpeedScale()
 			powerValue = powerWave(phase)
 			powerBar.Fill.Size = UDim2.fromScale(1, powerValue)
 			powerBar.Needle.Position = UDim2.fromScale(0.5, 1 - powerValue)
+			if timingMode then
+				hint.Text = if laneReady(currentLane) then "MOVING PINS! LOCK POWER FIRST" else "WAIT..."
+			end
 		elseif state == "Waiting" then
 			-- Back to aiming once the lane is free (or if the server ignored the throw)
 			local waited = os.clock() - sentAt
 			if (waited > 0.5 and laneReady(currentLane)) or waited > 6 then
-				setState("Aim")
+				startThrow()
 			end
 		end
 	end)

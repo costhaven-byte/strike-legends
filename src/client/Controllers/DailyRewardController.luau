@@ -166,9 +166,7 @@ function DailyRewardController:Start()
 		if crate and result.Crate and CrateController.PlayOpening then
 			task.wait(0.8)
 			UiFx.Close(popup)
-			openButton.Visible = false -- don't sit on top of the crate screen
 			CrateController.PlayOpening(crate, result.Crate)
-			openButton.Visible = true
 		else
 			task.wait(1.2)
 			UiFx.Close(popup)
@@ -184,6 +182,25 @@ function DailyRewardController:Start()
 	end)
 	claimButton.Activated:Connect(claim)
 	popup.Active = true -- taps on the popup don't fall through to the throw meter
+
+	-- Hide the DAILY button while the balls, crates or crate-opening screens are up
+	-- (on phones those fill the screen and the button would sit on top of them)
+	local ballsUi = player.PlayerGui:WaitForChild("BallsUI")
+	local covers = { ballsUi:WaitForChild("Inventory"), ballsUi:WaitForChild("Shop"), ballsUi:WaitForChild("Opening") }
+	local function updateButton()
+		local covered = false
+		for _, screen in covers do
+			covered = covered or screen.Visible
+		end
+		openButton.Visible = not covered
+		if covered and popup.Visible and not busy then
+			UiFx.Close(popup)
+		end
+	end
+	for _, screen in covers do
+		screen:GetPropertyChangedSignal("Visible"):Connect(updateButton)
+	end
+	updateButton()
 
 	player:GetAttributeChangedSignal("DailyNext"):Connect(refresh)
 	player:GetAttributeChangedSignal("DailyClaimable"):Connect(refresh)

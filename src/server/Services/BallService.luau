@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
+local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local CrateRoller = require(script.Parent.Parent.Modules.CrateRoller)
 
@@ -143,7 +144,10 @@ local function onEquip(player: Player, ballId: any)
 	if not getOwned(player)[ballId] then
 		return
 	end
-	PlayerDataService.Set(player, "EquippedBall", ballId)
+	if PlayerDataService.Get(player, "EquippedBall") ~= ballId then
+		PlayerDataService.Set(player, "EquippedBall", ballId)
+		Analytics.Step(player, "Equipped Ball")
+	end
 end
 
 -- Gives the player one crate's ball (no charge): rolls with pity, adds the ball or sells a duplicate.
@@ -169,7 +173,10 @@ function BallService.GiveCrate(player: Player, crate)
 		-- Duplicate: sold automatically
 		sellCoins = Balls.GetRarity(ball.Rarity).SellCoins
 		PlayerDataService.Add(player, "Coins", sellCoins)
+		Analytics.Currency(player, "Coins", sellCoins, "Gameplay", "DuplicateSold")
 	end
+	Analytics.Event(player, "CrateOpened", 1, { crate.Id, ball.Rarity, if isNew then "New" else "Duplicate" })
+	Analytics.Step(player, "Opened Crate")
 
 	return {
 		Ok = true,
@@ -218,6 +225,7 @@ local function openCrate(player: Player, crateId: any)
 		PlayerDataService.Add(player, "FreeCrates", -1)
 	else
 		PlayerDataService.Add(player, "Coins", -crate.Price)
+		Analytics.Currency(player, "Coins", -crate.Price, "Shop", crate.Id)
 	end
 	return BallService.GiveCrate(player, crate)
 end

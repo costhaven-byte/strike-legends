@@ -8,6 +8,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Calendar = require(Shared.Modules.Calendar)
 local Balls = require(Shared.Modules.Balls)
+local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local BallService = require(script.Parent.BallService)
 
@@ -53,10 +54,13 @@ local function claim(player: Player)
 	PlayerDataService.Set(player, "DailyLastClaim", Calendar.Day())
 	if reward.Coins then
 		PlayerDataService.Add(player, "Coins", reward.Coins)
+		Analytics.Currency(player, "Coins", reward.Coins, "TimedReward", "Daily")
 	end
 	if reward.Gems then
 		PlayerDataService.Add(player, "Gems", reward.Gems)
+		Analytics.Currency(player, "Gems", reward.Gems, "TimedReward", "Daily")
 	end
+	Analytics.Event(player, "DailyClaimed", day)
 	local crateResult
 	local crate = Balls.GetCrate(reward.Crate)
 	if crate then

@@ -9,6 +9,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionService = require(script.Parent.ProgressionService)
 
@@ -64,6 +65,7 @@ local function finish(player: Player, passed: boolean)
 		end)
 	end
 	resultEvent:FireClient(player, { Passed = passed })
+	Analytics.Event(player, "TrialFinished", 1, { if passed then "Passed" else "Failed" })
 	if passed then
 		ProgressionService.PromoteRank(player) -- the existing rank-up celebration
 	end
