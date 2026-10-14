@@ -28,6 +28,7 @@ local COMPACT = {
 	["ThrowUI.PowerBar.Label"] = { Size = UDim2.fromOffset(80, 22) },
 	["ThrowUI.ResultText"] = { Position = UDim2.new(0.5, 0, 0, 96), Size = UDim2.new(0.7, 0, 0, 60) },
 	["HUD.RewardPopup"] = { Position = UDim2.new(0.5, 0, 0, 132), Size = UDim2.new(0.7, 0, 0, 30) },
+	["ThrowUI.TraitPopups"] = { Position = UDim2.new(0.5, 0, 0, 166) },
 
 	-- Popups use most of the screen
 	["BallsUI.Shop"] = { Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.94, 0.94) },

@@ -182,6 +182,92 @@ Config.Sounds = {
 	RevealBig = { Id = 128460880879263, Volume = 0.8 },
 }
 
+-- Ball traits: special powers that change how a ball plays. Adding a trait = adding a row here
+-- (and, for a brand-new kind of power, a few lines where the server applies it).
+-- A ball's strength number means something different per trait, see Value below.
+-- Text: full description (%s = the strength, already scaled by Display). Short: the tag on inventory tiles.
+-- Popup: the text that flashes on screen when the trait kicks in. Fx: which 3D effect plays
+-- (Swirl, Ring, Dome, Burst). Sound: a name from Config.Sounds, played at Pitch.
+Config.Traits = {
+	{
+		Id = "Curve", -- Value: share of an off-centre aim the hook takes back (0.3 = 30% closer to the pocket)
+		Name = "Curve",
+		Text = "Hooks into the pocket: aiming right is %s%% more forgiving",
+		Short = "CURVE %s%%",
+		Display = 100,
+		Popup = "HOOK!",
+		Color = Color3.fromRGB(80, 220, 255),
+		Fx = "Swirl",
+		Sound = "Throw",
+		Pitch = 1.5,
+		HookSide = 1, -- 1 = aims right of centre hook back in, -1 = left
+	},
+	{
+		Id = "Blast", -- Value: chance (0-1) that a throw which hits pins knocks down ExtraPins more
+		Name = "Blast",
+		Text = "%s%% chance to blast down an extra pin",
+		Short = "BLAST %s%%",
+		Display = 100,
+		ExtraPins = 1,
+		Popup = "BLAST!",
+		Color = Color3.fromRGB(255, 120, 40),
+		Fx = "Ring",
+		FxSize = 24, -- ring width in studs
+		Sound = "StrikeCrash",
+		Pitch = 0.7,
+	},
+	{
+		Id = "StreakSaver", -- Value: seconds between saves
+		Name = "Streak Saver",
+		Text = "A miss won't break your streak (once every %ss)",
+		Short = "SAVER %ss",
+		Display = 1,
+		Popup = "STREAK SAVED!",
+		Color = Color3.fromRGB(90, 160, 255),
+		Fx = "Dome",
+		Sound = "StreakUp",
+		Pitch = 1.3,
+		MinStreak = 2, -- only saves streaks of at least this many strikes
+	},
+	{
+		Id = "Lucky", -- Value: extra Golden Pin chance (1 = twice as likely). Golden Pins arrive in 9.5d.
+		Name = "Lucky",
+		Text = "+%s%% Golden Pin chance",
+		Short = "LUCKY +%s%%",
+		Display = 100,
+		Popup = "LUCKY!",
+		Color = Color3.fromRGB(255, 215, 60),
+		Fx = "Burst",
+		Sound = "Coin",
+		Pitch = 1.2,
+	},
+	{
+		Id = "GemHunter", -- Value: extra chance of a gem on a Perfect Strike (0.1 = +10%)
+		Name = "Gem Hunter",
+		Text = "+%s%% gem chance on Perfect Strikes",
+		Short = "GEMS +%s%%",
+		Display = 100,
+		Popup = "GEM HUNTER! +1 GEM",
+		Color = Color3.fromRGB(255, 90, 200),
+		Fx = "Burst",
+		Sound = "Coin",
+		Pitch = 1.6,
+	},
+	{
+		Id = "Heavy", -- Value: how much wider the power sweet zone gets (0.5 = 50% wider)
+		Name = "Heavy",
+		Text = "Power sweet zone %s%% wider",
+		Short = "HEAVY +%s%%",
+		Display = 100,
+		Popup = "HEAVY HIT!",
+		Color = Color3.fromRGB(190, 190, 215),
+		Fx = "Ring",
+		FxSize = 12,
+		Sound = "PinHit",
+		Pitch = 0.6,
+	},
+}
+
 -- Ball rarities, lowest first. SellCoins = coins paid when a crate gives a ball you already own.
 Config.Rarities = {
 	{ Name = "Common", Color = Color3.fromRGB(200, 200, 210), SellCoins = 100 },
@@ -195,6 +281,15 @@ Config.Rarities = {
 -- Every ball in the game. Adding a ball = adding a row.
 -- Multiplier: coin multiplier while equipped. Forgiveness: widens the perfect-aim zone (meter is -1..1).
 -- Color/Material: the ball itself. Trail: the streak it leaves down the lane.
+-- Traits: { TraitId = strength } using the rows in Config.Traits. Leave it out for no trait.
+-- Keep each trait on a ladder so higher rarities are always clearly stronger:
+--   Curve      Common 5%   Uncommon 12%  Rare 25%   Epic 35%   Mythic 60%
+--   Blast      Uncommon 15%  Rare 35%  Epic 50%  Legendary 75%  Mythic 100%
+--   Heavy      Common 5%   Uncommon 15%  Epic 40%   Mythic 80%
+--   Lucky      Common 10%  Uncommon 30%  Rare 75%   Epic 125%  Legendary 200%
+--   GemHunter  Common 1%   Epic 6-8%     Legendary 15%
+--   StreakSaver (seconds between saves, lower = better)  Rare 60  Legendary 45  Mythic 30
+-- Epic and up get two traits.
 -- InCrates = false keeps a ball out of crates (the starter ball).
 Config.Balls = {
 	-- Common
@@ -218,6 +313,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(255, 130, 200),
 		Material = Enum.Material.SmoothPlastic,
 		Trail = Color3.fromRGB(255, 170, 220),
+		Traits = { Lucky = 0.1 },
 	},
 	{
 		Id = "Lime",
@@ -228,6 +324,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(160, 255, 60),
 		Material = Enum.Material.SmoothPlastic,
 		Trail = Color3.fromRGB(190, 255, 120),
+		Traits = { Curve = 0.05 },
 	},
 	{
 		Id = "Tangerine",
@@ -238,6 +335,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(255, 150, 40),
 		Material = Enum.Material.SmoothPlastic,
 		Trail = Color3.fromRGB(255, 190, 90),
+		Traits = { Heavy = 0.05 },
 	},
 	{
 		Id = "Ocean",
@@ -248,6 +346,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(30, 90, 200),
 		Material = Enum.Material.SmoothPlastic,
 		Trail = Color3.fromRGB(60, 140, 255),
+		Traits = { GemHunter = 0.01 },
 	},
 	-- Uncommon
 	{
@@ -259,6 +358,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(40, 120, 255),
 		Material = Enum.Material.Neon,
 		Trail = Color3.fromRGB(120, 200, 255),
+		Traits = { Curve = 0.12 },
 	},
 	{
 		Id = "Toxic",
@@ -269,6 +369,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(90, 255, 40),
 		Material = Enum.Material.Neon,
 		Trail = Color3.fromRGB(140, 255, 60),
+		Traits = { Blast = 0.15 },
 	},
 	{
 		Id = "Sunset",
@@ -279,6 +380,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(255, 90, 60),
 		Material = Enum.Material.Neon,
 		Trail = Color3.fromRGB(255, 200, 60),
+		Traits = { Lucky = 0.3 },
 	},
 	{
 		Id = "Frostbite",
@@ -289,6 +391,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(180, 240, 255),
 		Material = Enum.Material.Ice,
 		Trail = Color3.fromRGB(200, 250, 255),
+		Traits = { Heavy = 0.15 },
 	},
 	-- Rare
 	{
@@ -300,6 +403,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(255, 70, 20),
 		Material = Enum.Material.CrackedLava,
 		Trail = Color3.fromRGB(255, 120, 30),
+		Traits = { Blast = 0.35 },
 	},
 	{
 		Id = "Galaxy",
@@ -310,6 +414,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(90, 40, 180),
 		Material = Enum.Material.Neon,
 		Trail = Color3.fromRGB(200, 120, 255),
+		Traits = { Lucky = 0.75 },
 	},
 	{
 		Id = "Thunder",
@@ -320,6 +425,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(255, 240, 60),
 		Material = Enum.Material.Neon,
 		Trail = Color3.fromRGB(255, 255, 160),
+		Traits = { StreakSaver = 60 },
 	},
 	{
 		Id = "Phantom",
@@ -330,6 +436,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(220, 220, 255),
 		Material = Enum.Material.ForceField,
 		Trail = Color3.fromRGB(180, 180, 255),
+		Traits = { Curve = 0.25 },
 	},
 	-- Epic
 	{
@@ -341,6 +448,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(255, 40, 220),
 		Material = Enum.Material.Neon,
 		Trail = Color3.fromRGB(255, 120, 240),
+		Traits = { Heavy = 0.4, GemHunter = 0.06 },
 	},
 	{
 		Id = "Nebula",
@@ -351,6 +459,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(120, 60, 255),
 		Material = Enum.Material.Neon,
 		Trail = Color3.fromRGB(255, 90, 200),
+		Traits = { Lucky = 1.25, GemHunter = 0.08 },
 	},
 	{
 		Id = "Inferno",
@@ -361,6 +470,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(255, 100, 0),
 		Material = Enum.Material.Neon,
 		Trail = Color3.fromRGB(255, 40, 0),
+		Traits = { Blast = 0.5, Curve = 0.35 },
 	},
 	-- Legendary
 	{
@@ -372,6 +482,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(255, 200, 40),
 		Material = Enum.Material.Foil,
 		Trail = Color3.fromRGB(255, 230, 120),
+		Traits = { Lucky = 2.0, GemHunter = 0.15 },
 	},
 	{
 		Id = "Dragon",
@@ -382,6 +493,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(200, 20, 40),
 		Material = Enum.Material.Neon,
 		Trail = Color3.fromRGB(255, 160, 0),
+		Traits = { Blast = 0.75, StreakSaver = 45 },
 	},
 	-- Mythic
 	{
@@ -393,6 +505,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(15, 0, 30),
 		Material = Enum.Material.Neon,
 		Trail = Color3.fromRGB(150, 0, 255),
+		Traits = { Curve = 0.6, StreakSaver = 30 },
 	},
 	{
 		Id = "Supernova",
@@ -403,6 +516,7 @@ Config.Balls = {
 		Color = Color3.fromRGB(255, 255, 255),
 		Material = Enum.Material.Neon,
 		Trail = Color3.fromRGB(255, 220, 120),
+		Traits = { Blast = 1, Heavy = 0.8 },
 	},
 }
 

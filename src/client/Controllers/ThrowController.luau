@@ -9,6 +9,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Balls = require(Shared.Modules.Balls)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
@@ -68,12 +69,74 @@ function ThrowController:Start()
 	local throwRequest = remotes:WaitForChild("ThrowRequest")
 	local throwResult = remotes:WaitForChild("ThrowResult")
 
-	-- Size the coloured zones from Config so the UI always matches the rules
-	aimBar.SweetZone.Size = UDim2.fromScale(THROW.AimSweetSpot, 1)
-	aimBar.GutterLeft.Size = UDim2.fromScale((1 - THROW.GutterAim) / 2, 1)
-	aimBar.GutterRight.Size = UDim2.fromScale((1 - THROW.GutterAim) / 2, 1)
-	powerBar.SweetZone.Position = UDim2.fromScale(0, 1 - THROW.PowerSweetMin)
-	powerBar.SweetZone.Size = UDim2.fromScale(1, THROW.PowerSweetMax - THROW.PowerSweetMin)
+	-- Size the coloured zones from Config and the equipped ball so the UI always matches the rules
+	-- (the same maths as the server's ThrowResolver)
+	local hookZone = Instance.new("Frame")
+	hookZone.Name = "HookZone"
+	hookZone.BorderSizePixel = 0
+	hookZone.BackgroundTransparency = 0.1
+	hookZone.ZIndex = aimBar.SweetZone.ZIndex
+	hookZone.Parent = aimBar
+
+	local function refreshZones()
+		local ball = Balls.Get(player:GetAttribute("EquippedBall")) or Config.Balls[1]
+		local sweet = THROW.AimSweetSpot + (ball.Forgiveness or 0)
+		aimBar.SweetZone.Size = UDim2.fromScale(sweet, 1)
+		aimBar.GutterLeft.Size = UDim2.fromScale((1 - THROW.GutterAim) / 2, 1)
+		aimBar.GutterRight.Size = UDim2.fromScale((1 - THROW.GutterAim) / 2, 1)
+
+		-- Curve: the hook side also counts as perfect aim further out
+		local curve = Balls.TraitValue(ball, "Curve")
+		local curveTrait = Balls.GetTrait("Curve")
+		hookZone.Visible = curve > 0 and curveTrait ~= nil
+		if hookZone.Visible then
+			local edge = math.min(sweet / (1 - curve), THROW.GutterAim)
+			local side = curveTrait.HookSide or 1
+			hookZone.BackgroundColor3 = curveTrait.Color
+			hookZone.AnchorPoint = Vector2.new(if side > 0 then 0 else 1, 0)
+			hookZone.Position = UDim2.fromScale(0.5 + side * sweet / 2, 0)
+			hookZone.Size = UDim2.fromScale((edge - sweet) / 2, 1)
+		end
+
+		-- Heavy: a wider power sweet zone
+		local widen = (THROW.PowerSweetMax - THROW.PowerSweetMin) * Balls.TraitValue(ball, "Heavy") / 2
+		local low, high = THROW.PowerSweetMin - widen, math.min(THROW.PowerSweetMax + widen, 1)
+		powerBar.SweetZone.Position = UDim2.fromScale(0, 1 - low)
+		powerBar.SweetZone.Size = UDim2.fromScale(1, high - low)
+	end
+	player:GetAttributeChangedSignal("EquippedBall"):Connect(refreshZones)
+	refreshZones()
+
+	-- Trait popups ("STREAK SAVED!") stack under the result text (the TraitPopups frame is built in Studio)
+	local popups = gui:WaitForChild("TraitPopups") :: Frame
+	local popupOrder = 0
+
+	local function showTraitPopup(trait)
+		popupOrder += 1
+		local label = Instance.new("TextLabel")
+		label.LayoutOrder = popupOrder
+		label.Size = UDim2.new(1, 0, 0, 40)
+		label.BackgroundTransparency = 1
+		label.Text = trait.Popup
+		label.TextColor3 = trait.Color
+		label.TextScaled = true
+		label.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = Color3.fromRGB(20, 10, 40)
+		stroke.Thickness = 2.5
+		stroke.Parent = label
+		local scale = Instance.new("UIScale")
+		scale.Scale = 2
+		scale.Parent = label
+		label.Parent = popups
+		TweenService:Create(scale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Scale = 1,
+		}):Play()
+		local fade = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 1.4)
+		TweenService:Create(label, fade, { TextTransparency = 1 }):Play()
+		TweenService:Create(stroke, fade, { Transparency = 1 }):Play()
+		task.delay(1.8, label.Destroy, label)
+	end
 
 	local function setState(newState: string)
 		state = newState
@@ -161,6 +224,17 @@ function ThrowController:Start()
 	throwResult.OnClientEvent:Connect(function(data)
 		if data.UserId == player.UserId then
 			task.delay(data.RollTime, showResult, data)
+			-- Curve shows as the ball hooks; the rest when it reaches the pins, one after another
+			local delayAfter = 0.15
+			for _, traitId in data.Traits or {} do
+				local trait = Balls.GetTrait(traitId)
+				if trait and traitId == "Curve" then
+					task.delay(data.RollTime * 0.55, showTraitPopup, trait)
+				elseif trait then
+					task.delay(data.RollTime + delayAfter, showTraitPopup, trait)
+					delayAfter += 0.3
+				end
+			end
 		end
 	end)
 

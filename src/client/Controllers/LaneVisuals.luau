@@ -130,6 +130,21 @@ local function onImpact(data, rack, position: Vector3, isOwn: boolean, setTimeSc
 	end
 end
 
+-- Effects for the ball traits that kicked in (everything except Curve, which plays mid-roll)
+local function playTraits(data, position: Vector3, isOwn: boolean)
+	for _, traitId in data.Traits or {} do
+		local trait = Balls.GetTrait(traitId)
+		if not trait or traitId == "Curve" then
+			continue
+		end
+		local at = if trait.Fx == "Dome" then data.Lane.PinSpot.Position + Vector3.new(0, 1.5, 0) else position
+		LaneFx.Trait(trait, at)
+		if isOwn and trait.Fx == "Ring" then
+			CameraShake.Add((trait.FxSize or 16) * 0.02)
+		end
+	end
+end
+
 local function playThrow(data)
 	local lane: Model = data.Lane
 	local rack = racks[lane]
@@ -180,6 +195,8 @@ local function playThrow(data)
 	local travelled = 0
 	local x = 0
 	local hit = false
+	local traitsPlayed = false
+	local hooked = false
 	local connection
 	connection = RunService.Heartbeat:Connect(function(dt)
 		travelled += speed * dt * timeScale
@@ -190,6 +207,18 @@ local function playThrow(data)
 			local t = math.min(progress / gutterAt, 1)
 			x = data.HitX * t * t
 			drop = if t >= 1 then LANE.GutterDepth else 0
+		elseif data.CurveFromX then
+			-- Curve ball: heads out toward where it was aimed, then hooks back into the pocket
+			local hook = progress ^ 3
+			x = data.CurveFromX * progress * (1 - hook) + data.HitX * hook
+			drop = 0
+			if not hooked and progress >= 0.55 then
+				hooked = true
+				local trait = Balls.GetTrait("Curve")
+				if trait then
+					LaneFx.Trait(trait, ball.Position, ball)
+				end
+			end
 		else
 			x = data.HitX * progress ^ 1.6 -- slight curve toward the aim point
 			drop = 0
@@ -202,6 +231,10 @@ local function playThrow(data)
 		if not hit and travelled >= firstHit then
 			hit = true
 			onImpact(data, rack, position, isOwn, setTimeScale)
+		end
+		if not traitsPlayed and (hit or travelled >= headDistance) then
+			traitsPlayed = true
+			playTraits(data, position, isOwn)
 		end
 
 		for i = #pending, 1, -1 do

@@ -3,12 +3,14 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Balls = require(Shared.Modules.Balls)
 local Progression = require(Shared.Modules.Progression)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
 local ProgressionService = {}
 
 local streaks: { [Player]: number } = {}
+local lastSaved: { [Player]: number } = {} -- when Streak Saver last kept this player's streak (os.clock)
 local rankUpEvent: RemoteEvent
 
 -- Floating title above the player's head, e.g. "PRO"
@@ -50,11 +52,28 @@ local function updateBadge(player: Player)
 	label.TextColor3 = rank.Color
 end
 
--- Call once the throw is decided. Returns the new streak (so its multiplier can apply to this throw).
-function ProgressionService.NextStreak(player: Player, isStrike: boolean): number
-	local streak = if isStrike then (streaks[player] or 0) + 1 else 0
-	streaks[player] = streak
-	return streak
+-- Call once the throw is decided. Returns the new streak (so its multiplier can apply to this throw),
+-- and true if the Streak Saver trait kept a streak that a miss would have broken.
+-- saverCooldown: the ball's Streak Saver strength (seconds between saves), or 0.
+-- The cooldown follows the player, not the ball, so swapping balls can't skip it.
+function ProgressionService.NextStreak(player: Player, isStrike: boolean, saverCooldown: number?): (number, boolean)
+	local current = streaks[player] or 0
+	if isStrike then
+		streaks[player] = current + 1
+		return current + 1, false
+	end
+	local saver = Balls.GetTrait("StreakSaver")
+	local cooldown = saverCooldown or 0
+	if
+		cooldown > 0
+		and current >= (saver and saver.MinStreak or 1)
+		and os.clock() - (lastSaved[player] or -math.huge) >= cooldown
+	then
+		lastSaved[player] = os.clock()
+		return current, true
+	end
+	streaks[player] = 0
+	return 0, false
 end
 
 -- Call when the ball hits the pins, so the streak display changes at the right moment.
@@ -113,6 +132,7 @@ function ProgressionService:Start()
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		streaks[player] = nil
+		lastSaved[player] = nil
 	end)
 end
 

@@ -12,10 +12,17 @@ export type Reward = {
 	Coins: number,
 	XP: number,
 	Gems: number,
+	GemHunter: boolean, -- the gem came from the ball's Gem Hunter trait
 }
 
 -- multipliers: named coin multipliers (Ball, Rank, Streak, and later gamepasses). All are multiplied together.
-function RewardResolver.Calculate(count: number, tier: string, multipliers: { [string]: number }): Reward
+-- gemBonus: the ball's Gem Hunter strength, an extra chance of a gem on a Perfect Strike.
+function RewardResolver.Calculate(
+	count: number,
+	tier: string,
+	multipliers: { [string]: number },
+	gemBonus: number?
+): Reward
 	local multiplier = 1
 	for _, value in multipliers do
 		multiplier *= value
@@ -24,12 +31,17 @@ function RewardResolver.Calculate(count: number, tier: string, multipliers: { [s
 	local coins = count * REWARDS.BaseCoinsPerPin * multiplier
 	local xp = count * REWARDS.XpPerPin
 	local gems = 0
+	local gemHunter = false
 
 	if tier == "PerfectStrike" then
 		coins *= 1 + REWARDS.PerfectStrikeBonus
 		xp = REWARDS.PerfectStrikeXp
 		if math.random() < REWARDS.PerfectGemChance then
 			gems = REWARDS.PerfectGemAmount
+		elseif (gemBonus or 0) > 0 and math.random() < (gemBonus :: number) then
+			-- Gem Hunter: a second roll, so its strength adds to the normal chance
+			gems = REWARDS.PerfectGemAmount
+			gemHunter = true
 		end
 	elseif tier == "Strike" then
 		coins *= 1 + REWARDS.StrikeBonus
@@ -40,6 +52,7 @@ function RewardResolver.Calculate(count: number, tier: string, multipliers: { [s
 		Coins = math.floor(coins + 0.5),
 		XP = xp,
 		Gems = gems,
+		GemHunter = gemHunter,
 	}
 end
 

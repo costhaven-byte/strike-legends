@@ -28,6 +28,13 @@ function BallInventoryController.FillTile(tile: GuiObject, ball, owned: boolean)
 	outline.Color = rarity.Color
 	glow.BackgroundColor3 = rarity.Color
 	tile.Lock.Visible = not owned
+	-- Traits show on locked balls too, so you know what you're chasing
+	local trait = tile:FindFirstChild("Trait") :: TextLabel?
+	if trait then
+		local text = Balls.DescribeTraits(ball, true, true)
+		trait.Text = if text == "" then "NO TRAIT" else text
+		trait.TextTransparency = if text == "" then 0.6 else 0
+	end
 	if owned then
 		tile.BallName.Text = ball.Name
 		swatch.BackgroundColor3 = ball.Color
@@ -52,8 +59,23 @@ function BallInventoryController:Start()
 	local panel = gui:WaitForChild("Inventory") :: Frame
 	local grid = panel:WaitForChild("Grid") :: ScrollingFrame
 	local countLabel = panel:WaitForChild("Count") :: TextLabel
+	local detail = panel:WaitForChild("Detail") :: TextLabel
 	local template = panel:WaitForChild("TileTemplate") :: TextButton
 	local equipRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("EquipBall") :: RemoteEvent
+
+	-- The detail line: full trait description of the ball you point at (or tapped), else the equipped one
+	local function showDetail(ball)
+		ball = ball or Balls.Get(player:GetAttribute("EquippedBall")) or Config.Balls[1]
+		local owned = Balls.DecodeOwned(player:GetAttribute("OwnedBalls"))[ball.Id] == true
+		local rarity = Balls.GetRarity(ball.Rarity)
+		local name = if owned then ball.Name else "??? " .. ball.Rarity:lower() .. " ball"
+		local traits = Balls.DescribeTraits(ball, false, true)
+		detail.Text = ('<font color="#%s">%s</font>   %s'):format(
+			rarity.Color:ToHex(),
+			name:upper(),
+			if traits == "" then "No special trait" else (traits:gsub("\n", "   "))
+		)
+	end
 
 	-- One tile per ball, made once
 	local tiles = {}
@@ -64,9 +86,16 @@ function BallInventoryController:Start()
 		tile.Parent = grid
 		tiles[ball.Id] = tile
 		tile.Activated:Connect(function()
+			showDetail(ball)
 			if Balls.DecodeOwned(player:GetAttribute("OwnedBalls"))[ball.Id] then
 				equipRemote:FireServer(ball.Id)
 			end
+		end)
+		tile.MouseEnter:Connect(function()
+			showDetail(ball)
+		end)
+		tile.MouseLeave:Connect(function()
+			showDetail(nil)
 		end)
 	end
 
@@ -97,6 +126,7 @@ function BallInventoryController:Start()
 	end
 
 	player:GetAttributeChangedSignal("OwnedBalls"):Connect(refresh)
+	showDetail(nil)
 	player:GetAttributeChangedSignal("EquippedBall"):Connect(function()
 		refresh()
 		local tile = tiles[player:GetAttribute("EquippedBall")]

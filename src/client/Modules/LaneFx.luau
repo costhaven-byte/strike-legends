@@ -192,6 +192,91 @@ function LaneFx.Number(position: Vector3, text: string, color: Color3)
 	TweenService:Create(stroke, fade, { Transparency = 1 }):Play()
 end
 
+-- A ball trait kicking in. trait = its row in Config.Traits; the row's Fx picks the look:
+-- Swirl (sparkles spinning off the ball), Ring (a shockwave across the lane),
+-- Dome (a shield bubble over the pins), Burst (sparkles shooting up).
+-- position: where it happens. ball: the rolling ball, for effects that ride along with it.
+function LaneFx.Trait(trait, position: Vector3, ball: BasePart?)
+	local color = trait.Color
+	local holder: BasePart = if trait.Fx == "Swirl" and ball then ball else anchor(position, 2.5)
+
+	if trait.Fx == "Ring" then
+		local size = trait.FxSize or 16
+		local ring = Instance.new("Part")
+		ring.Name = "Shockwave"
+		ring.Shape = Enum.PartType.Cylinder
+		ring.Anchored = true
+		ring.CanCollide = false
+		ring.CanQuery = false
+		ring.CanTouch = false
+		ring.Material = Enum.Material.Neon
+		ring.Color = color
+		ring.Transparency = 0.15
+		ring.Size = Vector3.new(0.15, 2, 2)
+		ring.CFrame = CFrame.new(position + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+		ring.Parent = holder
+		local grow = TweenInfo.new(0.55, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+		TweenService:Create(ring, grow, { Size = Vector3.new(0.15, size, size), Transparency = 1 }):Play()
+	elseif trait.Fx == "Dome" then
+		local dome = Instance.new("Part")
+		dome.Name = "Shield"
+		dome.Shape = Enum.PartType.Ball
+		dome.Anchored = true
+		dome.CanCollide = false
+		dome.CanQuery = false
+		dome.CanTouch = false
+		dome.Material = Enum.Material.ForceField
+		dome.Color = color
+		dome.Size = Vector3.one * 3
+		dome.Position = position
+		dome.Parent = holder
+		TweenService:Create(dome, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Size = Vector3.one * 14,
+		}):Play()
+		TweenService:Create(dome, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 1.2), {
+			Transparency = 1,
+		}):Play()
+	end
+
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Texture = SPARKLE
+	emitter.Color = ColorSequence.new(color, Color3.new(1, 1, 1))
+	emitter.LightEmission = 1
+	emitter.Size = NumberSequence.new(if trait.Fx == "Swirl" then 0.6 else 1, 0)
+	emitter.Lifetime = NumberRange.new(0.5, 1)
+	emitter.Enabled = false
+	if trait.Fx == "Swirl" then
+		emitter.Speed = NumberRange.new(4, 8)
+		emitter.SpreadAngle = Vector2.new(180, 180)
+		emitter.RotSpeed = NumberRange.new(-400, 400)
+		emitter.Drag = 3
+	elseif trait.Fx == "Burst" then
+		emitter.Speed = NumberRange.new(12, 22)
+		emitter.SpreadAngle = Vector2.new(30, 30)
+		emitter.EmissionDirection = Enum.NormalId.Top
+		emitter.Acceleration = Vector3.new(0, -15, 0)
+	else
+		emitter.Speed = NumberRange.new(8, 16)
+		emitter.SpreadAngle = Vector2.new(80, 80)
+		emitter.Drag = 2
+	end
+	emitter.Parent = holder
+	emitter:Emit(if trait.Fx == "Swirl" then 30 else 40)
+	task.delay(1.5, emitter.Destroy, emitter)
+
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Range = 18
+	light.Brightness = 4
+	light.Parent = holder
+	TweenService:Create(light, TweenInfo.new(0.7), { Brightness = 0 }):Play()
+	task.delay(0.8, light.Destroy, light)
+
+	if trait.Sound then
+		Sfx.PlayAt(trait.Sound, holder, trait.Pitch)
+	end
+end
+
 -- Glow of the colour of the current streak tier on each of the lane's light strips (0 = back to normal)
 local streakState: { [Model]: any } = {}
 

@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Balls = require(Shared.Modules.Balls)
 local PinRack = require(Shared.Modules.PinRack)
 
 local THROW = Config.Throw
@@ -17,6 +18,8 @@ export type Result = {
 	HitX: number, -- where the ball meets the pins, studs from lane centre
 	Gutter: boolean,
 	RollTime: number,
+	CurveFromX: number?, -- Curve balls: where the ball heads before it hooks back to HitX
+	Traits: { string }, -- ball traits that made a difference on this throw (for effects)
 }
 
 -- 1 inside the sweet spot, falling to 0 at the gutter edge. forgiveness widens the sweet spot.
@@ -30,13 +33,21 @@ local function aimQuality(aim: number, forgiveness: number): number
 end
 
 -- 1 inside the sweet zone; drops slowly when weak, quickly when overpowered.
-local function powerQuality(power: number): number
-	if power < THROW.PowerSweetMin then
-		return math.clamp(1 - (THROW.PowerSweetMin - power) / THROW.PowerSweetMin * THROW.WeakPowerPenalty, 0, 1)
-	elseif power > THROW.PowerSweetMax then
-		return math.clamp(1 - (power - THROW.PowerSweetMax) * THROW.OverPowerPenalty, 0, 1)
+-- heavy (the Heavy trait) widens the zone by that share, half on each side.
+local function powerQuality(power: number, heavy: number): number
+	local widen = (THROW.PowerSweetMax - THROW.PowerSweetMin) * heavy / 2
+	local sweetMin, sweetMax = THROW.PowerSweetMin - widen, THROW.PowerSweetMax + widen
+	if power < sweetMin then
+		return math.clamp(1 - (sweetMin - power) / sweetMin * THROW.WeakPowerPenalty, 0, 1)
+	elseif power > sweetMax then
+		return math.clamp(1 - (power - sweetMax) * THROW.OverPowerPenalty, 0, 1)
 	end
 	return 1
+end
+
+-- Where the ball meets the pins for an aim value, in studs from lane centre
+local function aimToX(aim: number): number
+	return aim / THROW.GutterAim * LANE.LaneHalfWidth * 0.9
 end
 
 -- Pins closest to the ball's line fall first, with a little shuffle so patterns vary.
@@ -57,8 +68,10 @@ local function pickPins(count: number, hitX: number): { number }
 	return pins
 end
 
-function ThrowResolver.Resolve(aim: number, power: number, forgiveness: number?): Result
+-- ball: the equipped ball row from Config.Balls (its Forgiveness and Traits change the result)
+function ThrowResolver.Resolve(aim: number, power: number, ball): Result
 	local rollTime = THROW.RollTimeSlow + (THROW.RollTimeFast - THROW.RollTimeSlow) * power
+	local forgiveness = ball.Forgiveness or 0
 
 	local function gutterBall(): Result
 		return {
@@ -68,6 +81,7 @@ function ThrowResolver.Resolve(aim: number, power: number, forgiveness: number?)
 			HitX = math.sign(aim) * LANE.GutterOffset,
 			Gutter = true,
 			RollTime = rollTime,
+			Traits = {},
 		}
 	end
 
@@ -75,7 +89,25 @@ function ThrowResolver.Resolve(aim: number, power: number, forgiveness: number?)
 		return gutterBall()
 	end
 
-	local quality = aimQuality(aim, forgiveness or 0) * powerQuality(power)
+	local fired = {}
+
+	-- Curve: an off-centre aim on the hook side curls back toward the pocket
+	local aimUsed = aim
+	local curve = Balls.TraitValue(ball, "Curve")
+	local hookSide = (Balls.GetTrait("Curve") or {}).HookSide or 1
+	if curve > 0 and math.sign(aim) == hookSide and math.abs(aim) > THROW.AimSweetSpot + forgiveness then
+		aimUsed = aim * (1 - curve)
+		table.insert(fired, "Curve")
+	end
+
+	-- Heavy: a wider power sweet zone
+	local heavy = Balls.TraitValue(ball, "Heavy")
+	local power1 = powerQuality(power, heavy)
+	if power1 > powerQuality(power, 0) then
+		table.insert(fired, "Heavy")
+	end
+
+	local quality = aimQuality(aimUsed, forgiveness) * power1
 	local count
 	if quality >= 0.999 then
 		count = 10 -- a perfect throw always strikes
@@ -87,6 +119,14 @@ function ThrowResolver.Resolve(aim: number, power: number, forgiveness: number?)
 		return gutterBall() -- missing every pin always reads (and rolls) as a gutter ball
 	end
 
+	-- Blast: a chance that a hit knocks down extra pins
+	local blast = Balls.TraitValue(ball, "Blast")
+	if blast > 0 and count < 10 and math.random() < blast then
+		count = math.min(10, count + ((Balls.GetTrait("Blast") or {}).ExtraPins or 1))
+		table.insert(fired, "Blast")
+	end
+
+	-- Perfect Strikes still need truly perfect timing: traits never make them easier
 	local perfect = count == 10
 		and math.abs(aim) <= THROW.PerfectStrikeAim
 		and power >= THROW.PerfectStrikePowerMin
@@ -99,7 +139,7 @@ function ThrowResolver.Resolve(aim: number, power: number, forgiveness: number?)
 		elseif count >= 7 then "Good"
 		else "Weak"
 
-	local hitX = aim / THROW.GutterAim * LANE.LaneHalfWidth * 0.9
+	local hitX = aimToX(aimUsed)
 	return {
 		Count = count,
 		Tier = tier,
@@ -107,6 +147,8 @@ function ThrowResolver.Resolve(aim: number, power: number, forgiveness: number?)
 		HitX = hitX,
 		Gutter = false,
 		RollTime = rollTime,
+		CurveFromX = if aimUsed ~= aim then aimToX(aim) else nil,
+		Traits = fired,
 	}
 end
 

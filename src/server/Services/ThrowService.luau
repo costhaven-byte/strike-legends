@@ -4,6 +4,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Balls = require(Shared.Modules.Balls)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Progression = require(Shared.Modules.Progression)
 local BallService = require(script.Parent.BallService)
@@ -75,10 +76,24 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 	end
 
 	local ball = BallService.GetEquipped(player)
-	local result = ThrowResolver.Resolve(aim, power, ball.Forgiveness)
+	local result = ThrowResolver.Resolve(aim, power, ball)
 	local isStrike = result.Tier == "Strike" or result.Tier == "PerfectStrike"
-	local streak = ProgressionService.NextStreak(player, isStrike)
-	local reward = RewardResolver.Calculate(result.Count, result.Tier, getCoinMultipliers(player, ball, streak))
+	local streak, saved = ProgressionService.NextStreak(player, isStrike, Balls.TraitValue(ball, "StreakSaver"))
+	local reward = RewardResolver.Calculate(
+		result.Count,
+		result.Tier,
+		getCoinMultipliers(player, ball, streak),
+		Balls.TraitValue(ball, "GemHunter")
+	)
+
+	-- Every trait that kicked in on this throw, so clients can play its effect
+	local traits = table.clone(result.Traits)
+	if saved then
+		table.insert(traits, "StreakSaver")
+	end
+	if reward.GemHunter then
+		table.insert(traits, "GemHunter")
+	end
 	lane:SetAttribute("ReadyAt", now + result.RollTime + Config.Lane.PinResetDelay + Config.Throw.CooldownBuffer)
 
 	ThrowService.Remotes.ThrowResult:FireAllClients({
@@ -93,6 +108,8 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 		HitX = result.HitX,
 		Gutter = result.Gutter,
 		RollTime = result.RollTime,
+		CurveFromX = result.CurveFromX,
+		Traits = traits,
 		Reward = reward,
 		Streak = streak,
 	})

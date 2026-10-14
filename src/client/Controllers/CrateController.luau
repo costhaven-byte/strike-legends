@@ -199,6 +199,8 @@ function CrateController:Start()
 				formatNumber(result.SellCoins)
 			)
 		end
+		local traits = Balls.DescribeTraits(ball, false, true)
+		reveal.Trait.Text = if traits == "" then "No special trait" else traits
 		reveal.Visible = true
 		continueButton.Visible = false
 
