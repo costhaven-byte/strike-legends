@@ -12,6 +12,7 @@ local Config = require(Shared.Config)
 local PinRack = require(Shared.Modules.PinRack)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Balls = require(Shared.Modules.Balls)
+local Modifiers = require(Shared.Modules.Modifiers)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local CameraShake = require(Modules.CameraShake)
 local LaneFx = require(Modules.LaneFx)
@@ -28,6 +29,23 @@ local normalFov = Workspace.CurrentCamera.FieldOfView
 local LaneVisuals = {}
 
 local racks: { [Model]: any } = {}
+local busy: { [Model]: boolean } = {} -- a throw is playing on this lane; rack changes wait for the reset
+
+-- Pin size and the Golden Pin come from the lane modifier and lane attributes; applied when the rack is standing
+local function refreshRack(lane: Model)
+	local rack = racks[lane]
+	if not rack or busy[lane] then
+		return
+	end
+	local modifier = Modifiers.Current()
+	local scale = modifier and modifier.PinScale or 1
+	local golden = lane:GetAttribute("GoldenPin") or 0
+	if rack.Scale ~= scale or rack.Golden ~= golden then
+		rack.Scale = scale
+		rack.Golden = golden
+		rack:Reset()
+	end
+end
 
 -- The thrower's equipped ball, with its colour, material, trail and glow
 -- The trail hangs off the spin axis so it stays steady while the ball rolls.
@@ -103,6 +121,15 @@ local function onImpact(data, rack, position: Vector3, isOwn: boolean, setTimeSc
 	if isPerfect then
 		LaneFx.Fireworks(lane, JUICE.PerfectFireworks)
 	end
+	local golden = data.Golden
+	if golden and golden.Hit then
+		local pin = rack.Pins[golden.Pin]
+		LaneFx.GoldenBurst(lane, if pin and pin.PrimaryPart then pin.PrimaryPart.Position else position)
+		if isOwn then
+			UiFx.Flash(Config.GoldenPin.Color, 0.7, 0.6)
+			CameraShake.Add(0.6)
+		end
+	end
 	if not isOwn then
 		return
 	end
@@ -152,6 +179,7 @@ local function playThrow(data)
 		return
 	end
 	local isOwn = data.UserId == Players.LocalPlayer.UserId
+	busy[lane] = true
 
 	local ballStart = lane.BallStart :: BasePart
 	local pinSpot = lane.PinSpot :: BasePart
@@ -274,6 +302,10 @@ local function playThrow(data)
 	end
 
 	task.delay(data.RollTime + LANE.PinResetDelay, function()
+		busy[lane] = false
+		local modifier = Modifiers.Current()
+		rack.Scale = modifier and modifier.PinScale or 1
+		rack.Golden = lane:GetAttribute("GoldenPin") or 0
 		rack:Reset()
 		if cameraConnection then
 			cameraConnection:Disconnect()
@@ -290,6 +322,28 @@ function LaneVisuals:Start()
 
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
 	remotes:WaitForChild("ThrowResult").OnClientEvent:Connect(playThrow)
+
+	-- Golden Pins and the lane modifier change the standing rack
+	for lane in racks do
+		lane:GetAttributeChangedSignal("GoldenPin"):Connect(function()
+			refreshRack(lane)
+		end)
+		refreshRack(lane)
+	end
+	Workspace:GetAttributeChangedSignal("LaneModifier"):Connect(function()
+		for lane in racks do
+			refreshRack(lane)
+		end
+	end)
+
+	-- Moving Pins: standing pins slide with the server clock, so they are where the server scores them
+	RunService.Heartbeat:Connect(function()
+		local modifier = Modifiers.Current()
+		local offset = Modifiers.RackOffset(modifier, Workspace:GetServerTimeNow())
+		for _, rack in racks do
+			rack:SetOffset(offset)
+		end
+	end)
 end
 
 return LaneVisuals

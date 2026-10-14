@@ -6,14 +6,18 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local LaneUtil = require(Shared.Modules.LaneUtil)
+local Modifiers = require(Shared.Modules.Modifiers)
 local Progression = require(Shared.Modules.Progression)
 local BallService = require(script.Parent.BallService)
+local GoldenPinService = require(script.Parent.GoldenPinService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionService = require(script.Parent.ProgressionService)
 local TrialService = require(script.Parent.TrialService)
 local ThrowResolver = require(script.Parent.Parent.Modules.ThrowResolver)
 local RewardResolver = require(script.Parent.Parent.Modules.RewardResolver)
+
+local GOLDEN = Config.GoldenPin
 
 local ThrowService = {}
 
@@ -34,13 +38,15 @@ local function setStatus(lane: Model, text: string)
 	end
 end
 
--- Every coin multiplier for this player.
+-- Every coin multiplier for this throw.
 -- Future gamepasses and boosts get added here as new entries.
-local function getCoinMultipliers(player: Player, ball, streak: number): { [string]: number }
+local function getCoinMultipliers(player: Player, ball, streak: number, modifier, goldenHit: boolean)
 	return {
 		Ball = ball.Multiplier,
 		Rank = Progression.GetRank(ProgressionService.GetCurrentRankIndex(player)).Multiplier,
 		Streak = Progression.GetStreakMultiplier(streak),
+		Modifier = modifier and modifier.CoinMultiplier or 1,
+		GoldenPin = if goldenHit then GOLDEN.CoinMultiplier else 1,
 	}
 end
 
@@ -84,16 +90,38 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 	end
 
 	local ball = BallService.GetEquipped(player)
-	local result = ThrowResolver.Resolve(aim, power, ball)
+	local modifier = Modifiers.Current()
+	local result = ThrowResolver.Resolve(aim, power, ball, {
+		RackOffset = function(rollTime: number)
+			return Modifiers.RackOffset(modifier, now + rollTime)
+		end,
+		AimBonus = modifier and modifier.AimBonus,
+	})
 	local isStrike = result.Tier == "Strike" or result.Tier == "PerfectStrike"
 	local streak, saved = ProgressionService.NextStreak(player, isStrike, Balls.TraitValue(ball, "StreakSaver"))
+	local goldenPin = GoldenPinService.Get(lane)
+	local goldenHit = goldenPin > 0 and table.find(result.Pins, goldenPin) ~= nil
 	local reward = RewardResolver.Calculate(
 		result.Count,
 		result.Tier,
-		getCoinMultipliers(player, ball, streak),
+		getCoinMultipliers(player, ball, streak, modifier, goldenHit),
 		getXpMultipliers(streak),
 		Balls.TraitValue(ball, "GemHunter")
 	)
+
+	-- Surprise bonuses: Golden Pin gems and free crate, and the Bonus Gems lane modifier
+	local golden = { Pin = goldenPin, Hit = goldenHit, Gems = 0, Crate = false }
+	if goldenHit then
+		if math.random() < GOLDEN.GemChance then
+			golden.Gems = GOLDEN.GemAmount
+		end
+		golden.Crate = math.random() < GOLDEN.CrateChance
+	end
+	local modifierGems = 0
+	if isStrike and modifier and modifier.StrikeGemChance and math.random() < modifier.StrikeGemChance then
+		modifierGems = modifier.StrikeGemAmount or 1
+	end
+	reward.Gems += golden.Gems + modifierGems
 
 	local trialAttempt = TrialService.GetAttemptId(player)
 
@@ -123,6 +151,8 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 		Traits = traits,
 		Reward = reward,
 		Streak = streak,
+		Golden = golden,
+		ModifierGems = modifierGems,
 	})
 
 	BallService.HideHeldBall(player, result.RollTime + Config.Lane.PinResetDelay)
@@ -138,9 +168,17 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 			ProgressionService.AddXP(player, reward.XP)
 			LeaderboardService.RecordThrow(player, result.Count, reward.Coins)
 			TrialService.OnThrow(player, trialAttempt, result.Tier, saved)
+			if isStrike then
+				BallService.AddCrateStrike(player)
+			end
+			if golden.Crate then
+				BallService.GiveFreeCrate(player)
+			end
 		end
 		setStatus(lane, if result.Count == 1 then "1 PIN" else TIER_TEXT[result.Tier]:format(result.Count))
 	end)
+	-- Roll the next rack's Golden Pin as the pins reset
+	task.delay(result.RollTime + Config.Lane.PinResetDelay, GoldenPinService.Roll, lane)
 end
 
 function ThrowService:Start()

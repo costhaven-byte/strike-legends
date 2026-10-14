@@ -10,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
+local Modifiers = require(Shared.Modules.Modifiers)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
@@ -77,10 +78,13 @@ function ThrowController:Start()
 	hookZone.BackgroundTransparency = 0.1
 	hookZone.ZIndex = aimBar.SweetZone.ZIndex
 	hookZone.Parent = aimBar
+	local sweetBase = aimBar.SweetZone.Position -- where the zones sit before Moving Pins slides them
+	local hookBase = UDim2.new()
 
 	local function refreshZones()
 		local ball = Balls.Get(player:GetAttribute("EquippedBall")) or Config.Balls[1]
-		local sweet = THROW.AimSweetSpot + (ball.Forgiveness or 0)
+		local modifier = Modifiers.Current()
+		local sweet = THROW.AimSweetSpot + (ball.Forgiveness or 0) + (modifier and modifier.AimBonus or 0)
 		aimBar.SweetZone.Size = UDim2.fromScale(sweet, 1)
 		aimBar.GutterLeft.Size = UDim2.fromScale((1 - THROW.GutterAim) / 2, 1)
 		aimBar.GutterRight.Size = UDim2.fromScale((1 - THROW.GutterAim) / 2, 1)
@@ -94,7 +98,8 @@ function ThrowController:Start()
 			local side = curveTrait.HookSide or 1
 			hookZone.BackgroundColor3 = curveTrait.Color
 			hookZone.AnchorPoint = Vector2.new(if side > 0 then 0 else 1, 0)
-			hookZone.Position = UDim2.fromScale(0.5 + side * sweet / 2, 0)
+			hookBase = UDim2.fromScale(0.5 + side * sweet / 2, 0)
+			hookZone.Position = hookBase
 			hookZone.Size = UDim2.fromScale((edge - sweet) / 2, 1)
 		end
 
@@ -105,7 +110,19 @@ function ThrowController:Start()
 		powerBar.SweetZone.Size = UDim2.fromScale(1, high - low)
 	end
 	player:GetAttributeChangedSignal("EquippedBall"):Connect(refreshZones)
+	Workspace:GetAttributeChangedSignal("LaneModifier"):Connect(refreshZones)
 	refreshZones()
+
+	-- Moving Pins: the green zones slide to where the pins will be when a well-powered ball arrives
+	local typicalRoll = THROW.RollTimeSlow
+		+ (THROW.RollTimeFast - THROW.RollTimeSlow) * (THROW.PowerSweetMin + THROW.PowerSweetMax) / 2
+	RunService.RenderStepped:Connect(function()
+		local offset = Modifiers.RackOffset(Modifiers.Current(), Workspace:GetServerTimeNow() + typicalRoll)
+		-- studs -> share of the aim bar (the bar spans aim -1..1, aim GutterAim = 90% of the lane half-width)
+		local shift = offset / (Config.Lane.LaneHalfWidth * 0.9) * THROW.GutterAim / 2
+		aimBar.SweetZone.Position = sweetBase + UDim2.fromScale(shift, 0)
+		hookZone.Position = hookBase + UDim2.fromScale(shift, 0)
+	end)
 
 	-- Trait popups ("STREAK SAVED!") stack under the result text (the TraitPopups frame is built in Studio)
 	local popups = gui:WaitForChild("TraitPopups") :: Frame

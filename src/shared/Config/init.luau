@@ -72,12 +72,14 @@ Config.StartingData = {
 	WeeklyCoinsWeek = 0, -- ...and which week that was (see Calendar.Week)
 	DailyDay = 0, -- last daily reward day claimed (1-7), 0 = never
 	DailyLastClaim = 0, -- the day number (see Calendar.Day) it was claimed on
+	CrateStrikes = 0, -- strikes toward the next free crate (see Config.FreeCrates)
+	FreeCrates = 0, -- free crates waiting to be opened in the shop
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 4, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials). Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 5, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 90, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -297,6 +299,79 @@ Config.Traits = {
 		FxSize = 12,
 		Sound = "PinHit",
 		Pitch = 0.6,
+	},
+}
+
+-- Golden Pin: sometimes one pin in your rack is golden. Knock it down for a big bonus on that throw.
+-- The Lucky ball trait raises the chance: Chance * (1 + Lucky strength).
+Config.GoldenPin = {
+	Chance = 1 / 15, -- chance for each new rack
+	MaxChance = 0.5, -- never more than this, however lucky
+	CoinMultiplier = 5, -- that throw's coins are multiplied by this
+	GemChance = 0.3, -- chance of gems too...
+	GemAmount = 2,
+	CrateChance = 0.1, -- ...and chance of a free crate (see Config.FreeCrates)
+	Color = Color3.fromRGB(255, 200, 40),
+}
+
+-- Free crates: earned from strikes (every StrikesPerCrate strikes) and Golden Pins.
+-- They wait in the shop until the player opens them.
+Config.FreeCrates = {
+	CrateId = "Basic", -- which crate a free crate is
+	StrikesPerCrate = 15,
+}
+
+-- The "almost there" bar above the throw meter: always shows the nearest reward.
+Config.AlmostThere = {
+	PulseAt = 0.8, -- the bar pulses once you are this far (80%) toward the reward
+}
+
+-- Lane modifiers: every Interval seconds the server picks a new one for the whole alley.
+-- Adding a modifier = adding a row. Each row can use any of these (leave out what it doesn't need):
+--   CoinMultiplier  coins on every throw are multiplied by this
+--   StrikeGemChance / StrikeGemAmount  every strike has this chance of gems
+--   PinSway / SwayPeriod  the pins slide side to side this many studs, one full slide every SwayPeriod seconds
+--   PinScale / AimBonus  bigger pins (looks), and the perfect-aim zone grows by AimBonus (meter is -1..1)
+-- Weight: how often it is picked compared to the others.
+Config.LaneModifiers = {
+	Interval = 90,
+	List = {
+		{
+			Id = "DoubleCoins",
+			Name = "DOUBLE COINS",
+			Text = "Every throw pays x2 coins!",
+			Color = Color3.fromRGB(255, 200, 40),
+			Weight = 1,
+			CoinMultiplier = 2,
+		},
+		{
+			Id = "MovingPins",
+			Name = "MOVING PINS",
+			Text = "The pins slide side to side. Time your aim!",
+			Color = Color3.fromRGB(60, 230, 255),
+			Weight = 1,
+			PinSway = 1.6,
+			SwayPeriod = 3,
+		},
+		{
+			Id = "BonusGems",
+			Name = "BONUS GEMS",
+			Text = "Every strike has a 20% chance of a gem!",
+			Color = Color3.fromRGB(255, 90, 200),
+			Weight = 1,
+			StrikeGemChance = 0.2,
+			StrikeGemAmount = 1,
+		},
+		{
+			Id = "GiantPins",
+			Name = "GIANT PINS",
+			Text = "Huge pins are easier to hit, but pay x0.6 coins",
+			Color = Color3.fromRGB(120, 255, 120),
+			Weight = 1,
+			PinScale = 1.4,
+			AimBonus = 0.08,
+			CoinMultiplier = 0.6,
+		},
 	},
 }
 

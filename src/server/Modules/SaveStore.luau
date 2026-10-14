@@ -84,6 +84,7 @@ local function migrate(saved: any): { [string]: any }
 			end
 			data.Rank = rank
 		end
+		-- v5 added CrateStrikes and FreeCrates: new keys start at their starting value (0), nothing to upgrade
 	end
 	data.Rank = math.clamp(math.floor(tonumber(data.Rank) or 1), 1, #Config.Ranks)
 	return data

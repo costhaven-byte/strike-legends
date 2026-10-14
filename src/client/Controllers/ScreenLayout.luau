@@ -48,6 +48,20 @@ local COMPACT = {
 	["TrialUI.Tracker.Dots"] = { Position = UDim2.fromOffset(6, 19), Size = UDim2.new(1, -12, 0, 13) },
 	["TrialUI.Tracker.Dots.*"] = { Size = UDim2.fromOffset(13, 13) },
 	["TrialUI.Tracker.ThrowsLeft"] = { Position = UDim2.fromOffset(6, 33), Size = UDim2.new(1, -12, 0, 10) },
+	-- Lane modifier pill and the "almost there" bar: small, on the left under the menu buttons
+	["EventUI.ModifierPill"] = {
+		AnchorPoint = Vector2.new(0, 0),
+		Position = UDim2.fromOffset(12, 192),
+		Size = UDim2.fromOffset(150, 24),
+	},
+	["EventUI.AlmostBar"] = {
+		AnchorPoint = Vector2.new(0, 0),
+		Position = UDim2.fromOffset(12, 220),
+		Size = UDim2.fromOffset(150, 22),
+	},
+	["EventUI.Popup"] = { Position = UDim2.new(0.5, 0, 0, 150), Size = UDim2.new(0.7, 0, 0, 44) },
+	["EventUI.Banner"] = { Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.new(0.8, 0, 0, 90) },
+
 	["TrialUI.Intro"] = { Size = UDim2.fromScale(0.9, 0.92) },
 
 	-- Popups use most of the screen
@@ -117,7 +131,7 @@ end
 function ScreenLayout:Start()
 	playerGui = player:WaitForChild("PlayerGui") :: PlayerGui
 	local hud = playerGui:WaitForChild("HUD") :: ScreenGui
-	for _, name in { "ThrowUI", "BallsUI", "DailyUI", "TrialUI" } do
+	for _, name in { "ThrowUI", "BallsUI", "DailyUI", "TrialUI", "EventUI" } do
 		playerGui:WaitForChild(name)
 	end
 

@@ -1,4 +1,5 @@
 -- Builds a rack of 10 pins, knocks them flying and resets them. Used by the client for throw visuals.
+-- Lane surprises change the rack too: a Golden Pin, bigger pins (Giant Pins) and sliding pins (Moving Pins).
 local Config = require(script.Parent.Parent.Config)
 
 local LANE = Config.Lane
@@ -23,8 +24,8 @@ local function makePart(name: string, shape: Enum.PartType, size: Vector3, color
 end
 
 -- One pin: wide body, thin neck with a neon stripe, round head. Base is the root part.
-local function buildPin(baseCFrame: CFrame): Model
-	local h, w = LANE.PinHeight, LANE.PinWidth
+local function buildPin(baseCFrame: CFrame, scale: number): Model
+	local h, w = LANE.PinHeight * scale, LANE.PinWidth * scale
 	local bodyH, neckH = h * 0.58, h * 0.2
 	local headD = w * 0.7
 
@@ -84,8 +85,60 @@ function PinRack.new(headPinCFrame: CFrame, parent: Instance)
 	self.Folder.Name = "Pins"
 	self.Folder.Parent = parent
 	self.Pins = {}
+	self.Scale = 1 -- pin size (Giant Pins)
+	self.Offset = 0 -- studs the rack has slid sideways (Moving Pins)
+	self.Golden = 0 -- which pin is golden (0 = none)
 	self:Reset()
 	return self
+end
+
+-- Golden Pin look: shiny gold, glowing and sparkling
+local function makeGolden(pin: Model)
+	local gold = Config.GoldenPin.Color
+	for _, name in { "Body", "Head" } do
+		local part = pin:FindFirstChild(name) :: BasePart
+		part.Color = gold
+		part.Material = Enum.Material.Foil
+	end
+	local neck = pin:FindFirstChild("Neck") :: BasePart
+	neck.Color = Color3.new(1, 1, 1)
+	local body = pin.PrimaryPart :: BasePart
+	local light = Instance.new("PointLight")
+	light.Color = gold
+	light.Range = 10
+	light.Brightness = 3
+	light.Parent = body
+	local sparkles = Instance.new("ParticleEmitter")
+	sparkles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	sparkles.Color = ColorSequence.new(gold, Color3.new(1, 1, 1))
+	sparkles.LightEmission = 1
+	sparkles.Size = NumberSequence.new(0.45, 0)
+	sparkles.Lifetime = NumberRange.new(0.6, 1.1)
+	sparkles.Speed = NumberRange.new(1, 2.5)
+	sparkles.SpreadAngle = Vector2.new(180, 180)
+	sparkles.Rate = 14
+	sparkles.Parent = body
+end
+
+-- Where pin `index` stands, including the Moving Pins slide
+function PinRack:SpotFor(index: number): CFrame
+	return self.HeadPinCFrame * CFrame.new(PinRack.Offsets()[index] + Vector3.new(self.Offset, 0, 0))
+end
+
+-- Slides every standing pin sideways (Moving Pins). Knocked pins are left to fly.
+function PinRack:SetOffset(offset: number)
+	local delta = offset - self.Offset
+	if math.abs(delta) < 0.001 then
+		return
+	end
+	self.Offset = offset
+	local shift = self.HeadPinCFrame.RightVector * delta
+	for _, pin in self.Pins do
+		local body = pin.PrimaryPart
+		if body and body.Anchored then
+			pin:PivotTo(pin:GetPivot() + shift)
+		end
+	end
 end
 
 -- Puts all 10 pins back, standing and anchored (they only move when knocked).
@@ -93,10 +146,12 @@ function PinRack:Reset()
 	self.Folder:ClearAllChildren()
 	table.clear(self.Pins)
 
-	for index, offset in PinRack.Offsets() do
-		local spot = self.HeadPinCFrame * CFrame.new(offset)
-		local pin = buildPin(spot)
+	for index in PinRack.Offsets() do
+		local pin = buildPin(self:SpotFor(index), self.Scale)
 		pin.Name = "Pin" .. index
+		if index == self.Golden then
+			makeGolden(pin)
+		end
 		pin.PrimaryPart.Anchored = true
 		pin.Parent = self.Folder
 		self.Pins[index] = pin

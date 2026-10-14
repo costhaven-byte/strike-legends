@@ -277,6 +277,35 @@ function LaneFx.Trait(trait, position: Vector3, ball: BasePart?)
 	end
 end
 
+-- The Golden Pin going down: a gold shockwave, a shower of gold sparkles, fireworks and a big bang
+function LaneFx.GoldenBurst(lane: Model, position: Vector3)
+	local gold = Config.GoldenPin.Color
+	LaneFx.Trait({ Fx = "Ring", FxSize = 34, Color = gold, Sound = "RevealBig", Pitch = 1 }, position)
+	local part = anchor(position + Vector3.new(0, 1.5, 0), 3)
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Texture = SPARKLE
+	emitter.Color = ColorSequence.new(gold, Color3.new(1, 1, 1))
+	emitter.LightEmission = 1
+	emitter.Size = NumberSequence.new(1.3, 0)
+	emitter.Lifetime = NumberRange.new(0.8, 1.6)
+	emitter.Speed = NumberRange.new(18, 34)
+	emitter.SpreadAngle = Vector2.new(70, 70)
+	emitter.EmissionDirection = Enum.NormalId.Top
+	emitter.Acceleration = Vector3.new(0, -20, 0)
+	emitter.Drag = 1.5
+	emitter.Enabled = false
+	emitter.Parent = part
+	emitter:Emit(120)
+	local light = Instance.new("PointLight")
+	light.Color = gold
+	light.Range = 40
+	light.Brightness = 8
+	light.Parent = part
+	TweenService:Create(light, TweenInfo.new(1.5), { Brightness = 0 }):Play()
+	Sfx.PlayAt("Firework", part, 0.8)
+	LaneFx.Fireworks(lane, 4)
+end
+
 -- Glow of the colour of the current streak tier on each of the lane's light strips (0 = back to normal)
 local streakState: { [Model]: any } = {}
 

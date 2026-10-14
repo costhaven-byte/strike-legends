@@ -50,6 +50,11 @@ local function aimToX(aim: number): number
 	return aim / THROW.GutterAim * LANE.LaneHalfWidth * 0.9
 end
 
+-- The other way round: studs from lane centre to an aim value
+local function xToAim(x: number): number
+	return x / (LANE.LaneHalfWidth * 0.9) * THROW.GutterAim
+end
+
 -- Pins closest to the ball's line fall first, with a little shuffle so patterns vary.
 local function pickPins(count: number, hitX: number): { number }
 	local scored = {}
@@ -69,9 +74,20 @@ local function pickPins(count: number, hitX: number): { number }
 end
 
 -- ball: the equipped ball row from Config.Balls (its Forgiveness and Traits change the result)
-function ThrowResolver.Resolve(aim: number, power: number, ball): Result
+-- lane: lane modifier effects for this throw:
+--   RackOffset(rollTime) = studs the pins have slid sideways when the ball arrives (Moving Pins)
+--   AimBonus = extra perfect-aim zone (Giant Pins)
+export type LaneEffects = {
+	RackOffset: ((rollTime: number) -> number)?,
+	AimBonus: number?,
+}
+
+function ThrowResolver.Resolve(aim: number, power: number, ball, lane: LaneEffects?): Result
 	local rollTime = THROW.RollTimeSlow + (THROW.RollTimeFast - THROW.RollTimeSlow) * power
-	local forgiveness = ball.Forgiveness or 0
+	local forgiveness = (ball.Forgiveness or 0) + (lane and lane.AimBonus or 0)
+	-- Moving Pins: aim is judged against where the pins will be, not where they are now
+	local rackOffset = if lane and lane.RackOffset then lane.RackOffset(rollTime) else 0
+	local rackAim = xToAim(rackOffset)
 
 	local function gutterBall(): Result
 		return {
@@ -107,7 +123,7 @@ function ThrowResolver.Resolve(aim: number, power: number, ball): Result
 		table.insert(fired, "Heavy")
 	end
 
-	local quality = aimQuality(aimUsed, forgiveness) * power1
+	local quality = aimQuality(aimUsed - rackAim, forgiveness) * power1
 	local count
 	if quality >= 0.999 then
 		count = 10 -- a perfect throw always strikes
@@ -128,7 +144,7 @@ function ThrowResolver.Resolve(aim: number, power: number, ball): Result
 
 	-- Perfect Strikes still need truly perfect timing: traits never make them easier
 	local perfect = count == 10
-		and math.abs(aim) <= THROW.PerfectStrikeAim
+		and math.abs(aim - rackAim) <= THROW.PerfectStrikeAim
 		and power >= THROW.PerfectStrikePowerMin
 		and power <= THROW.PerfectStrikePowerMax
 
@@ -143,7 +159,7 @@ function ThrowResolver.Resolve(aim: number, power: number, ball): Result
 	return {
 		Count = count,
 		Tier = tier,
-		Pins = pickPins(count, hitX),
+		Pins = pickPins(count, hitX - rackOffset), -- pins nearest the ball, where the rack is at impact
 		HitX = hitX,
 		Gutter = false,
 		RollTime = rollTime,

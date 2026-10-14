@@ -180,6 +180,22 @@ function BallService.GiveCrate(player: Player, crate)
 	}
 end
 
+-- Free crates (Config.FreeCrates): saved as a count and opened from the shop whenever the player likes
+function BallService.GiveFreeCrate(player: Player)
+	PlayerDataService.Add(player, "FreeCrates", 1)
+end
+
+-- Counts a strike toward the next free crate. Returns true when this strike earned one.
+function BallService.AddCrateStrike(player: Player): boolean
+	local strikes = (PlayerDataService.Get(player, "CrateStrikes") or 0) + 1
+	local earned = strikes >= Config.FreeCrates.StrikesPerCrate
+	PlayerDataService.Set(player, "CrateStrikes", if earned then 0 else strikes)
+	if earned then
+		BallService.GiveFreeCrate(player)
+	end
+	return earned
+end
+
 local function openCrate(player: Player, crateId: any)
 	local crate = typeof(crateId) == "string" and Balls.GetCrate(crateId)
 	if not crate then
@@ -191,12 +207,18 @@ local function openCrate(player: Player, crateId: any)
 	if os.clock() - (lastOpen[player] or 0) < CRATE_COOLDOWN then
 		return { Ok = false, Error = "Slow down!" }
 	end
-	if (PlayerDataService.Get(player, "Coins") or 0) < crate.Price then
+	-- A waiting free crate is used before any coins are spent
+	local useFree = crate.Id == Config.FreeCrates.CrateId and (PlayerDataService.Get(player, "FreeCrates") or 0) > 0
+	if not useFree and (PlayerDataService.Get(player, "Coins") or 0) < crate.Price then
 		return { Ok = false, Error = "Not enough coins" }
 	end
 	lastOpen[player] = os.clock()
 
-	PlayerDataService.Add(player, "Coins", -crate.Price)
+	if useFree then
+		PlayerDataService.Add(player, "FreeCrates", -1)
+	else
+		PlayerDataService.Add(player, "Coins", -crate.Price)
+	end
 	return BallService.GiveCrate(player, crate)
 end
 

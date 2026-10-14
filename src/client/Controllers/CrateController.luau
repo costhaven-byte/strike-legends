@@ -367,11 +367,16 @@ function CrateController:Start()
 		busy = false
 	end
 
+	-- Free crates (from strikes and Golden Pins) are used before coins on their crate type
+	local function hasFree(crate): boolean
+		return crate.Id == Config.FreeCrates.CrateId and (player:GetAttribute("FreeCrates") or 0) > 0
+	end
+
 	local function buy(crate)
 		if busy then
 			return
 		end
-		if (player:GetAttribute("Coins") or 0) < crate.Price then
+		if not hasFree(crate) and (player:GetAttribute("Coins") or 0) < crate.Price then
 			task.spawn(showToast, "Not enough coins")
 			return
 		end
@@ -429,11 +434,20 @@ function CrateController:Start()
 			buy(crate)
 		end)
 
+		local coinIcon = buyButton:FindFirstChild("Coin") or buyButton:FindFirstChild("Icon")
 		local function refreshAfford()
-			local canAfford = (player:GetAttribute("Coins") or 0) >= crate.Price
+			local free = hasFree(crate)
+			local canAfford = free or (player:GetAttribute("Coins") or 0) >= crate.Price
 			buyButton.BackgroundColor3 = if canAfford then CAN_AFFORD else CANT_AFFORD
+			buyButton.Price.Text = if free
+				then ("OPEN FREE (%d)"):format(player:GetAttribute("FreeCrates"))
+				else formatNumber(crate.Price)
+			if coinIcon and coinIcon:IsA("GuiObject") then
+				coinIcon.Visible = not free
+			end
 		end
 		player:GetAttributeChangedSignal("Coins"):Connect(refreshAfford)
+		player:GetAttributeChangedSignal("FreeCrates"):Connect(refreshAfford)
 		refreshAfford()
 
 		card.Parent = cards
