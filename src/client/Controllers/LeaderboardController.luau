@@ -1,4 +1,5 @@
--- Draws the leaderboard boards in the lounge (Workspace.Leaderboards, built in Studio).
+-- Draws the leaderboard wall screen (Workspace.Leaderboards.Screen.Board, built in Studio).
+-- One panel per board in Board.Panels: Row1-3 are the crown rows, Row4-10 plain rows, You is pinned at the bottom.
 -- The server shares the top scores in ReplicatedStorage.Leaderboards; this script adds your own live
 -- score on top, so your row and position update right away instead of waiting for the next refresh.
 local HttpService = game:GetService("HttpService")
@@ -14,29 +15,24 @@ local player = Players.LocalPlayer
 
 local LB = Config.Leaderboards
 local ME_COLOR = Color3.fromRGB(60, 230, 255)
-local PLACE_COLORS = {
-	Color3.fromRGB(255, 210, 50),
-	Color3.fromRGB(220, 225, 240),
-	Color3.fromRGB(255, 150, 70),
-}
-local ROW_COLOR = Color3.fromRGB(255, 255, 255)
+local NAME_COLOR = Color3.fromRGB(255, 255, 255)
 
 local LeaderboardController = {}
 
--- 1234567 -> "1.23M", 12345 -> "12,345"
+local lastUpdate = 0 -- server time of the newest board refresh
+
+-- 1234567 -> "1,234,567"
 local function formatNumber(n: number): string
-	n = math.floor(n)
-	if n >= 1e9 then
-		return ("%.2fB"):format(n / 1e9)
-	elseif n >= 1e6 then
-		return ("%.2fM"):format(n / 1e6)
-	end
-	local text = tostring(n)
+	local text = tostring(math.floor(n))
 	repeat
 		local count
 		text, count = text:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
 	until count == 0
 	return text
+end
+
+local function headshot(userId: number): string
+	return ("rbxthumb://type=AvatarHeadShot&id=%d&w=150&h=150"):format(userId)
 end
 
 -- Your current score for a board, straight from your Player attributes
@@ -47,24 +43,25 @@ local function myScore(board): number
 	return math.floor(player:GetAttribute(board.Stat) or 0)
 end
 
-local function setupBoard(board, surface: SurfaceGui, data: Folder)
-	local rows = surface:WaitForChild("Rows") :: Frame
-	local template = surface:WaitForChild("RowTemplate") :: Frame
-	local you = surface:WaitForChild("You") :: Frame
-	local subtitle = surface:WaitForChild("Subtitle") :: TextLabel
-	local loading = surface:WaitForChild("Loading") :: TextLabel
-	surface:WaitForChild("Title").Text = board.Title
-	template.Visible = false
+local function setValue(holder: Frame, score: number?, showCoin: boolean)
+	holder.Score.Text = if score then formatNumber(score) else ""
+	holder.Coin.Visible = showCoin and score ~= nil
+end
+
+local function setupPanel(board, panel: Frame, data: Folder)
+	local rows = panel:WaitForChild("Rows")
+	local you = panel:WaitForChild("You")
+	local loading = panel:WaitForChild("Loading") :: TextLabel
+	local subtitle = panel:WaitForChild("Subtitle") :: TextLabel
+	panel:WaitForChild("Title").Text = board.Title
+	panel.Columns.ValueLabel.Text = board.Column
 
 	local rowFrames = {}
 	for i = 1, LB.ShowTop do
-		local row = template:Clone()
-		row.Name = "Row" .. i
-		row.LayoutOrder = i
-		row.Visible = false
-		row.Parent = rows
-		rowFrames[i] = row
+		rowFrames[i] = rows:WaitForChild("Row" .. i)
 	end
+	you.AvatarFrame.Avatar.Image = headshot(player.UserId)
+	you.PlayerName.Text = player.DisplayName
 
 	local function render()
 		local raw = data:GetAttribute(board.Id)
@@ -77,6 +74,7 @@ local function setupBoard(board, surface: SurfaceGui, data: Folder)
 			return
 		end
 		loading.Visible = false
+		lastUpdate = math.max(lastUpdate, decoded.UpdatedAt or 0)
 
 		-- Server list with your own entry swapped for your live score
 		local entries = {}
@@ -110,32 +108,29 @@ local function setupBoard(board, surface: SurfaceGui, data: Folder)
 
 		for i, row in rowFrames do
 			local entry = entries[i]
-			row.Visible = entry ~= nil
-			if entry then
-				local color = if entry.Me then ME_COLOR else PLACE_COLORS[i] or ROW_COLOR
-				row.Rank.Text = "#" .. i
-				row.Rank.TextColor3 = PLACE_COLORS[i] or ROW_COLOR
-				row.PlayerName.Text = if entry.Me
-					then player.DisplayName
-					else decoded.Names[tostring(entry.UserId)] or "Player"
-				row.PlayerName.TextColor3 = color
-				row.Score.Text = formatNumber(entry.Score)
-				row.Score.TextColor3 = color
-				row.Highlight.Visible = entry.Me == true
-			end
+			-- Empty places keep their frame so the board never looks broken
+			row.PlayerName.Text = if not entry
+				then "-"
+				elseif entry.Me then player.DisplayName
+				else decoded.Names[tostring(entry.UserId)] or "Player"
+			row.PlayerName.TextColor3 = if entry and entry.Me then ME_COLOR else NAME_COLOR
+			row.AvatarFrame.Avatar.Image = if entry then headshot(entry.UserId) else ""
+			setValue(row.Value, entry and entry.Score, board.ShowCoin == true and i <= 3)
 		end
 
-		you.Rank.Text = if score <= 0 then "-" elseif myPlace then "#" .. myPlace else "#" .. LB.FetchSize .. "+"
-		you.PlayerName.Text = "YOU"
-		you.Score.Text = formatNumber(score)
+		you.Rank.Text = if score <= 0
+			then "-"
+			elseif myPlace then "#" .. formatNumber(myPlace)
+			else "#" .. LB.FetchSize .. "+"
+		setValue(you.Value, score, board.ShowCoin == true)
 	end
 
 	local function renderSubtitle()
 		if board.Weekly then
 			local left = Calendar.SecondsUntilNextWeek(Workspace:GetServerTimeNow())
-			subtitle.Text = "RESETS IN " .. Calendar.FormatCountdown(left):upper()
+			subtitle.Text = "Resets in " .. Calendar.FormatCountdown(left)
 		else
-			subtitle.Text = "ALL TIME"
+			subtitle.Text = "All time"
 		end
 	end
 
@@ -154,18 +149,37 @@ local function setupBoard(board, surface: SurfaceGui, data: Folder)
 	end)
 end
 
+-- "Updated 12s ago" in the header
+local function runLiveLabel(label: TextLabel)
+	while true do
+		if lastUpdate <= 0 then
+			label.Text = "Loading..."
+		else
+			local ago = math.max(0, math.floor(Workspace:GetServerTimeNow() - lastUpdate))
+			label.Text = if ago < 60 then ("Updated %ds ago"):format(ago) else ("Updated %dm ago"):format(ago // 60)
+		end
+		task.wait(1)
+	end
+end
+
 function LeaderboardController:Start()
 	local data = ReplicatedStorage:WaitForChild("Leaderboards") :: Folder
-	local boards = Workspace:WaitForChild("Leaderboards")
+	local screen = Workspace:WaitForChild("Leaderboards"):WaitForChild("Screen", 10)
+	local surface = screen and screen:WaitForChild("Board", 10)
+	if not surface then
+		warn("[LeaderboardController] Missing Workspace.Leaderboards.Screen.Board")
+		return
+	end
+	local panels = surface:WaitForChild("Panels")
 	for _, board in LB.Boards do
-		local part = boards:WaitForChild(board.Id, 10)
-		local surface = part and part:WaitForChild("Board", 10) :: SurfaceGui?
-		if surface then
-			task.spawn(setupBoard, board, surface, data)
+		local panel = panels:WaitForChild(board.Id, 10)
+		if panel then
+			task.spawn(setupPanel, board, panel, data)
 		else
-			warn("[LeaderboardController] Missing board in Workspace.Leaderboards: " .. board.Id)
+			warn("[LeaderboardController] Missing leaderboard panel: " .. board.Id)
 		end
 	end
+	task.spawn(runLiveLabel, surface.Header.Live.Updated)
 end
 
 return LeaderboardController

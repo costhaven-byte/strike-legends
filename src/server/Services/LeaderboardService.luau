@@ -152,6 +152,7 @@ local function refreshBoard(board)
 			Entries = entries, -- { {userId, score}, ... } best first
 			Names = topNames,
 			Full = #page >= LB.FetchSize, -- more scores exist below the last entry
+			UpdatedAt = workspace:GetServerTimeNow(), -- for the "Updated 12s ago" label
 		})
 	)
 end

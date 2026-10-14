@@ -696,11 +696,25 @@ Config.Leaderboards = {
 	FetchSize = 100, -- how many top scores to read; your position shows as "100+" below this
 	ShowTop = 10,
 	Boards = {
-		{ Id = "Pins", Title = "MOST PINS", Stat = "LifetimePins", Store = "LB_LifetimePins" },
-		{ Id = "Streak", Title = "BEST STREAK", Stat = "BestStreak", Store = "LB_BestStreak" },
+		{
+			Id = "Pins",
+			Title = "MOST LIFETIME PINS",
+			Column = "PINS",
+			Stat = "LifetimePins",
+			Store = "LB_LifetimePins",
+		},
+		{
+			Id = "Streak",
+			Title = "BEST STRIKE STREAK",
+			Column = "STREAK",
+			Stat = "BestStreak",
+			Store = "LB_BestStreak",
+		},
 		{
 			Id = "Weekly",
 			Title = "WEEKLY COINS",
+			Column = "COINS",
+			ShowCoin = true, -- coin icon next to the top 3 scores and your own
 			Stat = "WeeklyCoins",
 			Store = "LB_WeeklyCoins",
 			Weekly = true,
