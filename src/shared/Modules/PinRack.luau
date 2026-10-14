@@ -1,5 +1,7 @@
 -- Builds a rack of 10 pins, knocks them flying and resets them. Used by the client for throw visuals.
 -- Lane surprises change the rack too: a Golden Pin, bigger pins (Giant Pins) and sliding pins (Moving Pins).
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local Config = require(script.Parent.Parent.Config)
 
 local LANE = Config.Lane
@@ -63,6 +65,109 @@ local function buildPin(baseCFrame: CFrame, scale: number): Model
 	return pin
 end
 
+-- Designed pins: mesh templates in ReplicatedStorage.PinModels (StandardPin, GoldenPin, GoldenStar).
+-- Until those are uploaded, the simple part pins above are used instead.
+-- Neck rings from the designs: height and width are fractions of the pin's height and width.
+local STANDARD_RINGS = {
+	{ Name = "RingBottom", Height = 0.621, Width = 0.63, Color = Color3.fromRGB(34, 242, 255) },
+	{ Name = "RingTop", Height = 0.707, Width = 0.63, Color = Color3.fromRGB(255, 43, 214) },
+}
+local GOLDEN_RINGS = {
+	{ Name = "BandLower", Height = 0.625, Width = 0.44, Color = Color3.fromRGB(255, 244, 176) },
+	{ Name = "BandUpper", Height = 0.685, Width = 0.39, Color = Color3.fromRGB(255, 244, 176) },
+}
+local GOLD_BODY = Color3.fromRGB(255, 207, 74)
+local GOLD_AURA = Color3.fromRGB(255, 226, 138)
+local GOLD_STAR = Color3.fromRGB(255, 246, 194)
+
+-- A part that rides along with the pin: welded, weightless, never collides
+local function attach(body: BasePart, part: BasePart)
+	part.Anchored = false
+	part.CanCollide = false
+	part.CanQuery = false
+	part.CanTouch = false
+	part.Massless = true
+	part.CastShadow = false
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = body
+	weld.Part1 = part
+	weld.Parent = part
+	part.Parent = body.Parent
+end
+
+local function buildMeshPin(baseCFrame: CFrame, scale: number, golden: boolean): Model?
+	local models = ReplicatedStorage:FindFirstChild("PinModels")
+	local template = models and models:FindFirstChild(if golden then "GoldenPin" else "StandardPin")
+	if not template then
+		return nil
+	end
+	local h, w = LANE.PinHeight * scale, LANE.PinWidth * scale
+
+	local pin = Instance.new("Model")
+	pin.Name = "Pin"
+	local body = template:Clone() :: MeshPart
+	body.Name = "Body"
+	body.Size = Vector3.new(w, h, w)
+	body.CFrame = baseCFrame * CFrame.new(0, h / 2, 0)
+	body.CustomPhysicalProperties = PhysicalProperties.new(LANE.PinDensity, 0.4, 0.3)
+	body.Parent = pin
+	pin.PrimaryPart = body
+
+	for _, ring in if golden then GOLDEN_RINGS else STANDARD_RINGS do
+		local part = Instance.new("Part")
+		part.Name = ring.Name
+		part.Shape = Enum.PartType.Cylinder
+		part.Size = Vector3.new(h * 0.03, w * ring.Width, w * ring.Width)
+		part.CFrame = baseCFrame * CFrame.new(0, h * ring.Height, 0) * UPRIGHT
+		part.Color = ring.Color
+		part.Material = Enum.Material.Neon
+		attach(body, part)
+	end
+
+	if golden then
+		body.Color = GOLD_BODY
+		body.Material = Enum.Material.Foil
+
+		-- The design's three glow shells, merged into one see-through shell
+		local aura = template:Clone() :: MeshPart
+		aura.Name = "Aura"
+		aura.Size = Vector3.new(w * 1.38, h * 1.09, w * 1.38)
+		aura.CFrame = body.CFrame
+		aura.Color = GOLD_AURA
+		aura.Material = Enum.Material.Neon
+		aura.Transparency = 0.82
+		attach(body, aura)
+
+		local starTemplate = models:FindFirstChild("GoldenStar") :: MeshPart?
+		if starTemplate then
+			local star = starTemplate:Clone()
+			star.Name = "Star"
+			star.Size = starTemplate.Size * scale
+			star.CFrame = baseCFrame * CFrame.new(0, h * 1.22, 0)
+			star.Color = GOLD_STAR
+			star.Material = Enum.Material.Neon
+			attach(body, star)
+		end
+
+		-- Glow on the deck under the pin. Not welded, so it stays put when the pin flies.
+		local glow = Instance.new("Part")
+		glow.Name = "FloorGlow"
+		glow.Shape = Enum.PartType.Cylinder
+		glow.Size = Vector3.new(0.04, w * 2.8, w * 2.8)
+		glow.CFrame = baseCFrame * CFrame.new(0, 0.03, 0) * UPRIGHT
+		glow.Color = GOLD_AURA
+		glow.Material = Enum.Material.Neon
+		glow.Transparency = 0.6
+		glow.Anchored = true
+		glow.CanCollide = false
+		glow.CanQuery = false
+		glow.CanTouch = false
+		glow.CastShadow = false
+		glow.Parent = pin
+	end
+	return pin
+end
+
 -- Standard triangle: row 0 has the head pin, row 3 has four pins.
 -- Offsets are relative to the head pin; -Z points down the lane.
 function PinRack.Offsets(): { Vector3 }
@@ -95,13 +200,16 @@ end
 -- Golden Pin look: shiny gold, glowing and sparkling
 local function makeGolden(pin: Model)
 	local gold = Config.GoldenPin.Color
-	for _, name in { "Body", "Head" } do
-		local part = pin:FindFirstChild(name) :: BasePart
-		part.Color = gold
-		part.Material = Enum.Material.Foil
+	-- Simple part pins only; the designed golden pin already has its own colours
+	local neck = pin:FindFirstChild("Neck") :: BasePart?
+	if neck then
+		neck.Color = Color3.new(1, 1, 1)
+		for _, name in { "Body", "Head" } do
+			local part = pin:FindFirstChild(name) :: BasePart
+			part.Color = gold
+			part.Material = Enum.Material.Foil
+		end
 	end
-	local neck = pin:FindFirstChild("Neck") :: BasePart
-	neck.Color = Color3.new(1, 1, 1)
 	local body = pin.PrimaryPart :: BasePart
 	local light = Instance.new("PointLight")
 	light.Color = gold
@@ -147,11 +255,15 @@ function PinRack:Reset()
 	table.clear(self.Pins)
 
 	for index in PinRack.Offsets() do
-		local pin = buildPin(self:SpotFor(index), self.Scale)
-		pin.Name = "Pin" .. index
-		if index == self.Golden then
+		local golden = index == self.Golden
+		local pin = buildMeshPin(self:SpotFor(index), self.Scale, golden)
+		if not pin then
+			pin = buildPin(self:SpotFor(index), self.Scale)
+		end
+		if golden then
 			makeGolden(pin)
 		end
+		pin.Name = "Pin" .. index
 		pin.PrimaryPart.Anchored = true
 		pin.Parent = self.Folder
 		self.Pins[index] = pin

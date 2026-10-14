@@ -13,6 +13,7 @@ local PinRack = require(Shared.Modules.PinRack)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Balls = require(Shared.Modules.Balls)
 local Modifiers = require(Shared.Modules.Modifiers)
+local Progression = require(Shared.Modules.Progression)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local CameraShake = require(Modules.CameraShake)
 local LaneFx = require(Modules.LaneFx)
@@ -314,7 +315,58 @@ local function playThrow(data)
 	end)
 end
 
+-- The lane scoreboard's STREAK and RANK screens show the lane owner's numbers (Studio-built labels).
+-- Only updates when the owner or their numbers change.
+local function watchBoard(lane: Model)
+	local board = lane:FindFirstChild("Scoreboard")
+	local streakLabel = board and board:FindFirstChild("StreakValue", true) :: TextLabel?
+	local rankLabel = board and board:FindFirstChild("RankValue", true) :: TextLabel?
+	if not streakLabel or not rankLabel then
+		return
+	end
+	local connections = {}
+	local function refresh(owner: Player?)
+		if not owner then
+			streakLabel.Text = "-"
+			rankLabel.Text = "-"
+			rankLabel.TextColor3 = Color3.new(1, 1, 1)
+			return
+		end
+		local streak = owner:GetAttribute("Streak") or 0
+		local tier = Progression.GetStreakTier(streak)
+		streakLabel.Text = tostring(streak)
+		streakLabel.TextColor3 = if tier and streak >= 2 then tier.Color else Color3.new(1, 1, 1)
+		local rank = Progression.GetRank(owner:GetAttribute("Rank") or 1)
+		rankLabel.Text = string.upper(rank.Name)
+		rankLabel.TextColor3 = rank.Color
+	end
+	local function onOwner()
+		for _, connection in connections do
+			connection:Disconnect()
+		end
+		table.clear(connections)
+		local owner = Players:GetPlayerByUserId(lane:GetAttribute("OwnerId") or 0)
+		if owner then
+			for _, key in { "Streak", "Rank" } do
+				table.insert(
+					connections,
+					owner:GetAttributeChangedSignal(key):Connect(function()
+						refresh(owner)
+					end)
+				)
+			end
+		end
+		refresh(owner)
+	end
+	lane:GetAttributeChangedSignal("OwnerId"):Connect(onOwner)
+	onOwner()
+end
+
 function LaneVisuals:Start()
+	for _, lane in LaneUtil.GetLanes() do
+		watchBoard(lane)
+	end
+
 	for _, lane in LaneUtil.GetLanes() do
 		local pinSpot = lane.PinSpot :: BasePart
 		racks[lane] = PinRack.new(pinSpot.CFrame * CFrame.new(0, -pinSpot.Size.Y / 2, 0), lane)
