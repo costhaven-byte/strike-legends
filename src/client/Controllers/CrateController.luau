@@ -1,4 +1,4 @@
--- The crate shop (prices, visible odds, pity counter) and the crate opening reel.
+-- The crate shop (prices, visible odds, pity counter, the "next unlock" goal) and the crate opening reel.
 -- The UI itself (StarterGui.BallsUI) is built in Studio; this script fills it in and animates it.
 -- The server picks the ball; the reel only shows what the server already decided.
 local Players = game:GetService("Players")
@@ -116,6 +116,106 @@ function CrateController:Start()
 		end
 		pityLabel.Text = "GUARANTEED:  " .. table.concat(parts, "   ·   ") .. " crates"
 	end
+
+	-- The "NEXT UNLOCK" card: the closest pity guarantee that can still give you a ball you don't own,
+	-- how many crates and coins away it is, and which balls it could be. Display only; the server rolls crates.
+	local goal = cards:WaitForChild("Goal") :: Frame
+	local goalList = goal:WaitForChild("List") :: Frame
+	local goalRow = goalList:WaitForChild("RowTemplate") :: Frame
+	local cheapest = Config.Crates[1]
+	for _, crate in Config.Crates do
+		if crate.Price < cheapest.Price then
+			cheapest = crate
+		end
+	end
+
+	local function lockedBalls(minRarity: number, owned)
+		local list = {}
+		for _, ball in Balls.Sorted() do
+			if ball.InCrates ~= false and not owned[ball.Id] and Balls.RarityIndex(ball.Rarity) >= minRarity then
+				table.insert(list, ball)
+			end
+		end
+		return list
+	end
+
+	local function refreshGoal()
+		local owned = Balls.DecodeOwned(player:GetAttribute("OwnedBalls"))
+		local coins = player:GetAttribute("Coins") or 0
+
+		-- Closest guarantee that still has locked balls behind it
+		local best, bestLeft, bestLocked = nil, math.huge, nil
+		for _, pity in Config.Pity do
+			local locked = lockedBalls(Balls.RarityIndex(pity.Rarity), owned)
+			local left = math.max(pity.Crates - (player:GetAttribute(pity.Counter) or 0), 1)
+			if #locked > 0 and left < bestLeft then
+				best, bestLeft, bestLocked = pity, left, locked
+			end
+		end
+
+		for _, child in goalList:GetChildren() do
+			if child:IsA("Frame") and child ~= goalRow then
+				child:Destroy()
+			end
+		end
+
+		local target, bar, sub, coinsLabel = goal.Target, goal.Bar, goal.Sub, goal.Coins
+		if not best then
+			local anyLocked = lockedBalls(1, owned)
+			target.Text = if #anyLocked == 0 then "ALL BALLS!" else "NEW BALLS"
+			target.TextColor3 = Color3.fromRGB(255, 240, 90)
+			sub.Text = if #anyLocked == 0 then "You own every ball" else "Keep opening crates"
+			bar.Visible = false
+			coinsLabel.Text = ""
+			bestLocked = anyLocked
+		else
+			local rarity = Balls.GetRarity(best.Rarity)
+			local done = best.Crates - bestLeft
+			target.Text = best.Rarity:upper() .. "+"
+			target.TextColor3 = rarity.Color
+			sub.Text = ("guaranteed in %d crate%s"):format(bestLeft, if bestLeft == 1 then "" else "s")
+			bar.Visible = true
+			bar.Fill.BackgroundColor3 = rarity.Color
+			bar.Fill.Size = UDim2.fromScale(math.clamp(done / best.Crates, 0.03, 1), 1)
+			bar.Count.Text = ("%d / %d CRATES"):format(done, best.Crates)
+			local cost = bestLeft * cheapest.Price
+			coinsLabel.Text = if coins >= cost
+				then "You can afford it now!"
+				else ("%s coins to go"):format(formatNumber(cost - coins))
+		end
+
+		goal.CouldBe.Visible = #bestLocked > 0
+		for i = 1, math.min(#bestLocked, 4) do
+			local ball = bestLocked[#bestLocked - i + 1] -- the most likely ones (lowest rarity) first
+			local row = goalRow:Clone()
+			row.Name = ball.Id
+			row.LayoutOrder = i
+			row.Visible = true
+			row.Dot.BackgroundColor3 = ball.Color
+			row.BallName.Text = ('%s  <font color="#%s">%s</font>'):format(
+				ball.Name,
+				Balls.GetRarity(ball.Rarity).Color:ToHex(),
+				ball.Rarity:upper()
+			)
+			row.Parent = goalList
+		end
+	end
+	-- Centre the cards when they fit; when they don't (phones), line them up from the left so you can scroll
+	local cardLayout = cards:WaitForChild("UIListLayout") :: UIListLayout
+	local function alignCards()
+		local fits = cardLayout.AbsoluteContentSize.X <= cards.AbsoluteSize.X
+		cardLayout.HorizontalAlignment = if fits then Enum.HorizontalAlignment.Center else Enum.HorizontalAlignment.Left
+	end
+	cardLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(alignCards)
+	cards:GetPropertyChangedSignal("AbsoluteSize"):Connect(alignCards)
+	alignCards()
+
+	for _, pity in Config.Pity do
+		player:GetAttributeChangedSignal(pity.Counter):Connect(refreshGoal)
+	end
+	player:GetAttributeChangedSignal("OwnedBalls"):Connect(refreshGoal)
+	player:GetAttributeChangedSignal("Coins"):Connect(refreshGoal)
+	refreshGoal()
 
 	-- Plays the reel, then the reveal. Returns when the player taps Continue.
 	local function playOpening(crate, result)

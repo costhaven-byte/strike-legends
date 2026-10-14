@@ -114,6 +114,7 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 		Streak = streak,
 	})
 
+	BallService.HideHeldBall(player, result.RollTime + Config.Lane.PinResetDelay)
 	setStatus(lane, "ROLLING...")
 	task.delay(result.RollTime, function()
 		-- Paid when the ball reaches the pins, so the HUD ticks up in sync with the hit

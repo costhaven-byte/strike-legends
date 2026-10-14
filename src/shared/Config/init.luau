@@ -268,6 +268,26 @@ Config.Traits = {
 	},
 }
 
+-- Lobby showcase: display cases for the best balls, built from Config.Balls on the slots in Workspace.Showcase.Slots.
+-- Every ball of MinRarity or better gets a case (best balls on the first slots). More balls than slots = add slots in Studio.
+Config.Showcase = {
+	MinRarity = "Epic",
+	SpinSpeed = 0.8, -- ball turns per second
+	BobHeight = 0.35, -- studs the ball floats up and down
+	OrbitSpeed = 0.5, -- turns per second for the glowing trails around the ball
+	OrbitsFromRarity = 3, -- orbiting trails = rarity number minus this (Epic 1, Legendary 2, Mythic 3)
+	SparkleRate = 4, -- trait sparkles per second, per trait
+	AnimateDistance = 110, -- only animate while your camera is this close (saves phone battery)
+}
+
+-- Your equipped ball, shown on your character so everyone can see it
+Config.BallFx = {
+	HeldSize = 1.1, -- the ball in your right hand (studs)
+	TrailLifetime = 0.35, -- the ball's trail behind you while you move
+	AuraFromRarity = "Rare", -- this rarity and better also get a sparkle aura...
+	AuraRatePerRarity = 3, -- ...with this many sparkles per second for every rarity step above Uncommon
+}
+
 -- Ball rarities, lowest first. SellCoins = coins paid when a crate gives a ball you already own.
 Config.Rarities = {
 	{ Name = "Common", Color = Color3.fromRGB(200, 200, 210), SellCoins = 100 },
