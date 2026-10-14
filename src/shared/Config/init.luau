@@ -56,6 +56,28 @@ Config.Throw = {
 	CooldownBuffer = 0.3,
 }
 
+-- What a player starts with the first time they join
+Config.StartingData = {
+	Coins = 0,
+	Gems = 0,
+	XP = 0,
+}
+
+-- Rewards per throw:
+-- coins = pins * BaseCoinsPerPin * (every multiplier: ball, rank, streak, future boosts), plus tier bonus
+Config.Rewards = {
+	BaseCoinsPerPin = 10,
+	StrikeBonus = 0.5, -- +50% coins on a Strike
+	PerfectStrikeBonus = 1.5, -- +150% coins on a Perfect Strike (instead of the Strike bonus)
+
+	XpPerPin = 1,
+	StrikeXp = 10,
+	PerfectStrikeXp = 20,
+
+	PerfectGemChance = 0.1, -- chance a Perfect Strike also drops gems
+	PerfectGemAmount = 1,
+}
+
 -- Camera that follows your own ball down the lane
 Config.Camera = {
 	FollowDistance = 10, -- studs behind the ball
