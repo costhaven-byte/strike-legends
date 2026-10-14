@@ -665,6 +665,17 @@ Config.Crates = {
 	},
 }
 
+-- The crate shop kiosk in the lobby (Workspace.Hub.CrateShop, built in Studio). Crate looks live in
+-- ReplicatedStorage.CrateModels, one model per crate Id.
+Config.CrateShop = {
+	PromptDistance = 10, -- studs from the buy button where "Open" shows up
+	HoldDuration = 0.4, -- seconds to hold the buy button, so nobody spends coins by accident
+	CrateSpin = 0.12, -- turns per second for the crates on display
+	CrateBob = 0.25, -- studs the display crates float up and down
+	AnimateDistance = 90, -- only animate while your camera is this close (saves phone battery)
+	IntroTime = 1.1, -- seconds the crate shakes on screen before the reel starts
+}
+
 -- Pity: guaranteed rarity after this many crates in a row without it (counts across both crates)
 Config.Pity = {
 	{ Rarity = "Rare", Crates = 20, Counter = "CratesSinceRare" },

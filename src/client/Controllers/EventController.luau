@@ -188,31 +188,13 @@ function EventController:Start()
 	end
 	refreshBar()
 
-	-- Free crates: a popup when one is earned, and a badge on the CRATES button while any are waiting
-	local shopButton = player.PlayerGui:WaitForChild("BallsUI"):WaitForChild("Menu"):WaitForChild("ShopButton")
-	local badge = Instance.new("TextLabel")
-	badge.Name = "FreeBadge"
-	badge.AnchorPoint = Vector2.new(0.5, 0.5)
-	badge.Position = UDim2.new(1, -4, 0, 4)
-	badge.Size = UDim2.fromOffset(26, 26)
-	badge.BackgroundColor3 = Color3.fromRGB(90, 230, 110)
-	badge.TextColor3 = Color3.fromRGB(10, 40, 20)
-	badge.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
-	badge.TextScaled = true
-	badge.ZIndex = 5
-	local badgeCorner = Instance.new("UICorner")
-	badgeCorner.CornerRadius = UDim.new(1, 0)
-	badgeCorner.Parent = badge
-	badge.Parent = shopButton
+	-- Free crates: a popup when one is earned (they wait at the Crate Shop kiosk, whose price plaque shows FREE xN)
 	local freeCrates = player:GetAttribute("FreeCrates") or 0
 	local function refreshBadge()
 		local count = player:GetAttribute("FreeCrates") or 0
-		badge.Visible = count > 0
-		badge.Text = tostring(count)
 		if count > freeCrates then
-			showPopup("FREE CRATE!", CRATE_COLOR, "Open it in CRATES", true)
+			showPopup("FREE CRATE!", CRATE_COLOR, "Open it at the Crate Shop", true)
 			Sfx.Play("RevealBig", 1.1)
-			UiFx.Pop(badge, 2, 0.4)
 		end
 		freeCrates = count
 	end

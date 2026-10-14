@@ -1,4 +1,5 @@
 -- The crate shop (prices, visible odds, pity counter, the "next unlock" goal) and the crate opening reel.
+-- The shop screen opens from the lobby kiosk (KioskController); there's no menu button for it.
 -- The UI itself (StarterGui.BallsUI) is built in Studio; this script fills it in and animates it.
 -- The server picks the ball; the reel only shows what the server already decided.
 local Players = game:GetService("Players")
@@ -59,7 +60,6 @@ end
 
 function CrateController:Start()
 	local gui = player:WaitForChild("PlayerGui"):WaitForChild("BallsUI")
-	local shopButton = gui:WaitForChild("Menu"):WaitForChild("ShopButton") :: TextButton
 	local panel = gui:WaitForChild("Shop") :: Frame
 	local cards = panel:WaitForChild("Cards") :: ScrollingFrame
 	local cardTemplate = panel:WaitForChild("CardTemplate") :: Frame
@@ -217,11 +217,85 @@ function CrateController:Start()
 	player:GetAttributeChangedSignal("Coins"):Connect(refreshGoal)
 	refreshGoal()
 
-	-- Plays the reel, then the reveal. Returns when the player taps Continue.
+	-- Intro: the crate itself (ReplicatedStorage.CrateModels) shakes harder and harder, then bursts in a flash
+	local crateModels = ReplicatedStorage:WaitForChild("CrateModels", 10)
+	local introView = Instance.new("ViewportFrame")
+	introView.Name = "CrateIntro"
+	introView.AnchorPoint = Vector2.new(0.5, 0.5)
+	introView.Position = UDim2.fromScale(0.5, 0.55)
+	introView.Size = UDim2.fromScale(0.5, 0.5)
+	introView.BackgroundTransparency = 1
+	introView.Ambient = Color3.fromRGB(200, 200, 220)
+	introView.LightColor = Color3.new(1, 1, 1)
+	introView.LightDirection = Vector3.new(-1, -1.5, -1)
+	introView.Visible = false
+	introView.ZIndex = 5
+	local introAspect = Instance.new("UIAspectRatioConstraint")
+	introAspect.Parent = introView
+	local introCamera = Instance.new("Camera")
+	introCamera.FieldOfView = 40
+	introCamera.Parent = introView
+	introView.CurrentCamera = introCamera
+	introView.Parent = opening
+
+	local function playIntro(crate)
+		local template = crateModels and crateModels:FindFirstChild(crate.Id)
+		if not template then
+			return
+		end
+		local model = template:Clone()
+		model:ScaleTo(4)
+		local base = CFrame.Angles(0, math.rad(-25), 0)
+		model:PivotTo(base)
+		model.Parent = introView
+		introCamera.CFrame = CFrame.lookAt(Vector3.new(0, 2.6, 12), Vector3.new(0, 0.3, 0))
+		introView.Visible = true
+		status.Visible = true
+		status.Text = crate.Name:upper()
+		status.TextColor3 = crate.Color
+		UiFx.Pop(introView, 0.4, 0.25)
+
+		local length = Config.CrateShop.IntroTime
+		local start = os.clock()
+		local nextTick = 0
+		while true do
+			local t = (os.clock() - start) / length
+			if t >= 1 then
+				break
+			end
+			local shake = 0.04 + t * t * 0.3 -- gentle wobble that builds up
+			model:PivotTo(
+				base
+					* CFrame.new(0, t * 0.4, 0)
+					* CFrame.Angles(
+						(math.random() - 0.5) * shake,
+						(math.random() - 0.5) * shake,
+						(math.random() - 0.5) * shake
+					)
+			)
+			introView.ImageColor3 = Color3.new(1, 1, 1):Lerp(crate.Color, t * 0.5)
+			if t >= nextTick then
+				Sfx.Play("ReelTick", 0.8 + t * 0.6)
+				nextTick += 0.25 - t * 0.15
+			end
+			RunService.RenderStepped:Wait()
+		end
+		UiFx.Flash(crate.Color, 0.6, 0.35)
+		introView.Visible = false
+		introView.ImageColor3 = Color3.new(1, 1, 1)
+		model:Destroy()
+	end
+
+	-- Plays the crate intro, the reel, then the reveal. Returns when the player taps Continue.
 	local function playOpening(crate, result)
 		local ball = Balls.Get(result.BallId)
 		local rarity = Balls.GetRarity(ball.Rarity)
 		local rarityIndex = Balls.RarityIndex(ball.Rarity)
+
+		opening.Visible = true
+		reveal.Visible = false
+		window.Visible = false
+		playIntro(crate)
 
 		strip:ClearAllChildren()
 		for i = 1, REEL_TILES do
@@ -372,7 +446,8 @@ function CrateController:Start()
 		return crate.Id == Config.FreeCrates.CrateId and (player:GetAttribute("FreeCrates") or 0) > 0
 	end
 
-	local function buy(crate)
+	-- backToShop: reopen the shop afterwards (when bought from the shop screen, not the kiosk)
+	local function buy(crate, backToShop: boolean?)
 		if busy then
 			return
 		end
@@ -390,8 +465,18 @@ function CrateController:Start()
 		setOpen(false)
 		playOpening(crate, result)
 		busy = false
-		setOpen(true) -- straight back to the shop for the next one
+		if backToShop ~= false then
+			setOpen(true) -- straight back to the shop for the next one
+		end
 	end
+	-- For the lobby kiosk: its buy buttons open a crate right away, its joystick opens the shop screen
+	CrateController.Buy = function(crate)
+		buy(crate, false)
+	end
+	CrateController.OpenShop = function()
+		setOpen(true)
+	end
+	CrateController.HasFree = hasFree
 
 	-- One card per crate, odds shown straight from Config
 	for order, crate in Config.Crates do
@@ -458,9 +543,6 @@ function CrateController:Start()
 	end
 	refreshPity()
 
-	shopButton.Activated:Connect(function()
-		setOpen(not panel.Visible)
-	end)
 	panel:WaitForChild("Close").Activated:Connect(function()
 		setOpen(false)
 	end)
