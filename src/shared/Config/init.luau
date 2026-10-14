@@ -66,12 +66,17 @@ Config.StartingData = {
 	OwnedBalls = { Rookie = true }, -- set of ball Ids
 	CratesSinceRare = 0, -- pity counters, see Config.Pity
 	CratesSinceEpic = 0,
+	LifetimePins = 0, -- leaderboard: Most Pins
+	WeeklyCoins = 0, -- leaderboard: coins earned from throws this week...
+	WeeklyCoinsWeek = 0, -- ...and which week that was (see Calendar.Week)
+	DailyDay = 0, -- last daily reward day claimed (1-7), 0 = never
+	DailyLastClaim = 0, -- the day number (see Calendar.Day) it was claimed on
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 2, -- v2 added balls and crates. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 3, -- v2 added balls and crates, v3 daily reward and leaderboard stats. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 90, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -376,6 +381,43 @@ Config.Crates = {
 Config.Pity = {
 	{ Rarity = "Rare", Crates = 20, Counter = "CratesSinceRare" },
 	{ Rarity = "Epic", Crates = 100, Counter = "CratesSinceEpic" },
+}
+
+-- Daily reward: a 7-day calendar. Claim once per day (days change at midnight UTC).
+-- Missing a whole day starts you back at day 1. After day 7 it loops back to day 1.
+-- Each day can give Coins, Gems and/or a free Crate (a crate Id from Config.Crates).
+Config.Daily = {
+	Rewards = {
+		{ Coins = 250 },
+		{ Coins = 500 },
+		{ Gems = 5 },
+		{ Coins = 1000 },
+		{ Coins = 1500 },
+		{ Gems = 10 },
+		{ Crate = "Neon", Gems = 15 },
+	},
+	CheckInterval = 30, -- seconds between checks for a new day while playing
+}
+
+-- Leaderboards (OrderedDataStores). Boards are read every RefreshInterval and
+-- each player's scores are written every WriteInterval and when they leave, never per throw.
+-- Stat = the saved player value the board ranks. Weekly boards start fresh every Monday 00:00 UTC.
+Config.Leaderboards = {
+	RefreshInterval = 90,
+	WriteInterval = 120,
+	FetchSize = 100, -- how many top scores to read; your position shows as "100+" below this
+	ShowTop = 10,
+	Boards = {
+		{ Id = "Pins", Title = "MOST PINS", Stat = "LifetimePins", Store = "LB_LifetimePins" },
+		{ Id = "Streak", Title = "BEST STREAK", Stat = "BestStreak", Store = "LB_BestStreak" },
+		{
+			Id = "Weekly",
+			Title = "WEEKLY COINS",
+			Stat = "WeeklyCoins",
+			Store = "LB_WeeklyCoins",
+			Weekly = true,
+		},
+	},
 }
 
 return Config

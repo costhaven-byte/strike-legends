@@ -240,6 +240,13 @@ function CrateController:Start()
 		opening.Visible = false
 		strip:ClearAllChildren()
 	end
+	-- Lets other screens (like the daily reward) play a crate the server already opened
+	CrateController.PlayOpening = function(crate, result)
+		busy = true
+		setOpen(false)
+		playOpening(crate, result)
+		busy = false
+	end
 
 	local function buy(crate)
 		if busy then
