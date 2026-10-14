@@ -16,16 +16,22 @@ export type Reward = {
 }
 
 -- multipliers: named coin multipliers (Ball, Rank, Streak, and later gamepasses). All are multiplied together.
+-- xpMultipliers: named XP multipliers (Streak, and later boosts like a 2x XP gamepass), multiplied together.
 -- gemBonus: the ball's Gem Hunter strength, an extra chance of a gem on a Perfect Strike.
 function RewardResolver.Calculate(
 	count: number,
 	tier: string,
 	multipliers: { [string]: number },
+	xpMultipliers: { [string]: number },
 	gemBonus: number?
 ): Reward
 	local multiplier = 1
 	for _, value in multipliers do
 		multiplier *= value
+	end
+	local xpMultiplier = 1
+	for _, value in xpMultipliers do
+		xpMultiplier *= value
 	end
 
 	local coins = count * REWARDS.BaseCoinsPerPin * multiplier
@@ -50,7 +56,7 @@ function RewardResolver.Calculate(
 
 	return {
 		Coins = math.floor(coins + 0.5),
-		XP = xp,
+		XP = math.floor(xp * xpMultiplier + 0.5),
 		Gems = gems,
 		GemHunter = gemHunter,
 	}

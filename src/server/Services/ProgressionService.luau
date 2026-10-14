@@ -1,8 +1,11 @@
 -- Tracks strike streaks and Pro Tier ranks. Hands out rank-up rewards and shows each player's rank above their head.
+-- Rank is saved on its own. A full XP bar only unlocks the next rank's Rank Trial (TrialService);
+-- ranks without a trial in Config.Trials are given straight away.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local Progression = require(Shared.Modules.Progression)
 local PlayerDataService = require(script.Parent.PlayerDataService)
@@ -85,35 +88,55 @@ function ProgressionService.ShowStreak(player: Player, streak: number)
 end
 
 function ProgressionService.GetCurrentRankIndex(player: Player): number
-	return Progression.GetRankIndex(PlayerDataService.Get(player, "XP") or 0)
+	return math.clamp(PlayerDataService.Get(player, "Rank") or 1, 1, #Config.Ranks)
 end
 
--- Adds XP and handles any rank-ups it causes (can skip several ranks at once).
-function ProgressionService.AddXP(player: Player, amount: number)
-	local before = ProgressionService.GetCurrentRankIndex(player)
-	if not PlayerDataService.Add(player, "XP", amount) then
-		return
-	end
-	local after = ProgressionService.GetCurrentRankIndex(player)
-	if after <= before then
-		return
-	end
+-- The rank this player is working toward, or nil at the top rank
+function ProgressionService.GetNextRank(player: Player)
+	return Config.Ranks[ProgressionService.GetCurrentRankIndex(player) + 1]
+end
 
-	local gems = 0
-	for index = before + 1, after do
-		gems += Progression.GetRank(index).Gems
+-- True when the XP bar is full and the next rank only needs its trial
+function ProgressionService.IsRankUpReady(player: Player): boolean
+	local nextRank = ProgressionService.GetNextRank(player)
+	return nextRank ~= nil and (PlayerDataService.Get(player, "XP") or 0) >= nextRank.XP
+end
+
+-- Gives the next rank, its gem reward and the celebration. Called by TrialService when a trial is passed.
+function ProgressionService.PromoteRank(player: Player)
+	local index = ProgressionService.GetCurrentRankIndex(player) + 1
+	if index > #Config.Ranks or not PlayerDataService.Set(player, "Rank", index) then
+		return
 	end
-	if gems > 0 then
-		PlayerDataService.Add(player, "Gems", gems)
+	local rank = Progression.GetRank(index)
+	if rank.Gems > 0 then
+		PlayerDataService.Add(player, "Gems", rank.Gems)
 	end
-	player:SetAttribute("Rank", after)
 	updateBadge(player)
 	rankUpEvent:FireAllClients({
 		UserId = player.UserId,
 		DisplayName = player.DisplayName,
-		Rank = after,
-		Gems = gems,
+		Rank = index,
+		Gems = rank.Gems,
 	})
+	ProgressionService.RefreshRankUpReady(player)
+end
+
+-- Publishes RankUpReady for the HUD, and gives ranks that have no trial right away
+function ProgressionService.RefreshRankUpReady(player: Player)
+	local ready = ProgressionService.IsRankUpReady(player)
+	local nextRank = ProgressionService.GetNextRank(player)
+	if ready and nextRank and not Config.Trials.Ranks[nextRank.Name] then
+		ProgressionService.PromoteRank(player)
+		return
+	end
+	player:SetAttribute("RankUpReady", ready)
+end
+
+function ProgressionService.AddXP(player: Player, amount: number)
+	if PlayerDataService.Add(player, "XP", amount) then
+		ProgressionService.RefreshRankUpReady(player)
+	end
 end
 
 function ProgressionService:Start()
@@ -122,8 +145,8 @@ function ProgressionService:Start()
 	rankUpEvent.Parent = ReplicatedStorage:WaitForChild("Remotes")
 
 	PlayerDataService.OnLoaded(function(player)
-		player:SetAttribute("Rank", ProgressionService.GetCurrentRankIndex(player))
 		player:SetAttribute("Streak", 0)
+		ProgressionService.RefreshRankUpReady(player)
 		player.CharacterAdded:Connect(function(character)
 			character:WaitForChild("Head", 5)
 			updateBadge(player)

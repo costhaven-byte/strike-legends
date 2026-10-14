@@ -30,6 +30,26 @@ local COMPACT = {
 	["HUD.RewardPopup"] = { Position = UDim2.new(0.5, 0, 0, 132), Size = UDim2.new(0.7, 0, 0, 30) },
 	["ThrowUI.TraitPopups"] = { Position = UDim2.new(0.5, 0, 0, 166) },
 
+	-- Rank Trial: on phones the ready button and a compact tracker (no goal line, smaller dots) share the
+	-- top-right corner, the only spot clear of the meters and result text. On computers that corner holds
+	-- Roblox's player list, so there the tracker sits top-left instead.
+	["TrialUI.TrialButton"] = {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -8, 0, 6),
+		Size = UDim2.fromOffset(140, 40),
+	},
+	["TrialUI.Tracker"] = {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -8, 0, 4),
+		Size = UDim2.fromOffset(140, 46),
+	},
+	["TrialUI.Tracker.Title"] = { Position = UDim2.fromOffset(6, 4), Size = UDim2.new(1, -12, 0, 13) },
+	["TrialUI.Tracker.Goal"] = { Visible = false },
+	["TrialUI.Tracker.Dots"] = { Position = UDim2.fromOffset(6, 19), Size = UDim2.new(1, -12, 0, 13) },
+	["TrialUI.Tracker.Dots.*"] = { Size = UDim2.fromOffset(13, 13) },
+	["TrialUI.Tracker.ThrowsLeft"] = { Position = UDim2.fromOffset(6, 33), Size = UDim2.new(1, -12, 0, 10) },
+	["TrialUI.Intro"] = { Size = UDim2.fromScale(0.9, 0.92) },
+
 	-- Popups use most of the screen
 	["BallsUI.Shop"] = { Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.94, 0.94) },
 	["BallsUI.Inventory"] = { Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.94, 0.94) },
@@ -74,7 +94,9 @@ local function resolve(parent: Instance, parts: { string }, index: number, fn: (
 			end)
 		end
 		for _, child in parent:GetChildren() do
-			resolve(child, parts, index + 1, fn)
+			if child:IsA("GuiObject") then -- skip layouts, corners and the like
+				resolve(child, parts, index + 1, fn)
+			end
 		end
 	else
 		local child = parent:FindFirstChild(parts[index])
@@ -95,7 +117,7 @@ end
 function ScreenLayout:Start()
 	playerGui = player:WaitForChild("PlayerGui") :: PlayerGui
 	local hud = playerGui:WaitForChild("HUD") :: ScreenGui
-	for _, name in { "ThrowUI", "BallsUI", "DailyUI" } do
+	for _, name in { "ThrowUI", "BallsUI", "DailyUI", "TrialUI" } do
 		playerGui:WaitForChild(name)
 	end
 

@@ -3,17 +3,6 @@ local Config = require(script.Parent.Parent.Config)
 
 local Progression = {}
 
--- Index into Config.Ranks for a lifetime XP total (1 = Rookie).
-function Progression.GetRankIndex(xp: number): number
-	local index = 1
-	for i, rank in Config.Ranks do
-		if xp >= rank.XP then
-			index = i
-		end
-	end
-	return index
-end
-
 function Progression.GetRank(index: number)
 	return Config.Ranks[math.clamp(index, 1, #Config.Ranks)]
 end
@@ -43,6 +32,11 @@ end
 function Progression.GetStreakMultiplier(streak: number): number
 	local tier = Progression.GetStreakTier(streak)
 	return if tier then tier.Multiplier else 1
+end
+
+function Progression.GetStreakXpMultiplier(streak: number): number
+	local tier = Progression.GetStreakTier(streak)
+	return if tier then tier.XpMultiplier or 1 else 1
 end
 
 return Progression

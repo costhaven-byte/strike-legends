@@ -77,12 +77,21 @@ local function bindRankBar(rankBar: Frame)
 
 	local function refresh()
 		local xp = player:GetAttribute("XP") or 0
-		local index = Progression.GetRankIndex(xp)
+		local index = player:GetAttribute("Rank") or 1 -- saved rank; a full bar waits for the Rank Trial
 		local rank = Progression.GetRank(index)
 		local nextRank = Config.Ranks[index + 1]
 
 		local progress = 1
-		if nextRank then
+		if nextRank and xp >= nextRank.XP then
+			local state = player:GetAttribute("TrialState")
+			label.Text = ("%s  ·  XP FULL  ·  %s"):format(
+				rank.Name:upper(),
+				if state == "Active"
+					then "TRIAL IN PROGRESS"
+					elseif state == "Cooldown" then "TRY THE TRIAL AGAIN SOON"
+					else "RANK TRIAL READY"
+			)
+		elseif nextRank then
 			progress = (xp - rank.XP) / (nextRank.XP - rank.XP)
 			label.Text = ("%s  ·  %s / %s XP"):format(rank.Name:upper(), formatNumber(xp), formatNumber(nextRank.XP))
 		else
@@ -96,6 +105,8 @@ local function bindRankBar(rankBar: Frame)
 	end
 
 	player:GetAttributeChangedSignal("XP"):Connect(refresh)
+	player:GetAttributeChangedSignal("Rank"):Connect(refresh)
+	player:GetAttributeChangedSignal("TrialState"):Connect(refresh)
 	refresh()
 end
 
@@ -117,7 +128,11 @@ local function bindStreak(panel: Frame)
 		count.TextColor3 = color
 		tierName.Text = if tier and tier.Name ~= "" then tier.Name elseif streak == 0 then "STRIKE TO START" else ""
 		tierName.TextColor3 = color
-		multiplier.Text = ("x%g COINS"):format(Progression.GetStreakMultiplier(streak))
+		local coinMultiplier = Progression.GetStreakMultiplier(streak)
+		local xpMultiplier = Progression.GetStreakXpMultiplier(streak)
+		multiplier.Text = if coinMultiplier == xpMultiplier
+			then ("x%g COINS & XP"):format(coinMultiplier)
+			else ("x%g COINS · x%g XP"):format(coinMultiplier, xpMultiplier)
 		outline.Color = color
 		outline.Thickness = 3 + index * 0.5
 	end

@@ -61,6 +61,7 @@ Config.StartingData = {
 	Coins = 0,
 	Gems = 0,
 	XP = 0,
+	Rank = 1, -- index into Config.Ranks (1 = Rookie); raised by passing Rank Trials
 	BestStreak = 0,
 	EquippedBall = "Rookie",
 	OwnedBalls = { Rookie = true }, -- set of ball Ids
@@ -76,7 +77,7 @@ Config.StartingData = {
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 3, -- v2 added balls and crates, v3 daily reward and leaderboard stats. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 4, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials). Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 90, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -85,31 +86,61 @@ Config.Data = {
 	LockWaitDelay = 5, -- ...this many seconds apart, then take over
 }
 
--- Strike streaks: the highest row you have reached sets the coin multiplier. A non-strike resets to 0.
+-- Strike streaks: the highest row you have reached sets the coin multiplier (Multiplier) and the XP multiplier
+-- (XpMultiplier). A non-strike resets to 0.
 -- Color tints the streak display and the player's alley lights.
 Config.Streaks = {
-	{ Streak = 1, Multiplier = 1.0, Name = "", Color = Color3.fromRGB(255, 255, 255) },
-	{ Streak = 2, Multiplier = 1.5, Name = "DOUBLE", Color = Color3.fromRGB(60, 230, 255) },
-	{ Streak = 3, Multiplier = 2.0, Name = "TURKEY", Color = Color3.fromRGB(120, 255, 120) },
-	{ Streak = 4, Multiplier = 2.5, Name = "HAMBONE", Color = Color3.fromRGB(255, 200, 40) },
-	{ Streak = 5, Multiplier = 3.0, Name = "WILD TURKEY", Color = Color3.fromRGB(255, 130, 30) },
-	{ Streak = 7, Multiplier = 4.0, Name = "STREAK MASTER", Color = Color3.fromRGB(255, 60, 210) },
-	{ Streak = 10, Multiplier = 5.0, Name = "PERFECT RUN", Color = Color3.fromRGB(255, 240, 90) },
+	{ Streak = 1, Multiplier = 1.0, XpMultiplier = 1.0, Name = "", Color = Color3.fromRGB(255, 255, 255) },
+	{ Streak = 2, Multiplier = 1.5, XpMultiplier = 1.5, Name = "DOUBLE", Color = Color3.fromRGB(60, 230, 255) },
+	{ Streak = 3, Multiplier = 2.0, XpMultiplier = 2.0, Name = "TURKEY", Color = Color3.fromRGB(120, 255, 120) },
+	{ Streak = 4, Multiplier = 2.5, XpMultiplier = 2.5, Name = "HAMBONE", Color = Color3.fromRGB(255, 200, 40) },
+	{ Streak = 5, Multiplier = 3.0, XpMultiplier = 3.0, Name = "WILD TURKEY", Color = Color3.fromRGB(255, 130, 30) },
+	{ Streak = 7, Multiplier = 4.0, XpMultiplier = 4.0, Name = "STREAK MASTER", Color = Color3.fromRGB(255, 60, 210) },
+	{ Streak = 10, Multiplier = 5.0, XpMultiplier = 5.0, Name = "PERFECT RUN", Color = Color3.fromRGB(255, 240, 90) },
 }
 
--- Pro Tiers, unlocked by lifetime XP. Coin multiplier is permanent; gems are a one-time rank-up reward.
--- Tuned so Rookie to Club takes about 15-20 minutes (roughly 60 XP per minute).
+-- Pro Tiers. XP fills the bar; reaching the next rank's XP unlocks its Rank Trial (see Config.Trials),
+-- and passing the trial gives the rank. Coin multiplier is permanent; gems are a one-time rank-up reward.
+-- Tuned for roughly 180-390 XP a minute (more with strike streaks, see Config.Streaks XpMultiplier):
+-- first rank-up after ~1-2 minutes, then each rank takes much longer.
+-- (Before 9.5c: 100, 350, 1000, 3000, 9000, 25000, 70000, 200000, 550000.)
 Config.Ranks = {
 	{ Name = "Rookie", XP = 0, Multiplier = 1.0, Gems = 0, Color = Color3.fromRGB(200, 200, 210) },
-	{ Name = "Amateur", XP = 100, Multiplier = 1.25, Gems = 5, Color = Color3.fromRGB(120, 230, 120) },
-	{ Name = "Regular", XP = 350, Multiplier = 1.5, Gems = 10, Color = Color3.fromRGB(80, 200, 255) },
-	{ Name = "Club", XP = 1000, Multiplier = 2.0, Gems = 15, Color = Color3.fromRGB(60, 120, 255) },
-	{ Name = "Semi-Pro", XP = 3000, Multiplier = 2.5, Gems = 20, Color = Color3.fromRGB(170, 90, 255) },
-	{ Name = "Pro", XP = 9000, Multiplier = 3.0, Gems = 30, Color = Color3.fromRGB(255, 60, 210) },
-	{ Name = "Elite", XP = 25000, Multiplier = 4.0, Gems = 40, Color = Color3.fromRGB(255, 70, 70) },
-	{ Name = "Master", XP = 70000, Multiplier = 5.0, Gems = 50, Color = Color3.fromRGB(255, 150, 30) },
-	{ Name = "Legend", XP = 200000, Multiplier = 7.0, Gems = 75, Color = Color3.fromRGB(255, 220, 60) },
-	{ Name = "Hall of Famer", XP = 550000, Multiplier = 10.0, Gems = 100, Color = Color3.fromRGB(255, 255, 255) },
+	{ Name = "Amateur", XP = 300, Multiplier = 1.25, Gems = 5, Color = Color3.fromRGB(120, 230, 120) },
+	{ Name = "Regular", XP = 600, Multiplier = 1.5, Gems = 10, Color = Color3.fromRGB(80, 200, 255) },
+	{ Name = "Club", XP = 2000, Multiplier = 2.0, Gems = 15, Color = Color3.fromRGB(60, 120, 255) },
+	{ Name = "Semi-Pro", XP = 6000, Multiplier = 2.5, Gems = 20, Color = Color3.fromRGB(170, 90, 255) },
+	{ Name = "Pro", XP = 18000, Multiplier = 3.0, Gems = 30, Color = Color3.fromRGB(255, 60, 210) },
+	{ Name = "Elite", XP = 50000, Multiplier = 4.0, Gems = 40, Color = Color3.fromRGB(255, 70, 70) },
+	{ Name = "Master", XP = 140000, Multiplier = 5.0, Gems = 50, Color = Color3.fromRGB(255, 150, 30) },
+	{ Name = "Legend", XP = 400000, Multiplier = 7.0, Gems = 75, Color = Color3.fromRGB(255, 220, 60) },
+	{ Name = "Hall of Famer", XP = 1000000, Multiplier = 10.0, Gems = 100, Color = Color3.fromRGB(255, 255, 255) },
+}
+
+-- Rank Trials: the test you pass to reach a rank once your XP bar is full.
+-- Types: what a trial counts. Counts = which throws count ("Strike" includes Perfect Strikes, "Perfect" only those).
+-- InARow = they must come one after another (a miss starts the count again).
+-- Text: %d = Goal, then Throws.
+-- Ranks: one trial per rank you are trying to reach. A rank with no row here is given straight away.
+Config.Trials = {
+	Cooldown = 60, -- seconds to wait after failing before you can try again
+	Types = {
+		Strikes = { Counts = "Strike", InARow = false, Text = "Get %d strikes in %d throws" },
+		Streak = { Counts = "Strike", InARow = true, Text = "Get %d strikes in a row within %d throws" },
+		Perfects = { Counts = "Perfect", InARow = false, Text = "Hit %d Perfect Strikes in %d throws" },
+		PerfectRow = { Counts = "Perfect", InARow = true, Text = "Hit %d Perfect Strikes in a row within %d throws" },
+	},
+	Ranks = {
+		Amateur = { Type = "Strikes", Goal = 2, Throws = 6 },
+		Regular = { Type = "Strikes", Goal = 3, Throws = 8 },
+		Club = { Type = "Streak", Goal = 2, Throws = 8 },
+		["Semi-Pro"] = { Type = "Strikes", Goal = 4, Throws = 8 },
+		Pro = { Type = "Streak", Goal = 3, Throws = 10 },
+		Elite = { Type = "Perfects", Goal = 2, Throws = 10 },
+		Master = { Type = "Streak", Goal = 4, Throws = 10 },
+		Legend = { Type = "PerfectRow", Goal = 2, Throws = 12 },
+		["Hall of Famer"] = { Type = "Streak", Goal = 6, Throws = 12 },
+	},
 }
 
 -- Rewards per throw:
@@ -119,9 +150,10 @@ Config.Rewards = {
 	StrikeBonus = 0.5, -- +50% coins on a Strike
 	PerfectStrikeBonus = 1.5, -- +150% coins on a Perfect Strike (instead of the Strike bonus)
 
-	XpPerPin = 1,
-	StrikeXp = 10,
-	PerfectStrikeXp = 20,
+	-- XP = (pins * XpPerPin, or the Strike / Perfect Strike amount) * every XP multiplier (streak, future boosts)
+	XpPerPin = 1.5, -- was 1 before 9.5c
+	StrikeXp = 15, -- was 10
+	PerfectStrikeXp = 30, -- was 20
 
 	PerfectGemChance = 0.1, -- chance a Perfect Strike also drops gems
 	PerfectGemAmount = 1,

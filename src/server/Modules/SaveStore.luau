@@ -59,16 +59,33 @@ local function withRetries(label: string, fn: () -> ()): boolean
 	return false
 end
 
+-- Rank XP thresholds before v4. Kept frozen here so old saves are upgraded with the rules they were earned under.
+local V3_RANK_XP = { 0, 100, 350, 1000, 3000, 9000, 25000, 70000, 200000, 550000 }
+
 -- Turns a saved record (any version, or nil for a new player) into current-format data.
 -- Keys missing from an old save get their starting value, so new fields need no upgrade step.
 local function migrate(saved: any): { [string]: any }
 	local data = SaveStore.DefaultData()
 	if type(saved) == "table" and type(saved.Data) == "table" then
-		-- Upgrade steps go here when a field changes meaning, e.g. if saved.Version < 3 then ... end
 		for key, value in saved.Data do
 			data[key] = value
 		end
+
+		-- Upgrade steps, oldest first, for fields that changed meaning
+		local version = tonumber(saved.Version) or 1
+		if version < 4 then
+			-- v4: rank is saved on its own (it used to come from XP) and thresholds went up.
+			-- Players keep the rank they had already reached, so nobody gets demoted.
+			local rank = 1
+			for index, xp in V3_RANK_XP do
+				if (tonumber(data.XP) or 0) >= xp then
+					rank = index
+				end
+			end
+			data.Rank = rank
+		end
 	end
+	data.Rank = math.clamp(math.floor(tonumber(data.Rank) or 1), 1, #Config.Ranks)
 	return data
 end
 

@@ -11,6 +11,7 @@ local BallService = require(script.Parent.BallService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionService = require(script.Parent.ProgressionService)
+local TrialService = require(script.Parent.TrialService)
 local ThrowResolver = require(script.Parent.Parent.Modules.ThrowResolver)
 local RewardResolver = require(script.Parent.Parent.Modules.RewardResolver)
 
@@ -40,6 +41,13 @@ local function getCoinMultipliers(player: Player, ball, streak: number): { [stri
 		Ball = ball.Multiplier,
 		Rank = Progression.GetRank(ProgressionService.GetCurrentRankIndex(player)).Multiplier,
 		Streak = Progression.GetStreakMultiplier(streak),
+	}
+end
+
+-- Every XP multiplier for this player. Future boosts (like a 2x XP gamepass) get added here.
+local function getXpMultipliers(streak: number): { [string]: number }
+	return {
+		Streak = Progression.GetStreakXpMultiplier(streak),
 	}
 end
 
@@ -83,8 +91,11 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 		result.Count,
 		result.Tier,
 		getCoinMultipliers(player, ball, streak),
+		getXpMultipliers(streak),
 		Balls.TraitValue(ball, "GemHunter")
 	)
+
+	local trialAttempt = TrialService.GetAttemptId(player)
 
 	-- Every trait that kicked in on this throw, so clients can play its effect
 	local traits = table.clone(result.Traits)
@@ -126,6 +137,7 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 			ProgressionService.ShowStreak(player, streak)
 			ProgressionService.AddXP(player, reward.XP)
 			LeaderboardService.RecordThrow(player, result.Count, reward.Coins)
+			TrialService.OnThrow(player, trialAttempt, result.Tier, saved)
 		end
 		setStatus(lane, if result.Count == 1 then "1 PIN" else TIER_TEXT[result.Tier]:format(result.Count))
 	end)
