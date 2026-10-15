@@ -39,7 +39,7 @@ local function surface(screen: BasePart): SurfaceGui
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
 	gui.PixelsPerStud = PPS
 	gui.LightInfluence = 0
-	gui.Brightness = 1.6
+	gui.Brightness = SHOP.ScreenBrightness
 	gui.Parent = screen
 	return gui
 end
@@ -84,25 +84,63 @@ local function buildMarquee(screen: BasePart)
 	glow(text, Color3.fromRGB(255, 43, 214), 4)
 end
 
--- "OPEN" flickers now and then, like an old neon sign
+-- "OPEN" is an old neon tube sign: it buzzes, stutters and now and then drops out for a moment,
+-- and the little light it throws on the kiosk flickers with it
 local function buildOpenSign(screen: BasePart)
+	local sign = SHOP.OpenSign
 	local gui = surface(screen)
-	local text = label(gui, {
-		Size = UDim2.new(1, -16, 1, -10),
-		Position = UDim2.fromOffset(8, 5),
+	local box = Instance.new("Frame")
+	box.BackgroundTransparency = 1
+	box.Size = UDim2.new(1, -14, 1, -14)
+	box.Position = UDim2.fromOffset(7, 7)
+	box.Parent = gui
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 12)
+	corner.Parent = box
+	local tube = Instance.new("UIStroke")
+	tube.Thickness = 3
+	tube.Parent = box
+	local text = label(box, {
+		Size = UDim2.new(1, -24, 1, -14),
+		Position = UDim2.fromOffset(12, 7),
 		Text = "OPEN",
-		TextColor3 = FREE_COLOR,
 	})
-	glow(text, Color3.fromRGB(40, 120, 20), 3)
+	local halo = Instance.new("UIStroke")
+	halo.Thickness = 3
+	halo.Parent = text
+
+	local light = Instance.new("PointLight")
+	light.Color = sign.Color
+	light.Range = sign.LightRange
+	light.Shadows = false
+	light.Parent = screen
+
+	local function set(level: number) -- 1 = fully lit, 0 = off
+		text.TextColor3 = sign.OffText:Lerp(sign.OnText, level)
+		halo.Color = sign.OffGlow:Lerp(sign.Color, level)
+		tube.Color = sign.OffGlow:Lerp(sign.Color, level)
+		light.Brightness = sign.LightBrightness * level
+	end
+	set(1)
+
 	task.spawn(function()
 		while text.Parent do
-			task.wait(3 + math.random() * 5)
-			for _ = 1, math.random(2, 4) do
-				text.TextTransparency = 0.75
-				task.wait(0.05 + math.random() * 0.06)
-				text.TextTransparency = 0
-				task.wait(0.05 + math.random() * 0.08)
+			task.wait(sign.CalmMin + math.random() * (sign.CalmMax - sign.CalmMin))
+			for _ = 1, math.random(2, 6) do
+				set(math.random() * 0.25)
+				task.wait(0.03 + math.random() * 0.09)
+				set(0.7 + math.random() * 0.3)
+				task.wait(0.03 + math.random() * 0.12)
 			end
+			if math.random() < sign.DropoutChance then
+				set(0)
+				task.wait(0.4 + math.random() * 1.2)
+				set(0.5)
+				task.wait(0.06)
+				set(0)
+				task.wait(0.1)
+			end
+			set(1)
 		end
 	end)
 end
@@ -255,7 +293,34 @@ function KioskController:Start()
 
 		local display = station:FindFirstChild("Display")
 		if display and display:IsA("Model") then
-			table.insert(displays, { Model = display, Home = display:GetPivot(), Phase = math.random() * math.pi * 2 })
+			local home = display:GetPivot()
+			-- Sparkles leave the crate and drift around it on their own instead of turning with it
+			local sparkles = {}
+			for _, part in display:GetDescendants() do
+				if part:IsA("BasePart") and part.Name == "Sparkle" then
+					local offset = home:PointToObjectSpace(part.Position)
+					table.insert(sparkles, {
+						Part = part,
+						Angle = math.atan2(offset.Z, offset.X),
+						Height = offset.Y,
+						Tilt = part.CFrame - part.Position,
+					})
+				end
+			end
+			if #sparkles > 0 then
+				local folder = Instance.new("Folder")
+				folder.Name = "Sparkles"
+				folder.Parent = station
+				for _, sparkle in sparkles do
+					sparkle.Part.Parent = folder
+				end
+			end
+			table.insert(displays, {
+				Model = display,
+				Home = home,
+				Phase = math.random() * math.pi * 2,
+				Sparkles = sparkles,
+			})
 		end
 	end
 
@@ -286,6 +351,14 @@ function KioskController:Start()
 		for _, d in displays do
 			local bob = (math.sin(t * 1.5 + d.Phase) + 1) * 0.5 * SHOP.CrateBob
 			d.Model:PivotTo(d.Home * CFrame.new(0, bob, 0) * CFrame.Angles(0, t * SHOP.CrateSpin * math.pi * 2, 0))
+			for i, s in d.Sparkles do
+				local angle = s.Angle + t * SHOP.SparkleOrbit * math.pi * 2
+				local radius = SHOP.SparkleRadius + math.sin(t * 0.9 + i * 1.7) * SHOP.SparkleDrift
+				local height = s.Height + math.sin(t * 1.3 + i * 2.1) * SHOP.SparkleFloat
+				local spot = d.Home * Vector3.new(math.cos(angle) * radius, height, math.sin(angle) * radius)
+				s.Part.CFrame = CFrame.new(spot) * CFrame.Angles(0, t * 2 + i, 0) * s.Tilt
+				s.Part.Transparency = 0.45 - math.sin(t * 3.1 + i * 1.3) * 0.45
+			end
 		end
 	end)
 end

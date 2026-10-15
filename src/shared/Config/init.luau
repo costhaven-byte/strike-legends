@@ -735,8 +735,24 @@ Config.CrateShop = {
 	HoldDuration = 0.4, -- seconds to hold the buy button, so nobody spends coins by accident
 	CrateSpin = 0.12, -- turns per second for the crates on display
 	CrateBob = 0.25, -- studs the display crates float up and down
+	SparkleOrbit = 0.08, -- turns per second the gold sparkles drift around the crate
+	SparkleRadius = 1.7, -- studs from the crate centre (more would poke into the kiosk's back wall)
+	SparkleDrift = 0.2, -- studs the sparkles drift in and out
+	SparkleFloat = 0.35, -- studs the sparkles float up and down
+	OpenSign = { -- the flickering "OPEN" neon on top of the kiosk
+		Color = Color3.fromRGB(255, 70, 150), -- tube colour when lit
+		OnText = Color3.fromRGB(255, 225, 235),
+		OffText = Color3.fromRGB(70, 60, 72), -- dead tube: grey glass
+		OffGlow = Color3.fromRGB(80, 30, 55),
+		LightRange = 9,
+		LightBrightness = 1.2,
+		CalmMin = 1.5, -- seconds it stays steady between flickers
+		CalmMax = 5,
+		DropoutChance = 0.35, -- chance a flicker ends with the sign going dark for a moment
+	},
 	AnimateDistance = 90, -- only animate while your camera is this close (saves phone battery)
 	IntroTime = 1.1, -- seconds the crate shakes on screen before the reel starts
+	ScreenBrightness = 1.15, -- glow of the kiosk screens (marquee, odds, prices); higher = more vibrant
 }
 
 -- Pity: guaranteed rarity after this many crates in a row without it (counts across both crates)
