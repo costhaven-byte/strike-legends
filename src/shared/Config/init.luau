@@ -378,7 +378,7 @@ Config.LaneModifiers = {
 -- Lobby showcase: display cases for the best balls, built from Config.Balls on the slots in Workspace.Showcase.Slots.
 -- Every ball of MinRarity or better gets a case (best balls on the first slots). More balls than slots = add slots in Studio.
 Config.Showcase = {
-	MinRarity = "Epic",
+	MinRarity = "Rare", -- 11 balls on 11 slots (Rare, Epic, Legendary, Mythic)
 	SparkleRate = 4, -- trait sparkles per second, per trait
 	AnimateDistance = 110, -- only animate while your camera is this close (saves phone battery)
 
