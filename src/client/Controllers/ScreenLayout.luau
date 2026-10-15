@@ -14,10 +14,10 @@ local COMPACT = {
 	["HUD.Bar"] = { Position = UDim2.new(0.5, 0, 0, 4) },
 	["HUD.RankBar"] = { Position = UDim2.new(0.5, 0, 0, 52), Size = UDim2.new(0.6, 0, 0, 22) },
 
-	-- Top-left: streak, with the Balls / Crates / Daily buttons in one row under it (clear of the thumbstick)
+	-- Top-left: streak, with the Balls / Daily buttons in one row under it (clear of the thumbstick)
 	["HUD.Streak"] = { AnchorPoint = Vector2.new(0, 0), Position = UDim2.fromOffset(12, 4) },
 	["BallsUI.Menu"] = { Position = UDim2.fromOffset(12, 128) },
-	["DailyUI.DailyButton"] = { Position = UDim2.fromOffset(138, 128) },
+	["DailyUI.DailyButton"] = { Position = UDim2.fromOffset(75, 128) },
 
 	-- Throw meters: a shorter panel so the lane stays visible, power meter kept above the jump button
 	["ThrowUI.Panel"] = { Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(0.5, 0, 0, 118) },
