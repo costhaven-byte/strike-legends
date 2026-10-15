@@ -379,30 +379,74 @@ Config.LaneModifiers = {
 -- Every ball of MinRarity or better gets a case (best balls on the first slots). More balls than slots = add slots in Studio.
 Config.Showcase = {
 	MinRarity = "Epic",
-	SpinSpeed = 0.8, -- ball turns per second
-	BobHeight = 0.35, -- studs the ball floats up and down
-	OrbitSpeed = 0.5, -- turns per second for the glowing trails around the ball
-	OrbitsFromRarity = 3, -- orbiting trails = rarity number minus this (Epic 1, Legendary 2, Mythic 3)
 	SparkleRate = 4, -- trait sparkles per second, per trait
 	AnimateDistance = 110, -- only animate while your camera is this close (saves phone battery)
 
-	-- The premium case from the owner's display_case render (navy case, white diamonds, light beam,
-	-- glow dots) is for this rarity only. The numbers above are for the other cases.
-	PremiumRarity = "Mythic",
-	Premium = {
+	-- Every case uses the owner's display case design (navy case, glass, pedestal, sign).
+	Case = {
 		CaseScale = 4.5, -- studs per unit of the display_case design (4.5 = 5.6 studs wide, 11 tall)
 		SpinSpeed = 0.35, -- ball turns per second
 		BobHeight = 0.25, -- studs the ball floats up and down (it never dips into its pedestal)
-		Rings = 3, -- thin rings orbiting the ball (white, cyan, pink)
-		RingSpeed = 0.4, -- turns per second for those rings
+		RingSpeed = 0.4, -- turns per second for the rings around the ball
 		RingRadius = 0.38, -- ring size, in case design units (the glass is 0.47 from the middle)
 		RingWidth = 0.14, -- studs
 		GemSpinSpeed = 0.25, -- turns per second for the diamond on top
-		FloatingDots = 14, -- cyan and pink glow dots per second floating around the case, per colour
-		Motes = 16, -- glowing specks circling the case
-		MoteSpeed = 0.12, -- turns per second for those specks
+		MoteSpeed = 0.12, -- turns per second for the specks circling the case
 		BeamHeight = 9, -- studs above the case where the light beam starts
 		GlowTexture = "rbxassetid://123280301429602", -- soft round glow dot (sl_glow_dot.png)
+	},
+
+	-- The look of each rarity's case, from the owner's renders. Leave a line out to turn that effect off.
+	-- Accent: glowing bands, padlock, sign border. Posts: "Gold" or "Black". Gems: diamonds on top (colour).
+	-- Beam: light from above (colour). Light: how bright the case lights are (1 = normal, lower = moodier).
+	-- Rings: rings orbiting the ball. Halo: soft glow sphere around the ball. InnerGlow: light behind the ball.
+	-- Dots: floating glow dots { colours, per second, size, spread in case units }. Motes: specks circling the case.
+	-- Aura: a faint glow around the whole case (colour). Shade: darkens the whole case (1 = normal).
+	Styles = {
+		Common = { Accent = Color3.fromRGB(225, 228, 240), Posts = "Black" },
+		Uncommon = { Accent = Color3.fromRGB(120, 235, 165), Posts = "Black" },
+		Rare = { Accent = Color3.fromRGB(105, 175, 255), Posts = "Black" },
+		Epic = {
+			Accent = Color3.fromRGB(170, 100, 255),
+			Posts = "Black",
+			Rings = 1,
+			Halo = true,
+			InnerGlow = Color3.fromRGB(170, 90, 255),
+			Dots = { Colors = { Color3.fromRGB(210, 160, 255) }, Rate = 3, Size = 0.15, Spread = 0.8 },
+		},
+		Legendary = {
+			Accent = Color3.fromRGB(255, 222, 140),
+			Posts = "Gold",
+			Gems = Color3.fromRGB(255, 180, 50),
+			Beam = Color3.fromRGB(255, 170, 80),
+			Light = 0.8,
+			Rings = 2,
+			Halo = true,
+			InnerGlow = Color3.fromRGB(255, 170, 60),
+			Dots = { Colors = { Color3.fromRGB(255, 200, 90) }, Rate = 8, Size = 0.2, Spread = 2.2 },
+			Aura = Color3.fromRGB(255, 180, 60),
+		},
+		Mythic = {
+			Accent = Color3.fromRGB(235, 240, 255),
+			Posts = "Gold",
+			Gems = Color3.fromRGB(235, 240, 255),
+			Beam = Color3.fromRGB(190, 205, 255),
+			Light = 0.4, -- more shadowy than the others (owner's request)
+			Shade = 0.7, -- darker case and bands too
+			Rings = 3,
+			RingColors = { Color3.fromRGB(235, 240, 255), Color3.fromRGB(70, 230, 255), Color3.fromRGB(255, 70, 190) },
+			Halo = true,
+			InnerGlow = Color3.fromRGB(150, 120, 255),
+			Dots = {
+				Colors = { Color3.fromRGB(70, 230, 255), Color3.fromRGB(255, 70, 190) },
+				Rate = 9,
+				Size = 0.4,
+				Spread = 1.8,
+			},
+			Motes = 16,
+			Aura = Color3.fromRGB(255, 50, 120),
+			SignGradient = true, -- pink-to-cyan sign border and name, like the render
+		},
 	},
 }
 
