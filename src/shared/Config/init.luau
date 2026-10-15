@@ -385,6 +385,25 @@ Config.Showcase = {
 	OrbitsFromRarity = 3, -- orbiting trails = rarity number minus this (Epic 1, Legendary 2, Mythic 3)
 	SparkleRate = 4, -- trait sparkles per second, per trait
 	AnimateDistance = 110, -- only animate while your camera is this close (saves phone battery)
+
+	-- The premium case from the owner's display_case render (navy case, white diamonds, light beam,
+	-- glow dots) is for this rarity only. The numbers above are for the other cases.
+	PremiumRarity = "Mythic",
+	Premium = {
+		CaseScale = 4.5, -- studs per unit of the display_case design (4.5 = 5.6 studs wide, 11 tall)
+		SpinSpeed = 0.35, -- ball turns per second
+		BobHeight = 0.25, -- studs the ball floats up and down (it never dips into its pedestal)
+		Rings = 3, -- thin rings orbiting the ball (white, cyan, pink)
+		RingSpeed = 0.4, -- turns per second for those rings
+		RingRadius = 0.38, -- ring size, in case design units (the glass is 0.47 from the middle)
+		RingWidth = 0.14, -- studs
+		GemSpinSpeed = 0.25, -- turns per second for the diamond on top
+		FloatingDots = 14, -- cyan and pink glow dots per second floating around the case, per colour
+		Motes = 16, -- glowing specks circling the case
+		MoteSpeed = 0.12, -- turns per second for those specks
+		BeamHeight = 9, -- studs above the case where the light beam starts
+		GlowTexture = "rbxassetid://123280301429602", -- soft round glow dot (sl_glow_dot.png)
+	},
 }
 
 -- Your equipped ball, shown on your character so everyone can see it
