@@ -93,7 +93,12 @@ local function bindRankBar(rankBar: Frame)
 			)
 		elseif nextRank then
 			progress = (xp - rank.XP) / (nextRank.XP - rank.XP)
-			label.Text = ("%s  ·  %s / %s XP"):format(rank.Name:upper(), formatNumber(xp), formatNumber(nextRank.XP))
+			-- One bar for rank progress: where you are and what's next
+			label.Text = ("%s  ·  %s XP TO %s"):format(
+				rank.Name:upper(),
+				formatNumber(nextRank.XP - xp),
+				nextRank.Name:upper()
+			)
 		else
 			label.Text = ("%s  ·  %s XP"):format(rank.Name:upper(), formatNumber(xp))
 		end

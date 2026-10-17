@@ -10,21 +10,26 @@ local player = Players.LocalPlayer
 -- Path inside PlayerGui ("*" = every child) -> properties to use on a compact screen.
 -- Phone screen is roughly 670-930 wide and 320-340 tall here (below Roblox's top bar).
 local COMPACT = {
-	-- Top: coins/gems, rank bar
-	["HUD.Bar"] = { Position = UDim2.new(0.5, 0, 0, 4) },
-	["HUD.RankBar"] = { Position = UDim2.new(0.5, 0, 0, 52), Size = UDim2.new(0.6, 0, 0, 22) },
-
-	-- Top-left: streak, with the Balls / Daily buttons in one row under it (clear of the thumbstick)
-	["HUD.Streak"] = { AnchorPoint = Vector2.new(0, 0), Position = UDim2.fromOffset(12, 4) },
-	["BallsUI.Menu"] = { Position = UDim2.fromOffset(12, 128) },
-	["DailyUI.DailyButton"] = { Position = UDim2.fromOffset(75, 128) },
+	-- Simulator-style: rank bar alone at the top, coins/gems and the menu buttons on the left
+	-- (above the thumbstick), streak on the right (left of the power meter)
+	["HUD.RankBar"] = { Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.new(0.5, 0, 0, 22) },
+	["HUD.Bar"] = { Position = UDim2.fromOffset(12, 4), Size = UDim2.fromOffset(130, 64) },
+	["HUD.Bar.Coins"] = { Size = UDim2.new(1, 0, 0, 28) },
+	["HUD.Bar.Gems"] = { Size = UDim2.new(1, 0, 0, 28) },
+	["BallsUI.Menu"] = { Position = UDim2.fromOffset(12, 76) },
+	["DailyUI.DailyButton"] = { Position = UDim2.fromOffset(75, 76) },
+	["HUD.Streak"] = { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -44, 0, 54) },
 
 	-- Throw meters: a shorter panel so the lane stays visible, power meter kept above the jump button
 	["ThrowUI.Panel"] = { Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(0.5, 0, 0, 118) },
 	["ThrowUI.Panel.Hint"] = { Size = UDim2.new(1, 0, 0, 22) },
 	["ThrowUI.Panel.AimBar"] = { Position = UDim2.fromOffset(0, 28), Size = UDim2.new(1, 0, 0, 28) },
 	["ThrowUI.Panel.ThrowButton"] = { Size = UDim2.new(0.6, 0, 0, 56) },
-	["ThrowUI.PowerBar"] = { Position = UDim2.new(1, -36, 0, 140), Size = UDim2.fromOffset(36, 130) },
+	["ThrowUI.PowerBar"] = {
+		AnchorPoint = Vector2.new(0, 0),
+		Position = UDim2.new(1, -36, 0, 140),
+		Size = UDim2.fromOffset(36, 130),
+	},
 	["ThrowUI.PowerBar.Label"] = { Size = UDim2.fromOffset(80, 22) },
 	["ThrowUI.ResultText"] = { Position = UDim2.new(0.5, 0, 0, 84), Size = UDim2.new(0.45, 0, 0, 40) },
 	["HUD.RewardPopup"] = { Position = UDim2.new(0.5, 0, 0, 132), Size = UDim2.new(0.7, 0, 0, 30) },
@@ -48,15 +53,15 @@ local COMPACT = {
 	["TrialUI.Tracker.Dots"] = { Position = UDim2.fromOffset(6, 19), Size = UDim2.new(1, -12, 0, 13) },
 	["TrialUI.Tracker.Dots.*"] = { Size = UDim2.fromOffset(13, 13) },
 	["TrialUI.Tracker.ThrowsLeft"] = { Position = UDim2.fromOffset(6, 33), Size = UDim2.new(1, -12, 0, 10) },
-	-- Lane modifier pill and the "almost there" bar: small, on the left under the menu buttons
+	-- Lane modifier pill and the free-crate goal: small, on the left under the menu buttons
 	["EventUI.ModifierPill"] = {
 		AnchorPoint = Vector2.new(0, 0),
-		Position = UDim2.fromOffset(12, 192),
+		Position = UDim2.fromOffset(12, 140),
 		Size = UDim2.fromOffset(150, 24),
 	},
 	["EventUI.AlmostBar"] = {
 		AnchorPoint = Vector2.new(0, 0),
-		Position = UDim2.fromOffset(12, 220),
+		Position = UDim2.fromOffset(12, 168),
 		Size = UDim2.fromOffset(150, 22),
 	},
 	["EventUI.Popup"] = { Position = UDim2.new(0.5, 0, 0, 150), Size = UDim2.new(0.7, 0, 0, 44) },

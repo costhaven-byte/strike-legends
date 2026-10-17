@@ -13,7 +13,6 @@ local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modifiers = require(Shared.Modules.Modifiers)
-local Progression = require(Shared.Modules.Progression)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local LaneFx = require(Modules.LaneFx)
 local Sfx = require(Modules.Sfx)
@@ -26,16 +25,6 @@ local GEM_COLOR = Color3.fromRGB(255, 90, 200)
 local player = Players.LocalPlayer
 
 local EventController = {}
-
--- 12345 -> "12,345"
-local function withCommas(n: number): string
-	local text = tostring(math.floor(n))
-	repeat
-		local count
-		text, count = text:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
-	until count == 0
-	return text
-end
 
 function EventController:Start()
 	local gui = player:WaitForChild("PlayerGui"):WaitForChild("EventUI")
@@ -130,7 +119,7 @@ function EventController:Start()
 		end
 	end)
 
-	-- "Almost there": whichever reward you are closest to (as a share of the way there)
+	-- "Almost there": progress to the next free crate (rank progress lives in the HUD rank bar)
 	local pulse = TweenService:Create(
 		barScale,
 		TweenInfo.new(0.45, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
@@ -148,18 +137,6 @@ function EventController:Start()
 			Text = ("FREE CRATE IN %d STRIKE%s"):format(left, if left == 1 then "" else "S"),
 			Color = CRATE_COLOR,
 		})
-
-		local rankIndex = player:GetAttribute("Rank") or 1
-		local rank = Progression.GetRank(rankIndex)
-		local nextRank = Config.Ranks[rankIndex + 1]
-		local xp = player:GetAttribute("XP") or 0
-		if nextRank and xp < nextRank.XP then
-			table.insert(options, {
-				Progress = math.max(0, (xp - rank.XP) / (nextRank.XP - rank.XP)),
-				Text = ("%s IN %s XP"):format(nextRank.Name:upper(), withCommas(nextRank.XP - xp)),
-				Color = nextRank.Color,
-			})
-		end
 
 		local best = options[1]
 		for _, option in options do
@@ -183,7 +160,7 @@ function EventController:Start()
 		end
 		pulsing = close
 	end
-	for _, key in { "CrateStrikes", "XP", "Rank" } do
+	for _, key in { "CrateStrikes" } do
 		player:GetAttributeChangedSignal(key):Connect(refreshBar)
 	end
 	refreshBar()
