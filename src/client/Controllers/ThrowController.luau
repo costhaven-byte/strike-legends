@@ -235,7 +235,7 @@ function ThrowController:Start()
 
 		-- Strikes slam in from huge with a twist and stay up longer; everything else pops in
 		local isStrike = data.Tier == "Strike" or data.Tier == "PerfectStrike"
-		resultScale.Scale = if isStrike then 2.8 else 0.3
+		resultScale.Scale = if isStrike then Config.Juice.ResultSlamScale else 0.3
 		resultText.Rotation = if isStrike then -12 else 0
 		local slam = TweenInfo.new(if isStrike then 0.45 else 0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 		TweenService:Create(resultScale, slam, { Scale = 1 }):Play()
@@ -243,13 +243,13 @@ function ThrowController:Start()
 
 		resultToken += 1
 		local token = resultToken
-		task.delay(if isStrike then 1.6 else 1.1, function()
+		task.delay(if isStrike then Config.Juice.ResultStrikeTime else Config.Juice.ResultTime, function()
 			if token ~= resultToken then
 				return
 			end
 			-- Grow and fade away
 			local out = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-			TweenService:Create(resultScale, out, { Scale = 1.4 }):Play()
+			TweenService:Create(resultScale, out, { Scale = 1.15 }):Play()
 			TweenService:Create(resultText, out, { TextTransparency = 1 }):Play()
 			if resultStroke then
 				TweenService:Create(resultStroke, out, { Transparency = 1 }):Play()

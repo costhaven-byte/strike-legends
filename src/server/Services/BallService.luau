@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
+local BallLook = require(Shared.Modules.BallLook)
 local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local CrateRoller = require(script.Parent.Parent.Modules.CrateRoller)
@@ -73,30 +74,29 @@ local function refreshCharacterBall(player: Player)
 	glow.Range = 6
 	glow.Brightness = 1
 	glow.Parent = held
+	held:SetAttribute("BallId", ball.Id) -- each client adds the ball's effects (BallFxController)
 	held.Parent = folder
+	BallLook.Apply(held, ball.Id)
 
-	-- The ball's trail streaming behind you as you move
+	-- The ball's trail streaming behind the ball in your hand as you move
 	local top = Instance.new("Attachment")
 	top.Name = "BallTrailTop"
-	top.Position = Vector3.new(0, -0.4, 0.4)
-	top.Parent = root
+	top.Position = Vector3.new(0, fx.HeldSize * 0.45, 0)
+	top.Parent = held
 	local bottom = Instance.new("Attachment")
 	bottom.Name = "BallTrailBottom"
-	bottom.Position = Vector3.new(0, -2.2, 0.4)
-	bottom.Parent = root
+	bottom.Position = Vector3.new(0, -fx.HeldSize * 0.45, 0)
+	bottom.Parent = held
 	local trail = Instance.new("Trail")
+	trail.Name = "BallTrail"
 	trail.Attachment0 = top
 	trail.Attachment1 = bottom
 	trail.Color = ColorSequence.new(ball.Trail)
 	trail.Transparency = NumberSequence.new(0.35, 1)
+	trail.WidthScale = NumberSequence.new(1, 0.1)
 	trail.LightEmission = 0.4
 	trail.Lifetime = fx.TrailLifetime
-	trail.Parent = folder
-	-- The attachments live on the root part, so tidy them up together with the folder
-	folder.Destroying:Connect(function()
-		top:Destroy()
-		bottom:Destroy()
-	end)
+	trail.Parent = held
 
 	-- Rare and better: a sparkle aura in the rarity colour, denser for rarer balls
 	local steps = Balls.RarityIndex(ball.Rarity) - Balls.RarityIndex("Uncommon")
@@ -124,15 +124,27 @@ end
 function BallService.HideHeldBall(player: Player, seconds: number)
 	local fx = player.Character and player.Character:FindFirstChild("EquippedBallFx")
 	local held = fx and fx:FindFirstChild("HeldBall") :: BasePart?
-	if not held then
+	if not held or held:GetAttribute("Hidden") then
 		return
 	end
+	-- Balls with a 3D model keep the plain part invisible; the model (and the client effects) hide instead
+	local look = held:FindFirstChild("Look")
 	held.Transparency = 1
 	held.PointLight.Enabled = false
+	held:SetAttribute("Hidden", true)
+	held.BallTrail.Enabled = false
+	if look then
+		look.Parent = nil
+	end
 	task.delay(seconds, function()
 		if held.Parent then
-			held.Transparency = 0
+			held.Transparency = if look then 1 else 0
 			held.PointLight.Enabled = true
+			held:SetAttribute("Hidden", false)
+			held.BallTrail.Enabled = true
+			if look then
+				look.Parent = held
+			end
 		end
 	end)
 end

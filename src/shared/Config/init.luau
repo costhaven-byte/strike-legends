@@ -189,6 +189,10 @@ Config.Juice = {
 	CoinPitchStep = 0.05, -- each coin's "ding" is this much higher than the last
 
 	StreakSparkleRate = 4, -- sparkles per second on your alley's light strips, per streak tier from Turkey up
+
+	ResultSlamScale = 1.5, -- STRIKE! text starts this much bigger and shrinks into place (kept small so the pins stay visible)
+	ResultStrikeTime = 1.2, -- seconds a STRIKE! stays up (other results: ResultTime)
+	ResultTime = 0.9,
 }
 
 -- Screen layout
@@ -456,6 +460,420 @@ Config.BallFx = {
 	TrailLifetime = 0.35, -- the ball's trail behind you while you move
 	AuraFromRarity = "Rare", -- this rarity and better also get a sparkle aura...
 	AuraRatePerRarity = 3, -- ...with this many sparkles per second for every rarity step above Uncommon
+}
+
+-- Ball effects (trail, sparkles, orbit rings, glow) copied from the owner's ball renders and videos.
+-- Played on the lane ball, the ball in your hand and the Vault cases (BallFx module on the client).
+-- Every size is in ball widths (1 = the ball's diameter), so one look fits every place the ball shows up.
+--   Trails:    comet streaks behind a rolling ball. Colors run from the ball back to the tail.
+--   Particles: Image, Colors, Rate (per second), Size, Life, Speed, Rise (pull upward),
+--              Radius (spawn on a shell this far out), Twinkle (grow then shrink), Spin (degrees/second)
+--   Rings:     thin glowing orbit rings. Tilt = { x, z } degrees, Spin = turns per second around the ball
+--   Disk:      a flat glowing disk around the ball (The Void). Spin in degrees per second
+--   Halos:     camera-facing glows around the ball. Ground: glowing rings on the floor under the ball
+--   Badge:     the trait icon floating above Rare balls. Light: the glow the ball throws around it
+-- A ball without a row gets a simple trail in its Trail colour.
+local WHITE = Color3.fromRGB(255, 255, 255)
+Config.BallVfx = {
+	HeldRate = 0.5, -- the ball in your hand uses this share of the sparkles (no trail, floor rings or badge)
+	Images = {
+		Ring = "rbxassetid://132592068787018",
+		Disk = "rbxassetid://108350014126813",
+		Star = "rbxassetid://77287225484408",
+		Diamond = "rbxassetid://113877677543813",
+		Bolt = "rbxassetid://95198117224211",
+		Flame = "rbxassetid://92245452670752",
+		Dot = "rbxassetid://123280301429602",
+		Shield = "rbxassetid://124964835477907",
+		Spiral = "rbxassetid://135987951766702",
+		Clover = "rbxassetid://78517109940877",
+		Burst = "rbxassetid://71546142790002",
+	},
+	Balls = {
+		-- Uncommon: a soft streak in the ball's colour
+		Electric = { Trails = { { Colors = { WHITE, Color3.fromRGB(60, 200, 255) }, Width = 0.8, Lifetime = 0.25 } } },
+		Toxic = { Trails = { { Colors = { WHITE, Color3.fromRGB(120, 255, 60) }, Width = 0.8, Lifetime = 0.25 } } },
+		Sunset = {
+			Trails = {
+				{
+					Colors = { Color3.fromRGB(255, 240, 80), Color3.fromRGB(255, 80, 200) },
+					Width = 0.8,
+					Lifetime = 0.25,
+				},
+			},
+		},
+		Frostbite = { Trails = { { Colors = { WHITE, Color3.fromRGB(150, 220, 255) }, Width = 0.8, Lifetime = 0.25 } } },
+
+		-- Rare: blue comet trail with sparkles, plus the trait icon floating above
+		Magma = {
+			Trails = {
+				{
+					Colors = { WHITE, Color3.fromRGB(80, 170, 255), Color3.fromRGB(40, 80, 255) },
+					Width = 1,
+					Lifetime = 0.35,
+				},
+			},
+			Particles = {
+				{
+					Image = "Star",
+					Colors = { WHITE, Color3.fromRGB(255, 150, 50) },
+					Rate = 30,
+					Size = 0.12,
+					Life = { 0.4, 0.8 },
+					Speed = { 0.2, 0.6 },
+					Radius = 0.45,
+				},
+			},
+			Badge = { Image = "Burst", Size = 0.5, Height = 0.95 },
+			Light = { Color = Color3.fromRGB(255, 120, 40), Brightness = 2, Range = 4 },
+		},
+		Galaxy = {
+			Trails = {
+				{
+					Colors = { WHITE, Color3.fromRGB(150, 140, 255), Color3.fromRGB(60, 70, 255) },
+					Width = 1,
+					Lifetime = 0.35,
+				},
+			},
+			Particles = {
+				{
+					Image = "Star",
+					Colors = { WHITE, Color3.fromRGB(200, 180, 255) },
+					Rate = 30,
+					Size = 0.12,
+					Life = { 0.4, 0.8 },
+					Speed = { 0.2, 0.6 },
+					Radius = 0.45,
+				},
+			},
+			Badge = { Image = "Clover", Size = 0.45, Height = 0.95 },
+			Light = { Color = Color3.fromRGB(140, 120, 255), Brightness = 2, Range = 4 },
+		},
+		Thunder = {
+			Trails = {
+				{
+					Colors = { WHITE, Color3.fromRGB(40, 210, 255), Color3.fromRGB(30, 110, 255) },
+					Width = 1,
+					Lifetime = 0.35,
+				},
+			},
+			Particles = {
+				{
+					Image = "Star",
+					Colors = { WHITE, Color3.fromRGB(255, 230, 60) },
+					Rate = 30,
+					Size = 0.12,
+					Life = { 0.4, 0.8 },
+					Speed = { 0.2, 0.6 },
+					Radius = 0.45,
+				},
+			},
+			Badge = { Image = "Shield", Size = 0.55, Height = 1 },
+			Light = { Color = Color3.fromRGB(60, 200, 255), Brightness = 2, Range = 4 },
+		},
+		Phantom = {
+			Trails = {
+				{
+					Colors = { WHITE, Color3.fromRGB(150, 210, 255), Color3.fromRGB(70, 130, 255) },
+					Width = 1,
+					Lifetime = 0.35,
+				},
+			},
+			Particles = {
+				{
+					Image = "Star",
+					Colors = { WHITE, Color3.fromRGB(210, 230, 255) },
+					Rate = 30,
+					Size = 0.12,
+					Life = { 0.4, 0.8 },
+					Speed = { 0.2, 0.6 },
+					Radius = 0.45,
+				},
+			},
+			Badge = { Image = "Spiral", Size = 0.45, Height = 0.95 },
+			Light = { Color = Color3.fromRGB(150, 200, 255), Brightness = 2, Range = 4 },
+		},
+
+		-- Epic: a column of glowing dots rising off the ball
+		Plasma = {
+			Trails = {
+				{
+					Colors = { WHITE, Color3.fromRGB(80, 220, 255), Color3.fromRGB(140, 60, 255) },
+					Width = 0.9,
+					Lifetime = 0.3,
+				},
+			},
+			Particles = {
+				{
+					Image = "Dot",
+					Colors = { Color3.fromRGB(90, 230, 255), Color3.fromRGB(200, 160, 255), WHITE },
+					Rate = 40,
+					Size = 0.14,
+					Life = { 1, 1.8 },
+					Speed = { 0.2, 0.5 },
+					Rise = 0.8,
+					Radius = 0.4,
+					Twinkle = true,
+				},
+			},
+			Halos = { { Image = "Dot", Color = Color3.fromRGB(140, 90, 255), Size = 2.2, Transparency = 0.6 } },
+			Light = { Color = Color3.fromRGB(150, 90, 255), Brightness = 3, Range = 5 },
+		},
+		Nebula = {
+			Trails = {
+				{
+					Colors = { WHITE, Color3.fromRGB(255, 90, 210), Color3.fromRGB(90, 130, 255) },
+					Width = 0.9,
+					Lifetime = 0.3,
+				},
+			},
+			Particles = {
+				{
+					Image = "Dot",
+					Colors = {
+						Color3.fromRGB(255, 90, 210),
+						Color3.fromRGB(80, 200, 255),
+						Color3.fromRGB(120, 110, 255),
+					},
+					Rate = 40,
+					Size = 0.14,
+					Life = { 1, 1.8 },
+					Speed = { 0.2, 0.5 },
+					Rise = 0.8,
+					Radius = 0.4,
+					Twinkle = true,
+				},
+				{
+					Image = "Star",
+					Colors = { Color3.fromRGB(255, 220, 90) },
+					Rate = 14,
+					Size = 0.14,
+					Life = { 0.4, 0.8 },
+					Speed = { 0.1, 0.4 },
+					Radius = 0.5,
+					Twinkle = true,
+				},
+			},
+			Halos = { { Image = "Dot", Color = Color3.fromRGB(220, 80, 255), Size = 2.2, Transparency = 0.6 } },
+			Light = { Color = Color3.fromRGB(220, 80, 255), Brightness = 3, Range = 5 },
+		},
+		Inferno = {
+			Trails = {
+				{
+					Colors = { WHITE, Color3.fromRGB(255, 90, 220), Color3.fromRGB(255, 200, 60) },
+					Width = 0.9,
+					Lifetime = 0.3,
+				},
+			},
+			Particles = {
+				{
+					Image = "Dot",
+					Colors = {
+						Color3.fromRGB(255, 80, 220),
+						Color3.fromRGB(255, 200, 60),
+						Color3.fromRGB(190, 90, 255),
+					},
+					Rate = 40,
+					Size = 0.14,
+					Life = { 1, 1.8 },
+					Speed = { 0.2, 0.5 },
+					Rise = 0.8,
+					Radius = 0.4,
+					Twinkle = true,
+				},
+			},
+			Halos = { { Image = "Dot", Color = Color3.fromRGB(255, 70, 220), Size = 2.2, Transparency = 0.6 } },
+			Light = { Color = Color3.fromRGB(255, 80, 220), Brightness = 3, Range = 5 },
+		},
+
+		-- Legendary
+		Golden = {
+			Trails = {
+				{
+					Colors = { Color3.fromRGB(255, 240, 150), Color3.fromRGB(255, 190, 40) },
+					Width = 0.6,
+					Lifetime = 0.45,
+					Texture = "Bolt",
+				},
+				{
+					Colors = { Color3.fromRGB(255, 220, 120), Color3.fromRGB(255, 150, 30) },
+					Width = 1,
+					Lifetime = 0.2,
+					Transparency = 0.6,
+				},
+			},
+			Particles = {
+				{
+					Image = "Diamond",
+					Colors = { Color3.fromRGB(190, 255, 245), Color3.fromRGB(120, 240, 230) },
+					Rate = 6,
+					Size = 0.16,
+					Life = { 1.2, 2 },
+					Speed = { 0.05, 0.2 },
+					Radius = 0.85,
+					Twinkle = true,
+				},
+				{
+					Image = "Dot",
+					Colors = { Color3.fromRGB(255, 220, 120), Color3.fromRGB(255, 170, 60) },
+					Rate = 35,
+					Size = 0.07,
+					Life = { 0.8, 1.6 },
+					Speed = { 0.1, 0.4 },
+					Rise = 0.3,
+					Radius = 0.7,
+					Twinkle = true,
+				},
+			},
+			Halos = { { Image = "Dot", Color = Color3.fromRGB(255, 190, 60), Size = 2.4, Transparency = 0.55 } },
+			Ground = {
+				{ Color = Color3.fromRGB(255, 235, 30), Radius = 0.9, Transparency = 0 },
+				{ Color = Color3.fromRGB(255, 170, 40), Radius = 1.15, Transparency = 0.6 },
+			},
+			Light = { Color = Color3.fromRGB(255, 190, 60), Brightness = 3, Range = 6 },
+		},
+		Dragon = {
+			Trails = {
+				{
+					Colors = { Color3.fromRGB(255, 230, 150), Color3.fromRGB(255, 140, 40) },
+					Width = 0.5,
+					Lifetime = 0.4,
+					Texture = "Bolt",
+				},
+				{
+					Colors = {
+						Color3.fromRGB(255, 220, 120),
+						Color3.fromRGB(255, 110, 20),
+						Color3.fromRGB(200, 40, 10),
+					},
+					Width = 1.1,
+					Lifetime = 0.3,
+					Transparency = 0.2,
+				},
+			},
+			Particles = {
+				{
+					Image = "Flame",
+					Colors = {
+						Color3.fromRGB(255, 220, 110),
+						Color3.fromRGB(255, 120, 30),
+						Color3.fromRGB(200, 40, 20),
+					},
+					Rate = 60,
+					Size = 0.5,
+					Life = { 0.35, 0.7 },
+					Speed = { 0.3, 0.8 },
+					Rise = 3,
+					Radius = 0.4,
+					Spin = 60,
+				},
+				{
+					Image = "Dot",
+					Colors = { Color3.fromRGB(255, 200, 80), Color3.fromRGB(255, 120, 30) },
+					Rate = 25,
+					Size = 0.06,
+					Life = { 0.8, 1.6 },
+					Speed = { 0.4, 1 },
+					Rise = 1.2,
+					Radius = 0.5,
+					Twinkle = true,
+				},
+			},
+			Ground = {
+				{ Color = Color3.fromRGB(255, 130, 20), Radius = 0.85, Transparency = 0 },
+				{ Color = Color3.fromRGB(255, 80, 20), Radius = 1.2, Transparency = 0.5 },
+			},
+			Light = { Color = Color3.fromRGB(255, 120, 30), Brightness = 4, Range = 6 },
+		},
+
+		-- Mythic
+		Void = {
+			Trails = {
+				{
+					Colors = {
+						Color3.fromRGB(255, 120, 240),
+						Color3.fromRGB(200, 40, 220),
+						Color3.fromRGB(90, 20, 160),
+					},
+					Width = 1.2,
+					Lifetime = 0.45,
+				},
+				{ Colors = { WHITE, Color3.fromRGB(255, 90, 230) }, Width = 0.35, Lifetime = 0.3 },
+			},
+			Particles = {
+				{
+					Image = "Diamond",
+					Colors = { Color3.fromRGB(255, 90, 220), Color3.fromRGB(255, 160, 240) },
+					Rate = 14,
+					Size = 0.1,
+					Life = { 0.8, 1.5 },
+					Speed = { 0.2, 0.6 },
+					Radius = 0.9,
+					Twinkle = true,
+					Spin = 90,
+				},
+			},
+			Disk = {
+				Color = Color3.fromRGB(255, 70, 220),
+				Radius = 1.25,
+				Tilt = { 72, 8 },
+				Spin = 70,
+				Transparency = 0.05,
+			},
+			Halos = {
+				{ Image = "Ring", Color = Color3.fromRGB(255, 120, 245), Size = 1.38, Transparency = 0 },
+				{ Image = "Dot", Color = Color3.fromRGB(190, 40, 255), Size = 2.6, Transparency = 0.45 },
+			},
+			Light = { Color = Color3.fromRGB(230, 60, 255), Brightness = 4, Range = 7 },
+		},
+		Supernova = {
+			Trails = {
+				{
+					Colors = {
+						WHITE,
+						Color3.fromRGB(255, 250, 120),
+						Color3.fromRGB(110, 255, 110),
+						Color3.fromRGB(60, 220, 255),
+						Color3.fromRGB(150, 80, 255),
+						Color3.fromRGB(255, 60, 120),
+					},
+					Width = 1.3,
+					Lifetime = 0.5,
+				},
+				{ Colors = { WHITE, Color3.fromRGB(255, 250, 220) }, Width = 0.5, Lifetime = 0.25 },
+			},
+			Particles = {
+				{
+					Image = "Star",
+					Colors = { Color3.fromRGB(255, 245, 190), Color3.fromRGB(255, 225, 140) },
+					Rate = 16,
+					Size = 0.2,
+					Life = { 0.6, 1.2 },
+					Speed = { 0.05, 0.2 },
+					Radius = 0.95,
+					Twinkle = true,
+					Spin = 45,
+				},
+				{
+					Image = "Dot",
+					Colors = { WHITE, Color3.fromRGB(200, 240, 255) },
+					Rate = 40,
+					Size = 0.05,
+					Life = { 0.5, 1 },
+					Speed = { 0.2, 0.6 },
+					Radius = 0.5,
+					Twinkle = true,
+				},
+			},
+			Rings = {
+				{ Color = Color3.fromRGB(70, 230, 255), Radius = 0.9, Width = 0.035, Tilt = { 70, 25 }, Spin = 0.25 },
+				{ Color = Color3.fromRGB(255, 80, 230), Radius = 0.82, Width = 0.035, Tilt = { 75, -30 }, Spin = -0.2 },
+				{ Color = Color3.fromRGB(60, 225, 255), Radius = 0.7, Width = 0.05, Tilt = { 8, -6 }, Spin = 0.1 },
+			},
+			Halos = { { Image = "Dot", Color = Color3.fromRGB(230, 200, 255), Size = 2.6, Transparency = 0.5 } },
+			Light = { Color = Color3.fromRGB(200, 220, 255), Brightness = 4, Range = 7 },
+		},
+	},
 }
 
 -- Ball rarities, lowest first. SellCoins = coins paid when a crate gives a ball you already own.

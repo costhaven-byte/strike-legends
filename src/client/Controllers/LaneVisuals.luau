@@ -12,6 +12,7 @@ local Config = require(Shared.Config)
 local PinRack = require(Shared.Modules.PinRack)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Balls = require(Shared.Modules.Balls)
+local BallLook = require(Shared.Modules.BallLook)
 local Modifiers = require(Shared.Modules.Modifiers)
 local Progression = require(Shared.Modules.Progression)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
@@ -19,6 +20,7 @@ local CameraShake = require(Modules.CameraShake)
 local LaneFx = require(Modules.LaneFx)
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
+local BallFx = require(Modules.BallFx)
 
 local LANE = Config.Lane
 local CAMERA = Config.Camera
@@ -48,9 +50,8 @@ local function refreshRack(lane: Model)
 	end
 end
 
--- The thrower's equipped ball, with its colour, material, trail and glow
--- The trail hangs off the spin axis so it stays steady while the ball rolls.
-local function makeBall(ballId: string?, spinAxis: Vector3): Part
+-- The thrower's equipped ball: its 3D model plus its effects (trail, sparkles, rings) from Config.BallVfx
+local function makeBall(ballId: string?): Part
 	local info = Balls.Get(ballId) or Config.Balls[1]
 	local ball = Instance.new("Part")
 	ball.Name = "Ball"
@@ -62,30 +63,7 @@ local function makeBall(ballId: string?, spinAxis: Vector3): Part
 	ball.CanCollide = false
 	ball.CanQuery = false
 	ball.CanTouch = false
-
-	local reach = LANE.BallDiameter * 0.35
-	local top = Instance.new("Attachment")
-	top.Position = spinAxis * reach
-	top.Parent = ball
-	local bottom = Instance.new("Attachment")
-	bottom.Position = -spinAxis * reach
-	bottom.Parent = ball
-
-	local trail = Instance.new("Trail")
-	trail.Attachment0 = top
-	trail.Attachment1 = bottom
-	trail.Color = ColorSequence.new(info.Trail)
-	trail.Transparency = NumberSequence.new(0.1, 1)
-	trail.LightEmission = 0.25 -- low, so bright lanes don't wash every trail out to white
-	trail.Lifetime = 0.35
-	trail.FaceCamera = true
-	trail.Parent = ball
-
-	local glow = Instance.new("PointLight")
-	glow.Color = info.Trail
-	glow.Range = 8
-	glow.Brightness = 2
-	glow.Parent = ball
+	BallLook.Apply(ball, info.Id)
 	return ball
 end
 
@@ -206,9 +184,10 @@ local function playThrow(data)
 	-- Gutter balls slide off the lane partway down
 	local gutterAt = if data.Gutter then 0.3 + math.random() * 0.3 else nil
 
-	local ball = makeBall(data.BallId, spinAxis)
+	local ball = makeBall(data.BallId)
 	ball.CFrame = ballStart.CFrame
 	ball.Parent = lane
+	local fx = BallFx.Attach(ball, data.BallId, "Lane", forward)
 	local ballInfo = Balls.Get(data.BallId) or Config.Balls[1]
 	local lights = LaneFx.FollowLights(lane, ballInfo.Trail)
 	local rollSound = Sfx.PlayAt("Roll", ball, 1.1 + data.Power * 0.2)
@@ -255,6 +234,7 @@ local function playThrow(data)
 
 		local position = ballStart.Position + forward * travelled + right * x - Vector3.new(0, drop, 0)
 		ball.CFrame = CFrame.new(position) * CFrame.fromAxisAngle(spinAxis, travelled / radius)
+		fx:Move(position)
 		lights.Update(position)
 
 		if not hit and travelled >= firstHit then

@@ -13,6 +13,8 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
+local BallLook = require(Shared.Modules.BallLook)
+local BallFx = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("BallFx"))
 
 local SHOW = Config.Showcase
 local CASE = SHOW.Case
@@ -416,6 +418,9 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 		}, display)
 		table.insert(holes, { Part = hole, Offset = CFrame.new(-offset.X * S, offset.Y * S, -offset.Z * S) })
 	end
+	-- The ball's 3D model (if it has one), shown once you own it; locked cases keep the plain silhouette
+	local look = BallLook.Apply(ballPart, ball.Id) and ballPart:FindFirstChild("Look")
+	local ballFx -- the ball's own effects (rings, sparkles, glow), made once the case is in the world
 	local lock = Instance.new("Model")
 	lock.Name = "Padlock"
 	for _, row in LOCK do
@@ -542,6 +547,7 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 	end
 
 	model.Parent = parent
+	ballFx = BallFx.Attach(ballPart, ball.Id, "Display")
 	local ringRadius = CASE.RingRadius * S
 	local phase = math.random() * math.pi * 2
 	return {
@@ -552,7 +558,15 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 			ballPart.Color = if isOwned then ball.Color else SILHOUETTE
 			ballPart.Material = if isOwned then ball.Material else Enum.Material.SmoothPlastic
 			ballPart.Reflectance = if isOwned then 0 else 0.1 -- a little shine so the silhouette reads as a ball
+			if look then
+				look.Parent = if isOwned then ballPart else nil
+				ballPart.Transparency = if isOwned then 1 else 0
+				for _, hole in holes do
+					hole.Part.Transparency = if isOwned then 1 else 0
+				end
+			end
 			lock.Parent = if isOwned then nil else display
+			ballFx:SetEnabled(isOwned)
 			outline.OutlineColor = if isOwned then rarity.Color else style.Accent
 			outline.OutlineTransparency = if isOwned then 0 else 0.25
 			light.Color = if isOwned then rarity.Color else style.Accent
@@ -567,6 +581,7 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 			local float = center * CFrame.new(0, math.sin(t * 1.6 + phase) * CASE.BobHeight, 0)
 			local ballCFrame = float * CFrame.Angles(0.3, t * CASE.SpinSpeed * math.pi * 2, 0)
 			ballPart.CFrame = ballCFrame
+			ballFx:Move(float.Position)
 			if halo then
 				halo.CFrame = float
 			end
