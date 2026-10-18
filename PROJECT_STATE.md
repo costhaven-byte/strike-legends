@@ -27,7 +27,6 @@ Next: Phase 2 step 6 (5 crate tiers, pity, odds screen, Polish Points), only whe
 - PowerUp sound (stand-in RankUp). Levels 5-12 unreachable without zones 2+ (Phase 3); use TEST button.
 
 ## Not built yet (from Addendum 2)
-- Measured 2026-10-18: Level 2 after 5 throws, Level 3 affordable about throw 18 (~1:00, earlier than sheet 1:22), Level 4 4:43 by sheet.
 - 5 crates + Polish Points, 60 rank levels.
 - Mascots, zones 2-6, bosses, rebirth, return loops, monetization (off switch).
 
@@ -38,5 +37,4 @@ Next: Phase 2 step 6 (5 crate tiers, pity, odds screen, Polish Points), only whe
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
 
 ## Last session
-- 2026-10-18: Addendum 2 kickoff + policy check; Phase 1 step 1 built and passed.
-- 2026-10-18/19: Phase 1 steps 2-4 passed. 2026-10-19: Phase 2 step 5 built (Curve + book), owner test pending.
+- 2026-10-18/19: Addendum 2 kickoff, Phase 1 steps 1-4 passed. 2026-10-19: Phase 2 step 5 built (Curve + book), owner test pending.
