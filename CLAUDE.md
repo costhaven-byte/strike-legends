@@ -2,6 +2,8 @@
 
 Full design is in GAME_DESIGN.md. From Milestone 10 on, MASTER_PLAN.md is the roadmap: it turns the game into a simulator (milestones 10 to 20). Read both before starting any milestone or making any design decision. STRIKE_LEGENDS_ADDENDUM_1.md corrects the plan (Power Levels instead of a ball shop, the 20-ball roster stays, crate odds, ranks as levels inside the 10 tiers, gems kept). Order of authority: addendum, then MASTER_PLAN.md, then GAME_DESIGN.md.
 
+**Current focus (2026-10-18): milestones 10 to 20 are paused.** The owner asked to rebuild only the throw feel in an isolated test place, the Throw Lab (`throwlab/`, built with `rojo build throwlab.project.json -o ThrowLab.rbxl`; feel numbers in `throwlab/shared/ThrowSettings.luau`). Do not resume the milestones until the owner says so.
+
 Quick rules:
 - Build one milestone at a time (see section 4 of MASTER_PLAN.md). Test in Studio play mode after each, then wait for confirmation.
 - Server is authoritative for coins, XP, pins, drops and saving. Clients only send inputs and UI requests.

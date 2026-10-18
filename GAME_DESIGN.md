@@ -230,3 +230,14 @@ From Milestone 10 on, MASTER_PLAN.md (plus STRIKE_LEGENDS_ADDENDUM_1.md) is the 
 - **Gems switch.** `Config.Gems.Enabled` turns gems on or off in one place (on, per Addendum 1). Off hides the gem counter, stops gem drops and makes Gem Hunter pay bonus coins ("Coin Hunter").
 - **Moved into Config:** pins per rack, the "Good throw" share, crate reel spin time, HUD count-up time, rank-up screen time and confetti, the crate-open cooldown.
 - **Owner decisions (2026-10-18):** gems stay on; the gem sink will be buying Polish levels with gems (earned only). Per-egg bonus scaling approved. Rebirth +100% XP approved for Milestone 17.
+
+### Throw Lab (2026-10-18)
+Milestones 10 to 20 are paused. Playtests showed the throw was boring and too realistic, so the throw is being rebuilt on its own in a separate test place (`ThrowLab.rbxl`, code in `throwlab/`). It does not touch the main game.
+- One input: hold to charge, let go to throw. No aim or power meters. The ball aims itself at the pins.
+- Timing skill: letting go inside the gold sweet spot is a PERFECT (stronger, always a strike). Outside it still works, weaker.
+- Exaggerated crash: pins blast into the air, spin, and knock each other over (chain reaction). Number pops per pin, camera punch and short shake, 0.4s slow motion on strikes only.
+- Strike streaks escalate (STRIKE, DOUBLE, TURKEY, HAMBONE, WILD TURKEY...); 3 and 5 in a row get fireworks, cheering and flashing lights.
+- Ball Power stat (100 = normal) scales how far pins fly and how big the numbers are.
+- All feel numbers are in `throwlab/shared/ThrowSettings.luau` with plain-English notes.
+- The whole lab runs on the player's screen for instant feel. When it moves into the real game, the server still decides the result.
+

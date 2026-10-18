@@ -1,0 +1,32 @@
+{
+  "name": "Throw Lab",
+  "servePort": 34873,
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "ThrowLab": {
+        "$className": "Folder",
+        "ThrowSettings": {
+          "$path": "throwlab/shared/ThrowSettings.luau"
+        }
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "ThrowLabClient": {
+          "$path": "throwlab/client"
+        }
+      }
+    },
+    "Players": {
+      "$properties": {
+        "CharacterAutoLoads": false
+      }
+    },
+    "Workspace": {
+      "$properties": {
+        "Gravity": 90
+      }
+    }
+  }
+}
