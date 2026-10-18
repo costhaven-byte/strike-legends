@@ -5,7 +5,6 @@ Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 
 Restore point: git tag restore-phase2-step6-before + Studio "Save to Roblox As" "Before crates step 6". Real game = cloud place 94254609600041.
 Next: Phase 2 step 7 (ranks 1-60, section 9.5), only when Selim says go.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
-
 ## Exists and works
 - 6 lanes, real physics pins (Standard/Golden/Golden Star meshes), lobby hub, kiosk, leaderboard wall, Vault (11 cases).
 - New hold-and-release throw with a gold Perfect zone (jumps each throw, shrinks per strike). Only Perfects strike.
