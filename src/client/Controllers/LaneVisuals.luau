@@ -36,6 +36,7 @@ local PIN_SCALE = LANE.PinSpacing / THROW.LabPinSpacing
 local GOLD = Color3.fromRGB(255, 200, 40)
 local PINK = Color3.fromRGB(255, 43, 214)
 local WHITE = Color3.new(1, 1, 1)
+local RED = Color3.fromRGB(255, 59, 92) -- overcharge
 
 local normalFov = Workspace.CurrentCamera.FieldOfView
 
@@ -148,7 +149,9 @@ local function throwFeel(data, ballInfo)
 		PopScale = 1 + (level - 1) * 0.12,
 		RarityColor = (Balls.GetRarity(ballInfo.Rarity) or {}).Color,
 		HitStop = if data.Perfect then THROW.HitStop else 0,
-		Color = if data.Perfect then GOLD else ballInfo.Trail or ballInfo.Color,
+		Color = if data.Overcharge == "Blast" then RED
+			elseif data.Perfect then GOLD
+			else ballInfo.Trail or ballInfo.Color,
 	}
 end
 
@@ -182,6 +185,15 @@ local function onImpact(data, rack, feel, isOwn: boolean, setTimeScale: (number)
 		ThrowFx.Burst(crashPoint + Vector3.new(0, 2, 0), WHITE, 15 * crash, 50 * crash * PIN_SCALE, 1.6)
 		Sfx.PlayAt("StrikeCrash", lane.PinSpot, 0.55, 1.2)
 	end
+	local overcharged = data.Overcharge == "Blast"
+	if overcharged then
+		-- The gamble paid off: an extra red blast wave and a deep boom on top of the strike
+		Sfx.PlayAt("OverchargeBlast", lane.PinSpot, 1, 1.2)
+		task.delay(0.05, function()
+			ThrowFx.Shockwave(headPin + forward * 2 + Vector3.new(0, 0.3, 0), RED, (14 + 8 * crash) * PIN_SCALE, 0.5)
+		end)
+		ThrowFx.Burst(crashPoint + Vector3.new(0, 1.5, 0), RED, 40 * crash, 60 * crash * PIN_SCALE, 1.8)
+	end
 	if isStrike then
 		LaneFx.Confetti(lane, JUICE.ConfettiAmount)
 	end
@@ -201,6 +213,10 @@ local function onImpact(data, rack, feel, isOwn: boolean, setTimeScale: (number)
 		return
 	end
 
+	if overcharged then
+		UiFx.Flash(RED, 0.5, 0.35)
+		CameraShake.Add(0.8)
+	end
 	ThrowFx.Punch(THROW.CameraPunch * crash)
 	ThrowFx.Shake(THROW.CameraShakeStrength * crash * (0.4 + count * 0.06), THROW.CameraShakeTime)
 	UiFx.Flash(WHITE, 0.08 + count * 0.012, 0.12)
@@ -313,7 +329,7 @@ local function playThrow(data)
 		Sfx.Play("Throw", (1 + (feel.Strength - 1) * 0.3) * heavy)
 		if data.Perfect then
 			Sfx.Play("PerfectSting")
-			ThrowFx.Burst(ball.Position, GOLD, 30, 18 * PIN_SCALE, 0.7)
+			ThrowFx.Burst(ball.Position, feel.Color, 30, 18 * PIN_SCALE, 0.7)
 		end
 		ThrowFx.Punch(0.8 * feel.Strength * math.sqrt(feel.Crash))
 	end
@@ -361,6 +377,9 @@ local function playThrow(data)
 	local frozen = false
 	local function impact()
 		hit = true
+		if data.Gutter then
+			return -- an overcooked ball rolls past the pins in the gutter: no crash
+		end
 		onImpact(data, rack, feel, isOwn, setTimeScale)
 		if isOwn and coins > 0 then
 			local multiplier = ballInfo.Multiplier or 1
@@ -412,11 +431,19 @@ local function playThrow(data)
 				hooked = true
 				TraitFx.Hooked(lane, ball, isOwn)
 			end
+		elseif data.Gutter then
+			-- Overcooked: it veers off early and drops into the gutter
+			local veer = math.min(1, progress * 1.8)
+			x = data.HitX * veer * veer * (3 - 2 * veer)
 		else
 			x = data.HitX * progress
 		end
 
 		position = ballStart.Position + lift + forward * travelled + right * x
+		if data.Gutter then
+			local over = math.clamp((math.abs(x) - LANE.LaneHalfWidth + radius) / radius, 0, 1)
+			position -= Vector3.new(0, LANE.GutterDepth * over, 0)
+		end
 		if travelled < THROW.HandBlendDistance then
 			local s = travelled / THROW.HandBlendDistance
 			position += handOffset * (1 - s * s * (3 - 2 * s))

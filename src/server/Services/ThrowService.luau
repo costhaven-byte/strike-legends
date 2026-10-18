@@ -35,7 +35,7 @@ local ThrowService = {}
 local holdStarts: { [Player]: number } = {}
 
 local TIER_TEXT = {
-	Gutter = "GUTTER",
+	Gutter = "OVERCOOKED!", -- only a failed overcharge ends in the gutter
 	Weak = "%d PINS",
 	Good = "%d PINS",
 	Nine = "SO CLOSE! 9",
@@ -137,19 +137,24 @@ local function onThrowRequest(player: Player, clientHold: any)
 	local hooked = not perfect
 		and hook > 0
 		and ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW, hook, goldCenter, shownStreak)
+	local overcharged = ThrowRules.InOvercharge(charge)
 	-- The next throw's gold is somewhere else on the arc
 	lane:SetAttribute("GoldCenter", ThrowRules.NextGoldCenter(goldCenter))
 	local forward = lane.BallStart.CFrame.LookVector
 	local distance = (lane.PinSpot.Position - lane.BallStart.Position):Dot(forward)
-	local result = ThrowResolver.Resolve(charge, perfect, hooked, ball, distance)
+	local result = ThrowResolver.Resolve(charge, perfect, hooked, overcharged, ball, distance)
 	local isStrike = result.Tier == "Strike" or result.Tier == "PerfectStrike"
 	local streak, saved = ProgressionService.NextStreak(player, isStrike, Balls.TraitValue(ball, "StreakSaver"))
 	local goldenPin = GoldenPinService.Get(lane)
 	local goldenHit = goldenPin > 0 and table.find(result.Pins, goldenPin) ~= nil
+	local multipliers = getCoinMultipliers(player, ball, streak, modifier, goldenHit)
+	if result.Overcharge == "Blast" then
+		multipliers.Overcharge = THROW.Overcharge.CoinMultiplier
+	end
 	local reward = RewardResolver.Calculate(
 		result.Count,
 		result.Tier,
-		getCoinMultipliers(player, ball, streak, modifier, goldenHit),
+		multipliers,
 		getXpMultipliers(streak),
 		Balls.TraitValue(ball, "GemHunter")
 	)
@@ -216,6 +221,7 @@ local function onThrowRequest(player: Player, clientHold: any)
 		Streak = streak,
 		Golden = golden,
 		ModifierGems = modifierGems,
+		Overcharge = result.Overcharge,
 	})
 
 	SessionLog.Throw(player, ThrowRules.Level(ball))

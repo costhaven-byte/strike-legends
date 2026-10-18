@@ -17,7 +17,7 @@ local ThrowResolver = {}
 
 export type Result = {
 	Count: number,
-	Tier: string, -- Weak, Good, Nine, Strike, PerfectStrike (Gutter is no longer possible)
+	Tier: string, -- Weak, Good, Nine, Strike, PerfectStrike, or Gutter (only from a failed overcharge)
 	Pins: { number }, -- which pins fall (1 = head pin)
 	HitX: number, -- where the ball meets the pins, studs from lane centre
 	Gutter: boolean,
@@ -26,7 +26,27 @@ export type Result = {
 	Traits: { string }, -- ball traits that made a difference on this throw (for effects)
 	Perfect: boolean,
 	Strength: number, -- how hard the release was (Config.Throw.PerfectPowerBonus for a PERFECT)
+	Overcharge: string?, -- released in the red cap: "Blast" (paid off) or "Wasted" (gutter)
 }
+
+local OVER = THROW.Overcharge
+
+-- A failed overcharge: the ball overcooks and drops into the gutter. No pins, no traits.
+local function wasted(distance: number): Result
+	return {
+		Count = 0,
+		Tier = "Gutter",
+		Pins = {},
+		HitX = LANE.GutterOffset * (if math.random() < 0.5 then -1 else 1),
+		Gutter = true,
+		RollTime = ThrowRules.RollTime(distance, 1),
+		CurveFromX = nil,
+		Traits = {},
+		Perfect = false,
+		Strength = 1,
+		Overcharge = "Wasted",
+	}
+end
 
 -- Pins on the ball's path always fall; the rest are picked front-to-back with some luck.
 local function pickPins(count: number): { number }
@@ -51,10 +71,26 @@ end
 
 -- charge: where the bar was on release (0-1)
 -- perfect: released in the gold. hooked: missed the gold but landed in a Curve ball's hook band (also a PERFECT)
+-- overcharged: missed the gold and the hook band but landed in the red cap (only when overcharge is on)
 -- ball: the equipped ball row from Config.Balls; distance: studs from the ball start to the head pin
-function ThrowResolver.Resolve(charge: number, perfect: boolean, hooked: boolean, ball, distance: number): Result
+function ThrowResolver.Resolve(
+	charge: number,
+	perfect: boolean,
+	hooked: boolean,
+	overcharged: boolean,
+	ball,
+	distance: number
+): Result
+	-- The gamble: a huge strike or the gutter
+	local blasted = false
+	if overcharged and not (perfect or hooked) then
+		if math.random() >= OVER.SuccessChance then
+			return wasted(distance)
+		end
+		blasted = true
+	end
 	local fired = {}
-	perfect = perfect or hooked
+	perfect = perfect or hooked or blasted
 	if hooked then
 		table.insert(fired, "Curve")
 	end
@@ -96,7 +132,7 @@ function ThrowResolver.Resolve(charge: number, perfect: boolean, hooked: boolean
 		elseif count >= PINS * THROW.GoodShare then "Good"
 		else "Weak"
 
-	local strength = ThrowRules.Strength(charge, perfect)
+	local strength = ThrowRules.Strength(charge, perfect) * (if blasted then OVER.PowerMultiplier else 1)
 	return {
 		Count = count,
 		Tier = tier,
@@ -108,6 +144,7 @@ function ThrowResolver.Resolve(charge: number, perfect: boolean, hooked: boolean
 		Traits = fired,
 		Perfect = perfect,
 		Strength = strength,
+		Overcharge = if blasted then "Blast" else nil,
 	}
 end
 

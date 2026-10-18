@@ -1,4 +1,4 @@
--- Plays the sound effects listed in Config.Sounds.
+-- Plays the sound effects listed in Config.Sounds (Shared.AssetSlots).
 -- Play = a flat sound for this player only. PlayAt = a sound coming from a spot in the world.
 local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -24,10 +24,18 @@ local function getTemplate(name: string): Sound?
 		warn("[Sfx] No sound called " .. name)
 		return nil
 	end
+	-- Not picked yet: borrow the stand-in sound at its own pitch
+	local standIn = if info.Id then nil else Config.Sounds[info.StandIn]
+	local id = info.Id or (standIn and standIn.Id)
+	if not id then
+		warn("[Sfx] No sound picked for " .. name)
+		return nil
+	end
 	local sound = Instance.new("Sound")
 	sound.Name = name
-	sound.SoundId = "rbxassetid://" .. info.Id
+	sound.SoundId = "rbxassetid://" .. id
 	sound.Volume = info.Volume or 0.5
+	sound:SetAttribute("Pitch", if standIn then info.StandInPitch or 1 else 1)
 	sound.Parent = folder
 	templates[name] = sound
 	return sound
@@ -39,7 +47,7 @@ local function start(name: string, parent: Instance, pitch: number?, volumeScale
 		return nil
 	end
 	local sound = template:Clone()
-	sound.PlaybackSpeed = pitch or 1
+	sound.PlaybackSpeed = (pitch or 1) * (template:GetAttribute("Pitch") or 1)
 	sound.Volume = template.Volume * (volumeScale or 1)
 	sound.Parent = parent
 	sound:Play()
@@ -79,7 +87,10 @@ end
 function Sfx.Preload()
 	local list = {}
 	for name in Config.Sounds do
-		table.insert(list, getTemplate(name))
+		local template = getTemplate(name)
+		if template then
+			table.insert(list, template)
+		end
 	end
 	task.spawn(ContentProvider.PreloadAsync, ContentProvider, list)
 end

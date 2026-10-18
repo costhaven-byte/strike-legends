@@ -62,7 +62,7 @@ Config.Throw = {
 	MeterStyle = "Side", -- "Side" = half circle standing up right of your bowler; "Arc" = lying flat
 	HandBlendDistance = 10, -- the rolling ball drops from the hand onto the lane over this many studs
 	ForgivenessScale = 6, -- a ball's Forgiveness 0.05 = gold zone 30% wider
-	HitStop = 0.07, -- a PERFECT freezes the crash for this many seconds before the pins explode (makes it feel heavy)
+	HitStop = 0.05, -- a PERFECT freezes the crash for this many seconds before the pins explode (makes it feel heavy)
 	PerfectPowerBonus = 1.5, -- a PERFECT release is this much stronger than a full bar
 	WeakestThrow = 0.35, -- strength of a quick tap (0 to 1)
 
@@ -115,7 +115,7 @@ Config.Throw = {
 
 	-- Strike slow motion
 	SlowMotionStartsAfter = 0.12, -- full-speed explosion first, so the hit feels instant
-	SlowMotionLength = 0.4,
+	SlowMotionLength = 0.2, -- Addendum 2: at most 0.2 seconds, so the next throw comes quickly
 	SlowMotionSpeed = 0.3,
 
 	-- Number pops out of each pin (coins earned); better balls make them bigger
@@ -135,6 +135,18 @@ Config.Throw = {
 
 	-- Server waits this long after a roll before the lane takes another throw
 	CooldownBuffer = 0.3,
+
+	-- Overcharge: the greedy release. The top of the power bar is a red cap (the gold never goes there).
+	-- Let go in the red and it's a gamble: either a huge OVERCHARGE strike that pays extra,
+	-- or the ball overcooks into the gutter (0 pins, streak over). Safe gold or greedy red, every throw.
+	Overcharge = {
+		Enabled = true, -- false = no red cap, the bar works like before
+		From = 0.94, -- the red cap starts here (0 = empty bar, 1 = full)
+		SuccessChance = 0.5, -- chance a red release pays off
+		CoinMultiplier = 2, -- an OVERCHARGE strike pays this many times a PERFECT
+		PowerMultiplier = 1.5, -- and hits this much harder (pins fly further, bigger crash)
+		GoldGap = 0.01, -- the gold zone always ends at least this far below the red cap
+	},
 }
 
 -- What a player starts with the first time they join
@@ -311,26 +323,10 @@ Config.Ui = {
 	RankUpConfetti = 40, -- confetti pieces on the rank-up screen
 }
 
--- Sound effects. Placeholders from the Creator Store: change an Id to swap a sound.
-Config.Sounds = {
-	Click = { Id = 114782931135220, Volume = 0.4 }, -- any UI button
-	Tap = { Id = 127036696152728, Volume = 0.7 }, -- locking aim / power
-	Charge = { Id = 127036696152728, Volume = 0.5 }, -- start holding to charge a throw
-	Throw = { Id = 9114156499, Volume = 0.5 }, -- ball released
-	Roll = { Id = 9118661490, Volume = 0.6 }, -- ball rolling down the lane
-	PinHit = { Id = 9113559266, Volume = 0.9 },
-	StrikeCrash = { Id = 4692687595, Volume = 1 },
-	PerfectSting = { Id = 1840076509, Volume = 0.6 },
-	Cheer = { Id = 9120974378, Volume = 0.45 },
-	Firework = { Id = 134947109312227, Volume = 0.6 },
-	Coin = { Id = 135483737426662, Volume = 0.3 },
-	StreakUp = { Id = 112485797063762, Volume = 0.6 },
-	StreakLost = { Id = 97861773515321, Volume = 0.45 },
-	RankUp = { Id = 1841488866, Volume = 0.8 },
-	ReelTick = { Id = 88442833509532, Volume = 0.6 },
-	Reveal = { Id = 6079105785, Volume = 0.6 },
-	RevealBig = { Id = 128460880879263, Volume = 0.8 },
-}
+-- Sound effects: every sound slot and its asset ID lives in Shared.AssetSlots
+-- (tools/EconomySim requires a parentless copy of this module, hence the fallback)
+local shared = script.Parent or game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+Config.Sounds = require(shared:WaitForChild("AssetSlots") :: any).Sounds
 
 -- Ball traits: special powers that change how a ball plays. Adding a trait = adding a row here
 -- (and, for a brand-new kind of power, a few lines where the server applies it).

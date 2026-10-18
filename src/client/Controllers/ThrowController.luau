@@ -28,6 +28,11 @@ local CYAN = Color3.fromRGB(70, 230, 255)
 local DARK = Color3.fromRGB(28, 16, 52)
 local INK = Color3.fromRGB(40, 10, 60)
 local WHITE = Color3.new(1, 1, 1)
+local RED = Color3.fromRGB(255, 59, 92) -- the overcharge cap
+local OVER = THROW.Overcharge
+local READY_HINT = if OVER.Enabled
+	then "HOLD - LET GO IN THE GOLD, OR GAMBLE ON RED"
+	else "HOLD TO CHARGE - LET GO IN THE GOLD"
 
 -- The arc: a half circle like the top of a bowling ball. Empty on the left, full on the right.
 local ARC_SEGMENTS = 100
@@ -57,6 +62,7 @@ local held: InputObject? = nil
 local lastStreak = 0 -- your streak before the latest throw, to say when it ends
 local savedWalkSpeed: number? = nil -- you stand still while you charge and throw
 local releasedPerfect = false -- the arc stays lit gold after a PERFECT release
+local wasInRed = false -- the bar was in the overcharge cap last frame (to play the warning once per visit)
 
 -- Where the bar is now (the server works out the same thing from its own timing of the hold)
 local function chargeNow(): number
@@ -304,6 +310,7 @@ function ThrowController:Start()
 			local zone = if offset <= size / 2
 				then "Gold"
 				elseif hook > 0 and offset <= size / 2 + hook then "Hook"
+				elseif ThrowRules.InOvercharge(segment.Value) then "Red"
 				else ""
 			local filled = segment.Value <= value
 			local key = zone .. (if filled then "F" else "") .. (if filled and inGold then "G" else "")
@@ -315,17 +322,19 @@ function ThrowController:Start()
 				frame.BackgroundColor3 = if zone == "Gold"
 					then (if filled then Color3.new(1, 0.95, 0.6) else GOLD)
 					elseif zone == "Hook" then (if filled then hookColor:Lerp(WHITE, 0.35) else hookColor)
+					elseif zone == "Red" then (if filled then RED:Lerp(WHITE, 0.4) else RED:Lerp(DARK, 0.25))
 					elseif filled then (if inGold then GOLD else PINK)
 					else DARK
 			end
 		end
 		rider.Position, rider.Rotation = arcPoint(math.clamp(value, 0, 1), ARC_RADIUS)
 		rider.BackgroundColor3 = equippedBall().Color
-		riderStroke.Color = if inGold then GOLD elseif charging then PINK else WHITE
-		riderStroke.Thickness = if inGold then 5 else 3
+		local inRed = charging and not inGold and ThrowRules.InOvercharge(value)
+		riderStroke.Color = if inGold then GOLD elseif inRed then RED elseif charging then PINK else WHITE
+		riderStroke.Thickness = if inGold or inRed then 5 else 3
 		local streak = player:GetAttribute("Streak") or 0
-		arcLabel.Text = if streak > 0 then "GOLD SHRINKS x" .. streak else "POWER"
-		arcLabel.TextColor3 = if streak > 0 then GOLD else WHITE
+		arcLabel.Text = if inRed then "RISKY!" elseif streak > 0 then "GOLD SHRINKS x" .. streak else "POWER"
+		arcLabel.TextColor3 = if inRed then RED elseif streak > 0 then GOLD else WHITE
 	end
 
 	local function setState(newState: string)
@@ -336,12 +345,13 @@ function ThrowController:Start()
 			lockFeet(false)
 		elseif newState == "Ready" then
 			charge = 0
-			hint.Text = "HOLD TO CHARGE - LET GO IN THE GOLD"
+			hint.Text = READY_HINT
 			button.Text = "HOLD!"
 			drawBar(0, false, false)
 			lockFeet(false)
 		elseif newState == "Charging" then
 			charge, holdStartedAt = 0, os.clock()
+			wasInRed = false
 			throwHold:FireServer() -- the server starts its own clock for this hold
 			hint.Text = "LET GO IN THE GOLD!"
 			button.Text = "LET GO!"
@@ -376,6 +386,10 @@ function ThrowController:Start()
 		elseif hooked then
 			showPerfect("HOOK! PERFECT!", hookColor)
 			UiFx.Flash(hookColor, 0.25, 0.2)
+		elseif ThrowRules.InOvercharge(charge) then
+			-- The gamble: the server says whether it pays off when the ball lands
+			showPerfect("OVERCHARGE...?", RED)
+			UiFx.Flash(RED, 0.25, 0.2)
 		end
 		UiFx.Pop(arc, if perfect then 1.15 else 1.08, 0.25)
 		sentAt = os.clock()
@@ -485,7 +499,13 @@ function ThrowController:Start()
 		local streak = data.Streak or 0
 		lastStreak = streak
 		local isStrike = data.Tier == "Strike" or data.Tier == "PerfectStrike"
-		if isStrike then
+		if data.Overcharge == "Wasted" then
+			Sfx.Play("Overcooked")
+			showText(if previous >= 2 then "OVERCOOKED! STREAK OVER" else "OVERCOOKED! GUTTER", RED, false, 1.15)
+		elseif data.Overcharge == "Blast" then
+			local name = if streak >= 2 then "OVERCHARGE x" .. streak .. "!" else "OVERCHARGE!"
+			showText(name, RED:Lerp(GOLD, 0.35), true, 1.4)
+		elseif isStrike then
 			local level = math.min(math.max(streak, 1), THROW.StreakGrowthStopsAt)
 			local grow = 1 + THROW.StreakGrowth * (level - 1)
 			local special = table.find(THROW.SpecialStreaks, streak) ~= nil
@@ -539,14 +559,21 @@ function ThrowController:Start()
 				setState("Charging") -- pressed while the lane was still busy
 			else
 				drawBar(0, false, false, dt) -- the gold zone glides to its new spot (and slides with Moving Gold)
-				hint.Text = if laneReady(currentLane) then "HOLD TO CHARGE - LET GO IN THE GOLD" else "WAIT..."
+				hint.Text = if laneReady(currentLane) then READY_HINT else "WAIT..."
 			end
 		elseif state == "Charging" then
 			-- Fills, then slides back down and up again while you keep holding; the arm swings with it
 			charge = chargeNow()
 			local center, size = sweetSpot()
 			local hook = ThrowRules.HookWidth(equippedBall())
-			drawBar(charge, ThrowRules.InSpot(charge, center, size, hook), true)
+			local inGold = ThrowRules.InSpot(charge, center, size, hook)
+			drawBar(charge, inGold, true)
+			-- A warning buzz each time the bar climbs into the red cap
+			local inRed = not inGold and ThrowRules.InOvercharge(charge)
+			if inRed and not wasInRed then
+				Sfx.Play("OverchargeWarn")
+			end
+			wasInRed = inRed
 			ThrowPose.Charge(player.Character, charge, ThrowRules.Level(equippedBall()))
 			faceLane(dt)
 		elseif state == "Waiting" then

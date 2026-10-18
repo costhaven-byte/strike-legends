@@ -22,9 +22,20 @@ function ThrowRules.SweetSpot(ball, modifier, serverTime: number, center: number
 		local wave = 0.5 - 0.5 * math.cos(serverTime / (modifier.SwayPeriod or 3) * math.pi * 2)
 		center -= modifier.SweetSway * wave
 	end
-	-- Keep the whole zone on the bar
-	center = math.clamp(center, size / 2, 1 - size / 2)
+	-- Keep the whole zone on the bar (and below the overcharge red cap)
+	center = math.clamp(center, size / 2, ThrowRules.GoldCeiling() - size / 2)
 	return center, size
+end
+
+-- The highest the gold zone may reach: the top of the bar, or just under the red cap when overcharge is on
+function ThrowRules.GoldCeiling(): number
+	local over = THROW.Overcharge
+	return if over.Enabled then over.From - over.GoldGap else 1
+end
+
+-- Overcharge: was this release in the red cap at the top of the bar?
+function ThrowRules.InOvercharge(charge: number): boolean
+	return THROW.Overcharge.Enabled and charge >= THROW.Overcharge.From
 end
 
 -- Server: where the gold jumps to after a throw (always a clear move away from the last spot)
