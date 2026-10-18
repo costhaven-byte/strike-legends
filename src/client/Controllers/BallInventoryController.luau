@@ -9,14 +9,13 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
+local BallView = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("BallView"))
 
 local player = Players.LocalPlayer
 
-local LOCKED_COLOR = Color3.fromRGB(70, 60, 100)
-
 local BallInventoryController = {}
 
--- Fills one tile (used here and by the crate reel)
+-- Fills one tile (used here and by the crate reel); the ball shows in 3D (a silhouette if locked)
 function BallInventoryController.FillTile(tile: GuiObject, ball, owned: boolean)
 	local rarity = Balls.GetRarity(ball.Rarity)
 	local swatch = tile:FindFirstChild("Swatch") :: Frame
@@ -37,7 +36,7 @@ function BallInventoryController.FillTile(tile: GuiObject, ball, owned: boolean)
 	end
 	if owned then
 		tile.BallName.Text = ball.Name
-		swatch.BackgroundColor3 = ball.Color
+		BallView.Put(swatch, ball)
 		local goldBonus = math.floor(ball.Forgiveness * Config.Throw.ForgivenessScale * 100 + 0.5)
 		tile.Stats.Text = if goldBonus > 0
 			then ("x%g coins · gold +%d%%"):format(ball.Multiplier, goldBonus)
@@ -45,7 +44,7 @@ function BallInventoryController.FillTile(tile: GuiObject, ball, owned: boolean)
 		tile.BackgroundTransparency = 0
 	else
 		tile.BallName.Text = "???"
-		swatch.BackgroundColor3 = LOCKED_COLOR
+		BallView.Put(swatch, ball, { Locked = true })
 		tile.Stats.Text = "Find it in crates"
 		tile.BackgroundTransparency = 0.4
 	end

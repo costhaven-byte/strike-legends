@@ -12,6 +12,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local UiFx = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("UiFx"))
+local BallView = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("BallView"))
 
 local player = Players.LocalPlayer
 
@@ -53,39 +54,9 @@ local function text(parent: Instance, name: string, font: Font, color: Color3): 
 	return label
 end
 
--- The ball's 3D model, sitting at the origin and one stud wide (or a plain sphere if it has none)
-local function ballModel(ball): Instance
-	local models = ReplicatedStorage:FindFirstChild("BallModels")
-	local source = models and models:FindFirstChild(ball.Id)
-	if source then
-		local model = source:Clone() :: Model
-		model:PivotTo(CFrame.new())
-		return model
-	end
-	local part = Instance.new("Part")
-	part.Shape = Enum.PartType.Ball
-	part.Size = Vector3.one
-	part.Color = ball.Color
-	part.Material = ball.Material or Enum.Material.SmoothPlastic
-	part.CFrame = CFrame.new()
-	return part
-end
-
--- Points a viewport camera so the whole ball fills the view (models differ a little in size)
-local function frameBall(camera: Camera, model: Instance, margin: number)
-	local size = if model:IsA("Model") then select(2, model:GetBoundingBox()) else (model :: BasePart).Size
-	local radius = math.max(size.X, size.Y, size.Z) / 2
-	local distance = radius * margin / math.tan(math.rad(camera.FieldOfView / 2))
-	camera.CFrame = CFrame.lookAt(Vector3.new(0, 0.25, 1).Unit * distance, Vector3.zero)
-end
-
-local function spin(model: Instance, turn: CFrame)
-	if model:IsA("Model") then
-		model:PivotTo(model:GetPivot() * turn)
-	elseif model:IsA("BasePart") then
-		model.CFrame *= turn
-	end
-end
+local ballModel = BallView.Model
+local frameBall = BallView.FrameCamera
+local spin = BallView.Turn
 
 function CollectionBookController:Start()
 	local gui = player:WaitForChild("PlayerGui"):WaitForChild("BallsUI")

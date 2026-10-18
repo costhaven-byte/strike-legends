@@ -14,6 +14,7 @@ local BallInventoryController = require(script.Parent.BallInventoryController)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
+local BallView = require(Modules.BallView)
 
 local player = Players.LocalPlayer
 
@@ -200,7 +201,7 @@ function CrateController:Start()
 			row.Name = ball.Id
 			row.LayoutOrder = i
 			row.Visible = true
-			row.Dot.BackgroundColor3 = ball.Color
+			BallView.Put(row.Dot, ball, { Margin = 0.95 })
 			row.BallName.Text = ('%s  <font color="#%s">%s</font>'):format(
 				ball.Name,
 				Balls.GetRarity(ball.Rarity).Color:ToHex(),
@@ -372,7 +373,7 @@ function CrateController:Start()
 		window.Visible = false
 		status.Text = if rarityIndex >= EPIC_INDEX then ball.Rarity:upper() .. "!!" else ""
 		status.TextColor3 = rarity.Color
-		reveal.Swatch.BackgroundColor3 = ball.Color
+		BallView.Put(reveal.Swatch, ball, { Spin = true })
 		reveal.Glow.BackgroundColor3 = rarity.Color
 		reveal.Rarity.Text = ball.Rarity:upper()
 		reveal.Rarity.TextColor3 = rarity.Color
@@ -629,8 +630,8 @@ function CrateController:Start()
 			order += 1
 			local row = oddsText(ball.Id, {
 				LayoutOrder = order,
-				Size = UDim2.new(1, -8, 0, 20),
-				Text = ('   %s%s  <font color="#%s">%.4g%%</font>'):format(
+				Size = UDim2.new(1, -8, 0, 28),
+				Text = ('%s%s  <font color="#%s">%.4g%%</font>'):format(
 					ball.Name,
 					if owned[ball.Id] then "" else '  <font color="#8C82A0">(new)</font>',
 					rarity.Color:ToHex(),
@@ -638,6 +639,18 @@ function CrateController:Start()
 				),
 				TextXAlignment = Enum.TextXAlignment.Left,
 			})
+			-- The ball itself, in 3D, at the start of its row
+			local rowPad = Instance.new("UIPadding")
+			rowPad.PaddingLeft = UDim.new(0, 40)
+			rowPad.PaddingTop = UDim.new(0, 4)
+			rowPad.PaddingBottom = UDim.new(0, 4)
+			rowPad.Parent = row
+			local ballView = BallView.New(ball, { Margin = 0.95 })
+			ballView.AnchorPoint = Vector2.new(0, 0.5)
+			ballView.Position = UDim2.new(0, -32, 0.5, 0)
+			ballView.Size = UDim2.fromOffset(28, 28)
+			ballView.ZIndex = 22
+			ballView.Parent = row
 			row.Parent = oddsList
 		end
 		oddsList.CanvasPosition = Vector2.zero
