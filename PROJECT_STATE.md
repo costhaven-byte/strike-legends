@@ -38,3 +38,4 @@ Next: Phase 2 step 7 (ranks 1-60, section 9.5), only when Selim says go.
 
 ## Last session
 - 2026-10-18/19: Addendum 2 kickoff, Phase 1 steps 1-4 passed. 2026-10-19: Phase 2 step 5 passed; tweaks + fixes passed; step 6 built.
+- 2026-10-19: ball colour fix (Studio only, awaiting test): tier-wide blue/green glow shells + accents recoloured per ball theme; Inferno/Plasma got theme glow shells.
