@@ -1,9 +1,9 @@
 # Project state (max 40 lines, read at the start of every session, update at the end)
 Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 2 replaces Addendum 1).
 
-**Current milestone:** Phase 2 step 5 PASSED 2026-10-19. Daily lock + book tweaks passed. 3 bug fixes PASSED (book preload, 3D BALLS button, daily popup waits for the showcase swing).
-Restore point: git tag restore-tweaks-daily-book-before + Studio "Save to Roblox As" "Before daily+book tweaks". Real game = cloud place 94254609600041.
-Next: Phase 2 step 6 (5 crate tiers, pity, odds screen, Polish Points), only when Selim says go.
+**Current milestone:** Phase 2 step 6 BUILT 2026-10-19 (5 crates, per-crate pity, odds screen, Polish), owner test PENDING.
+Restore point: git tag restore-phase2-step6-before + Studio "Save to Roblox As" "Before crates step 6". Real game = cloud place 94254609600041.
+Next: Phase 2 step 7 (ranks 1-60, section 9.5), only when Selim says go.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
 
 ## Exists and works
@@ -23,12 +23,13 @@ Next: Phase 2 step 6 (5 crate tiers, pity, odds screen, Polish Points), only whe
 - Curve (Addendum 2 spec): Curve X% = PERFECT window X% wider (ThrowRules.HookWidth(ball, size)); magenta edges on the gold. Heavy and Forgiveness also widen the gold (reported to Selim).
 - Collection book (CollectionBookController, built in code): the BALLS button opens it (old Inventory grid retired, kept hidden as a template), one page per rarity, owned balls spin in 3D with EQUIP buttons, missing = silhouette + traits.
 - DAILY button: grey + lock + throws-left countdown during onboarding; server refuses claims until Onboarding stage 3.
+- 5 crates (Basic 1.6K, Bronze 9.2K, Silver 1M, Gold 87M, Neon 5.9B; Config.Economy.Crates), pity per crate (save v10 CratePity, attributes Pity_<Crate>_<Rarity>), first crate ever Rare+ (CratesOpened), ODDS button per shop card = every ball's chance. Duplicates = Polish (save Polish, +5% mult per level, max 10, then coins); book shows POLISH n/10.
 ## Placeholder
-- All sounds (Creator Store picks); 3 overcharge sounds not picked (stand-ins). Crates: only Basic and Neon, old odds and pity.
+- All sounds (Creator Store picks); 3 overcharge sounds not picked (stand-ins). Bronze/Silver/Gold crate models = recoloured Basic; kiosk only has Basic + Neon stations. Gold/Neon unaffordable until zones 2+.
 - PowerUp sound (stand-in RankUp). Levels 5-12 unreachable without zones 2+ (Phase 3); use TEST button.
 
 ## Not built yet (from Addendum 2)
-- 5 crates + Polish Points, 60 rank levels.
+- 60 rank levels, gem sink (owner chose: gems buy Polish levels).
 - Mascots, zones 2-6, bosses, rebirth, return loops, monetization (off switch).
 
 ## Parked: Tournaments, ghost replays, spectator lanes, challenge lane. Master plan M11-M20 replaced by Addendum 2 phases.
@@ -37,4 +38,4 @@ Next: Phase 2 step 6 (5 crate tiers, pity, odds screen, Polish Points), only whe
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
 
 ## Last session
-- 2026-10-18/19: Addendum 2 kickoff, Phase 1 steps 1-4 passed. 2026-10-19: Phase 2 step 5 passed; daily lock + book tweaks passed; 3 small fixes passed.
+- 2026-10-18/19: Addendum 2 kickoff, Phase 1 steps 1-4 passed. 2026-10-19: Phase 2 step 5 passed; tweaks + fixes passed; step 6 built.

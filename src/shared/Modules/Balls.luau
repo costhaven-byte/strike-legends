@@ -105,6 +105,68 @@ function Balls.Sorted()
 	return list
 end
 
+-- Polish (Config.Economy.Polish): duplicates give a ball Polish Points; every PointsPerLevel points = one level
+local POLISH = Config.Economy.Polish
+
+function Balls.PolishLevel(points: number?): number
+	return math.min(math.floor((points or 0) / POLISH.PointsPerLevel), POLISH.MaxLevel)
+end
+
+-- The ball's coin multiplier with its Polish level on top (+5% of the ball's own Multiplier per level)
+function Balls.Multiplier(ball, polishLevel: number?): number
+	return ball.Multiplier * (1 + POLISH.ValuePerLevel * (polishLevel or 0))
+end
+
+-- The server sends Polish Points as "Galaxy:3,Rookie:1" in a Player attribute
+function Balls.EncodePolish(polish: { [string]: number }): string
+	local parts = {}
+	for id, points in polish do
+		table.insert(parts, id .. ":" .. points)
+	end
+	table.sort(parts)
+	return table.concat(parts, ",")
+end
+
+function Balls.DecodePolish(text: string?): { [string]: number }
+	local polish = {}
+	for id, points in (text or ""):gmatch("([^,:]+):(%d+)") do
+		polish[id] = tonumber(points)
+	end
+	return polish
+end
+
+-- Pity per crate: the rows of Config.Economy.CratePity that count for this crate, each with its save key
+-- ("Basic_Rare"). Clients see the count as the Player attribute "Pity_" .. Key.
+function Balls.PityRows(crateId: string)
+	local rows = {}
+	for _, row in Config.Economy.CratePity do
+		if row.Crates[crateId] then
+			table.insert(rows, { Rarity = row.Rarity, After = row.After, Key = crateId .. "_" .. row.Rarity })
+		end
+	end
+	return rows
+end
+
+-- Each ball's real chance (percent) in a crate: rarity odds shared equally by the balls of that rarity
+function Balls.CrateBallOdds(crate): { { Ball: any, Chance: number } }
+	local list = {}
+	for _, rarity in Config.Rarities do
+		local pool = {}
+		for _, ball in Config.Balls do
+			if ball.Rarity == rarity.Name and ball.InCrates ~= false then
+				table.insert(pool, ball)
+			end
+		end
+		local odds = crate.Odds[rarity.Name] or 0
+		if odds > 0 then
+			for _, ball in pool do
+				table.insert(list, { Ball = ball, Chance = odds / #pool })
+			end
+		end
+	end
+	return list
+end
+
 -- The server sends owned balls as "Rookie,Galaxy,..." in a Player attribute
 function Balls.EncodeOwned(owned: { [string]: boolean }): string
 	local ids = {}

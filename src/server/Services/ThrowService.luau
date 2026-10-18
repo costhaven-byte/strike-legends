@@ -58,7 +58,7 @@ end
 local function getCoinMultipliers(player: Player, ball, level, streak: number, modifier, goldenHit: boolean)
 	return {
 		PowerLevel = level.Value,
-		Ball = ball.Multiplier,
+		Ball = BallService.GetMultiplier(player, ball), -- Polish included
 		Rank = Progression.GetRank(ProgressionService.GetCurrentRankIndex(player)).Multiplier,
 		Streak = Progression.GetStreakMultiplier(streak),
 		Modifier = modifier and modifier.CoinMultiplier or 1,

@@ -267,7 +267,21 @@ function CollectionBookController:Start()
 		local stats = text(card, "Stats", BODY_FONT, Color3.fromRGB(200, 190, 230))
 		stats.Position = UDim2.new(0, 6, 0.61, 4)
 		stats.Size = UDim2.new(1, -12, 0.07, 0)
-		stats.Text = if owned then ("x%g COINS"):format(ball.Multiplier) else "FIND IT IN CRATES"
+		-- Owned balls: the multiplier with Polish on top, and the Polish level from duplicates (POLISH 3/10)
+		if owned then
+			local level = Balls.PolishLevel(Balls.DecodePolish(player:GetAttribute("Polish"))[ball.Id])
+			local mult = math.floor(Balls.Multiplier(ball, level) * 100 + 0.5) / 100
+			stats.RichText = true
+			stats.Text = if level > 0
+				then ('x%g COINS  <font color="#FFE15A">POLISH %d/%d</font>'):format(
+					mult,
+					level,
+					Config.Economy.Polish.MaxLevel
+				)
+				else ("x%g COINS"):format(mult)
+		else
+			stats.Text = "FIND IT IN CRATES"
+		end
 
 		-- Traits show on missing balls too, so you know what you're chasing (short tags, one per line)
 		local traits = text(card, "Traits", FONT, Color3.new(1, 1, 1))
@@ -432,6 +446,11 @@ function CollectionBookController:Start()
 	end)
 	close.Activated:Connect(function()
 		setOpen(false)
+	end)
+	player:GetAttributeChangedSignal("Polish"):Connect(function()
+		if book.Visible then
+			render()
+		end
 	end)
 	player:GetAttributeChangedSignal("OwnedBalls"):Connect(function()
 		if book.Visible then

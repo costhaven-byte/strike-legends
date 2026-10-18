@@ -179,8 +179,11 @@ Config.StartingData = {
 	BestStreak = 0,
 	EquippedBall = "Rookie",
 	OwnedBalls = { Rookie = true }, -- set of ball Ids
-	CratesSinceRare = 0, -- pity counters, see Config.Pity
+	CratesSinceRare = 0, -- old shared pity counters (before v10), no longer used; kept so old saves stay valid
 	CratesSinceEpic = 0,
+	CratePity = {}, -- pity per crate (Config.Economy.CratePity): { ["Basic_Rare"] = pulls in a row without Rare+ }
+	Polish = {}, -- Polish Points per ball from duplicates (Config.Economy.Polish): { Galaxy = 3 }
+	CratesOpened = 0, -- crates opened ever (the first one is Config.Economy.FirstCrateMin or better)
 	LifetimePins = 0, -- leaderboard: Most Pins
 	WeeklyCoins = 0, -- leaderboard: coins earned from throws this week...
 	WeeklyCoinsWeek = 0, -- ...and which week that was (see Calendar.Week)
@@ -198,7 +201,7 @@ Config.StartingData = {
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 9, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 10, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened). Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -1545,22 +1548,15 @@ Config.Balls = {
 	},
 }
 
--- Crates, bought with coins. Odds are percentages per rarity and must add up to 100.
+-- Crates, bought with coins: name and colour here, cheapest first. Price and Odds come from Config.Economy.Crates
+-- (filled in below it), pity from Config.Economy.CratePity, duplicates from Config.Economy.Polish.
+-- Looks: ReplicatedStorage.CrateModels has one model per Id (Bronze, Silver and Gold are recoloured copies for now).
 Config.Crates = {
-	{
-		Id = "Basic",
-		Name = "Basic Crate",
-		Price = 500,
-		Color = Color3.fromRGB(60, 200, 255),
-		Odds = { Common = 60, Uncommon = 25, Rare = 10, Epic = 4, Legendary = 0.9, Mythic = 0.1 },
-	},
-	{
-		Id = "Neon",
-		Name = "Neon Crate",
-		Price = 2500,
-		Color = Color3.fromRGB(255, 60, 210),
-		Odds = { Common = 35, Uncommon = 35, Rare = 20, Epic = 8, Legendary = 1.75, Mythic = 0.25 },
-	},
+	{ Id = "Basic", Name = "Basic Crate", Color = Color3.fromRGB(60, 200, 255) },
+	{ Id = "Bronze", Name = "Bronze Crate", Color = Color3.fromRGB(215, 135, 70) },
+	{ Id = "Silver", Name = "Silver Crate", Color = Color3.fromRGB(200, 215, 235) },
+	{ Id = "Gold", Name = "Gold Crate", Color = Color3.fromRGB(255, 200, 40) },
+	{ Id = "Neon", Name = "Neon Crate", Color = Color3.fromRGB(255, 60, 210) },
 }
 
 -- The crate shop kiosk in the lobby (Workspace.Hub.CrateShop, built in Studio). Crate looks live in
@@ -1589,12 +1585,6 @@ Config.CrateShop = {
 	IntroTime = 1.1, -- seconds the crate shakes on screen before the reel starts
 	SpinTime = 4.5, -- seconds the crate reel spins before it stops on the result
 	ScreenBrightness = 1.15, -- glow of the kiosk screens (marquee, odds, prices); higher = more vibrant
-}
-
--- Pity: guaranteed rarity after this many crates in a row without it (counts across both crates)
-Config.Pity = {
-	{ Rarity = "Rare", Crates = 20, Counter = "CratesSinceRare" },
-	{ Rarity = "Epic", Crates = 100, Counter = "CratesSinceEpic" },
 }
 
 -- Daily reward: a 7-day calendar. Claim once per day (days change at midnight UTC).
@@ -1682,7 +1672,8 @@ Config.Analytics = {
 		"LuckyThrow", -- later (Milestone 13)
 		"MascotHatched", -- later (Milestone 14)
 		"BossDefeated", -- later (Milestone 15)
-		"PityHit", -- later (Milestone 16)
+		"PityHit", -- labels = crate, rarity
+		"PolishLevel", -- value = new Polish level; labels = ball
 		"Rebirth", -- later (Milestone 17)
 		"QuestCompleted", -- later (Milestone 18)
 	},
@@ -1773,6 +1764,17 @@ Config.Economy.Polish = {
 	PointsPerDuplicate = 1, -- starting guess (Milestone 16)...
 	PointsPerLevel = 1, -- ...so one duplicate = one level for now
 }
+
+-- LIVE since Addendum 2 Phase 2 step 6: the shop crates (Config.Crates) take their price and odds from Economy.Crates
+for _, crate in Config.Crates do
+	for _, row in Config.Economy.Crates do
+		if row.Id == crate.Id then
+			crate.Price = row.Price
+			crate.Odds = row.Odds
+		end
+	end
+	assert(crate.Odds, "Config.Crates." .. crate.Id .. " has no row in Config.Economy.Crates")
+end
 
 -- Mascots (Milestone 14). Unlock: Rank = rank needed, or Zone = zone number that must be unlocked.
 -- BonusScale: this egg's mascots get Mascots.Bonus times this (not in the plan, where every egg gave the same

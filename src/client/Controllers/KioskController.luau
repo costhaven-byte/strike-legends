@@ -193,8 +193,14 @@ local function buildOdds(screen: BasePart)
 		end
 	end
 	local parts = {}
-	for _, pity in Config.Pity do
-		table.insert(parts, ("%s+ every %d"):format(pity.Rarity, pity.Crates))
+	for _, row in Config.Economy.CratePity do
+		local names = {}
+		for _, crate in Config.Crates do
+			if row.Crates[crate.Id] then
+				table.insert(names, (crate.Name:gsub(" Crate", "")))
+			end
+		end
+		table.insert(parts, ("%s %s+ in %d"):format(table.concat(names, "/"), row.Rarity, row.After))
 	end
 	label(gui, {
 		Position = UDim2.fromScale(0, (rows - 1) * rowHeight),

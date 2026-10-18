@@ -92,6 +92,17 @@ local function migrate(saved: any): { [string]: any }
 			-- v9 added the first-3-minutes path (Onboarding). Players who already played skip it.
 			data.Onboarding = 3
 		end
+		if version < 10 then
+			-- v10: 5 crates with pity per crate, Polish Points and CratesOpened (new keys start empty / at 0).
+			-- Anyone who already owns a ball besides the starter has opened a crate: no second "first crate".
+			local owned = 0
+			for _ in (if type(data.OwnedBalls) == "table" then data.OwnedBalls else {}) do
+				owned += 1
+			end
+			if owned > 1 then
+				data.CratesOpened = 1
+			end
+		end
 	end
 	data.Rank = math.clamp(math.floor(tonumber(data.Rank) or 1), 1, #Config.Ranks)
 	return data

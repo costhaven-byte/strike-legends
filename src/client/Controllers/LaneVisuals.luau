@@ -471,7 +471,8 @@ local function playThrow(data)
 		end
 		onImpact(data, rack, feel, isOwn, setTimeScale)
 		if isOwn and coins > 0 then
-			local multiplier = ballInfo.Multiplier or 1
+			local polish = Balls.DecodePolish(Players.LocalPlayer:GetAttribute("Polish"))[ballInfo.Id]
+			local multiplier = math.floor(Balls.Multiplier(ballInfo, Balls.PolishLevel(polish)) * 100 + 0.5) / 100
 			local note = if multiplier > 1 then ("x%g %s"):format(multiplier, string.upper(ballInfo.Name)) else nil
 			local color = if data.Perfect
 				then GOLD

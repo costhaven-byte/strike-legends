@@ -81,6 +81,7 @@ function CrateController:Start()
 
 	local busy = false
 	local toastToken = 0
+	local showOdds: (crate: any) -> () -- the odds screen, built further down
 
 	local function showToast(text: string)
 		toastToken += 1
@@ -112,32 +113,33 @@ function CrateController:Start()
 		end
 	end
 
-	-- Pity line: always shows how close the next guarantee is
+	-- Top line: the first crate's promise, then how pity works (each crate counts its own pulls)
 	local function refreshPity()
-		local parts = {}
-		for _, pity in Config.Pity do
-			local left = pity.Crates - (player:GetAttribute(pity.Counter) or 0)
-			table.insert(parts, ("%s+ in %d"):format(pity.Rarity, math.max(left, 1)))
-		end
-		pityLabel.Text = "GUARANTEED:  " .. table.concat(parts, "   ·   ") .. " crates"
+		pityLabel.Text = if (player:GetAttribute("CratesOpened") or 0) == 0
+			then ("YOUR FIRST CRATE IS %s OR BETTER!"):format(Config.Economy.FirstCrateMin:upper())
+			else "EVERY CRATE HAS A GUARANTEE  ·  TAP ODDS FOR EVERY BALL'S CHANCE"
 	end
 
-	-- The "NEXT UNLOCK" card: the closest pity guarantee that can still give you a ball you don't own,
+	-- Pulls left (this one included) until a pity row of a crate guarantees its rarity
+	local function pullsLeft(row): number
+		return math.max(row.After - (player:GetAttribute("Pity_" .. row.Key) or 0), 1)
+	end
+
+	-- The "NEXT UNLOCK" card: the cheapest pity guarantee (in coins) that can still give you a ball you don't own,
 	-- how many crates and coins away it is, and which balls it could be. Display only; the server rolls crates.
 	local goal = cards:WaitForChild("Goal") :: Frame
 	local goalList = goal:WaitForChild("List") :: Frame
 	local goalRow = goalList:WaitForChild("RowTemplate") :: Frame
-	local cheapest = Config.Crates[1]
-	for _, crate in Config.Crates do
-		if crate.Price < cheapest.Price then
-			cheapest = crate
-		end
-	end
 
-	local function lockedBalls(minRarity: number, owned)
+	local function lockedBalls(minRarity: number, owned, crate)
 		local list = {}
 		for _, ball in Balls.Sorted() do
-			if ball.InCrates ~= false and not owned[ball.Id] and Balls.RarityIndex(ball.Rarity) >= minRarity then
+			if
+				ball.InCrates ~= false
+				and not owned[ball.Id]
+				and Balls.RarityIndex(ball.Rarity) >= minRarity
+				and (not crate or (crate.Odds[ball.Rarity] or 0) > 0)
+			then
 				table.insert(list, ball)
 			end
 		end
@@ -148,13 +150,16 @@ function CrateController:Start()
 		local owned = Balls.DecodeOwned(player:GetAttribute("OwnedBalls"))
 		local coins = player:GetAttribute("Coins") or 0
 
-		-- Closest guarantee that still has locked balls behind it
-		local best, bestLeft, bestLocked = nil, math.huge, nil
-		for _, pity in Config.Pity do
-			local locked = lockedBalls(Balls.RarityIndex(pity.Rarity), owned)
-			local left = math.max(pity.Crates - (player:GetAttribute(pity.Counter) or 0), 1)
-			if #locked > 0 and left < bestLeft then
-				best, bestLeft, bestLocked = pity, left, locked
+		-- Cheapest guarantee that still has locked balls behind it
+		local best, bestCrate, bestLeft, bestCost, bestLocked = nil, nil, 0, math.huge, nil
+		for _, crate in Config.Crates do
+			for _, row in Balls.PityRows(crate.Id) do
+				local locked = lockedBalls(Balls.RarityIndex(row.Rarity), owned, crate)
+				local left = pullsLeft(row)
+				local cost = left * crate.Price
+				if #locked > 0 and cost < bestCost then
+					best, bestCrate, bestLeft, bestCost, bestLocked = row, crate, left, cost, locked
+				end
 			end
 		end
 
@@ -175,18 +180,17 @@ function CrateController:Start()
 			bestLocked = anyLocked
 		else
 			local rarity = Balls.GetRarity(best.Rarity)
-			local done = best.Crates - bestLeft
+			local done = best.After - bestLeft
 			target.Text = best.Rarity:upper() .. "+"
 			target.TextColor3 = rarity.Color
-			sub.Text = ("guaranteed in %d crate%s"):format(bestLeft, if bestLeft == 1 then "" else "s")
+			sub.Text = ("guaranteed in %d %s%s"):format(bestLeft, bestCrate.Name, if bestLeft == 1 then "" else "s")
 			bar.Visible = true
 			bar.Fill.BackgroundColor3 = rarity.Color
-			bar.Fill.Size = UDim2.fromScale(math.clamp(done / best.Crates, 0.03, 1), 1)
-			bar.Count.Text = ("%d / %d CRATES"):format(done, best.Crates)
-			local cost = bestLeft * cheapest.Price
-			coinsLabel.Text = if coins >= cost
+			bar.Fill.Size = UDim2.fromScale(math.clamp(done / best.After, 0.03, 1), 1)
+			bar.Count.Text = ("%d / %d CRATES"):format(done, best.After)
+			coinsLabel.Text = if coins >= bestCost
 				then "You can afford it now!"
-				else ("%s coins to go"):format(formatNumber(cost - coins))
+				else ("%s coins to go"):format(formatNumber(bestCost - coins))
 		end
 
 		goal.CouldBe.Visible = #bestLocked > 0
@@ -215,8 +219,10 @@ function CrateController:Start()
 	cards:GetPropertyChangedSignal("AbsoluteSize"):Connect(alignCards)
 	alignCards()
 
-	for _, pity in Config.Pity do
-		player:GetAttributeChangedSignal(pity.Counter):Connect(refreshGoal)
+	for _, crate in Config.Crates do
+		for _, row in Balls.PityRows(crate.Id) do
+			player:GetAttributeChangedSignal("Pity_" .. row.Key):Connect(refreshGoal)
+		end
 	end
 	player:GetAttributeChangedSignal("OwnedBalls"):Connect(refreshGoal)
 	player:GetAttributeChangedSignal("Coins"):Connect(refreshGoal)
@@ -374,10 +380,20 @@ function CrateController:Start()
 		reveal.BallName.TextColor3 = if rarityIndex >= EPIC_INDEX then rarity.Color else Color3.new(1, 1, 1)
 		if result.IsNew then
 			reveal.Info.Text = ('<font color="#5AE66E">NEW!</font>   x%g coins'):format(ball.Multiplier)
+		elseif result.PolishLevel then
+			-- Duplicate: the ball got polished (+5% of its multiplier per level)
+			reveal.Info.Text = ('Duplicate - <font color="#FFE15A">POLISH %d/%d</font>   x%g coins'):format(
+				result.PolishLevel,
+				Config.Economy.Polish.MaxLevel,
+				math.floor(Balls.Multiplier(ball, result.PolishLevel) * 100 + 0.5) / 100
+			)
 		else
-			reveal.Info.Text = ('Duplicate - sold for <font color="#FFC828">+%s coins</font>'):format(
+			reveal.Info.Text = ('Fully polished - sold for <font color="#FFC828">+%s coins</font>'):format(
 				formatNumber(result.SellCoins)
 			)
+		end
+		if result.FromPity then
+			reveal.Info.Text ..= '   <font color="#5AE66E">GUARANTEED!</font>'
 		end
 		local traits = Balls.DescribeTraits(ball, false, true)
 		reveal.Trait.Text = if traits == "" then "No special trait" else traits
@@ -494,6 +510,143 @@ function CrateController:Start()
 	end
 	CrateController.HasFree = hasFree
 
+	-- Odds screen: every ball a crate can give with its real chance, plus this crate's guarantees (Roblox wants
+	-- every outcome and its numeric odds shown; built now so paid packs later are already covered)
+	local oddsScreen = Instance.new("Frame")
+	oddsScreen.Name = "OddsScreen"
+	oddsScreen.AnchorPoint = Vector2.new(0.5, 0.5)
+	oddsScreen.Position = UDim2.fromScale(0.5, 0.5)
+	oddsScreen.Size = UDim2.new(0.9, 0, 1, -20)
+	oddsScreen.BackgroundColor3 = Color3.fromRGB(28, 18, 48)
+	oddsScreen.Active = true
+	oddsScreen.Visible = false
+	oddsScreen.ZIndex = 20
+	local oddsSizeLimit = Instance.new("UISizeConstraint")
+	oddsSizeLimit.MaxSize = Vector2.new(460, math.huge)
+	oddsSizeLimit.Parent = oddsScreen
+	local screenCorner = Instance.new("UICorner")
+	screenCorner.CornerRadius = UDim.new(0, 14)
+	screenCorner.Parent = oddsScreen
+	local screenStroke = Instance.new("UIStroke")
+	screenStroke.Thickness = 3
+	screenStroke.Parent = oddsScreen
+	local font = panel.Title.FontFace
+
+	local function oddsText(name: string, props): TextLabel
+		local l = Instance.new("TextLabel")
+		l.Name = name
+		l.BackgroundTransparency = 1
+		l.FontFace = font
+		l.TextScaled = true
+		l.RichText = true
+		l.TextColor3 = Color3.new(1, 1, 1)
+		l.ZIndex = 21
+		for key, value in props do
+			(l :: any)[key] = value
+		end
+		return l
+	end
+
+	local oddsTitle = oddsText("Title", { Position = UDim2.fromOffset(16, 10), Size = UDim2.new(1, -76, 0, 30) })
+	oddsTitle.TextXAlignment = Enum.TextXAlignment.Left
+	oddsTitle.Parent = oddsScreen
+	local oddsClose = Instance.new("TextButton")
+	oddsClose.Name = "Close"
+	oddsClose.AnchorPoint = Vector2.new(1, 0)
+	oddsClose.Position = UDim2.new(1, -10, 0, 8)
+	oddsClose.Size = UDim2.fromOffset(40, 40)
+	oddsClose.BackgroundColor3 = Color3.fromRGB(255, 70, 110)
+	oddsClose.FontFace = font
+	oddsClose.Text = "X"
+	oddsClose.TextScaled = true
+	oddsClose.TextColor3 = Color3.new(1, 1, 1)
+	oddsClose.ZIndex = 21
+	local closeCorner = Instance.new("UICorner")
+	closeCorner.CornerRadius = UDim.new(0, 10)
+	closeCorner.Parent = oddsClose
+	oddsClose.Parent = oddsScreen
+	local oddsPity = oddsText("Pity", { Position = UDim2.fromOffset(16, 46), Size = UDim2.new(1, -32, 0, 40) })
+	oddsPity.TextWrapped = true
+	oddsPity.TextColor3 = Color3.fromRGB(200, 190, 230)
+	oddsPity.Parent = oddsScreen
+	local oddsList = Instance.new("ScrollingFrame")
+	oddsList.Name = "List"
+	oddsList.Position = UDim2.fromOffset(12, 92)
+	oddsList.Size = UDim2.new(1, -24, 1, -102)
+	oddsList.BackgroundTransparency = 1
+	oddsList.BorderSizePixel = 0
+	oddsList.ScrollBarThickness = 6
+	oddsList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	oddsList.CanvasSize = UDim2.new()
+	oddsList.ZIndex = 21
+	local listLayout = Instance.new("UIListLayout")
+	listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	listLayout.Padding = UDim.new(0, 2)
+	listLayout.Parent = oddsList
+	oddsList.Parent = oddsScreen
+	oddsScreen.Parent = panel
+
+	showOdds = function(crate)
+		oddsTitle.Text = crate.Name:upper() .. "  ODDS"
+		oddsTitle.TextColor3 = crate.Color
+		screenStroke.Color = crate.Color
+		local pityParts = {}
+		for _, row in Balls.PityRows(crate.Id) do
+			table.insert(
+				pityParts,
+				("%s or better guaranteed within %d pulls (%d to go)"):format(row.Rarity, row.After, pullsLeft(row))
+			)
+		end
+		if (player:GetAttribute("CratesOpened") or 0) == 0 then
+			table.insert(pityParts, ("Your first crate ever: %s or better"):format(Config.Economy.FirstCrateMin))
+		end
+		oddsPity.Text = table.concat(pityParts, "\n")
+
+		for _, child in oddsList:GetChildren() do
+			if child:IsA("GuiObject") then
+				child:Destroy()
+			end
+		end
+		local owned = Balls.DecodeOwned(player:GetAttribute("OwnedBalls"))
+		local order = 0
+		local lastRarity = nil
+		for _, entry in Balls.CrateBallOdds(crate) do
+			local ball = entry.Ball
+			local rarity = Balls.GetRarity(ball.Rarity)
+			if ball.Rarity ~= lastRarity then
+				-- Rarity header with that rarity's total chance
+				lastRarity = ball.Rarity
+				order += 1
+				local header = oddsText(ball.Rarity, {
+					LayoutOrder = order,
+					Size = UDim2.new(1, -8, 0, 24),
+					Text = ("%s  ·  %g%%"):format(ball.Rarity:upper(), crate.Odds[ball.Rarity]),
+					TextColor3 = rarity.Color,
+					TextXAlignment = Enum.TextXAlignment.Left,
+				})
+				header.Parent = oddsList
+			end
+			order += 1
+			local row = oddsText(ball.Id, {
+				LayoutOrder = order,
+				Size = UDim2.new(1, -8, 0, 20),
+				Text = ('   %s%s  <font color="#%s">%.4g%%</font>'):format(
+					ball.Name,
+					if owned[ball.Id] then "" else '  <font color="#8C82A0">(new)</font>',
+					rarity.Color:ToHex(),
+					entry.Chance
+				),
+				TextXAlignment = Enum.TextXAlignment.Left,
+			})
+			row.Parent = oddsList
+		end
+		oddsList.CanvasPosition = Vector2.zero
+		UiFx.Open(oddsScreen)
+	end
+	oddsClose.Activated:Connect(function()
+		UiFx.Close(oddsScreen)
+	end)
+
 	-- One card per crate, odds shown straight from Config
 	for order, crate in Config.Crates do
 		local card = cardTemplate:Clone()
@@ -529,6 +682,57 @@ function CrateController:Start()
 		end
 		rowTemplate:Destroy()
 
+		-- Room under the odds for this crate's guarantee line, and an ODDS button for every ball's chance
+		card.Odds.Size = UDim2.new(1, -28, 1, -136)
+		local pityLine = Instance.new("TextLabel")
+		pityLine.Name = "PityLine"
+		pityLine.BackgroundTransparency = 1
+		pityLine.AnchorPoint = Vector2.new(0, 1)
+		pityLine.Position = UDim2.new(0, 12, 1, -70)
+		pityLine.Size = UDim2.new(1, -24, 0, 22)
+		pityLine.FontFace = card.CrateName.FontFace
+		pityLine.TextScaled = true
+		pityLine.RichText = true
+		pityLine.TextColor3 = Color3.fromRGB(200, 190, 230)
+		pityLine.Parent = card
+		local function refreshPityLine()
+			local parts = {}
+			for _, row in Balls.PityRows(crate.Id) do
+				table.insert(
+					parts,
+					('<font color="#%s">%s+</font> in %d'):format(
+						Balls.GetRarity(row.Rarity).Color:ToHex(),
+						row.Rarity:upper(),
+						pullsLeft(row)
+					)
+				)
+			end
+			pityLine.Text = table.concat(parts, "  ·  ")
+		end
+		for _, row in Balls.PityRows(crate.Id) do
+			player:GetAttributeChangedSignal("Pity_" .. row.Key):Connect(refreshPityLine)
+		end
+		refreshPityLine()
+
+		local oddsButton = Instance.new("TextButton")
+		oddsButton.Name = "OddsButton"
+		oddsButton.AnchorPoint = Vector2.new(1, 0)
+		oddsButton.Position = UDim2.new(1, -8, 0, 8)
+		oddsButton.Size = UDim2.fromOffset(52, 24)
+		oddsButton.BackgroundColor3 = crate.Color
+		oddsButton.FontFace = card.CrateName.FontFace
+		oddsButton.Text = "ODDS"
+		oddsButton.TextScaled = true
+		oddsButton.TextColor3 = Color3.fromRGB(25, 15, 40)
+		local oddsCorner = Instance.new("UICorner")
+		oddsCorner.CornerRadius = UDim.new(0, 6)
+		oddsCorner.Parent = oddsButton
+		oddsButton.Parent = card
+		card.CrateName.Size = UDim2.new(1, -76, 0, 26)
+		oddsButton.Activated:Connect(function()
+			showOdds(crate)
+		end)
+
 		local buyButton = card.Buy :: TextButton
 		buyButton.Price.Text = formatNumber(crate.Price)
 		buyButton.Activated:Connect(function()
@@ -554,9 +758,7 @@ function CrateController:Start()
 		card.Parent = cards
 	end
 
-	for _, pity in Config.Pity do
-		player:GetAttributeChangedSignal(pity.Counter):Connect(refreshPity)
-	end
+	player:GetAttributeChangedSignal("CratesOpened"):Connect(refreshPity)
 	refreshPity()
 
 	panel:WaitForChild("Close").Activated:Connect(function()

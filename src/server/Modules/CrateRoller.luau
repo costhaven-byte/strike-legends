@@ -8,7 +8,16 @@ local Balls = require(Shared.Modules.Balls)
 local CrateRoller = {}
 
 -- Rolls a rarity from the crate's odds, only counting rarities at or above minIndex.
+-- If the crate has nothing that rare (a guarantee above its best rarity), its best rarity is used.
 local function rollRarity(crate, minIndex: number): string
+	local best = 1
+	for index, rarity in Config.Rarities do
+		if (crate.Odds[rarity.Name] or 0) > 0 then
+			best = index
+		end
+	end
+	minIndex = math.min(minIndex, best)
+
 	local total = 0
 	for index, rarity in Config.Rarities do
 		if index >= minIndex then
@@ -17,25 +26,28 @@ local function rollRarity(crate, minIndex: number): string
 	end
 	local roll = math.random() * total
 	for index, rarity in Config.Rarities do
-		if index >= minIndex then
-			roll -= crate.Odds[rarity.Name] or 0
+		local odds = crate.Odds[rarity.Name] or 0
+		if index >= minIndex and odds > 0 then
+			roll -= odds
 			if roll <= 0 then
 				return rarity.Name
 			end
 		end
 	end
-	return Config.Rarities[#Config.Rarities].Name
+	return Config.Rarities[best].Name
 end
 
--- counters: the player's pity counters ({ CratesSinceRare = 3, ... }) BEFORE this crate.
--- minRarity: optional, this roll gives at least this rarity (the first-3-minutes gift crate).
--- Returns the ball and the new counter values.
-function CrateRoller.Roll(crate, counters: { [string]: number }, minRarity: string?)
-	-- A pity kicks in when this crate would be number N in a row without that rarity
-	local minIndex = if minRarity then Balls.RarityIndex(minRarity) else 1
-	for _, pity in Config.Pity do
-		if (counters[pity.Counter] or 0) + 1 >= pity.Crates then
-			minIndex = math.max(minIndex, Balls.RarityIndex(pity.Rarity))
+-- pity: the player's pity counts for this crate ({ Basic_Rare = 3 }) BEFORE this pull (Balls.PityRows keys).
+-- minRarity: optional, this roll gives at least this rarity (the first crate ever, the gift crate).
+-- Returns the ball, the new counts for this crate's pity rows, and true if a pity guarantee decided it.
+function CrateRoller.Roll(crate, pity: { [string]: number }, minRarity: string?)
+	local baseIndex = if minRarity then Balls.RarityIndex(minRarity) else 1
+	local minIndex = baseIndex
+	local rows = Balls.PityRows(crate.Id)
+	-- A guarantee kicks in when this pull would be number After in a row without that rarity
+	for _, row in rows do
+		if (pity[row.Key] or 0) + 1 >= row.After then
+			minIndex = math.max(minIndex, Balls.RarityIndex(row.Rarity))
 		end
 	end
 
@@ -49,13 +61,11 @@ function CrateRoller.Roll(crate, counters: { [string]: number }, minRarity: stri
 	local ball = pool[math.random(#pool)]
 
 	local got = Balls.RarityIndex(rarity)
-	local newCounters = {}
-	for _, pity in Config.Pity do
-		newCounters[pity.Counter] = if got >= Balls.RarityIndex(pity.Rarity)
-			then 0
-			else (counters[pity.Counter] or 0) + 1
+	local newCounts = {}
+	for _, row in rows do
+		newCounts[row.Key] = if got >= Balls.RarityIndex(row.Rarity) then 0 else (pity[row.Key] or 0) + 1
 	end
-	return ball, newCounters, minIndex > 1 and not minRarity
+	return ball, newCounts, minIndex > baseIndex
 end
 
 return CrateRoller

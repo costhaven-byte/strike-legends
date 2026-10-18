@@ -166,34 +166,75 @@ local function onEquip(player: Player, ballId: any)
 	end
 end
 
--- Gives the player one crate's ball (no charge): rolls with pity, adds the ball or sells a duplicate.
+local POLISH = Config.Economy.Polish
+
+local function publishPolish(player: Player)
+	player:SetAttribute("Polish", Balls.EncodePolish(PlayerDataService.Get(player, "Polish") or {}))
+end
+
+local function publishPity(player: Player)
+	local pity = PlayerDataService.Get(player, "CratePity") or {}
+	for _, crate in Config.Crates do
+		for _, row in Balls.PityRows(crate.Id) do
+			player:SetAttribute("Pity_" .. row.Key, pity[row.Key] or 0)
+		end
+	end
+end
+
+-- The ball's coin multiplier for this player, Polish included (used for every throw's payout)
+function BallService.GetMultiplier(player: Player, ball): number
+	local polish = PlayerDataService.Get(player, "Polish") or {}
+	return Balls.Multiplier(ball, Balls.PolishLevel(polish[ball.Id]))
+end
+
+-- Gives the player one crate's ball (no charge): rolls with this crate's pity, adds the ball, or turns a duplicate
+-- into Polish Points (coins once that ball is fully polished).
 -- Used for bought crates and free ones (like the daily reward). Returns the result the client shows.
 -- minRarity: optional, the ball is at least this rare (the first-3-minutes gift crate)
 function BallService.GiveCrate(player: Player, crate, minRarity: string?)
-	local counters = {}
-	for _, pity in Config.Pity do
-		counters[pity.Counter] = PlayerDataService.Get(player, pity.Counter) or 0
+	-- The very first crate a player ever opens is Rare or better
+	if (PlayerDataService.Get(player, "CratesOpened") or 0) == 0 then
+		local first = Config.Economy.FirstCrateMin
+		if not minRarity or Balls.RarityIndex(first) > Balls.RarityIndex(minRarity) then
+			minRarity = first
+		end
 	end
-	local ball, newCounters, fromPity = CrateRoller.Roll(crate, counters, minRarity)
-
-	for counter, value in newCounters do
-		PlayerDataService.Set(player, counter, value)
+	local pity = PlayerDataService.Get(player, "CratePity") or {}
+	local ball, newCounts, fromPity = CrateRoller.Roll(crate, pity, minRarity)
+	for key, value in newCounts do
+		pity[key] = value
+		player:SetAttribute("Pity_" .. key, value)
 	end
+	PlayerDataService.Add(player, "CratesOpened", 1)
 
 	local owned = getOwned(player)
 	local isNew = not owned[ball.Id]
 	local sellCoins = 0
+	local polishLevel = nil
 	if isNew then
 		owned[ball.Id] = true
 		publishOwned(player)
 	else
-		-- Duplicate: sold automatically
-		sellCoins = Balls.GetRarity(ball.Rarity).SellCoins
-		PlayerDataService.Add(player, "Coins", sellCoins)
-		Analytics.Currency(player, "Coins", sellCoins, "Gameplay", "DuplicateSold")
+		local polish = PlayerDataService.Get(player, "Polish") or {}
+		local before = polish[ball.Id] or 0
+		if Balls.PolishLevel(before) < POLISH.MaxLevel then
+			-- Duplicate: Polish Points for this ball (+5% of its multiplier per level)
+			polish[ball.Id] = before + POLISH.PointsPerDuplicate
+			polishLevel = Balls.PolishLevel(polish[ball.Id])
+			publishPolish(player)
+			Analytics.Event(player, "PolishLevel", polishLevel, { ball.Id })
+		else
+			-- Fully polished already: sold for coins
+			sellCoins = Balls.GetRarity(ball.Rarity).SellCoins
+			PlayerDataService.Add(player, "Coins", sellCoins)
+			Analytics.Currency(player, "Coins", sellCoins, "Gameplay", "DuplicateSold")
+		end
 	end
 	SessionLog.Crate(player)
 	Analytics.Event(player, "CrateOpened", 1, { crate.Id, ball.Rarity, if isNew then "New" else "Duplicate" })
+	if fromPity then
+		Analytics.Event(player, "PityHit", 1, { crate.Id, ball.Rarity })
+	end
 	Analytics.Step(player, "Opened Crate")
 
 	return {
@@ -201,6 +242,7 @@ function BallService.GiveCrate(player: Player, crate, minRarity: string?)
 		BallId = ball.Id,
 		IsNew = isNew,
 		SellCoins = sellCoins,
+		PolishLevel = polishLevel, -- set when a duplicate polished the ball
 		FromPity = fromPity,
 	}
 end
@@ -285,6 +327,8 @@ function BallService:Start()
 			PlayerDataService.Set(player, "EquippedBall", Config.StartingData.EquippedBall)
 		end
 		publishOwned(player)
+		publishPolish(player)
+		publishPity(player)
 
 		player:GetAttributeChangedSignal("EquippedBall"):Connect(function()
 			refreshCharacterBall(player)
