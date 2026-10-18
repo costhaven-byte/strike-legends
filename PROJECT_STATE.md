@@ -1,7 +1,7 @@
 # Project state (max 40 lines, read at the start of every session, update at the end)
 Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 2 replaces Addendum 1).
 
-**Current milestone:** Phase 2 step 6 PASSED 2026-10-19. Follow-up: 3D balls everywhere (client Modules/BallView) + Rookie model blue, owner test PENDING.
+**Current milestone:** Phase 2 step 6 PASSED 2026-10-19. Follow-up 3D balls everywhere (client Modules/BallView) + Rookie model blue PASSED.
 Restore point: git tag restore-ball-3d-everywhere-before + Studio "Save to Roblox As" "Before 3D balls everywhere". Real game = cloud place 94254609600041.
 Next: Phase 2 step 7 (ranks 1-60, section 9.5), only when Selim says go.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
