@@ -86,20 +86,20 @@ Config.Throw = {
 
 	-- Power Levels 1-12 (bought with coins, see Config.Economy.PowerLevels): how the equipped ball looks,
 	-- sounds and hits at each level. Every level adds something you can see on the very next throw.
-	-- Size = rolling ball size (1 = normal), Force = how hard pins fly, New = what the shop says this level adds
+	-- Size = rolling ball size (1 = normal; trimmed about 10% on 2026-10-18, owner: a tiny bit too big), Force = how hard pins fly, New = what the shop says this level adds
 	Levels = {
 		{ Size = 0.8, Force = 0.6, New = "" },
-		{ Size = 1.0, Force = 0.8, New = "POWER TRAIL" },
-		{ Size = 1.15, Force = 0.95, New = "SPARKS" },
-		{ Size = 1.35, Force = 1.1, New = "BIGGER BALL" },
-		{ Size = 1.5, Force = 1.3, New = "ON FIRE" },
-		{ Size = 1.65, Force = 1.5, New = "HUGE TRAIL" },
-		{ Size = 1.85, Force = 1.7, New = "MEGA CRASH" },
-		{ Size = 2.0, Force = 1.9, New = "POWER AURA" },
-		{ Size = 2.15, Force = 2.1, New = "CLEAN THROW" },
-		{ Size = 2.4, Force = 2.3, New = "GIANT BALL" },
-		{ Size = 2.6, Force = 2.5, New = "RAINBOW FIRE" },
-		{ Size = 2.9, Force = 2.8, New = "MAXIMUM POWER" },
+		{ Size = 0.95, Force = 0.8, New = "POWER TRAIL" },
+		{ Size = 1.1, Force = 0.95, New = "SPARKS" },
+		{ Size = 1.25, Force = 1.1, New = "BIGGER BALL" },
+		{ Size = 1.4, Force = 1.3, New = "ON FIRE" },
+		{ Size = 1.5, Force = 1.5, New = "HUGE TRAIL" },
+		{ Size = 1.65, Force = 1.7, New = "MEGA CRASH" },
+		{ Size = 1.8, Force = 1.9, New = "POWER AURA" },
+		{ Size = 1.95, Force = 2.1, New = "CLEAN THROW" },
+		{ Size = 2.15, Force = 2.3, New = "GIANT BALL" },
+		{ Size = 2.35, Force = 2.5, New = "RAINBOW FIRE" },
+		{ Size = 2.6, Force = 2.8, New = "MAXIMUM POWER" },
 	},
 	-- How loud the level effects are (owner 2026-10-18: "exaggerate them a bit more"). Bigger = stronger.
 	LevelFx = {
