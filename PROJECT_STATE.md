@@ -19,7 +19,6 @@ Next after it passes: Phase 1 step 3 (Power Levels 1 to 12), only when Selim say
 - Economy sheet: require(game.ServerStorage.Tools.EconomySim).Sheet(). Measured throw = about 3s (lane free 2.2s after release).
 - Overcharge (Config.Throw.Overcharge, Enabled = true): red cap at the top of the arc (from 0.94); release there = 50% OVERCHARGE strike (x2 a Perfect, harder hit) or OVERCOOKED gutter (0 pins, streak over). Gold never enters the red.
 - AssetSlots (Shared.AssetSlots): every sound slot; nil Id = borrows a stand-in sound. Strike slow motion 0.2s, hit-stop 0.05s (Addendum spec).
-
 ## Placeholder
 - All sounds (Creator Store picks); 3 overcharge sounds not picked (stand-ins). Crates: only Basic and Neon, old odds and pity.
 - Ball "level" comes from rarity until real Power Levels exist.
@@ -37,6 +36,5 @@ Next after it passes: Phase 1 step 3 (Power Levels 1 to 12), only when Selim say
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
 
 ## Last session
-- 2026-10-18: read Addendum 2, checked the throw against it, ran the policy check, made this file.
-- 2026-10-18: built Phase 1 step 1 (server-timed hold, session log, measured throw time, economy sheet). Test passed.
+- 2026-10-18: Addendum 2 kickoff + policy check; Phase 1 step 1 built and passed.
 - 2026-10-18: built Phase 1 step 2 (overcharge, AssetSlots, strike timing to spec). Synced via http trick, Rojo not running.
