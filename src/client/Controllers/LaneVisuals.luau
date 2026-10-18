@@ -59,13 +59,27 @@ local function refreshRack(lane: Model)
 	end
 end
 
--- The thrower's equipped ball: its 3D model plus its effects (trail, sparkles, rings) from Config.BallVfx
+local RAINBOW = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 43, 214)),
+	ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 200, 40)),
+	ColorSequenceKeypoint.new(0.66, Color3.fromRGB(70, 230, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(140, 255, 90)),
+})
+local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
+
+-- The thrower's equipped ball: its 3D model plus its effects (trail, sparkles, rings) from Config.BallVfx.
+-- Better balls roll bigger, glow brighter, pour sparks, catch fire and finally burn in rainbow (the Throw Lab ladder).
 local function makeBall(ballId: string?): Part
 	local info = Balls.Get(ballId) or Config.Balls[1]
+	local level = ThrowRules.Level(info)
+	local d = LANE.BallDiameter * THROW.Levels[level].Size
+	local color = info.Trail or info.Color
+	local rainbow = level >= THROW.RainbowFromLevel
+
 	local ball = Instance.new("Part")
 	ball.Name = "Ball"
 	ball.Shape = Enum.PartType.Ball
-	ball.Size = Vector3.one * LANE.BallDiameter
+	ball.Size = Vector3.one * d
 	ball.Color = info.Color
 	ball.Material = info.Material
 	ball.Anchored = true
@@ -73,6 +87,37 @@ local function makeBall(ballId: string?): Part
 	ball.CanQuery = false
 	ball.CanTouch = false
 	BallLook.Apply(ball, info.Id)
+
+	local glow = Instance.new("PointLight")
+	glow.Color = color
+	glow.Range = 6 + level
+	glow.Brightness = 0.5 + level * 0.25
+	glow.Parent = ball
+	if level >= THROW.SparklesFromLevel then
+		local e = Instance.new("ParticleEmitter")
+		e.Name = "PowerSparkles"
+		e.Texture = SPARKLE
+		e.Color = if rainbow then RAINBOW else ColorSequence.new(color, Color3.new(1, 1, 1))
+		e.LightEmission = 1
+		e.Size =
+			NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.25 + d * 0.12), NumberSequenceKeypoint.new(1, 0) })
+		e.Lifetime = NumberRange.new(0.3, 0.6)
+		e.Speed = NumberRange.new(1, 2 + level * 0.5)
+		e.SpreadAngle = Vector2.new(180, 180)
+		e.Rate = 15 + (level - THROW.SparklesFromLevel) * 12
+		e.Shape = Enum.ParticleEmitterShape.Sphere
+		e.Parent = ball
+	end
+	if level >= THROW.FireFromLevel then
+		local fire = Instance.new("Fire")
+		fire.Name = "PowerFire"
+		-- Kept low and coloured (never white) so the flames don't hide the pins
+		fire.Size = d * 0.9
+		fire.Heat = 2 + level * 0.4
+		fire.Color = if rainbow then Color3.fromRGB(255, 43, 214) else color
+		fire.SecondaryColor = if rainbow then Color3.fromRGB(70, 230, 255) else color:Lerp(Color3.new(0, 0, 0), 0.3)
+		fire.Parent = ball
+	end
 	return ball
 end
 
@@ -99,7 +144,9 @@ local function throwFeel(data, ballInfo)
 		Strength = strength,
 		Force = THROW.Levels[level].Force * strength,
 		Crash = (1 + THROW.CrashGrowthPerLevel * (level - 1)) * math.sqrt(strength),
-		PopScale = 1 + (level - 1) * 0.08,
+		PopScale = 1 + (level - 1) * 0.12,
+		RarityColor = (Balls.GetRarity(ballInfo.Rarity) or {}).Color,
+		HitStop = if data.Perfect then THROW.HitStop else 0,
 		Color = if data.Perfect then GOLD else ballInfo.Trail or ballInfo.Color,
 	}
 end
@@ -161,7 +208,7 @@ local function onImpact(data, rack, feel, isOwn: boolean, setTimeScale: (number)
 	end
 	if isStrike then
 		-- The pins burst at full speed first (instant payoff), then slow motion kicks in mid-air
-		task.delay(THROW.SlowMotionStartsAfter, slowMotion, rack, setTimeScale)
+		task.delay(feel.HitStop + THROW.SlowMotionStartsAfter, slowMotion, rack, setTimeScale)
 		local streak = data.Streak or 1
 		local special = table.find(THROW.SpecialStreaks, streak) ~= nil
 		local grow = 1 + THROW.StreakGrowth * (math.min(math.max(streak, 1), THROW.StreakGrowthStopsAt) - 1)
@@ -215,7 +262,10 @@ local function playThrow(data)
 	local forward = ballStart.CFrame.LookVector
 	local right = ballStart.CFrame.RightVector
 	local spinAxis = Vector3.new(0, 1, 0):Cross(forward).Unit
-	local radius = LANE.BallDiameter / 2
+	local ball = makeBall(data.BallId)
+	local radius = ball.Size.X / 2
+	-- Bigger balls sit higher, so they still roll on the lane
+	local lift = Vector3.new(0, radius - LANE.BallDiameter / 2, 0)
 	local touchDistance = radius + LANE.PinWidth * rack.Scale / 2 + 0.3
 
 	local headDistance = (pinSpot.Position - ballStart.Position):Dot(forward)
@@ -233,8 +283,7 @@ local function playThrow(data)
 	local coins = if data.Reward then data.Reward.Coins else 0
 	local coinsEach = if #data.Pins > 0 then math.max(1, math.floor(coins / #data.Pins + 0.5)) else 0
 
-	local ball = makeBall(data.BallId)
-	ball.CFrame = ballStart.CFrame
+	ball.CFrame = ballStart.CFrame + lift
 	ball.Parent = lane
 	local fx = BallFx.Attach(ball, data.BallId, "Lane", forward)
 	local lights = LaneFx.FollowLights(lane, ballInfo.Trail)
@@ -272,7 +321,12 @@ local function playThrow(data)
 		if isOwn then
 			if coinsEach > 0 then
 				local size = THROW.NumberPopSize * feel.PopScale * (0.9 + math.min(flew, 2) * 0.1)
-				local color = if data.Perfect then GOLD elseif isStrike then PINK else WHITE
+				-- Gold on a PERFECT; otherwise the ball's rarity colour from Rare up, so better balls pop brighter
+				local color = if data.Perfect
+					then GOLD
+					elseif feel.Level >= 5 and feel.RarityColor then feel.RarityColor
+					elseif isStrike then PINK
+					else WHITE
 				ThrowFx.NumberPop(spot, "+" .. coinsEach, size, color)
 			end
 			ThrowFx.Shake(THROW.CameraShakeStrength * 0.25 * feel.Crash, THROW.CameraShakeTime * 0.6)
@@ -288,9 +342,31 @@ local function playThrow(data)
 
 	-- The crash: effects, then every pin that should fall takes off within PinSpreadTime,
 	-- a quick ripple from front to back, so no pin is left hanging
+	local frozen = false
 	local function impact()
 		hit = true
 		onImpact(data, rack, feel, isOwn, setTimeScale)
+		if isOwn and coins > 0 then
+			local multiplier = ballInfo.Multiplier or 1
+			local note = if multiplier > 1 then ("x%g %s"):format(multiplier, string.upper(ballInfo.Name)) else nil
+			local color = if data.Perfect
+				then GOLD
+				elseif feel.RarityColor and feel.Level >= 3 then feel.RarityColor
+				else WHITE
+			task.delay(feel.HitStop + 0.1, function()
+				ThrowFx.PayoutPop(rack.HeadPinCFrame.Position + Vector3.new(0, LANE.PinHeight, 0), coins, note, color)
+			end)
+		end
+		-- Hit-stop: a PERFECT freezes everything for a split second before the explosion
+		local stop = feel.HitStop
+		if stop > 0 then
+			frozen = true
+			setTimeScale(0)
+			task.delay(stop, function()
+				frozen = false
+				setTimeScale(1)
+			end)
+		end
 		local hitPoint = rack.HeadPinCFrame.Position - forward * 1.5 + Vector3.new(0, 0.5, 0)
 		local farthest = LANE.PinSpacing * 3.5
 		for index in falls do
@@ -298,7 +374,7 @@ local function playThrow(data)
 			local body = pin and pin.PrimaryPart
 			if body then
 				local distance = (body.Position - hitPoint).Magnitude
-				task.delay(THROW.PinSpreadTime * math.clamp(distance / farthest, 0, 1), function()
+				task.delay(stop + THROW.PinSpreadTime * math.clamp(distance / farthest, 0, 1), function()
 					if run == rack.Throw then
 						launch(index, hitPoint, 1)
 					end
@@ -316,7 +392,7 @@ local function playThrow(data)
 			-- Curve ball: heads out to the side, then hooks back into the pocket
 			local hook = progress ^ 3
 			x = data.CurveFromX * progress * (1 - hook) + data.HitX * hook
-			if not hooked and progress >= 0.55 then
+			if not hooked and progress >= 0.55 and curveTrail then
 				hooked = true
 				TraitFx.Hooked(lane, ball, isOwn)
 			end
@@ -324,7 +400,7 @@ local function playThrow(data)
 			x = data.HitX * progress
 		end
 
-		position = ballStart.Position + forward * travelled + right * x
+		position = ballStart.Position + lift + forward * travelled + right * x
 		ball.CFrame = CFrame.new(position) * CFrame.fromAxisAngle(spinAxis, travelled / radius)
 		fx:Move(position)
 		lights.Update(position)
@@ -336,7 +412,7 @@ local function playThrow(data)
 		end
 
 		-- Pins the ball rolls into: the ones the server knocked down fly, the others just wobble
-		if run == rack.Throw then
+		if run == rack.Throw and not frozen then
 			for index, pin in rack.Pins do
 				local body = pin.PrimaryPart
 				if body and body.Anchored then
@@ -440,9 +516,9 @@ local function buildPinFence(lane: Model)
 	local back = LANE.PinSpacing * 3 + 12
 	-- (the lane's forward is -Z in the head pin's frame)
 	for _, x in { -side, side } do
-		wall(Vector3.new(x, 20, -back / 2 + 3), Vector3.new(1, 40, back + 6))
+		wall(Vector3.new(x, 40, -back / 2 + 3), Vector3.new(1, 80, back + 6))
 	end
-	wall(Vector3.new(0, 20, -back), Vector3.new(side * 2 + 1, 40, 1))
+	wall(Vector3.new(0, 40, -back), Vector3.new(side * 2 + 1, 80, 1))
 	folder.Parent = lane
 end
 

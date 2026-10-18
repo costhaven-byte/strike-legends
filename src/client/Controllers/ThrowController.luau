@@ -44,9 +44,12 @@ local function laneReady(lane: Model): boolean
 	return Workspace:GetServerTimeNow() >= (lane:GetAttribute("ReadyAt") or 0)
 end
 
+local function equippedBall()
+	return Balls.Get(player:GetAttribute("EquippedBall")) or Config.Balls[1]
+end
+
 local function sweetSpot(): (number, number)
-	local ball = Balls.Get(player:GetAttribute("EquippedBall")) or Config.Balls[1]
-	return ThrowRules.SweetSpot(ball, Modifiers.Current(), Workspace:GetServerTimeNow())
+	return ThrowRules.SweetSpot(equippedBall(), Modifiers.Current(), Workspace:GetServerTimeNow())
 end
 
 function ThrowController:Start()
@@ -80,19 +83,30 @@ function ThrowController:Start()
 	sweet.BackgroundColor3 = GOLD
 	sweet.BackgroundTransparency = 0.35
 	sweet.ZIndex = 2
+	-- Curve balls: a magenta hook band on each side of the gold also counts as PERFECT
+	local hookColor = (Balls.GetTrait("Curve") or {}).Color or PINK
+	local hookBand = Instance.new("Frame")
+	hookBand.Name = "HookBand"
+	hookBand.AnchorPoint = Vector2.new(0.5, 0.5)
+	hookBand.BorderSizePixel = 0
+	hookBand.BackgroundColor3 = hookColor
+	hookBand.BackgroundTransparency = 0.45
+	hookBand.ZIndex = 2
+	hookBand.Parent = bar
+	sweet.ZIndex = 3
 	local fill = Instance.new("Frame")
 	fill.Name = "Fill"
 	fill.BorderSizePixel = 0
 	fill.BackgroundColor3 = PINK
 	fill.Size = UDim2.fromScale(0, 1)
-	fill.ZIndex = 2
+	fill.ZIndex = 4 -- over the zones; they stick out above and below it
 	fill.Parent = bar
 	local fillCorner = bar:FindFirstChildOfClass("UICorner")
 	if fillCorner then
 		fillCorner:Clone().Parent = fill
 	end
 	local needle = bar.Needle :: Frame
-	needle.ZIndex = 3
+	needle.ZIndex = 5
 
 	-- PERFECT! pops above the bar the moment you let go in the gold
 	local perfectLabel = Instance.new("TextLabel")
@@ -116,7 +130,9 @@ function ThrowController:Start()
 	perfectScale.Parent = perfectLabel
 	local perfectToken = 0
 
-	local function showPerfect()
+	local function showPerfect(text: string, color: Color3)
+		perfectLabel.Text = text
+		perfectLabel.TextColor3 = color
 		perfectToken += 1
 		local token = perfectToken
 		perfectLabel.Visible = true
@@ -145,6 +161,10 @@ function ThrowController:Start()
 		local center, size = sweetSpot()
 		sweet.Position = UDim2.fromScale(center, 0.5)
 		sweet.Size = UDim2.new(size, 0, 1, 8)
+		local hook = ThrowRules.HookWidth(equippedBall())
+		hookBand.Visible = hook > 0
+		hookBand.Position = sweet.Position
+		hookBand.Size = UDim2.new(size + hook * 2, 0, 1, 4)
 		fill.Size = UDim2.fromScale(value, 1)
 		needle.Position = UDim2.fromScale(value, 0.5)
 		fill.BackgroundColor3 = if inGold then GOLD else PINK
@@ -183,11 +203,16 @@ function ThrowController:Start()
 
 	local function release()
 		local center, size = sweetSpot()
-		local perfect = ThrowRules.InSpot(charge, center, size)
+		local gold = ThrowRules.InSpot(charge, center, size)
+		local hooked = not gold and ThrowRules.InSpot(charge, center, size, ThrowRules.HookWidth(equippedBall()))
+		local perfect = gold or hooked
 		drawBar(charge, perfect, false)
-		if perfect then
-			showPerfect()
+		if gold then
+			showPerfect("PERFECT!", GOLD)
 			UiFx.Flash(GOLD, 0.25, 0.2)
+		elseif hooked then
+			showPerfect("HOOK! PERFECT!", hookColor)
+			UiFx.Flash(hookColor, 0.25, 0.2)
 		end
 		UiFx.Pop(bar, if perfect then 1.15 else 1.08, 0.25)
 		sentAt = os.clock()
@@ -354,7 +379,8 @@ function ThrowController:Start()
 			local t = chargeClock % 2
 			charge = if t <= 1 then t else 2 - t
 			local center, size = sweetSpot()
-			drawBar(charge, ThrowRules.InSpot(charge, center, size), true)
+			local hook = ThrowRules.HookWidth(equippedBall())
+			drawBar(charge, ThrowRules.InSpot(charge, center, size, hook), true)
 		elseif state == "Waiting" then
 			-- Ready again once the lane is free (or if the server ignored the throw)
 			local waited = os.clock() - sentAt

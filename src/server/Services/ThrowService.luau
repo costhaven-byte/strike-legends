@@ -102,10 +102,11 @@ local function onThrowRequest(player: Player, charge: any)
 	local ball = BallService.GetEquipped(player)
 	local modifier = Modifiers.Current()
 	local perfect = ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW)
-	local perfectWithoutHeavy = ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW, true)
+	local hook = ThrowRules.HookWidth(ball)
+	local hooked = not perfect and hook > 0 and ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW, hook)
 	local forward = lane.BallStart.CFrame.LookVector
 	local distance = (lane.PinSpot.Position - lane.BallStart.Position):Dot(forward)
-	local result = ThrowResolver.Resolve(charge, perfect, perfectWithoutHeavy, ball, distance)
+	local result = ThrowResolver.Resolve(charge, perfect, hooked, ball, distance)
 	local isStrike = result.Tier == "Strike" or result.Tier == "PerfectStrike"
 	local streak, saved = ProgressionService.NextStreak(player, isStrike, Balls.TraitValue(ball, "StreakSaver"))
 	local goldenPin = GoldenPinService.Get(lane)

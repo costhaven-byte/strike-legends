@@ -8,10 +8,9 @@ local THROW = Config.Throw
 local ThrowRules = {}
 
 -- The gold zone for this ball and lane modifier at a server time: its centre and width (shares of the bar)
--- withoutHeavy leaves out the Heavy trait (to tell whether Heavy made the difference).
-function ThrowRules.SweetSpot(ball, modifier, serverTime: number, withoutHeavy: boolean?): (number, number)
+function ThrowRules.SweetSpot(ball, modifier, serverTime: number): (number, number)
 	local bonus = (ball.Forgiveness or 0) * THROW.ForgivenessScale
-		+ (if withoutHeavy then 0 else Balls.TraitValue(ball, "Heavy"))
+		+ Balls.TraitValue(ball, "Heavy")
 		+ (modifier and modifier.SweetBonus or 0)
 	local size = math.min(THROW.SweetSpotSize * (1 + bonus), THROW.SweetSpotMax)
 	local center = THROW.SweetSpotCenter
@@ -25,24 +24,23 @@ function ThrowRules.SweetSpot(ball, modifier, serverTime: number, withoutHeavy: 
 	return center, size
 end
 
-function ThrowRules.InSpot(charge: number, center: number, size: number): boolean
-	return math.abs(charge - center) <= size / 2
+-- extra: more bar on each side that also counts (a Curve ball's hook band)
+function ThrowRules.InSpot(charge: number, center: number, size: number, extra: number?): boolean
+	return math.abs(charge - center) <= size / 2 + (extra or 0)
+end
+
+-- Curve: how much bar on each side of the gold hooks into a PERFECT
+function ThrowRules.HookWidth(ball): number
+	return Balls.TraitValue(ball, "Curve") * THROW.CurveHookWindow
 end
 
 -- Server check: was the release in the gold at any moment in the last `window` seconds?
 -- (A sliding zone moves while the release travels to the server, so recent moments count too.)
-function ThrowRules.WasInSpot(
-	charge: number,
-	ball,
-	modifier,
-	now: number,
-	window: number,
-	withoutHeavy: boolean?
-): boolean
+function ThrowRules.WasInSpot(charge: number, ball, modifier, now: number, window: number, extra: number?): boolean
 	local steps = if modifier and modifier.SweetSway then 6 else 0
 	for i = 0, steps do
-		local center, size = ThrowRules.SweetSpot(ball, modifier, now - window * i / math.max(steps, 1), withoutHeavy)
-		if ThrowRules.InSpot(charge, center, size) then
+		local center, size = ThrowRules.SweetSpot(ball, modifier, now - window * i / math.max(steps, 1))
+		if ThrowRules.InSpot(charge, center, size, extra) then
 			return true
 		end
 	end
@@ -57,9 +55,26 @@ function ThrowRules.Strength(charge: number, perfect: boolean): number
 	return THROW.WeakestThrow + (1 - THROW.WeakestThrow) * charge
 end
 
--- Which Throw Lab level (1-12) a ball hits like
+-- Which Throw Lab level (1-12) a ball hits like: its rarity's level, one higher for the better half of that rarity
+local levels: { [string]: number } = {}
+do
+	local byRarity = {}
+	for _, ball in Config.Balls do
+		byRarity[ball.Rarity] = byRarity[ball.Rarity] or {}
+		table.insert(byRarity[ball.Rarity], ball)
+	end
+	for rarity, list in byRarity do
+		table.sort(list, function(a, b)
+			return a.Multiplier < b.Multiplier
+		end)
+		for i, ball in list do
+			local upper = #list > 1 and i > #list / 2
+			levels[ball.Id] = (THROW.RarityLevel[rarity] or 1) + (if upper then 1 else 0)
+		end
+	end
+end
 function ThrowRules.Level(ball): number
-	return math.clamp(THROW.RarityLevel[ball.Rarity] or 1, 1, #THROW.Levels)
+	return math.clamp(levels[ball.Id] or THROW.RarityLevel[ball.Rarity] or 1, 1, #THROW.Levels)
 end
 
 -- Seconds from release until the ball reaches the head pin, over `distance` studs

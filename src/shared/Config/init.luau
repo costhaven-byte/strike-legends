@@ -33,15 +33,17 @@ Config.Throw = {
 	ChargeTime = 0.75, -- seconds for the bar to fill. Lower = faster bar = harder
 	MeterSpeedPerRank = 0.05, -- the bar gets 5% faster for every rank above Rookie
 	SweetSpotCenter = 0.86, -- where the gold zone sits on the bar (0 = empty, 1 = full)
-	SweetSpotSize = 0.14, -- how wide the gold zone is (share of the bar)
-	SweetSpotMax = 0.22, -- ball bonuses never make the gold zone wider than this (keeps a gap above it)
-	ForgivenessScale = 10, -- a ball's Forgiveness 0.05 = gold zone 50% wider
+	SweetSpotSize = 0.08, -- how wide the gold zone is (share of the bar). Narrow on purpose: a PERFECT should feel earned
+	SweetSpotMax = 0.14, -- ball bonuses never make the gold zone wider than this
+	ForgivenessScale = 6, -- a ball's Forgiveness 0.05 = gold zone 30% wider
+	HitStop = 0.07, -- a PERFECT freezes the crash for this many seconds before the pins explode (makes it feel heavy)
 	PerfectPowerBonus = 1.5, -- a PERFECT release is this much stronger than a full bar
 	WeakestThrow = 0.35, -- strength of a quick tap (0 to 1)
 
 	-- What gets knocked down. A PERFECT release is always a strike.
 	StrikeChanceWithoutPerfect = 0.3, -- strike chance with a full bar outside the gold (drops fast for weaker throws)
-	CurveStrikeShare = 0.5, -- Curve balls: this share of the trait's strength is added to that chance
+	CurveHookWindow = 0.1, -- Curve balls: a magenta band this x the trait's strength wide on each side of the gold
+	-- also counts as PERFECT ("HOOK!"). Mythic Curve 0.6 = 6% of the bar on each side.
 	FewestPinsKnocked = 3, -- fewest pins any throw knocks down
 	GoodShare = 0.7, -- knocking down at least this share of the rack reads as a "Good" throw (7 of 10)
 
@@ -56,23 +58,28 @@ Config.Throw = {
 	PinGravity = 90, -- pull on flying pins (normal is 196); characters keep normal gravity
 	LabPinSpacing = 2.9, -- pin spacing in the Lab, used to scale the numbers above to this alley
 
-	-- How hard each ball hits, by rarity (Throw Lab Power Levels 1-12; real Power Levels replace this in Milestone 12)
-	RarityLevel = { Common = 2, Uncommon = 4, Rare = 6, Epic = 8, Legendary = 10, Mythic = 12 },
+	-- How hard each ball hits and how it looks, by rarity (Throw Lab Power Levels 1-12;
+	-- real Power Levels replace this in Milestone 12). Inside a rarity, better balls go one level up.
+	RarityLevel = { Common = 1, Uncommon = 3, Rare = 5, Epic = 7, Legendary = 9, Mythic = 11 },
+	-- Size = rolling ball size (1 = normal), Force = how hard pins fly
 	Levels = {
-		{ Force = 0.6, Color = Color3.fromRGB(190, 190, 210) },
-		{ Force = 0.75, Color = Color3.fromRGB(90, 230, 120) },
-		{ Force = 0.9, Color = Color3.fromRGB(70, 230, 255) },
-		{ Force = 1.05, Color = Color3.fromRGB(60, 120, 255) },
-		{ Force = 1.2, Color = Color3.fromRGB(150, 70, 255) },
-		{ Force = 1.4, Color = Color3.fromRGB(255, 43, 214) },
-		{ Force = 1.6, Color = Color3.fromRGB(255, 50, 50) },
-		{ Force = 1.8, Color = Color3.fromRGB(255, 130, 20) },
-		{ Force = 2.0, Color = Color3.fromRGB(255, 200, 40) },
-		{ Force = 2.2, Color = Color3.fromRGB(255, 245, 220) },
-		{ Force = 2.45, Color = Color3.fromRGB(255, 80, 200) },
-		{ Force = 2.7, Color = Color3.fromRGB(255, 255, 255) },
+		{ Size = 0.85, Force = 0.6 },
+		{ Size = 0.9, Force = 0.75 },
+		{ Size = 0.95, Force = 0.9 },
+		{ Size = 1.0, Force = 1.05 },
+		{ Size = 1.08, Force = 1.2 },
+		{ Size = 1.16, Force = 1.4 },
+		{ Size = 1.25, Force = 1.6 },
+		{ Size = 1.35, Force = 1.8 },
+		{ Size = 1.45, Force = 2.0 },
+		{ Size = 1.55, Force = 2.2 },
+		{ Size = 1.65, Force = 2.45 },
+		{ Size = 1.75, Force = 2.7 },
 	},
-	MegaCrashFromLevel = 8, -- double shockwave, big flash, deep extra boom
+	SparklesFromLevel = 3, -- sparks pour off the rolling ball
+	FireFromLevel = 5, -- the ball is on fire
+	MegaCrashFromLevel = 7, -- double shockwave, big flash, deep extra boom
+	RainbowFromLevel = 11, -- rainbow flames and sparks
 	CrashGrowthPerLevel = 0.15, -- each level makes the crash 15% bigger
 
 	-- Camera
@@ -85,9 +92,13 @@ Config.Throw = {
 	SlowMotionLength = 0.4,
 	SlowMotionSpeed = 0.3,
 
-	-- Number pops out of each pin (coins earned)
+	-- Number pops out of each pin (coins earned); better balls make them bigger
 	NumberPopSize = 34,
 	NumberPopTime = 0.7,
+	-- The big "+12.5K" total that slams in over the pins on your own throws
+	PayoutPopSize = 46, -- text size for a small payout...
+	PayoutPopGrowth = 10, -- ...plus this much for every x10 more coins
+	PayoutPopTime = 1.1,
 
 	-- Strike streak names on screen; after the last one it says "8 IN A ROW!" and so on
 	StreakNames = { "STRIKE!", "DOUBLE!", "TURKEY!", "HAMBONE!", "WILD TURKEY!", "SIX PACK!", "SEVEN UP!" },
@@ -295,11 +306,11 @@ Config.Sounds = {
 -- Sound: a name from Config.Sounds, played at Pitch.
 Config.Traits = {
 	{
-		Id = "Curve", -- Value: extra strike chance on a full bar outside the gold, times Config.Throw.CurveStrikeShare
+		Id = "Curve", -- Value: hook band on each side of the gold, times Config.Throw.CurveHookWindow
 		Name = "Curve",
-		Text = "Near misses can hook in: +%s%% strike chance outside the gold",
-		Short = "CURVE +%s%%",
-		Display = 50, -- = 100 * Config.Throw.CurveStrikeShare
+		Text = "Every throw hooks: near misses (%s%% of the bar each side of the gold) count as PERFECT",
+		Short = "CURVE %s%%",
+		Display = 10, -- = 100 * Config.Throw.CurveHookWindow
 		Popup = "HOOK!",
 		Color = Color3.fromHex("FF2BD6"), -- magenta
 		Sound = "Throw",
@@ -307,9 +318,9 @@ Config.Traits = {
 		HookSide = 1, -- 1 = aims right of centre hook back in, -1 = left
 	},
 	{
-		Id = "Blast", -- Value: chance (0-1) that a throw which hits pins knocks down ExtraPins more
+		Id = "Blast", -- Value: chance (0-1) per throw of a blast: ExtraPins more on a miss, a huge explosion on a strike
 		Name = "Blast",
-		Text = "%s%% chance to blast down an extra pin",
+		Text = "%s%% chance per throw to BLAST: an extra pin, or a giant explosion on strikes",
 		Short = "BLAST %s%%",
 		Display = 100,
 		ExtraPins = 1,
@@ -359,9 +370,9 @@ Config.Traits = {
 		Pitch = 1.6,
 	},
 	{
-		Id = "Heavy", -- Value: how much wider the gold zone on the charge bar gets (0.5 = 50% wider)
+		Id = "Heavy", -- Value: how much wider the gold zone on the charge bar gets (0.5 = 50% wider). Every strike hits HEAVY.
 		Name = "Heavy",
-		Text = "Gold zone %s%% wider",
+		Text = "Gold zone %s%% wider, and every strike lands a HEAVY HIT",
 		Short = "HEAVY +%s%%",
 		Display = 100,
 		Popup = "HEAVY HIT!",

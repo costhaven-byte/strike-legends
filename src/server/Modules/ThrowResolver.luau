@@ -50,51 +50,40 @@ local function pickPins(count: number): { number }
 end
 
 -- charge: where the bar was on release (0-1)
--- perfect / perfectWithoutHeavy: was it in the gold (worked out by ThrowRules, with and without the Heavy trait)
+-- perfect: released in the gold. hooked: missed the gold but landed in a Curve ball's hook band (also a PERFECT)
 -- ball: the equipped ball row from Config.Balls; distance: studs from the ball start to the head pin
-function ThrowResolver.Resolve(
-	charge: number,
-	perfect: boolean,
-	perfectWithoutHeavy: boolean,
-	ball,
-	distance: number
-): Result
+function ThrowResolver.Resolve(charge: number, perfect: boolean, hooked: boolean, ball, distance: number): Result
 	local fired = {}
-	if perfect and not perfectWithoutHeavy then
-		table.insert(fired, "Heavy")
+	perfect = perfect or hooked
+	if hooked then
+		table.insert(fired, "Curve")
 	end
 
-	local strike = perfect
-	local curveFromX = nil
-	if not strike then
-		local chance = THROW.StrikeChanceWithoutPerfect * charge ^ 3
-		local roll = math.random()
-		if roll < chance then
-			strike = true
-		else
-			-- Curve: a near miss can hook into the pocket for a strike
-			local curve = Balls.TraitValue(ball, "Curve") * THROW.CurveStrikeShare * charge ^ 3
-			if curve > 0 and roll < chance + curve then
-				strike = true
-				table.insert(fired, "Curve")
-				local side = (Balls.GetTrait("Curve") or {}).HookSide or 1
-				curveFromX = side * LANE.LaneHalfWidth * 0.6
-			end
-		end
-	end
-
+	local strike = perfect or math.random() < THROW.StrikeChanceWithoutPerfect * charge ^ 3
 	local count = PINS
 	if not strike then
 		local fewest = THROW.FewestPinsKnocked
 		local wanted = fewest + (PINS - 1 - fewest) * charge + (math.random() * 2 - 1)
 		count = math.clamp(math.floor(wanted + 0.5), math.max(fewest, 2), PINS - 1)
+	end
 
-		-- Blast: a chance that a hit knocks down extra pins
-		local blast = Balls.TraitValue(ball, "Blast")
-		if blast > 0 and math.random() < blast then
-			count = math.min(PINS, count + ((Balls.GetTrait("Blast") or {}).ExtraPins or 1))
-			table.insert(fired, "Blast")
-		end
+	-- Blast: a chance on every throw. A miss knocks down extra pins; a strike gets a giant explosion.
+	local blast = Balls.TraitValue(ball, "Blast")
+	if blast > 0 and math.random() < blast then
+		count = math.min(PINS, count + (if count < PINS then (Balls.GetTrait("Blast") or {}).ExtraPins or 1 else 0))
+		table.insert(fired, "Blast")
+	end
+
+	-- Heavy: every strike lands a heavy hit
+	if count == PINS and Balls.TraitValue(ball, "Heavy") > 0 then
+		table.insert(fired, "Heavy")
+	end
+
+	-- Curve balls always hook down the lane (from the hook side back into the pocket)
+	local curveFromX = nil
+	if Balls.TraitValue(ball, "Curve") > 0 then
+		local side = (Balls.GetTrait("Curve") or {}).HookSide or 1
+		curveFromX = side * LANE.LaneHalfWidth * 0.6
 	end
 
 	local tier = if perfect

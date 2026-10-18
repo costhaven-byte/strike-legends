@@ -115,6 +115,79 @@ function ThrowFx.NumberPop(position: Vector3, text: string, size: number, color:
 	end)
 end
 
+local function formatNumber(n: number): string
+	n = math.floor(n + 0.5)
+	if n >= 1e9 then
+		return ("%.2fB"):format(n / 1e9)
+	elseif n >= 1e6 then
+		return ("%.2fM"):format(n / 1e6)
+	end
+	local text = tostring(n)
+	repeat
+		local count
+		text, count = text:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
+	until count == 0
+	return text
+end
+
+-- The big total payout that slams in over the pins: "+12,500" with the multiplier under it ("x25 BALL").
+-- Bigger for bigger payouts, so stronger balls look as strong as they pay.
+function ThrowFx.PayoutPop(position: Vector3, coins: number, note: string?, color: Color3)
+	local size = THROW.PayoutPopSize + THROW.PayoutPopGrowth * math.log10(math.max(coins, 1))
+	local time = THROW.PayoutPopTime
+	local anchor = holder(position, time + 0.2)
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.fromOffset(600, size * 2.4)
+	gui.AlwaysOnTop = true
+	gui.LightInfluence = 0
+	gui.MaxDistance = 300
+	gui.StudsOffset = Vector3.new(0, 3, 0)
+	gui.Parent = anchor
+
+	local function line(text: string, textSize: number, y: number, lineColor: Color3): (TextLabel, UIStroke)
+		local label = Instance.new("TextLabel")
+		label.BackgroundTransparency = 1
+		label.AnchorPoint = Vector2.new(0.5, 0)
+		label.Position = UDim2.fromScale(0.5, y)
+		label.Size = UDim2.new(1, 0, 0, textSize * 1.2)
+		label.Font = Enum.Font.FredokaOne
+		label.Text = text
+		label.TextSize = math.floor(textSize)
+		label.TextColor3 = lineColor
+		label.Parent = gui
+		local stroke = Instance.new("UIStroke")
+		stroke.Thickness = math.max(3, textSize / 10)
+		stroke.Color = Color3.fromRGB(40, 10, 60)
+		stroke.Parent = label
+		return label, stroke
+	end
+	local labels = {}
+	local main, mainStroke = line("+" .. formatNumber(coins), size, 0, color)
+	table.insert(labels, { main, mainStroke })
+	if note then
+		local sub, subStroke = line(note, size * 0.45, 0.55, Color3.new(1, 1, 1))
+		table.insert(labels, { sub, subStroke })
+	end
+	-- Slams in from huge
+	for _, pair in labels do
+		local slam = Instance.new("UIScale")
+		slam.Scale = 2.2
+		slam.Parent = pair[1]
+		TweenService:Create(slam, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+			:Play()
+	end
+	TweenService:Create(gui, TweenInfo.new(time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		StudsOffset = Vector3.new(0, 6, 0),
+	}):Play()
+	task.delay(time * 0.6, function()
+		local fade = TweenInfo.new(time * 0.4)
+		for _, pair in labels do
+			TweenService:Create(pair[1], fade, { TextTransparency = 1 }):Play()
+			TweenService:Create(pair[2], fade, { Transparency = 1 }):Play()
+		end
+	end)
+end
+
 -- Pin hits can come 10 at once; space them out a tiny bit so they don't turn into one blob
 local lastPinSound = 0
 function ThrowFx.PinHitSound(at: Instance, force: number, slow: boolean)
