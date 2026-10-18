@@ -1,7 +1,7 @@
 -- The collection book: every ball in the game, one page per rarity. Owned balls spin in 3D;
 -- the ones you're missing show as dark silhouettes with their traits, so you know what to chase.
--- Opened with the BOOK button in the BALLS panel. Built in code (not in Studio), so it lives in git.
--- Ownership comes from the OwnedBalls Player attribute the server sets.
+-- Opened with the BALLS button; owned balls have an EQUIP button (this replaced the old BALLS grid on 2026-10-19).
+-- Built in code (not in Studio), so it lives in git. Ownership comes from the OwnedBalls Player attribute the server sets.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -19,7 +19,6 @@ local INK = Color3.fromHex("06060F")
 local CARD = Color3.fromRGB(30, 20, 60)
 local TAB = Color3.fromRGB(22, 14, 44)
 local SILHOUETTE = Color3.fromRGB(28, 22, 48)
-local GOLD = Color3.fromRGB(255, 200, 40)
 local SPIN_SPEED = 0.6 -- turns of the owned balls, radians per second
 
 local CollectionBookController = {}
@@ -89,33 +88,8 @@ function CollectionBookController:Start()
 	title.Text = "COLLECTION BOOK"
 	local countLabel = book:WaitForChild("Count") :: TextLabel
 	local close = book:WaitForChild("Close") :: TextButton
-
-	-- BOOK in the BALLS panel, and BALLS in the book to go back
-	local function headerButton(parent: Instance, label: string): TextButton
-		local button = Instance.new("TextButton")
-		button.Name = label .. "Button"
-		button.AnchorPoint = Vector2.new(1, 0)
-		button.Position = UDim2.new(1, -62, 0, 8)
-		button.Size = UDim2.fromOffset(104, 44)
-		button.BackgroundColor3 = GOLD
-		button.FontFace = FONT
-		button.Text = label
-		button.TextScaled = true
-		button.TextColor3 = INK
-		button.AutoButtonColor = true
-		corner(button, 10)
-		stroke(button, INK, 2)
-		local pad = Instance.new("UIPadding")
-		pad.PaddingTop = UDim.new(0, 8)
-		pad.PaddingBottom = UDim.new(0, 6)
-		pad.PaddingLeft = UDim.new(0, 8)
-		pad.PaddingRight = UDim.new(0, 8)
-		pad.Parent = button
-		button.Parent = parent
-		return button
-	end
-	local openButton = headerButton(inventory, "BOOK")
-	local backButton = headerButton(book, "BALLS")
+	local ballsButton = gui:WaitForChild("Menu"):WaitForChild("BallsButton") :: TextButton
+	local equipRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("EquipBall") :: RemoteEvent
 
 	-- One tab per rarity page
 	local tabs = Instance.new("Frame")
@@ -229,18 +203,6 @@ function CollectionBookController:Start()
 			mark.Text = "?"
 			stroke(mark, INK, 2).ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 		end
-		if equipped then
-			local tag = text(card, "Equipped", FONT, INK)
-			tag.AnchorPoint = Vector2.new(0.5, 0)
-			tag.Position = UDim2.new(0.5, 0, 0, -8)
-			tag.Size = UDim2.new(0.8, 0, 0, 20)
-			tag.BackgroundTransparency = 0
-			tag.BackgroundColor3 = Color3.fromRGB(70, 230, 255)
-			tag.Text = "EQUIPPED"
-			tag.ZIndex = 3
-			corner(tag, 8)
-		end
-
 		local name = text(card, "BallName", FONT, if owned then Color3.new(1, 1, 1) else rarity.Color)
 		name.Position = UDim2.new(0, 6, 0.5, 6)
 		name.Size = UDim2.new(1, -12, 0.1, 0)
@@ -255,7 +217,7 @@ function CollectionBookController:Start()
 		-- Traits show on missing balls too, so you know what you're chasing (short tags, one per line)
 		local traits = text(card, "Traits", FONT, Color3.new(1, 1, 1))
 		traits.Position = UDim2.new(0, 8, 0.7, 4)
-		traits.Size = UDim2.new(1, -16, 0.3, -12)
+		traits.Size = UDim2.new(1, -16, if owned then 0.17 else 0.3, if owned then -4 else -12)
 		traits.RichText = true
 		traits.TextWrapped = false -- one tag per line; long tags shrink instead of breaking
 		local short = Balls.DescribeTraits(ball, true, true):gsub(" · ", "\n")
@@ -275,6 +237,34 @@ function CollectionBookController:Start()
 		end
 		card.MouseEnter:Connect(describe)
 		card.Activated:Connect(describe)
+
+		-- Owned balls: EQUIP (or a lit EQUIPPED bar on the one you're throwing)
+		if owned then
+			local equip = Instance.new("TextButton")
+			equip.Name = "Equip"
+			equip.AnchorPoint = Vector2.new(0.5, 1)
+			equip.Position = UDim2.new(0.5, 0, 1, -8)
+			equip.Size = UDim2.new(1, -16, 0.11, 0)
+			equip.FontFace = FONT
+			equip.TextScaled = true
+			equip.Text = if equipped then "EQUIPPED" else "EQUIP"
+			equip.TextColor3 = INK
+			equip.BackgroundColor3 = if equipped then Color3.fromRGB(70, 230, 255) else Color3.fromRGB(90, 230, 110)
+			equip.AutoButtonColor = not equipped
+			corner(equip, 8)
+			stroke(equip, INK, 2)
+			local pad = Instance.new("UIPadding")
+			pad.PaddingTop = UDim.new(0.18, 0)
+			pad.PaddingBottom = UDim.new(0.1, 0)
+			pad.Parent = equip
+			equip.Parent = card
+			equip.Activated:Connect(function()
+				describe()
+				if not equipped then
+					equipRemote:FireServer(ball.Id)
+				end
+			end)
+		end
 
 		card.Parent = cards
 	end
@@ -356,14 +346,12 @@ function CollectionBookController:Start()
 		end)
 	end
 
-	-- Opens on the first page you haven't finished
-	local function firstUnfinishedPage(): number
-		local owned = Balls.DecodeOwned(player:GetAttribute("OwnedBalls"))
+	-- Opens on the page of the ball you're throwing
+	local function equippedPage(): number
+		local current = Balls.Get(player:GetAttribute("EquippedBall")) or Config.Balls[1]
 		for index, rarity in rarities do
-			for _, ball in ballsOf(rarity.Name) do
-				if not owned[ball.Id] then
-					return index
-				end
+			if rarity.Name == current.Rarity then
+				return index
 			end
 		end
 		return 1
@@ -374,7 +362,7 @@ function CollectionBookController:Start()
 			-- Same spot and size as the BALLS panel (which already has the phone layout applied)
 			book.Position = inventory.Position
 			book.Size = inventory.Size
-			page = firstUnfinishedPage()
+			page = equippedPage()
 			render()
 			gui.Shop.Visible = false
 			UiFx.Close(inventory)
@@ -384,12 +372,8 @@ function CollectionBookController:Start()
 		end
 	end
 
-	openButton.Activated:Connect(function()
-		setOpen(true)
-	end)
-	backButton.Activated:Connect(function()
-		setOpen(false)
-		UiFx.Open(inventory)
+	ballsButton.Activated:Connect(function()
+		setOpen(not book.Visible)
 	end)
 	close.Activated:Connect(function()
 		setOpen(false)

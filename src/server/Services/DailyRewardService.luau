@@ -45,6 +45,10 @@ local function claim(player: Player)
 	if not PlayerDataService.IsLoaded(player) then
 		return { Ok = false, Error = "Still loading" }
 	end
+	-- The calendar unlocks once the first 3 minutes are done (stage 3, see OnboardingService)
+	if Config.Onboarding.Enabled and (tonumber(PlayerDataService.Get(player, "Onboarding")) or 3) < 3 then
+		return { Ok = false, Error = "Keep bowling!" }
+	end
 	local day, claimable = getState(player)
 	if not claimable then
 		return { Ok = false, Error = "Come back tomorrow!" }

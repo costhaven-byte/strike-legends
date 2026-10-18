@@ -1,5 +1,6 @@
--- The BALLS button (shows your equipped ball) and the inventory where you pick which ball to throw.
--- The UI itself (StarterGui.BallsUI) is built in Studio; this script fills it in.
+-- The BALLS button (shows your equipped ball). Since 2026-10-19 the button opens the collection book
+-- (CollectionBookController), where you also equip balls. The old Inventory panel stays in StarterGui.BallsUI,
+-- hidden: the book copies its look and the crate reel uses its TileTemplate.
 -- Ownership comes from Player attributes the server sets: OwnedBalls and EquippedBall.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -8,7 +9,6 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
-local UiFx = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("UiFx"))
 
 local player = Players.LocalPlayer
 
@@ -143,22 +143,6 @@ function BallInventoryController:Start()
 	end)
 	refresh()
 
-	local function setOpen(open: boolean)
-		if open then
-			gui.Shop.Visible = false
-			UiFx.Open(panel)
-		else
-			UiFx.Close(panel)
-		end
-	end
-
-	ballsButton.Activated:Connect(function()
-		setOpen(not panel.Visible)
-	end)
-	panel:WaitForChild("Close").Activated:Connect(function()
-		setOpen(false)
-	end)
-	panel.Active = true -- taps on the panel don't fall through to the throw meter
 	panel.Visible = false
 end
 

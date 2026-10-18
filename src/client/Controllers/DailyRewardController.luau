@@ -66,6 +66,65 @@ function DailyRewardController:Start()
 	local busy = false
 	local errorText: string? = nil
 
+	-- Brand new players can't open the calendar during their first 3 minutes (Config.Onboarding):
+	-- the button stays grey with a throw countdown until the daily popup opens by itself
+	local onboard = Config.Onboarding
+	local function onboarding(): boolean
+		return onboard.Enabled and (player:GetAttribute("Onboarding") or 3) < 3
+	end
+	local locked = onboarding()
+	local shaking = false
+	local caption = openButton:WaitForChild("Caption") :: TextLabel
+	local icon = openButton:WaitForChild("Icon") :: Frame
+	local litColors = {}
+	for _, part in { openButton, icon, icon:WaitForChild("Ribbon"), icon:WaitForChild("Band") } do
+		litColors[part] = (part :: GuiObject).BackgroundColor3
+	end
+	local outline = openButton:FindFirstChildOfClass("UIStroke")
+	local litOutline = outline and outline.Color
+	local shade = Instance.new("Frame")
+	shade.Name = "Lock"
+	shade.Size = UDim2.fromScale(1, 1)
+	shade.BackgroundColor3 = Color3.new(0, 0, 0)
+	shade.BackgroundTransparency = 0.45
+	shade.ZIndex = 5
+	local shadeCorner = openButton:FindFirstChildOfClass("UICorner")
+	if shadeCorner then
+		shadeCorner:Clone().Parent = shade
+	end
+	local lockIcon = Instance.new("TextLabel")
+	lockIcon.Name = "Icon"
+	lockIcon.BackgroundTransparency = 1
+	lockIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+	lockIcon.Position = UDim2.fromScale(0.5, 0.4)
+	lockIcon.Size = UDim2.fromScale(0.5, 0.5)
+	lockIcon.Text = "🔒"
+	lockIcon.TextScaled = true
+	lockIcon.ZIndex = 6
+	lockIcon.Parent = shade
+	shade.Parent = openButton
+
+	local function updateLock()
+		shade.Visible = locked
+		caption.ZIndex = 7 -- the countdown sits above the shade
+		for part, color in litColors do
+			local h, s, v = color:ToHSV()
+			part.BackgroundColor3 = if locked then Color3.fromHSV(h, s * 0.1, v * 0.6) else color
+		end
+		if outline and litOutline then
+			outline.Color = if locked then Color3.fromRGB(90, 85, 100) else litOutline
+		end
+		if locked then
+			local unlockAt = onboard.GiftAfterThrows + onboard.LegendsAfterThrows
+			local left = math.max(unlockAt - (player:GetAttribute("OnboardThrows") or 0), 0)
+			caption.Text = if left > 1 then left .. " THROWS" elseif left == 1 then "1 THROW" else "SOON"
+		else
+			caption.Text = "DAILY"
+		end
+	end
+	updateLock()
+	player:GetAttributeChangedSignal("OnboardThrows"):Connect(updateLock)
+
 	-- One tile per day, straight from Config.Daily
 	local tiles = {}
 	for day, reward in Config.Daily.Rewards do
@@ -90,7 +149,7 @@ function DailyRewardController:Start()
 	local function refresh()
 		local nextDay = player:GetAttribute("DailyNext") or 1
 		local claimable = player:GetAttribute("DailyClaimable") == true
-		dot.Visible = claimable
+		dot.Visible = claimable and not locked
 
 		for day, tile in tiles do
 			local claimed = day < nextDay or (day == nextDay and not claimable)
@@ -175,6 +234,24 @@ function DailyRewardController:Start()
 	end
 
 	openButton.Activated:Connect(function()
+		if locked then
+			-- A little "no" shake; the countdown on the button says when it opens
+			if shaking then
+				return
+			end
+			shaking = true
+			local start = openButton.Position
+			for _, dx in { -6, 6, -4, 4, 0 } do
+				openButton.Position = start + UDim2.fromOffset(dx, 0)
+				if dx == -6 then
+					Sfx.Play("Error")
+				end
+				task.wait(0.04)
+			end
+			openButton.Position = start
+			shaking = false
+			return
+		end
 		setOpen(not popup.Visible)
 	end)
 	closeButton.Activated:Connect(function()
@@ -183,10 +260,15 @@ function DailyRewardController:Start()
 	claimButton.Activated:Connect(claim)
 	popup.Active = true -- taps on the popup don't fall through to the throw meter
 
-	-- Hide the DAILY button while the balls, crates or crate-opening screens are up
+	-- Hide the DAILY button while the book, crates or crate-opening screens are up
 	-- (on phones those fill the screen and the button would sit on top of them)
 	local ballsUi = player.PlayerGui:WaitForChild("BallsUI")
-	local covers = { ballsUi:WaitForChild("Inventory"), ballsUi:WaitForChild("Shop"), ballsUi:WaitForChild("Opening") }
+	local covers = {
+		ballsUi:WaitForChild("Inventory"),
+		ballsUi:WaitForChild("Book"),
+		ballsUi:WaitForChild("Shop"),
+		ballsUi:WaitForChild("Opening"),
+	}
 	local function updateButton()
 		local covered = false
 		for _, screen in covers do
@@ -223,12 +305,17 @@ function DailyRewardController:Start()
 		waited += task.wait(0.5)
 	end
 	-- Brand new players see no menus in their first 3 minutes (Config.Onboarding): it waits until that path is done
-	if Config.Onboarding.Enabled and (player:GetAttribute("Onboarding") or 3) < 3 then
-		while (player:GetAttribute("Onboarding") or 3) < 3 do
+	if onboarding() then
+		locked = true
+		updateLock()
+		while onboarding() do
 			player:GetAttributeChangedSignal("Onboarding"):Wait()
 		end
 		task.wait(8) -- after the showcase camera moment
 	end
+	locked = false
+	updateLock()
+	refresh()
 	if player:GetAttribute("DailyClaimable") == true then
 		task.wait(1.5) -- let the game load in first
 		setOpen(true)

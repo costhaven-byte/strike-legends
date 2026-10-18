@@ -1,8 +1,8 @@
 # Project state (max 40 lines, read at the start of every session, update at the end)
 Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 2 replaces Addendum 1).
 
-**Current milestone:** Phase 2 step 5 BUILT 2026-10-19, waiting for Selim's 2-minute test (Curve fix + collection book).
-Restore point: git tag restore-phase2-step5-before + Studio "Save to Roblox As" "Before Phase 2 step 5". Real game = cloud place 94254609600041.
+**Current milestone:** Phase 2 step 5 PASSED 2026-10-19. Two follow-up tweaks BUILT, waiting for Selim's test: DAILY button locked until the first 3 minutes end; BALLS opens the book (equip there).
+Restore point: git tag restore-tweaks-daily-book-before + Studio "Save to Roblox As" "Before daily+book tweaks". Real game = cloud place 94254609600041.
 Next: Phase 2 step 6 (5 crate tiers, pity, odds screen, Polish Points), only when Selim says go.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
 
@@ -21,7 +21,8 @@ Next: Phase 2 step 6 (5 crate tiers, pity, odds screen, Polish Points), only whe
 - Power Levels (save v8 PowerLevel; PowerLevelService + PowerUI button built in code): Config.Economy.PowerLevels live (sim units x10 = real coins). Power caps pins on non-PERFECT throws (LV1 = 6); PERFECT still strikes. Value multiplies coins. Looks per level: Config.Throw.Levels (size, power trail, sparks, fire, mega crash, aura, rainbow, deeper sounds, cleaner pose). Perfect now pays x2. Studio-only TEST +COINS button.
 - First 3 minutes (OnboardingService/Controller, Config.Onboarding, save v9 Onboarding + OnboardThrows; old saves skip it): assisted first PERFECT (whole arc gold), BUY LV 2 callout, gift crate (Rare+, EQUIP button) after 35 throws, camera swing to a locked showcase ball 6 throws later, daily popup held until then. "Next goal" bar = closest of Power Level / gift / free crate. Studio: Config.Onboarding.StudioNewPlayer = true (fresh, unsaved player each test).
 - Curve (Addendum 2 spec): Curve X% = PERFECT window X% wider (ThrowRules.HookWidth(ball, size)); magenta edges on the gold. Heavy and Forgiveness also widen the gold (reported to Selim).
-- Collection book (CollectionBookController, built in code): BOOK button in the BALLS panel, one page per rarity, owned balls spin in 3D, missing = silhouette + traits.
+- Collection book (CollectionBookController, built in code): the BALLS button opens it (old Inventory grid retired, kept hidden as a template), one page per rarity, owned balls spin in 3D with EQUIP buttons, missing = silhouette + traits.
+- DAILY button: grey + lock + throws-left countdown during onboarding; server refuses claims until Onboarding stage 3.
 ## Placeholder
 - All sounds (Creator Store picks); 3 overcharge sounds not picked (stand-ins). Crates: only Basic and Neon, old odds and pity.
 - PowerUp sound (stand-in RankUp). Levels 5-12 unreachable without zones 2+ (Phase 3); use TEST button.
@@ -37,4 +38,4 @@ Next: Phase 2 step 6 (5 crate tiers, pity, odds screen, Polish Points), only whe
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
 
 ## Last session
-- 2026-10-18/19: Addendum 2 kickoff, Phase 1 steps 1-4 passed. 2026-10-19: Phase 2 step 5 built (Curve + book), owner test pending.
+- 2026-10-18/19: Addendum 2 kickoff, Phase 1 steps 1-4 passed. 2026-10-19: Phase 2 step 5 passed; daily lock + equip-from-book tweaks built, owner test pending.

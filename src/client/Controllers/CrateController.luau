@@ -102,6 +102,10 @@ function CrateController:Start()
 	local function setOpen(open: boolean)
 		if open then
 			gui.Inventory.Visible = false
+			local book = gui:FindFirstChild("Book")
+			if book then
+				book.Visible = false
+			end
 			UiFx.Open(panel)
 		else
 			UiFx.Close(panel)
