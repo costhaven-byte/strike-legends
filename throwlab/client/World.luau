@@ -1,7 +1,10 @@
 -- Builds the test lane on the player's screen: lighting, lane, walls, lights, the ball and the pins.
 -- Nothing here comes from the main game; it is all made from plain parts.
 local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+
+local Settings = require(ReplicatedStorage:WaitForChild("ThrowLab"):WaitForChild("ThrowSettings"))
 
 local World = {}
 
@@ -14,6 +17,7 @@ World.BallDiameter = 2.3
 World.BallStartZ = 3
 World.LaneHalfWidth = 5
 
+World.BallEffects = {} -- sparkles and fire on the current ball
 World.Lights = {} -- neon strips that flash during celebrations: { part, baseColor }
 
 local folder = Instance.new("Folder")
@@ -322,24 +326,44 @@ function World.BuildRack(): { { model: Model, root: Part, row: number, x: number
 	return rack
 end
 
-function World.BuildBall(): Part
-	local d = World.BallDiameter
+local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
+local RAINBOW = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 43, 214)),
+	ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 200, 40)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(140, 255, 90)),
+	ColorSequenceKeypoint.new(0.75, Color3.fromRGB(70, 230, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 70, 255)),
+})
+
+-- How big the ball is at a Power Level (diameter in studs)
+function World.BallSize(level: number): number
+	return World.BallDiameter * Settings.PowerLevels[level].Size
+end
+
+-- Builds the ball for a Power Level: bigger, brighter and wilder the higher the level.
+-- Level 1 is plain; sparkles, fire and a rainbow trail switch on at the levels set in ThrowSettings.
+function World.BuildBall(level: number): Part
+	local look = Settings.PowerLevels[level]
+	local color = look.Color
+	local rainbow = level >= Settings.RainbowFromLevel
+	local d = World.BallSize(level)
 	local ball = part({
 		Name = "Ball",
 		Shape = Enum.PartType.Ball,
 		Size = Vector3.new(d, d, d),
 		CFrame = CFrame.new(0, d / 2, World.BallStartZ),
-		Color = Color3.fromRGB(120, 40, 255),
+		Color = color:Lerp(Color3.new(0.05, 0.02, 0.1), 0.55),
 		Material = Enum.Material.Glass,
 		Reflectance = 0.2,
 		CanCollide = false,
 	})
+	local coreSize = d * (level == 1 and 0.5 or 0.7)
 	local core = part({
 		Name = "Core",
 		Shape = Enum.PartType.Ball,
-		Size = Vector3.new(d * 0.7, d * 0.7, d * 0.7),
+		Size = Vector3.new(coreSize, coreSize, coreSize),
 		CFrame = ball.CFrame,
-		Color = Color3.fromRGB(255, 43, 214),
+		Color = color,
 		Material = Enum.Material.Neon,
 		CanCollide = false,
 		Parent = ball,
@@ -352,9 +376,9 @@ function World.BuildBall(): Part
 
 	local glow = Instance.new("PointLight")
 	glow.Name = "Glow"
-	glow.Color = Color3.fromRGB(255, 43, 214)
-	glow.Range = 10
-	glow.Brightness = 1
+	glow.Color = color
+	glow.Range = 6 + level
+	glow.Brightness = World.BallGlow(level)
 	glow.Parent = ball
 
 	local a0 = Instance.new("Attachment")
@@ -367,15 +391,65 @@ function World.BuildBall(): Part
 	trail.Name = "Trail"
 	trail.Attachment0 = a0
 	trail.Attachment1 = a1
-	trail.Lifetime = 0.25
+	trail.Lifetime = 0.12 + level * 0.04
 	trail.LightEmission = 1
 	trail.FaceCamera = true
-	trail.Color = ColorSequence.new(Color3.fromRGB(255, 43, 214), Color3.fromRGB(120, 40, 255))
-	trail.Transparency = NumberSequence.new(0.1, 1)
+	trail.Color = rainbow and RAINBOW or ColorSequence.new(color, color:Lerp(Color3.new(1, 1, 1), 0.4))
+	trail.Transparency = NumberSequence.new(level == 1 and 0.6 or 0.1, 1)
 	trail.WidthScale = NumberSequence.new(1, 0.2)
 	trail.Enabled = false
 	trail.Parent = ball
+
+	-- Effects that are on all the time (sparkles, fire) go in here, so they can be hidden together
+	local effects = {}
+	if level >= Settings.SparklesFromLevel then
+		local e = Instance.new("ParticleEmitter")
+		e.Name = "Sparkles"
+		e.Texture = SPARKLE
+		e.Color = rainbow and RAINBOW or ColorSequence.new(color, Color3.new(1, 1, 1))
+		e.LightEmission = 1
+		e.Size =
+			NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.25 + d * 0.12), NumberSequenceKeypoint.new(1, 0) })
+		e.Lifetime = NumberRange.new(0.3, 0.6)
+		e.Speed = NumberRange.new(1, 2 + level * 0.5)
+		e.SpreadAngle = Vector2.new(180, 180)
+		e.Rate = 15 + (level - Settings.SparklesFromLevel) * 12
+		e.Shape = Enum.ParticleEmitterShape.Sphere
+		e.Parent = ball
+		table.insert(effects, e)
+	end
+	if level >= Settings.FireFromLevel then
+		local fire = Instance.new("Fire")
+		fire.Name = "Fire"
+		-- Kept low and coloured (never white) so the flames don't hide the pins behind the ball
+		fire.Size = d * 0.9
+		fire.Heat = 2 + level * 0.4
+		fire.Color = level >= Settings.RainbowFromLevel and Color3.fromRGB(255, 43, 214) or color
+		fire.SecondaryColor = level >= Settings.RainbowFromLevel and Color3.fromRGB(70, 230, 255)
+			or color:Lerp(Color3.new(0, 0, 0), 0.3)
+		fire.Parent = ball
+		table.insert(effects, fire)
+	end
+	World.BallEffects = effects
 	return ball
+end
+
+-- How bright the ball's light is while it sits still at a Power Level
+function World.BallGlow(level: number): number
+	return 0.3 + level * 0.1
+end
+
+-- Shows or hides the ball and everything glowing on it (used when it drops into the pit)
+function World.SetBallVisible(ball: Part, visible: boolean)
+	ball.Transparency = visible and 0 or 1
+	ball.Core.Transparency = visible and 0 or 1
+	ball.Glow.Enabled = visible
+	if not visible then
+		ball.Trail.Enabled = false
+	end
+	for _, effect in World.BallEffects do
+		effect.Enabled = visible
+	end
 end
 
 function World.Build()

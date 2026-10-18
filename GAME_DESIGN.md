@@ -237,7 +237,7 @@ Milestones 10 to 20 are paused. Playtests showed the throw was boring and too re
 - Timing skill: letting go inside the gold sweet spot is a PERFECT (stronger, always a strike). Outside it still works, weaker.
 - Exaggerated crash: pins blast into the air, spin, and knock each other over (chain reaction). Number pops per pin, camera punch and short shake, 0.4s slow motion on strikes only.
 - Strike streaks escalate (STRIKE, DOUBLE, TURKEY, HAMBONE, WILD TURKEY...); 3 and 5 in a row get fireworks, cheering and flashing lights.
-- Ball Power stat (100 = normal) scales how far pins fly and how big the numbers are.
+- Power Levels 1 to 12 (the - and + buttons): each level makes the ball bigger and brighter, pins fly higher, the numbers jump (10 per pin at level 1, 750 at level 12) and the crash gets bigger. Sparkles from level 3, fire from 5, mega crash from 8, rainbow from 11. Matches Addendum 1's Power Levels.
 - All feel numbers are in `throwlab/shared/ThrowSettings.luau` with plain-English notes.
 - The whole lab runs on the player's screen for instant feel. When it moves into the real game, the server still decides the result.
 

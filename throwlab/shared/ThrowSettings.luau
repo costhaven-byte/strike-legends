@@ -49,21 +49,41 @@ ThrowSettings.StrikeChanceWithoutPerfect = 0.3
 ThrowSettings.FewestPinsKnocked = 3
 
 ---------------------------------------------------------------------------
--- 3. BALL POWER (the ball's stat)
+-- 3. POWER LEVELS (the ball's upgrade ladder, 1 to 12)
 ---------------------------------------------------------------------------
 
--- The ball's Power. 100 = a normal ball. 200 = twice as violent:
--- pins fly about twice as far and the number pops are twice as big.
--- Later, better balls and upgrades will simply raise this number.
--- (In the test lane you can also change it while playing with the - and + buttons.)
-ThrowSettings.BallPower = 100
+-- The Power Level you start on. Change it while playing with the - and + buttons.
+ThrowSettings.StartingPowerLevel = 1
 
--- How much Power the - and + buttons add or remove per click.
-ThrowSettings.PowerButtonStep = 50
+-- One row per Power Level. Every level should look and hit clearly harder than the one before.
+--   Size   = how big the ball is (1 = normal)
+--   Force  = how hard the pins fly (1 = normal)
+--   Points = the number that pops out of each pin (a PERFECT makes it bigger)
+--   Color  = the ball's glow: core, light and trail
+ThrowSettings.PowerLevels = {
+	{ Size = 0.85, Force = 0.6, Points = 10, Color = Color3.fromRGB(190, 190, 210) }, -- 1  plain
+	{ Size = 0.9, Force = 0.75, Points = 15, Color = Color3.fromRGB(90, 230, 120) }, -- 2  green
+	{ Size = 0.95, Force = 0.9, Points = 20, Color = Color3.fromRGB(70, 230, 255) }, -- 3  cyan
+	{ Size = 1.0, Force = 1.05, Points = 30, Color = Color3.fromRGB(60, 120, 255) }, -- 4  blue
+	{ Size = 1.05, Force = 1.2, Points = 45, Color = Color3.fromRGB(150, 70, 255) }, -- 5  purple
+	{ Size = 1.12, Force = 1.4, Points = 70, Color = Color3.fromRGB(255, 43, 214) }, -- 6  pink
+	{ Size = 1.2, Force = 1.6, Points = 100, Color = Color3.fromRGB(255, 50, 50) }, -- 7  red
+	{ Size = 1.3, Force = 1.8, Points = 150, Color = Color3.fromRGB(255, 130, 20) }, -- 8  orange
+	{ Size = 1.4, Force = 2.0, Points = 220, Color = Color3.fromRGB(255, 200, 40) }, -- 9  gold
+	{ Size = 1.5, Force = 2.2, Points = 330, Color = Color3.fromRGB(255, 245, 220) }, -- 10 white-hot
+	{ Size = 1.6, Force = 2.45, Points = 500, Color = Color3.fromRGB(255, 80, 200) }, -- 11 rainbow
+	{ Size = 1.7, Force = 2.7, Points = 750, Color = Color3.fromRGB(255, 255, 255) }, -- 12 absurd
+}
 
--- Pins can't fly more than this many times harder than a normal ball,
--- so very high Power stays fun instead of launching pins off the map.
-ThrowSettings.MostExtraForce = 4
+-- Extra effects switch on at these levels and stay on for every level above.
+ThrowSettings.SparklesFromLevel = 3 -- glittering sparks pour off the ball
+ThrowSettings.FireFromLevel = 5 -- the ball is on fire
+ThrowSettings.MegaCrashFromLevel = 8 -- double shockwave, big screen flash, deep extra boom
+ThrowSettings.RainbowFromLevel = 11 -- rainbow trail and rainbow sparks
+
+-- How much bigger the crash gets per level (shake, camera punch, sparks, shockwave).
+-- 0.15 = each level adds 15%. Level 12 is then about 2.6 times level 1.
+ThrowSettings.CrashGrowthPerLevel = 0.15
 
 -- How fast the ball rolls at full strength (studs per second).
 -- Higher = less waiting between letting go and the crash.
@@ -98,11 +118,9 @@ ThrowSettings.PinGravity = 90
 -- 5. NUMBER POPS (the numbers that jump out of each pin)
 ---------------------------------------------------------------------------
 
--- Points shown per pin with a normal ball at full strength.
--- Power and PERFECT multiply it.
-ThrowSettings.PointsPerPin = 10
+-- (The points each pin shows are set per Power Level, in section 3.)
 
--- Text size of a number pop with a normal ball. Bigger Power = bigger numbers.
+-- Text size of a number pop at Power Level 1. Higher levels make the numbers bigger.
 ThrowSettings.NumberPopSize = 34
 
 -- Seconds a number pop stays on screen.

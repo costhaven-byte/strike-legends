@@ -254,7 +254,7 @@ function Hud.SetStreak(streak: number)
 end
 
 ---------------------------------------------------------------------------
--- Buttons (top right): ball Power - / +, and Reset
+-- Buttons (top right): Power Level - / +, and Reset
 ---------------------------------------------------------------------------
 local panel = Instance.new("Frame")
 panel.Name = "Buttons"
@@ -298,7 +298,7 @@ end
 local minus = button("PowerDown", "-", 48, DARK, 1)
 local powerLabel = text("Power", {
 	Size = UDim2.fromOffset(120, 48),
-	Text = "POWER 100",
+	Text = "LV 1 / 12",
 	TextColor3 = CYAN,
 	LayoutOrder = 2,
 	ZIndex = 5,
@@ -312,8 +312,8 @@ Hud.ResetPressed = reset.Activated
 Hud.PowerDownPressed = minus.Activated
 Hud.PowerUpPressed = plus.Activated
 
-function Hud.SetPower(power: number)
-	powerLabel.Text = "POWER " .. power
+function Hud.SetPower(level: number, top: number)
+	powerLabel.Text = "LV " .. level .. " / " .. top
 end
 
 return Hud

@@ -25,8 +25,10 @@ local WHITE = Color3.new(1, 1, 1)
 
 World.Build()
 Juice.SetGravity()
-local ball = World.BuildBall()
-local ballRadius = World.BallDiameter / 2
+local powerLevel = math.clamp(Settings.StartingPowerLevel, 1, #Settings.PowerLevels)
+local ball = World.BuildBall(powerLevel)
+local ballLevel = powerLevel -- the level the ball on screen was built for
+local ballRadius = World.BallSize(powerLevel) / 2
 local pinRadius = World.PinWidth / 2
 
 ---------------------------------------------------------------------------
@@ -47,10 +49,18 @@ local state = "ready" -- ready, charging, rolling
 local rack: { Pin } = {}
 local throwRun = 0 -- goes up on every throw and reset; old timers check it and stop
 local streak = 0
-local power = Settings.BallPower
 local held: InputObject? = nil
 local charge, chargeClock = 0, 0
-local throwInfo = { strength = 1, perfect = false, strike = false, force = 1, popScale = 1, impacted = false }
+local throwInfo = {
+	strength = 1,
+	perfect = false,
+	strike = false,
+	force = 1,
+	popScale = 1,
+	crash = 1,
+	color = WHITE,
+	impacted = false,
+}
 local ballZ = World.BallStartZ
 local ballSpin = 0
 local rollSound: Sound? = nil
@@ -73,7 +83,7 @@ end
 -- Pins flying
 ---------------------------------------------------------------------------
 local function popNumber(pin: Pin, force: number)
-	local base = Settings.PointsPerPin * (power / 100) * throwInfo.strength
+	local base = Settings.PowerLevels[powerLevel].Points * throwInfo.strength
 	local value = math.max(1, math.floor(base * (0.85 + math.random() * 0.3) + 0.5))
 	local size = Settings.NumberPopSize * throwInfo.popScale * (0.9 + math.min(force, 2) * 0.1)
 	local color = throwInfo.perfect and GOLD or (throwInfo.strike and PINK or WHITE)
@@ -96,7 +106,8 @@ local function launch(pin: Pin, from: Vector3, speedScale: number)
 	local direction = (away.Unit + Vector3.new(0, 0, -0.6) + Vector3.new((math.random() - 0.5) * 0.8, 0, 0)).Unit
 	local force = throwInfo.force * speedScale * (0.85 + math.random() * 0.3)
 	local velocity = direction * Settings.PinLaunchForce * force
-		+ Vector3.new(0, Settings.PinLaunchUpward * force * (0.8 + math.random() * 0.4), 0)
+		-- (upward grows a bit slower than sideways, so pins from top levels still come back into view)
+		+ Vector3.new(0, Settings.PinLaunchUpward * force ^ 0.7 * (0.8 + math.random() * 0.4), 0)
 	local spin = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5).Unit
 		* Settings.PinSpin
 		* math.sqrt(force)
@@ -112,8 +123,14 @@ local function launch(pin: Pin, from: Vector3, speedScale: number)
 
 	popNumber(pin, force)
 	Juice.PinHitSound(force)
-	Juice.Burst(position + Vector3.new(0, 1.2, 0), throwInfo.perfect and GOLD or WHITE, 10 + 6 * force, 22 * force, 0.5)
-	Juice.Shake(Settings.CameraShakeStrength * 0.25 * math.min(force, 2), Settings.CameraShakeTime * 0.6)
+	Juice.Burst(
+		position + Vector3.new(0, 1.2, 0),
+		throwInfo.perfect and GOLD or throwInfo.color,
+		10 + 6 * force,
+		22 * force,
+		0.5 * throwInfo.crash
+	)
+	Juice.Shake(Settings.CameraShakeStrength * 0.25 * throwInfo.crash, Settings.CameraShakeTime * 0.6)
 end
 
 -- A pin that stays standing gives a little wobble when something bumps it
@@ -276,13 +293,19 @@ end
 -- Throw flow
 ---------------------------------------------------------------------------
 local function placeBall()
+	if ballLevel ~= powerLevel then
+		ball:Destroy()
+		ball = World.BuildBall(powerLevel)
+		ballLevel = powerLevel
+		ballRadius = World.BallSize(powerLevel) / 2
+	end
 	ballZ = World.BallStartZ
 	ballSpin = 0
 	ball.CFrame = CFrame.new(0, ballRadius, ballZ)
-	ball.Transparency = 0
-	ball.Core.Transparency = 0
+	World.SetBallVisible(ball, true)
 	ball.Trail.Enabled = false
-	ball.Glow.Brightness = 1
+	ball.Glow.Brightness = World.BallGlow(powerLevel)
+	ball.Glow.Color = Settings.PowerLevels[powerLevel].Color
 end
 
 local function getReady()
@@ -321,7 +344,8 @@ local function release()
 	local perfect = inSweetSpot(value)
 	local strength = perfect and Settings.PerfectPowerBonus
 		or (Settings.WeakestThrow + (1 - Settings.WeakestThrow) * value)
-	local powerFactor = power / 100
+	local level = Settings.PowerLevels[powerLevel]
+	local crash = (1 + Settings.CrashGrowthPerLevel * (powerLevel - 1)) * math.sqrt(strength)
 
 	throwRun += 1
 	state = "rolling"
@@ -329,14 +353,18 @@ local function release()
 		strength = strength,
 		perfect = perfect,
 		strike = choosePins(value, perfect),
-		force = math.min(powerFactor, Settings.MostExtraForce) * strength,
-		popScale = 1 + (math.min(powerFactor, Settings.MostExtraForce) - 1) * 0.5,
+		force = level.Force * strength,
+		popScale = 1 + (powerLevel - 1) * 0.08,
+		crash = crash,
+		color = level.Color,
 		impacted = false,
 	}
 
 	Hud.SetCharge(value, perfect, false)
-	Juice.Sound("Throw", 1 + (strength - 1) * 0.3)
-	rollSound = Juice.Sound("Roll", 0.9 + strength * 0.2)
+	-- Bigger balls sound heavier (deeper)
+	local heavy = 1.1 - powerLevel * 0.03
+	Juice.Sound("Throw", (1 + (strength - 1) * 0.3) * heavy)
+	rollSound = Juice.Sound("Roll", (0.9 + strength * 0.2) * heavy, 0.8 + powerLevel * 0.05)
 	ball.Trail.Enabled = true
 	if perfect then
 		Hud.Perfect()
@@ -344,13 +372,13 @@ local function release()
 		Hud.Flash(GOLD, 0.25, 0.2)
 		Juice.Burst(ball.Position, GOLD, 30, 18, 0.7)
 	end
-	Juice.Punch(0.8 * strength)
+	Juice.Punch(0.8 * strength * math.sqrt(crash))
 end
 
 local function impact()
 	throwInfo.impacted = true
 	local run = throwRun
-	local force = throwInfo.force
+	local crash = throwInfo.crash
 	local knocked = 0
 	for _, pin in rack do
 		if pin.willFall then
@@ -360,12 +388,26 @@ local function impact()
 
 	-- The crash itself: sound, ring, sparks, camera punch and shake
 	local crashPoint = Vector3.new(0, 1, World.HeadPinZ)
-	Juice.Sound("Crash", throwInfo.strike and 0.95 or 1.1, math.clamp(0.5 + knocked * 0.07, 0.5, 1.3))
-	Juice.Shockwave(Vector3.new(0, 0.1, World.HeadPinZ - 2), throwInfo.perfect and GOLD or PINK, 6 + 4 * force)
-	Juice.Burst(crashPoint, throwInfo.perfect and GOLD or WHITE, 25 + 15 * force, 35 * force, 0.9)
-	Juice.Punch(Settings.CameraPunch * math.min(force, 2))
-	Juice.Shake(Settings.CameraShakeStrength * math.min(force, 2) * (0.4 + knocked * 0.06), Settings.CameraShakeTime)
+	local ringColor = throwInfo.perfect and GOLD or throwInfo.color
+	Juice.Sound(
+		"Crash",
+		(throwInfo.strike and 0.95 or 1.1) * (1.08 - powerLevel * 0.025),
+		math.clamp(0.5 + knocked * 0.07, 0.5, 1.3) * math.min(crash, 1.6)
+	)
+	Juice.Shockwave(Vector3.new(0, 0.1, World.HeadPinZ - 2), ringColor, 6 + 5 * crash)
+	Juice.Burst(crashPoint, ringColor, 25 + 20 * crash, 35 * crash, 0.9 * math.sqrt(crash))
+	Juice.Punch(Settings.CameraPunch * crash)
+	Juice.Shake(Settings.CameraShakeStrength * crash * (0.4 + knocked * 0.06), Settings.CameraShakeTime)
 	Hud.Flash(WHITE, 0.08 + knocked * 0.012, 0.12)
+	if powerLevel >= Settings.MegaCrashFromLevel then
+		-- Top levels: a second, bigger shockwave, a white-out flash and a deep extra boom
+		task.delay(0.07, function()
+			Juice.Shockwave(Vector3.new(0, 0.2, World.HeadPinZ - 2), WHITE, 10 + 7 * crash, 0.45)
+		end)
+		Juice.Burst(crashPoint + Vector3.new(0, 2, 0), WHITE, 15 * crash, 50 * crash, 1.6, 0.3)
+		Juice.Sound("Crash", 0.55, 1.2)
+		Hud.Flash(ringColor, 0.25 + (powerLevel - Settings.MegaCrashFromLevel) * 0.06, 0.25)
+	end
 	if throwInfo.strike then
 		-- The pins burst at full speed first (instant payoff), then slow motion kicks in mid-air
 		task.delay(Settings.SlowMotionStartsAfter, function()
@@ -438,9 +480,7 @@ local function updateRoll(dt: number)
 
 	-- Into the pit: hide the ball
 	if ballZ < World.HeadPinZ - 12 and ball.Transparency < 1 then
-		ball.Transparency = 1
-		ball.Core.Transparency = 1
-		ball.Trail.Enabled = false
+		World.SetBallVisible(ball, false)
 		if rollSound then
 			Juice.Sound("PinHit", 0.6, 0.5)
 			rollSound:Destroy()
@@ -464,8 +504,8 @@ local function updateCharge(dt: number)
 	local shake = charge * 0.08
 	local offset = Vector3.new((math.random() - 0.5) * shake, (math.random() - 0.5) * shake * 0.5, charge * 1.2)
 	ball.CFrame = CFrame.new(Vector3.new(0, ballRadius, World.BallStartZ) + offset)
-	ball.Glow.Brightness = 1 + charge * 4
-	ball.Glow.Color = sweetNow and GOLD or PINK
+	ball.Glow.Brightness = World.BallGlow(powerLevel) + charge * 4
+	ball.Glow.Color = sweetNow and GOLD or Settings.PowerLevels[powerLevel].Color
 end
 
 RunService.RenderStepped:Connect(function(dt)
@@ -534,19 +574,41 @@ Hud.ResetPressed:Connect(function()
 	resetLane()
 end)
 
+-- Power Level - / +: the new ball shows up straight away (or right after the current throw)
 local function changePower(delta: number)
-	Juice.Sound("Click")
-	power = math.clamp(power + delta, Settings.PowerButtonStep, 1000)
-	Hud.SetPower(power)
+	local new = math.clamp(powerLevel + delta, 1, #Settings.PowerLevels)
+	if new == powerLevel then
+		Juice.Sound("Click")
+		return
+	end
+	powerLevel = new
+	Hud.SetPower(powerLevel, #Settings.PowerLevels)
+	local color = Settings.PowerLevels[powerLevel].Color
+	Hud.Small("POWER LEVEL " .. powerLevel, color)
+	if state == "rolling" then
+		Juice.Sound("Click")
+		return
+	end
+	held = nil
+	state = "ready"
+	placeBall()
+	Hud.SetCharge(0, false, false)
+	if delta > 0 then
+		Juice.Sound("StreakUp", 0.8 + powerLevel * 0.05, 0.7)
+		Juice.Burst(ball.Position, color, 20 + powerLevel * 5, 12 + powerLevel, 0.6 + ballRadius * 0.3, 0.5)
+		Juice.Shockwave(Vector3.new(0, 0.1, World.BallStartZ), color, 4 + powerLevel * 0.6)
+	else
+		Juice.Sound("Click")
+	end
 end
 Hud.PowerDownPressed:Connect(function()
-	changePower(-Settings.PowerButtonStep)
+	changePower(-1)
 end)
 Hud.PowerUpPressed:Connect(function()
-	changePower(Settings.PowerButtonStep)
+	changePower(1)
 end)
 
-Hud.SetPower(power)
+Hud.SetPower(powerLevel, #Settings.PowerLevels)
 Hud.SetStreak(0)
 newRack()
 getReady()
