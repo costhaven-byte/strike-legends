@@ -27,6 +27,8 @@ AssetSlots.Sounds = {
 	OverchargeWarn = { Id = nil, Volume = 0.5, StandIn = "Charge", StandInPitch = 1.8 }, -- bar enters the red cap
 	OverchargeBlast = { Id = nil, Volume = 1, StandIn = "StrikeCrash", StandInPitch = 0.55 }, -- the gamble paid off
 	Overcooked = { Id = nil, Volume = 0.6, StandIn = "StreakLost", StandInPitch = 0.7 }, -- the gamble failed: gutter
+	-- Power Levels (Config.Economy.PowerLevels). Not picked yet.
+	PowerUp = { Id = nil, Volume = 0.8, StandIn = "RankUp", StandInPitch = 1.25 }, -- bought a Power Level
 }
 
 return AssetSlots

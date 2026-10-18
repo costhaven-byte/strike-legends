@@ -8,6 +8,7 @@ local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modifiers = require(Shared.Modules.Modifiers)
+local PowerLevels = require(Shared.Modules.PowerLevels)
 local Progression = require(Shared.Modules.Progression)
 local ThrowRules = require(Shared.Modules.ThrowRules)
 local Analytics = require(script.Parent.Analytics)
@@ -53,8 +54,9 @@ end
 
 -- Every coin multiplier for this throw.
 -- Future gamepasses and boosts get added here as new entries.
-local function getCoinMultipliers(player: Player, ball, streak: number, modifier, goldenHit: boolean)
+local function getCoinMultipliers(player: Player, ball, level, streak: number, modifier, goldenHit: boolean)
 	return {
+		PowerLevel = level.Value,
 		Ball = ball.Multiplier,
 		Rank = Progression.GetRank(ProgressionService.GetCurrentRankIndex(player)).Multiplier,
 		Streak = Progression.GetStreakMultiplier(streak),
@@ -128,6 +130,8 @@ local function onThrowRequest(player: Player, clientHold: any)
 	end
 
 	local ball = BallService.GetEquipped(player)
+	local powerLevel = ThrowRules.Level(PlayerDataService.Get(player, "PowerLevel"))
+	local level = PowerLevels.Get(powerLevel)
 	local modifier = Modifiers.Current()
 	-- The gold sits where the lane says and shrinks with the streak (the client draws it the same way)
 	local goldCenter = lane:GetAttribute("GoldCenter")
@@ -142,12 +146,12 @@ local function onThrowRequest(player: Player, clientHold: any)
 	lane:SetAttribute("GoldCenter", ThrowRules.NextGoldCenter(goldCenter))
 	local forward = lane.BallStart.CFrame.LookVector
 	local distance = (lane.PinSpot.Position - lane.BallStart.Position):Dot(forward)
-	local result = ThrowResolver.Resolve(charge, perfect, hooked, overcharged, ball, distance)
+	local result = ThrowResolver.Resolve(charge, perfect, hooked, overcharged, ball, distance, level.Power)
 	local isStrike = result.Tier == "Strike" or result.Tier == "PerfectStrike"
 	local streak, saved = ProgressionService.NextStreak(player, isStrike, Balls.TraitValue(ball, "StreakSaver"))
 	local goldenPin = GoldenPinService.Get(lane)
 	local goldenHit = goldenPin > 0 and table.find(result.Pins, goldenPin) ~= nil
-	local multipliers = getCoinMultipliers(player, ball, streak, modifier, goldenHit)
+	local multipliers = getCoinMultipliers(player, ball, level, streak, modifier, goldenHit)
 	if result.Overcharge == "Blast" then
 		multipliers.Overcharge = THROW.Overcharge.CoinMultiplier
 	end
@@ -205,6 +209,7 @@ local function onThrowRequest(player: Player, clientHold: any)
 		Lane = lane,
 		UserId = player.UserId,
 		BallId = ball.Id,
+		PowerLevel = powerLevel, -- how the ball looks, sounds and hits (Config.Throw.Levels)
 		Charge = charge,
 		Power = result.Strength, -- how hard it was thrown (above 1 for a PERFECT)
 		Perfect = result.Perfect,
@@ -224,7 +229,7 @@ local function onThrowRequest(player: Player, clientHold: any)
 		Overcharge = result.Overcharge,
 	})
 
-	SessionLog.Throw(player, ThrowRules.Level(ball))
+	SessionLog.Throw(player, powerLevel)
 	BallService.HideHeldBall(player, result.RollTime + resetDelay)
 	setStatus(lane, "ROLLING...")
 	task.delay(result.RollTime, function()

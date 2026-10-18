@@ -54,8 +54,8 @@ Config.Throw = {
 	PoseHoldTime = 0.35, -- holds the follow-through pose this long, then relaxes
 	PoseRelaxTime = 0.35,
 	PoseExaggeration = 1.3, -- every bend of the throw animation is this much bigger (1 = the original pose)
-	-- Worse balls throw worse: level 1 is stiff, wobbly and flailing, and it gets cleaner every level
-	PoseCleanLevel = 9, -- from this level (Legendary) the throw is fully clean
+	-- Low Power Levels throw worse: level 1 is stiff, wobbly and flailing, and it gets cleaner every level
+	PoseCleanLevel = 9, -- from this Power Level the throw is fully clean
 	PoseWobble = 14, -- how far (degrees) a level 1 throw shakes; none at PoseCleanLevel
 	PoseWobbleSpeed = 4, -- how fast the shaking is
 	PoseFlairPerLevel = 0.06, -- each level above PoseCleanLevel swings this much bigger (level 12 = +18%)
@@ -84,27 +84,28 @@ Config.Throw = {
 	PinGravity = 90, -- pull on flying pins (normal is 196); characters keep normal gravity
 	LabPinSpacing = 2.9, -- pin spacing in the Lab, used to scale the numbers above to this alley
 
-	-- How hard each ball hits and how it looks, by rarity (Throw Lab Power Levels 1-12;
-	-- real Power Levels replace this in Milestone 12). Inside a rarity, better balls go one level up.
-	RarityLevel = { Common = 1, Uncommon = 3, Rare = 5, Epic = 7, Legendary = 9, Mythic = 11 },
-	-- Size = rolling ball size (1 = normal), Force = how hard pins fly
+	-- Power Levels 1-12 (bought with coins, see Config.Economy.PowerLevels): how the equipped ball looks,
+	-- sounds and hits at each level. Every level adds something you can see on the very next throw.
+	-- Size = rolling ball size (1 = normal), Force = how hard pins fly, New = what the shop says this level adds
 	Levels = {
-		{ Size = 0.85, Force = 0.6 },
-		{ Size = 0.9, Force = 0.75 },
-		{ Size = 0.95, Force = 0.9 },
-		{ Size = 1.0, Force = 1.05 },
-		{ Size = 1.08, Force = 1.2 },
-		{ Size = 1.16, Force = 1.4 },
-		{ Size = 1.25, Force = 1.6 },
-		{ Size = 1.35, Force = 1.8 },
-		{ Size = 1.45, Force = 2.0 },
-		{ Size = 1.55, Force = 2.2 },
-		{ Size = 1.65, Force = 2.45 },
-		{ Size = 1.75, Force = 2.7 },
+		{ Size = 0.8, Force = 0.6, New = "" },
+		{ Size = 0.95, Force = 0.8, New = "POWER TRAIL" },
+		{ Size = 1.05, Force = 0.95, New = "SPARKS" },
+		{ Size = 1.15, Force = 1.1, New = "BIGGER BALL" },
+		{ Size = 1.25, Force = 1.3, New = "ON FIRE" },
+		{ Size = 1.35, Force = 1.5, New = "HUGE TRAIL" },
+		{ Size = 1.5, Force = 1.7, New = "MEGA CRASH" },
+		{ Size = 1.6, Force = 1.9, New = "POWER AURA" },
+		{ Size = 1.75, Force = 2.1, New = "CLEAN THROW" },
+		{ Size = 1.9, Force = 2.3, New = "GIANT BALL" },
+		{ Size = 2.05, Force = 2.5, New = "RAINBOW FIRE" },
+		{ Size = 2.25, Force = 2.8, New = "MAXIMUM POWER" },
 	},
+	PowerTrailFromLevel = 2, -- a bright streak behind the rolling ball, wider every level
 	SparklesFromLevel = 3, -- sparks pour off the rolling ball
 	FireFromLevel = 5, -- the ball is on fire
 	MegaCrashFromLevel = 7, -- double shockwave, big flash, deep extra boom
+	AuraFromLevel = 8, -- the ball glows with an outline in its own colour
 	RainbowFromLevel = 11, -- rainbow flames and sparks
 	CrashGrowthPerLevel = 0.15, -- each level makes the crash 15% bigger
 
@@ -168,13 +169,14 @@ Config.StartingData = {
 	CrateStrikes = 0, -- strikes toward the next free crate (see Config.FreeCrates)
 	FreeCrates = 0, -- free crates waiting to be opened in the shop
 	PlayTime = 0, -- total seconds played, for analytics ("bought ball tier 3 after 12 minutes")
+	PowerLevel = 1, -- Power Level bought so far (Config.Economy.PowerLevels)
 	SessionLog = {}, -- the last few play sessions (see Config.SessionLog), newest last
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 7, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 8, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -198,6 +200,7 @@ Config.RateLimits = {
 	OpenCrate = 1,
 	ClaimDaily = 1,
 	StartTrial = 1,
+	BuyPowerLevel = 0.5,
 }
 
 -- Gems on/off switch. Addendum 1 keeps gems (earned only, a gem sink comes later); set Enabled = false to hide them.
@@ -270,7 +273,7 @@ Config.Trials = {
 Config.Rewards = {
 	BaseCoinsPerPin = 10,
 	StrikeBonus = 0.5, -- +50% coins on a Strike
-	PerfectStrikeBonus = 1.5, -- +150% coins on a Perfect Strike (instead of the Strike bonus)
+	PerfectStrikeBonus = 1, -- +100% coins on a Perfect Strike (Addendum 2: crit x2), instead of the Strike bonus
 
 	-- XP = (pins * XpPerPin, or the Strike / Perfect Strike amount) * every XP multiplier (streak, future boosts)
 	XpPerPin = 1.5, -- was 1 before 9.5c
@@ -1618,6 +1621,7 @@ Config.Analytics = {
 		"Opened Crate",
 		"Equipped Ball",
 		"Ranked Up",
+		"Bought Power Level",
 	},
 	PlayTimeInterval = 30, -- seconds between adding play time to the save
 	-- Every custom event name the game logs (MASTER_PLAN.md section 7). A name not on this list prints a warning in
@@ -1672,44 +1676,47 @@ Config.Economy.Formula = {
 
 -- Zones: you need Power >= Pins to strike a zone's lane. Rank = rank needed to enter.
 Config.Economy.Zones = {
-	{ Id = "StarterAlley", Name = "Starter Alley", Pins = 10, PinValue = 1, XpPerPin = 1, Rank = 1 },
-	{ Id = "NeonLanes", Name = "Neon Lanes", Pins = 30, PinValue = 5, XpPerPin = 2, Rank = 5 },
-	{ Id = "ArcadeArena", Name = "Arcade Arena", Pins = 100, PinValue = 25, XpPerPin = 4, Rank = 12 },
-	{ Id = "SkylineLanes", Name = "Skyline Lanes", Pins = 300, PinValue = 125, XpPerPin = 8, Rank = 22 },
-	{ Id = "VolcanoStrike", Name = "Volcano Strike", Pins = 1000, PinValue = 600, XpPerPin = 16, Rank = 35 },
-	{ Id = "CosmicAlley", Name = "Cosmic Alley", Pins = 3000, PinValue = 3000, XpPerPin = 32, Rank = 50 },
+	{ Id = "StarterAlley", Name = "Starter Alley", Pins = 10, PinValue = 10, XpPerPin = 1, Rank = 1 },
+	{ Id = "NeonLanes", Name = "Neon Lanes", Pins = 30, PinValue = 50, XpPerPin = 2, Rank = 5 },
+	{ Id = "ArcadeArena", Name = "Arcade Arena", Pins = 100, PinValue = 250, XpPerPin = 4, Rank = 12 },
+	{ Id = "SkylineLanes", Name = "Skyline Lanes", Pins = 300, PinValue = 1250, XpPerPin = 8, Rank = 22 },
+	{ Id = "VolcanoStrike", Name = "Volcano Strike", Pins = 1000, PinValue = 6000, XpPerPin = 16, Rank = 35 },
+	{ Id = "CosmicAlley", Name = "Cosmic Alley", Pins = 3000, PinValue = 30000, XpPerPin = 32, Rank = 50 },
 }
 
--- Power Levels (Addendum 1; the plan's "Ball Shop"): upgrades bought with coins, in order. Power = pins knocked
--- per throw at quality 1.0. Value = payout multiplier, which multiplies with the equipped ball's own Multiplier
--- (Config.Balls). Each level will also change how the ball looks and sounds (Milestone 12).
+-- Power Levels (LIVE since Addendum 2 Phase 1 step 3; the plan's "Ball Shop"): upgrades bought with coins, in order.
+-- Power = pins knocked per throw at quality 1.0 (in the live game: the most pins a non-PERFECT throw can knock down;
+-- a PERFECT always strikes the 10-pin Starter Alley). Value = payout multiplier, which multiplies with the equipped
+-- ball's own Multiplier (Config.Balls). How each level looks and sounds: Config.Throw.Levels.
 -- Tuned with the simulator. Plan prices: 0, 100, 500, 2.5K, 12K, 60K, 300K, 1.5M, 7M, 35M, 175M, 1B; plan values went
 -- up to x75, lowered to x12 because ball multipliers (up to x25) stack on top. Prices jump right after each new
 -- zone opens (levels 5 and 7), because a new zone pays far more per throw.
+-- 2026-10-18: every simulator price and pin value went x10 so they are in real game coins (the live game pays
+-- Config.Rewards.BaseCoinsPerPin = 10 per pin in zone 1). Levels 2 and 3 cheaper for Addendum 2's first 3 minutes.
 Config.Economy.PowerLevels = {
 	{ Level = 1, Price = 0, Power = 6, Value = 1.0 },
-	{ Level = 2, Price = 160, Power = 10, Value = 1.25 },
-	{ Level = 3, Price = 460, Power = 16, Value = 1.5 },
-	{ Level = 4, Price = 2700, Power = 30, Value = 2 },
-	{ Level = 5, Price = 84000, Power = 50, Value = 2.5 },
-	{ Level = 6, Price = 420000, Power = 100, Value = 3 },
-	{ Level = 7, Price = 10000000, Power = 180, Value = 4 },
-	{ Level = 8, Price = 150000000, Power = 350, Value = 5 },
-	{ Level = 9, Price = 820000000, Power = 700, Value = 6 },
-	{ Level = 10, Price = 4100000000, Power = 1400, Value = 8 },
-	{ Level = 11, Price = 21000000000, Power = 2800, Value = 10 },
-	{ Level = 12, Price = 120000000000, Power = 5000, Value = 12 },
+	{ Level = 2, Price = 400, Power = 10, Value = 1.25 },
+	{ Level = 3, Price = 3000, Power = 16, Value = 1.5 },
+	{ Level = 4, Price = 27000, Power = 30, Value = 2 },
+	{ Level = 5, Price = 840000, Power = 50, Value = 2.5 },
+	{ Level = 6, Price = 4200000, Power = 100, Value = 3 },
+	{ Level = 7, Price = 100000000, Power = 180, Value = 4 },
+	{ Level = 8, Price = 1500000000, Power = 350, Value = 5 },
+	{ Level = 9, Price = 8200000000, Power = 700, Value = 6 },
+	{ Level = 10, Price = 41000000000, Power = 1400, Value = 8 },
+	{ Level = 11, Price = 210000000000, Power = 2800, Value = 10 },
+	{ Level = 12, Price = 1200000000000, Power = 5000, Value = 12 },
 }
 
 -- Crate tiers (Addendum 1). Crates drop only the balls in Config.Balls: roll a rarity with these odds, then every
 -- ball of that rarity is equally likely. Every row adds up to 100.
 -- Prices move with the Power Level they sit next to (plan: 100, 1K, 15K, 250K, 5M).
 Config.Economy.Crates = {
-	{ Id = "Basic", Price = 160, Odds = { Common = 70, Uncommon = 25, Rare = 5 } },
-	{ Id = "Bronze", Price = 920, Odds = { Common = 45, Uncommon = 35, Rare = 17, Epic = 3 } },
-	{ Id = "Silver", Price = 100000, Odds = { Common = 20, Uncommon = 35, Rare = 32, Epic = 11, Legendary = 2 } },
-	{ Id = "Gold", Price = 8700000, Odds = { Uncommon = 20, Rare = 45, Epic = 28, Legendary = 6.5, Mythic = 0.5 } },
-	{ Id = "Neon", Price = 590000000, Odds = { Rare = 40, Epic = 38, Legendary = 18, Mythic = 4 } },
+	{ Id = "Basic", Price = 1600, Odds = { Common = 70, Uncommon = 25, Rare = 5 } },
+	{ Id = "Bronze", Price = 9200, Odds = { Common = 45, Uncommon = 35, Rare = 17, Epic = 3 } },
+	{ Id = "Silver", Price = 1000000, Odds = { Common = 20, Uncommon = 35, Rare = 32, Epic = 11, Legendary = 2 } },
+	{ Id = "Gold", Price = 87000000, Odds = { Uncommon = 20, Rare = 45, Epic = 28, Legendary = 6.5, Mythic = 0.5 } },
+	{ Id = "Neon", Price = 5900000000, Odds = { Rare = 40, Epic = 38, Legendary = 18, Mythic = 4 } },
 }
 -- Pity: a pull of one of these Crates is at least Rarity once that many pulls in a row (of that crate) missed it
 Config.Economy.CratePity = {
@@ -1730,11 +1737,11 @@ Config.Economy.Polish = {
 -- BonusScale: this egg's mascots get Mascots.Bonus times this (not in the plan, where every egg gave the same
 -- bonuses: cheap eggs made coins explode and expensive eggs were pointless). Plan prices: 400, 6K, 90K, 1.5M, 30M.
 Config.Economy.Eggs = {
-	{ Id = "Alley", Price = 370, Rank = 3, BonusScale = 0.1 },
-	{ Id = "Neon", Price = 42000, Zone = 2, BonusScale = 0.2 },
-	{ Id = "Arcade", Price = 630000, Zone = 3, BonusScale = 0.4 },
-	{ Id = "Skyline", Price = 150000000, Zone = 4, BonusScale = 0.7 },
-	{ Id = "Volcano", Price = 3500000000, Zone = 5, BonusScale = 1 },
+	{ Id = "Alley", Price = 3700, Rank = 3, BonusScale = 0.1 },
+	{ Id = "Neon", Price = 420000, Zone = 2, BonusScale = 0.2 },
+	{ Id = "Arcade", Price = 6300000, Zone = 3, BonusScale = 0.4 },
+	{ Id = "Skyline", Price = 1500000000, Zone = 4, BonusScale = 0.7 },
+	{ Id = "Volcano", Price = 35000000000, Zone = 5, BonusScale = 1 },
 }
 Config.Economy.Mascots = {
 	Odds = { Common = 60, Uncommon = 25, Rare = 10, Epic = 4, Legendary = 0.9, Mythic = 0.1 },
@@ -1761,7 +1768,7 @@ Config.Economy.Ranks = {
 Config.Economy.Rebirth = {
 	FirstRank = 20, -- rank needed for the first rebirth...
 	RankStep = 3, -- ...and this many more ranks for each one after
-	FirstCost = 400000000, -- coins needed for the first rebirth... (plan: none given)
+	FirstCost = 4000000000, -- coins needed for the first rebirth... (plan: none given)
 	CostGrowth = 1.6, -- ...times this for each one after
 	DiscountLevels = 5, -- after a rebirth, Power Levels up to this one...
 	DiscountPrice = 0.1, -- ...cost this share of their price
@@ -1770,7 +1777,7 @@ Config.Economy.Rebirth = {
 
 -- The timeline the simulator checks (MASTER_PLAN.md section 2), in minutes from a brand new player's first join
 Config.Economy.Timeline = {
-	{ Goal = "Level2", Text = "Buy Power Level 2", From = 1.5, To = 2 },
+	{ Goal = "Level2", Text = "Buy Power Level 2", From = 0.3, To = 1 }, -- Addendum 2: about 6 throws
 	{ Goal = "FirstCrate", Text = "Afford first crate", From = 1.5, To = 2 },
 	{ Goal = "Rank3", Text = "Reach rank 3", From = 4, To = 5 },
 	{ Goal = "FirstEgg", Text = "Afford first mascot egg", From = 4, To = 5 },

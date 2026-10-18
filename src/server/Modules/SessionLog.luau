@@ -21,7 +21,7 @@ end
 -- Text version of one session, for the Output window
 function SessionLog.Describe(entry: Entry): string
 	local leave = if entry.Leave > 0 then entry.Leave else os.time()
-	return ("joined %s, left %s (%d min), %d throws, %d crates, level %d"):format(
+	return ("joined %s, left %s (%d min), %d throws, %d crates, Power Level %d"):format(
 		stamp(entry.Join),
 		if entry.Leave > 0 then stamp(entry.Leave) else "still playing",
 		math.floor((leave - entry.Join) / 60 + 0.5),
@@ -31,7 +31,7 @@ function SessionLog.Describe(entry: Entry): string
 	)
 end
 
--- level: the throw level (1-12) the player just threw at
+-- level: the Power Level (1-12) the player just threw at
 function SessionLog.Throw(player: Player, level: number)
 	local entry = current[player]
 	if entry then

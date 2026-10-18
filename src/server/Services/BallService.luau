@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
+local ThrowRules = require(Shared.Modules.ThrowRules)
 local BallLook = require(Shared.Modules.BallLook)
 local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
@@ -50,6 +51,9 @@ local function refreshCharacterBall(player: Player)
 	local ball = BallService.GetEquipped(player)
 	local rarity = Balls.GetRarity(ball.Rarity)
 	local fx = Config.BallFx
+	-- The ball in your hand grows with your Power Level, like the one that rolls
+	local heldSize = fx.HeldSize
+		* Config.Throw.Levels[ThrowRules.Level(PlayerDataService.Get(player, "PowerLevel"))].Size
 	local folder = Instance.new("Folder")
 	folder.Name = "EquippedBallFx"
 
@@ -57,14 +61,14 @@ local function refreshCharacterBall(player: Player)
 	local held = Instance.new("Part")
 	held.Name = "HeldBall"
 	held.Shape = Enum.PartType.Ball
-	held.Size = Vector3.one * fx.HeldSize
+	held.Size = Vector3.one * heldSize
 	held.Color = ball.Color
 	held.Material = ball.Material
 	held.CanCollide = false
 	held.CanQuery = false
 	held.CanTouch = false
 	held.Massless = true
-	held.CFrame = hand.CFrame * CFrame.new(0, -hand.Size.Y / 2 - fx.HeldSize * 0.35, 0)
+	held.CFrame = hand.CFrame * CFrame.new(0, -hand.Size.Y / 2 - heldSize * 0.35, 0)
 	local weld = Instance.new("WeldConstraint")
 	weld.Part0 = hand
 	weld.Part1 = held
@@ -81,11 +85,11 @@ local function refreshCharacterBall(player: Player)
 	-- The ball's trail streaming behind the ball in your hand as you move
 	local top = Instance.new("Attachment")
 	top.Name = "BallTrailTop"
-	top.Position = Vector3.new(0, fx.HeldSize * 0.45, 0)
+	top.Position = Vector3.new(0, heldSize * 0.45, 0)
 	top.Parent = held
 	local bottom = Instance.new("Attachment")
 	bottom.Name = "BallTrailBottom"
-	bottom.Position = Vector3.new(0, -fx.HeldSize * 0.45, 0)
+	bottom.Position = Vector3.new(0, -heldSize * 0.45, 0)
 	bottom.Parent = held
 	local trail = Instance.new("Trail")
 	trail.Name = "BallTrail"
@@ -282,6 +286,9 @@ function BallService:Start()
 		publishOwned(player)
 
 		player:GetAttributeChangedSignal("EquippedBall"):Connect(function()
+			refreshCharacterBall(player)
+		end)
+		player:GetAttributeChangedSignal("PowerLevel"):Connect(function()
 			refreshCharacterBall(player)
 		end)
 		player.CharacterAdded:Connect(function(character)

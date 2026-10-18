@@ -1,6 +1,7 @@
 -- Turns a charge-bar release into a throw result. Pure math, no side effects.
 -- Rules from the Throw Lab: a release in the gold is a PERFECT and always a strike;
--- otherwise the fuller the bar, the more pins, but never all ten (a strike only comes from the gold).
+-- otherwise the fuller the bar, the more pins, but never all ten (a strike only comes from the gold),
+-- and never more than the player's Power (Power Level 1 knocks at most 6).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -73,13 +74,15 @@ end
 -- perfect: released in the gold. hooked: missed the gold but landed in a Curve ball's hook band (also a PERFECT)
 -- overcharged: missed the gold and the hook band but landed in the red cap (only when overcharge is on)
 -- ball: the equipped ball row from Config.Balls; distance: studs from the ball start to the head pin
+-- power: the Power Level's Power (Config.Economy.PowerLevels), the most pins a non-PERFECT throw knocks down
 function ThrowResolver.Resolve(
 	charge: number,
 	perfect: boolean,
 	hooked: boolean,
 	overcharged: boolean,
 	ball,
-	distance: number
+	distance: number,
+	power: number
 ): Result
 	-- The gamble: a huge strike or the gutter
 	local blasted = false
@@ -98,9 +101,10 @@ function ThrowResolver.Resolve(
 	local strike = perfect or math.random() < THROW.StrikeChanceWithoutPerfect * charge ^ 3
 	local count = PINS
 	if not strike then
-		local fewest = THROW.FewestPinsKnocked
-		local wanted = fewest + (PINS - 1 - fewest) * charge + (math.random() * 2 - 1)
-		count = math.clamp(math.floor(wanted + 0.5), math.max(fewest, 2), PINS - 1)
+		local most = math.clamp(math.floor(power), 2, PINS - 1)
+		local fewest = math.min(THROW.FewestPinsKnocked, most)
+		local wanted = fewest + (most - fewest) * charge + (math.random() * 2 - 1)
+		count = math.clamp(math.floor(wanted + 0.5), math.min(math.max(fewest, 2), most), most)
 	end
 
 	-- Blast: a chance on every throw. A miss knocks down extra pins (up to 9: it can't turn a miss into a strike);

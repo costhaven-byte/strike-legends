@@ -103,26 +103,9 @@ function ThrowRules.Strength(charge: number, perfect: boolean): number
 	return THROW.WeakestThrow + (1 - THROW.WeakestThrow) * charge
 end
 
--- Which Throw Lab level (1-12) a ball hits like: its rarity's level, one higher for the better half of that rarity
-local levels: { [string]: number } = {}
-do
-	local byRarity = {}
-	for _, ball in Config.Balls do
-		byRarity[ball.Rarity] = byRarity[ball.Rarity] or {}
-		table.insert(byRarity[ball.Rarity], ball)
-	end
-	for rarity, list in byRarity do
-		table.sort(list, function(a, b)
-			return a.Multiplier < b.Multiplier
-		end)
-		for i, ball in list do
-			local upper = #list > 1 and i > #list / 2
-			levels[ball.Id] = (THROW.RarityLevel[rarity] or 1) + (if upper then 1 else 0)
-		end
-	end
-end
-function ThrowRules.Level(ball): number
-	return math.clamp(levels[ball.Id] or THROW.RarityLevel[ball.Rarity] or 1, 1, #THROW.Levels)
+-- The look-and-hit level (1-12) for a player's Power Level (Config.Throw.Levels), kept on the ladder
+function ThrowRules.Level(powerLevel: number?): number
+	return math.clamp(math.floor(tonumber(powerLevel) or 1), 1, #THROW.Levels)
 end
 
 -- Seconds from release until the ball reaches the head pin, over `distance` studs

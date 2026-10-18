@@ -70,10 +70,10 @@ local RAINBOW = ColorSequence.new({
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 
 -- The thrower's equipped ball: its 3D model plus its effects (trail, sparkles, rings) from Config.BallVfx.
--- Better balls roll bigger, glow brighter, pour sparks, catch fire and finally burn in rainbow (the Throw Lab ladder).
-local function makeBall(ballId: string?): Part
+-- Higher Power Levels roll bigger, glow brighter, pour sparks, catch fire, glow with an aura and finally burn in
+-- rainbow (Config.Throw.Levels).
+local function makeBall(ballId: string?, level: number): Part
 	local info = Balls.Get(ballId) or Config.Balls[1]
-	local level = ThrowRules.Level(info)
 	local d = LANE.BallDiameter * THROW.Levels[level].Size
 	local color = info.Trail or info.Color
 	local rainbow = level >= THROW.RainbowFromLevel
@@ -120,7 +120,62 @@ local function makeBall(ballId: string?): Part
 		fire.SecondaryColor = if rainbow then Color3.fromRGB(70, 230, 255) else color:Lerp(Color3.new(0, 0, 0), 0.3)
 		fire.Parent = ball
 	end
+	if level >= THROW.AuraFromLevel then
+		local aura = Instance.new("Highlight")
+		aura.Name = "PowerAura"
+		aura.FillColor = if rainbow then PINK else color
+		aura.OutlineColor = if rainbow then GOLD else color:Lerp(WHITE, 0.5)
+		aura.FillTransparency = 0.75
+		aura.DepthMode = Enum.HighlightDepthMode.Occluded
+		aura.Parent = ball
+	end
 	return ball
+end
+
+-- Power Level 2 and up: a bright streak flat on the lane behind the rolling ball, wider every level.
+-- Lives on its own part so it doesn't spin with the ball.
+local function powerTrail(lane: Model, level: number, diameter: number, color: Color3, forward: Vector3)
+	if level < THROW.PowerTrailFromLevel then
+		return nil
+	end
+	local steps = level - THROW.PowerTrailFromLevel
+	local rig = Instance.new("Part")
+	rig.Name = "PowerTrail"
+	rig.Anchored = true
+	rig.CanCollide = false
+	rig.CanQuery = false
+	rig.CanTouch = false
+	rig.Transparency = 1
+	rig.Size = Vector3.one * 0.2
+	local half = diameter * (0.3 + steps * 0.04)
+	local low = -diameter * 0.45
+	local left = Instance.new("Attachment")
+	left.Position = Vector3.new(-half, low, 0)
+	left.Parent = rig
+	local rightSide = Instance.new("Attachment")
+	rightSide.Position = Vector3.new(half, low, 0)
+	rightSide.Parent = rig
+	local trail = Instance.new("Trail")
+	trail.Attachment0 = left
+	trail.Attachment1 = rightSide
+	trail.Color = if level >= THROW.RainbowFromLevel then RAINBOW else ColorSequence.new(WHITE, color)
+	trail.Transparency = NumberSequence.new(0.15, 1)
+	trail.LightEmission = 1
+	trail.FaceCamera = false
+	trail.Lifetime = 0.15 + steps * 0.04
+	trail.Parent = rig
+	rig.Parent = lane
+	return {
+		Move = function(position: Vector3)
+			rig.CFrame = CFrame.lookAt(position, position + forward)
+		end,
+		Stop = function()
+			trail.Enabled = false
+			task.delay(trail.Lifetime + 0.1, function()
+				rig:Destroy()
+			end)
+		end,
+	}
 end
 
 -- Strike slow motion: the ball and the flying pins run at a fraction of normal speed for a moment.
@@ -139,7 +194,7 @@ end
 
 -- How hard this throw hits and how big its crash is (from the Throw Lab's Power Levels)
 local function throwFeel(data, ballInfo)
-	local level = ThrowRules.Level(ballInfo)
+	local level = ThrowRules.Level(data.PowerLevel)
 	local strength = data.Power or 1
 	return {
 		Level = level,
@@ -148,8 +203,10 @@ local function throwFeel(data, ballInfo)
 		Crash = (1 + THROW.CrashGrowthPerLevel * (level - 1)) * math.sqrt(strength),
 		PopScale = 1 + (level - 1) * 0.12,
 		RarityColor = (Balls.GetRarity(ballInfo.Rarity) or {}).Color,
+		Rarity = Balls.RarityIndex(ballInfo.Rarity),
 		HitStop = if data.Perfect then THROW.HitStop else 0,
-		Color = if data.Overcharge == "Blast" then RED
+		Color = if data.Overcharge == "Blast"
+			then RED
 			elseif data.Perfect then GOLD
 			else ballInfo.Trail or ballInfo.Color,
 	}
@@ -279,7 +336,7 @@ local function playThrow(data)
 	local forward = ballStart.CFrame.LookVector
 	local right = ballStart.CFrame.RightVector
 	local spinAxis = Vector3.new(0, 1, 0):Cross(forward).Unit
-	local ball = makeBall(data.BallId)
+	local ball = makeBall(data.BallId, ThrowRules.Level(data.PowerLevel))
 	local radius = ball.Size.X / 2
 	-- Bigger balls sit higher, so they still roll on the lane
 	local lift = Vector3.new(0, radius - LANE.BallDiameter / 2, 0)
@@ -304,7 +361,7 @@ local function playThrow(data)
 	local thrower = Players:GetPlayerByUserId(data.UserId)
 	local character = thrower and thrower.Character
 	if character and not isOwn then
-		ThrowPose.Release(character, ThrowRules.Level(ballInfo)) -- your own swing already started when you let go
+		ThrowPose.Release(character, feel.Level) -- your own swing already started when you let go
 	end
 	local heldBall = character and character:FindFirstChild("HeldBall", true) :: BasePart?
 	local handOffset = Vector3.zero
@@ -319,6 +376,7 @@ local function playThrow(data)
 	ball.Parent = lane
 	local fx = BallFx.Attach(ball, data.BallId, "Lane", forward)
 	local lights = LaneFx.FollowLights(lane, ballInfo.Trail)
+	local streak = powerTrail(lane, feel.Level, ball.Size.X, ballInfo.Trail or ballInfo.Color, forward)
 	local fired = data.Traits or {}
 	local curveTrail = if table.find(fired, "Curve") then TraitFx.CurveTrail(lane, headDistance) else nil
 	local gemTrail = if table.find(fired, "GemHunter") then TraitFx.GemTrail(lane) else nil
@@ -356,7 +414,7 @@ local function playThrow(data)
 				-- Gold on a PERFECT; otherwise the ball's rarity colour from Rare up, so better balls pop brighter
 				local color = if data.Perfect
 					then GOLD
-					elseif feel.Level >= 5 and feel.RarityColor then feel.RarityColor
+					elseif feel.Rarity >= Balls.RarityIndex("Rare") and feel.RarityColor then feel.RarityColor
 					elseif isStrike then PINK
 					else WHITE
 				ThrowFx.NumberPop(spot, "+" .. coinsEach, size, color)
@@ -386,7 +444,7 @@ local function playThrow(data)
 			local note = if multiplier > 1 then ("x%g %s"):format(multiplier, string.upper(ballInfo.Name)) else nil
 			local color = if data.Perfect
 				then GOLD
-				elseif feel.RarityColor and feel.Level >= 3 then feel.RarityColor
+				elseif feel.RarityColor and feel.Rarity >= Balls.RarityIndex("Uncommon") then feel.RarityColor
 				else WHITE
 			task.delay(feel.HitStop + 0.1, function()
 				ThrowFx.PayoutPop(rack.HeadPinCFrame.Position + Vector3.new(0, LANE.PinHeight, 0), coins, note, color)
@@ -451,6 +509,9 @@ local function playThrow(data)
 		ball.CFrame = CFrame.new(position) * CFrame.fromAxisAngle(spinAxis, travelled / radius)
 		fx:Move(position)
 		lights.Update(position)
+		if streak then
+			streak.Move(position)
+		end
 		if curveTrail then
 			curveTrail.Move(position)
 		end
@@ -500,6 +561,9 @@ local function playThrow(data)
 			connection:Disconnect()
 			ball:Destroy()
 			lights.Destroy()
+			if streak then
+				streak.Stop()
+			end
 		end
 	end)
 
