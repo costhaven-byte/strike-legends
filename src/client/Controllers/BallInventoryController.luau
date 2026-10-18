@@ -38,9 +38,9 @@ function BallInventoryController.FillTile(tile: GuiObject, ball, owned: boolean)
 	if owned then
 		tile.BallName.Text = ball.Name
 		swatch.BackgroundColor3 = ball.Color
-		local aimBonus = math.floor(ball.Forgiveness / Config.Throw.AimSweetSpot * 100 + 0.5)
-		tile.Stats.Text = if aimBonus > 0
-			then ("x%g coins · aim +%d%%"):format(ball.Multiplier, aimBonus)
+		local goldBonus = math.floor(ball.Forgiveness * Config.Throw.ForgivenessScale * 100 + 0.5)
+		tile.Stats.Text = if goldBonus > 0
+			then ("x%g coins · gold +%d%%"):format(ball.Multiplier, goldBonus)
 			else ("x%g coins"):format(ball.Multiplier)
 		tile.BackgroundTransparency = 0
 	else

@@ -1,10 +1,10 @@
--- Plays every throw on this player's screen: the ball roll, the pins the server says fall,
--- and the effects (sounds, lane lights, sparks, confetti, plus slow-motion and camera shake on your own throws).
+-- Plays every throw on this player's screen: the ball roll, the pins the server says fall (the Throw Lab explosion),
+-- and the effects (sounds, lane lights, sparks, shockwaves, number pops, plus slow motion, camera punch and shake
+-- on your own throws).
 -- Pins live only on this client, so they never lag and always match the server's result.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -15,6 +15,7 @@ local Balls = require(Shared.Modules.Balls)
 local BallLook = require(Shared.Modules.BallLook)
 local Modifiers = require(Shared.Modules.Modifiers)
 local Progression = require(Shared.Modules.Progression)
+local ThrowRules = require(Shared.Modules.ThrowRules)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local CameraShake = require(Modules.CameraShake)
 local LaneFx = require(Modules.LaneFx)
@@ -22,12 +23,19 @@ local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
 local BallFx = require(Modules.BallFx)
 local TraitFx = require(Modules.TraitFx)
+local ThrowFx = require(Modules.ThrowFx)
 
 local LANE = Config.Lane
 local CAMERA = Config.Camera
 local JUICE = Config.Juice
+local THROW = Config.Throw
+-- Throw Lab distances were tuned on bigger pins; effect sizes scale by this
+local PIN_SCALE = LANE.PinSpacing / THROW.LabPinSpacing
 
-local normalGravity = Workspace.Gravity
+local GOLD = Color3.fromRGB(255, 200, 40)
+local PINK = Color3.fromRGB(255, 43, 214)
+local WHITE = Color3.new(1, 1, 1)
+
 local normalFov = Workspace.CurrentCamera.FieldOfView
 
 local LaneVisuals = {}
@@ -68,33 +76,64 @@ local function makeBall(ballId: string?): Part
 	return ball
 end
 
--- Strike slow-motion: the ball, flying pins and gravity all run at a fraction of normal speed.
+-- Strike slow motion: the ball and the flying pins run at a fraction of normal speed for a moment.
 -- (Roblox can't slow down time itself, so we slow down everything this player sees in the alley.)
 local function slowMotion(rack, setTimeScale: (number) -> ())
-	local scale = JUICE.SlowMoScale
-	local camera = Workspace.CurrentCamera
-	setTimeScale(scale)
-	rack:ScaleMotion(scale)
-	Workspace.Gravity = normalGravity * scale * scale
-	TweenService:Create(camera, TweenInfo.new(0.1), { FieldOfView = JUICE.SlowMoFov }):Play()
-
-	task.delay(JUICE.SlowMoTime, function()
+	local speed = math.max(THROW.SlowMotionSpeed, 0.05)
+	setTimeScale(speed)
+	rack:SetTimeScale(speed)
+	ThrowFx.SlowMoLook(true)
+	task.delay(THROW.SlowMotionLength, function()
 		setTimeScale(1)
-		rack:ScaleMotion(1 / scale)
-		Workspace.Gravity = normalGravity
-		TweenService:Create(camera, TweenInfo.new(0.35, Enum.EasingStyle.Quad), { FieldOfView = normalFov }):Play()
+		rack:SetTimeScale(1)
+		ThrowFx.SlowMoLook(false)
 	end)
 end
 
+-- How hard this throw hits and how big its crash is (from the Throw Lab's Power Levels)
+local function throwFeel(data, ballInfo)
+	local level = ThrowRules.Level(ballInfo)
+	local strength = data.Power or 1
+	return {
+		Level = level,
+		Strength = strength,
+		Force = THROW.Levels[level].Force * strength,
+		Crash = (1 + THROW.CrashGrowthPerLevel * (level - 1)) * math.sqrt(strength),
+		PopScale = 1 + (level - 1) * 0.08,
+		Color = if data.Perfect then GOLD else ballInfo.Trail or ballInfo.Color,
+	}
+end
+
 -- Everything that happens the moment the ball reaches the pins
-local function onImpact(data, rack, position: Vector3, isOwn: boolean, setTimeScale: (number) -> ())
+local function onImpact(data, rack, feel, isOwn: boolean, setTimeScale: (number) -> ())
 	local lane: Model = data.Lane
 	local isStrike = data.Tier == "Strike" or data.Tier == "PerfectStrike"
 	local isPerfect = data.Tier == "PerfectStrike"
 	local count = #data.Pins
+	local crash = feel.Crash
+	local forward = rack.HeadPinCFrame.LookVector
+	local headPin = rack.HeadPinCFrame.Position
+	local crashPoint = headPin + Vector3.new(0, 1, 0)
+	local ringColor = feel.Color
 
-	-- Everyone nearby hears the crash; strikes get the big one
-	Sfx.PlayAt(if isStrike then "StrikeCrash" else "PinHit", lane.PinSpot, 0.95 + math.random() * 0.1)
+	-- Everyone nearby hears and sees the crash; strikes get the big one
+	Sfx.PlayAt(
+		if isStrike then "StrikeCrash" else "PinHit",
+		lane.PinSpot,
+		(if isStrike then 0.95 else 1.1) * (1.08 - feel.Level * 0.025),
+		math.clamp(0.5 + count * 0.07, 0.5, 1.3) * math.min(crash, 1.6)
+	)
+	ThrowFx.Shockwave(headPin + forward * 2 + Vector3.new(0, 0.1, 0), ringColor, (6 + 5 * crash) * PIN_SCALE)
+	ThrowFx.Burst(crashPoint, ringColor, 25 + 20 * crash, 35 * crash * PIN_SCALE, 0.9 * math.sqrt(crash))
+	local mega = feel.Level >= THROW.MegaCrashFromLevel
+	if mega then
+		-- The strongest balls: a second, bigger shockwave, a white burst and a deep extra boom
+		task.delay(0.07, function()
+			ThrowFx.Shockwave(headPin + forward * 2 + Vector3.new(0, 0.2, 0), WHITE, (10 + 7 * crash) * PIN_SCALE, 0.45)
+		end)
+		ThrowFx.Burst(crashPoint + Vector3.new(0, 2, 0), WHITE, 15 * crash, 50 * crash * PIN_SCALE, 1.6)
+		Sfx.PlayAt("StrikeCrash", lane.PinSpot, 0.55, 1.2)
+	end
 	if isStrike then
 		LaneFx.Confetti(lane, JUICE.ConfettiAmount)
 	end
@@ -104,7 +143,7 @@ local function onImpact(data, rack, position: Vector3, isOwn: boolean, setTimeSc
 	local golden = data.Golden
 	if golden and golden.Hit then
 		local pin = rack.Pins[golden.Pin]
-		LaneFx.GoldenBurst(lane, if pin and pin.PrimaryPart then pin.PrimaryPart.Position else position)
+		LaneFx.GoldenBurst(lane, if pin and pin.PrimaryPart then pin.PrimaryPart.Position else crashPoint)
 		if isOwn then
 			UiFx.Flash(Config.GoldenPin.Color, 0.7, 0.6)
 			CameraShake.Add(0.6)
@@ -114,25 +153,27 @@ local function onImpact(data, rack, position: Vector3, isOwn: boolean, setTimeSc
 		return
 	end
 
-	CameraShake.Add(count * JUICE.ShakePerPin + (if isStrike then JUICE.ShakeStrikeBonus else 0))
-	LaneFx.Sparks(position, count * 4)
+	ThrowFx.Punch(THROW.CameraPunch * crash)
+	ThrowFx.Shake(THROW.CameraShakeStrength * crash * (0.4 + count * 0.06), THROW.CameraShakeTime)
+	UiFx.Flash(WHITE, 0.08 + count * 0.012, 0.12)
+	if mega then
+		UiFx.Flash(ringColor, 0.25 + (feel.Level - THROW.MegaCrashFromLevel) * 0.06, 0.25)
+	end
 	if isStrike then
-		slowMotion(rack, setTimeScale)
-		UiFx.Flash(if isPerfect then Color3.fromRGB(255, 230, 120) else nil, 0.55, 0.4)
-		Sfx.Play("Cheer", 1, if isPerfect then 1.4 else 1)
+		-- The pins burst at full speed first (instant payoff), then slow motion kicks in mid-air
+		task.delay(THROW.SlowMotionStartsAfter, slowMotion, rack, setTimeScale)
+		local streak = data.Streak or 1
+		local special = table.find(THROW.SpecialStreaks, streak) ~= nil
+		local grow = 1 + THROW.StreakGrowth * (math.min(math.max(streak, 1), THROW.StreakGrowthStopsAt) - 1)
+		UiFx.Flash(
+			if special or isPerfect then GOLD else WHITE,
+			if special then 0.55 else 0.3,
+			if special then 0.4 else 0.2
+		)
+		ThrowFx.Shake(THROW.CameraShakeStrength * 0.5 * grow, THROW.CameraShakeTime)
+		Sfx.Play("Cheer", 1, if isPerfect or special then 1.4 else 1)
 		if isPerfect then
 			Sfx.Play("PerfectSting")
-		end
-	end
-
-	-- Coins pop out of each pin that went down
-	local coins = if data.Reward then data.Reward.Coins else 0
-	if coins > 0 and count > 0 then
-		local each = math.max(1, math.floor(coins / count + 0.5))
-		local offsets = PinRack.Offsets()
-		for i, index in data.Pins do
-			local spot = rack.HeadPinCFrame * CFrame.new(offsets[index] + Vector3.new(0, LANE.PinHeight + 0.5, 0))
-			task.delay(i * 0.03, LaneFx.Number, spot.Position, "+" .. each, Color3.fromRGB(255, 200, 40))
 		end
 	end
 end
@@ -166,6 +207,8 @@ local function playThrow(data)
 	end
 	local isOwn = data.UserId == Players.LocalPlayer.UserId
 	busy[lane] = true
+	rack.Throw = (rack.Throw or 0) + 1
+	local run = rack.Throw
 
 	local ballStart = lane.BallStart :: BasePart
 	local pinSpot = lane.PinSpot :: BasePart
@@ -173,36 +216,41 @@ local function playThrow(data)
 	local right = ballStart.CFrame.RightVector
 	local spinAxis = Vector3.new(0, 1, 0):Cross(forward).Unit
 	local radius = LANE.BallDiameter / 2
+	local touchDistance = radius + LANE.PinWidth * rack.Scale / 2 + 0.3
 
 	local headDistance = (pinSpot.Position - ballStart.Position):Dot(forward)
 	local endDistance = headDistance + LANE.PinSpacing * 3 + 8 -- past the last row, into the pit
 	local speed = headDistance / data.RollTime
 
-	-- When (how far down the lane) each falling pin gets hit
-	local pending = {}
-	local firstHit = math.huge
-	local offsets = PinRack.Offsets()
+	local falls = {}
 	for _, index in data.Pins do
-		local distance = headDistance - offsets[index].Z - 0.8
-		table.insert(pending, { Index = index, Distance = distance })
-		firstHit = math.min(firstHit, distance)
+		falls[index] = true
 	end
 
-	-- Gutter balls slide off the lane partway down
-	local gutterAt = if data.Gutter then 0.3 + math.random() * 0.3 else nil
+	local ballInfo = Balls.Get(data.BallId) or Config.Balls[1]
+	local feel = throwFeel(data, ballInfo)
+	local isStrike = data.Tier == "Strike" or data.Tier == "PerfectStrike"
+	local coins = if data.Reward then data.Reward.Coins else 0
+	local coinsEach = if #data.Pins > 0 then math.max(1, math.floor(coins / #data.Pins + 0.5)) else 0
 
 	local ball = makeBall(data.BallId)
 	ball.CFrame = ballStart.CFrame
 	ball.Parent = lane
 	local fx = BallFx.Attach(ball, data.BallId, "Lane", forward)
-	local ballInfo = Balls.Get(data.BallId) or Config.Balls[1]
 	local lights = LaneFx.FollowLights(lane, ballInfo.Trail)
 	local fired = data.Traits or {}
 	local curveTrail = if table.find(fired, "Curve") then TraitFx.CurveTrail(lane, headDistance) else nil
 	local gemTrail = if table.find(fired, "GemHunter") then TraitFx.GemTrail(lane) else nil
-	local rollSound = Sfx.PlayAt("Roll", ball, 1.1 + data.Power * 0.2)
+	-- Stronger balls sound heavier (deeper)
+	local heavy = 1.1 - feel.Level * 0.03
+	local rollSound = Sfx.PlayAt("Roll", ball, (0.9 + feel.Strength * 0.2) * heavy, 0.8 + feel.Level * 0.05)
 	if isOwn then
-		Sfx.Play("Throw", 0.9 + data.Power * 0.3)
+		Sfx.Play("Throw", (1 + (feel.Strength - 1) * 0.3) * heavy)
+		if data.Perfect then
+			Sfx.Play("PerfectSting")
+			ThrowFx.Burst(ball.Position, GOLD, 30, 18 * PIN_SCALE, 0.7)
+		end
+		ThrowFx.Punch(0.8 * feel.Strength * math.sqrt(feel.Crash))
 	end
 
 	local timeScale = 1
@@ -210,36 +258,73 @@ local function playThrow(data)
 		timeScale = scale
 	end
 
+	-- Sends one pin flying, with its number pop, sound and sparks
+	local function launch(index: number, from: Vector3, scale: number)
+		local pin = rack.Pins[index]
+		local flew = rack:Knock(index, from, feel.Force * scale)
+		if not flew or not pin then
+			return
+		end
+		local body = pin.PrimaryPart :: BasePart
+		local spot = body.Position + Vector3.new(0, 1, 0)
+		ThrowFx.PinHitSound(body, flew, timeScale < 1)
+		ThrowFx.Burst(spot, feel.Color, 10 + 6 * flew, 22 * flew * PIN_SCALE, 0.5 * feel.Crash, timeScale)
+		if isOwn then
+			if coinsEach > 0 then
+				local size = THROW.NumberPopSize * feel.PopScale * (0.9 + math.min(flew, 2) * 0.1)
+				local color = if data.Perfect then GOLD elseif isStrike then PINK else WHITE
+				ThrowFx.NumberPop(spot, "+" .. coinsEach, size, color)
+			end
+			ThrowFx.Shake(THROW.CameraShakeStrength * 0.25 * feel.Crash, THROW.CameraShakeTime * 0.6)
+		end
+	end
+
 	local travelled = 0
 	local x = 0
 	local hit = false
 	local traitsPlayed = false
 	local hooked = false
+	local position = ballStart.Position
+
+	-- The crash: effects, then every pin that should fall takes off within PinSpreadTime,
+	-- a quick ripple from front to back, so no pin is left hanging
+	local function impact()
+		hit = true
+		onImpact(data, rack, feel, isOwn, setTimeScale)
+		local hitPoint = rack.HeadPinCFrame.Position - forward * 1.5 + Vector3.new(0, 0.5, 0)
+		local farthest = LANE.PinSpacing * 3.5
+		for index in falls do
+			local pin = rack.Pins[index]
+			local body = pin and pin.PrimaryPart
+			if body then
+				local distance = (body.Position - hitPoint).Magnitude
+				task.delay(THROW.PinSpreadTime * math.clamp(distance / farthest, 0, 1), function()
+					if run == rack.Throw then
+						launch(index, hitPoint, 1)
+					end
+				end)
+			end
+		end
+	end
+
 	local connection
 	connection = RunService.Heartbeat:Connect(function(dt)
-		travelled += speed * dt * timeScale
+		travelled += speed * dt * timeScale * (if hit then 0.6 else 1) -- the pins slow it down a bit
 		local progress = math.min(travelled / headDistance, 1)
 
-		local drop
-		if gutterAt then
-			local t = math.min(progress / gutterAt, 1)
-			x = data.HitX * t * t
-			drop = if t >= 1 then LANE.GutterDepth else 0
-		elseif data.CurveFromX then
-			-- Curve ball: heads out toward where it was aimed, then hooks back into the pocket
+		if data.CurveFromX then
+			-- Curve ball: heads out to the side, then hooks back into the pocket
 			local hook = progress ^ 3
 			x = data.CurveFromX * progress * (1 - hook) + data.HitX * hook
-			drop = 0
 			if not hooked and progress >= 0.55 then
 				hooked = true
 				TraitFx.Hooked(lane, ball, isOwn)
 			end
 		else
-			x = data.HitX * progress ^ 1.6 -- slight curve toward the aim point
-			drop = 0
+			x = data.HitX * progress
 		end
 
-		local position = ballStart.Position + forward * travelled + right * x - Vector3.new(0, drop, 0)
+		position = ballStart.Position + forward * travelled + right * x
 		ball.CFrame = CFrame.new(position) * CFrame.fromAxisAngle(spinAxis, travelled / radius)
 		fx:Move(position)
 		lights.Update(position)
@@ -250,10 +335,29 @@ local function playThrow(data)
 			gemTrail.Move(position)
 		end
 
-		if not hit and travelled >= firstHit then
-			hit = true
-			onImpact(data, rack, position, isOwn, setTimeScale)
+		-- Pins the ball rolls into: the ones the server knocked down fly, the others just wobble
+		if run == rack.Throw then
+			for index, pin in rack.Pins do
+				local body = pin.PrimaryPart
+				if body and body.Anchored then
+					local offset = body.Position - position
+					if Vector2.new(offset.X, offset.Z).Magnitude < touchDistance then
+						if falls[index] then
+							if not hit then
+								impact()
+							end
+							launch(index, position, 1)
+						else
+							rack:Wobble(index)
+						end
+					end
+				end
+			end
+			if not hit and travelled >= headDistance then
+				impact()
+			end
 		end
+
 		if not traitsPlayed and (hit or travelled >= headDistance) then
 			traitsPlayed = true
 			if curveTrail then
@@ -263,13 +367,6 @@ local function playThrow(data)
 				gemTrail.Stop()
 			end
 			playTraits(data, position, isOwn)
-		end
-
-		for i = #pending, 1, -1 do
-			if travelled >= pending[i].Distance then
-				rack:Knock(pending[i].Index, position, forward, timeScale)
-				table.remove(pending, i)
-			end
 		end
 
 		if travelled >= headDistance and rollSound then
@@ -283,7 +380,8 @@ local function playThrow(data)
 		end
 	end)
 
-	-- The thrower's camera follows the ball down the lane, stopping short of the pins, and shakes on impact
+	-- The thrower's camera follows the ball down the lane, stopping short of the pins,
+	-- and punches and shakes on impact
 	local camera = Workspace.CurrentCamera
 	local cameraConnection
 	if isOwn then
@@ -297,21 +395,55 @@ local function playThrow(data)
 				base + forward * CAMERA.LookAhead
 			)
 			smooth = smooth:Lerp(target, math.min(1, dt * CAMERA.Smoothness))
-			camera.CFrame = smooth * CameraShake.Offset(dt)
+			camera.CFrame = smooth * CameraShake.Offset(dt) * ThrowFx.CameraOffset(dt)
+			camera.FieldOfView = normalFov - ThrowFx.FovOffset()
 		end)
 	end
 
-	task.delay(data.RollTime + LANE.PinResetDelay, function()
+	task.delay(data.RollTime + (data.ResetDelay or LANE.PinResetDelay), function()
+		if cameraConnection then
+			cameraConnection:Disconnect()
+			camera.CameraType = Enum.CameraType.Custom
+			camera.FieldOfView = normalFov
+		end
+		if run ~= rack.Throw then
+			return
+		end
 		busy[lane] = false
 		local modifier = Modifiers.Current()
 		rack.Scale = modifier and modifier.PinScale or 1
 		rack.Golden = lane:GetAttribute("GoldenPin") or 0
 		rack:Reset()
-		if cameraConnection then
-			cameraConnection:Disconnect()
-			camera.CameraType = Enum.CameraType.Custom
-		end
 	end)
+end
+
+-- Invisible walls around each pin deck (on this screen only), so flying pins bounce around the deck
+-- instead of landing in the next lane
+local function buildPinFence(lane: Model)
+	local pinSpot = lane.PinSpot :: BasePart
+	local head = pinSpot.CFrame * CFrame.new(0, -pinSpot.Size.Y / 2, 0)
+	local folder = Instance.new("Folder")
+	folder.Name = "PinFence"
+	local function wall(offset: Vector3, size: Vector3)
+		local part = Instance.new("Part")
+		part.Name = "Wall"
+		part.Anchored = true
+		part.Transparency = 1
+		part.CanQuery = false
+		part.CanTouch = false
+		part.CastShadow = false
+		part.Size = size
+		part.CFrame = head * CFrame.new(offset)
+		part.Parent = folder
+	end
+	local side = LANE.LaneHalfWidth + 2.3
+	local back = LANE.PinSpacing * 3 + 12
+	-- (the lane's forward is -Z in the head pin's frame)
+	for _, x in { -side, side } do
+		wall(Vector3.new(x, 20, -back / 2 + 3), Vector3.new(1, 40, back + 6))
+	end
+	wall(Vector3.new(0, 20, -back), Vector3.new(side * 2 + 1, 40, 1))
+	folder.Parent = lane
 end
 
 -- The lane scoreboard's STREAK and RANK screens show the lane owner's numbers (Studio-built labels).
@@ -364,6 +496,7 @@ end
 function LaneVisuals:Start()
 	for _, lane in LaneUtil.GetLanes() do
 		watchBoard(lane)
+		buildPinFence(lane)
 	end
 
 	for _, lane in LaneUtil.GetLanes() do
@@ -384,15 +517,6 @@ function LaneVisuals:Start()
 	Workspace:GetAttributeChangedSignal("LaneModifier"):Connect(function()
 		for lane in racks do
 			refreshRack(lane)
-		end
-	end)
-
-	-- Moving Pins: standing pins slide with the server clock, so they are where the server scores them
-	RunService.Heartbeat:Connect(function()
-		local modifier = Modifiers.Current()
-		local offset = Modifiers.RackOffset(modifier, Workspace:GetServerTimeNow())
-		for _, rack in racks do
-			rack:SetOffset(offset)
 		end
 	end)
 end

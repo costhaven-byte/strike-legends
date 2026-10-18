@@ -1,4 +1,4 @@
--- Receives aim/power from players, validates it, works out the result and tells every client.
+-- Receives charge-bar releases from players, validates it, works out the result and tells every client.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
@@ -8,6 +8,7 @@ local Balls = require(Shared.Modules.Balls)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modifiers = require(Shared.Modules.Modifiers)
 local Progression = require(Shared.Modules.Progression)
+local ThrowRules = require(Shared.Modules.ThrowRules)
 local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
 local GoldenPinService = require(script.Parent.GoldenPinService)
@@ -20,6 +21,11 @@ local RewardResolver = require(script.Parent.Parent.Modules.RewardResolver)
 local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
 
 local GOLDEN = Config.GoldenPin
+local THROW = Config.Throw
+
+-- A sliding gold zone counts as hit if the release was in it at any moment this many seconds back
+-- (covers the time the release takes to reach the server)
+local SWAY_WINDOW = 0.35
 
 local ThrowService = {}
 
@@ -63,12 +69,11 @@ local function isValidNumber(value: any): boolean
 	return typeof(value) == "number" and value == value and math.abs(value) ~= math.huge
 end
 
-local function onThrowRequest(player: Player, aim: any, power: any)
-	if not isValidNumber(aim) or not isValidNumber(power) then
+local function onThrowRequest(player: Player, charge: any)
+	if not isValidNumber(charge) then
 		return
 	end
-	aim = math.clamp(aim, -1, 1)
-	power = math.clamp(power, 0, 1)
+	charge = math.clamp(charge, 0, 1)
 
 	-- No throws until the player's save has loaded, so rewards always have somewhere to go
 	if not PlayerDataService.IsLoaded(player) then
@@ -96,12 +101,11 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 
 	local ball = BallService.GetEquipped(player)
 	local modifier = Modifiers.Current()
-	local result = ThrowResolver.Resolve(aim, power, ball, {
-		RackOffset = function(rollTime: number)
-			return Modifiers.RackOffset(modifier, now + rollTime)
-		end,
-		AimBonus = modifier and modifier.AimBonus,
-	})
+	local perfect = ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW)
+	local perfectWithoutHeavy = ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW, true)
+	local forward = lane.BallStart.CFrame.LookVector
+	local distance = (lane.PinSpot.Position - lane.BallStart.Position):Dot(forward)
+	local result = ThrowResolver.Resolve(charge, perfect, perfectWithoutHeavy, ball, distance)
 	local isStrike = result.Tier == "Strike" or result.Tier == "PerfectStrike"
 	local streak, saved = ProgressionService.NextStreak(player, isStrike, Balls.TraitValue(ball, "StreakSaver"))
 	local goldenPin = GoldenPinService.Get(lane)
@@ -144,14 +148,19 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 	if reward.GemHunter then
 		table.insert(traits, "GemHunter")
 	end
-	lane:SetAttribute("ReadyAt", now + result.RollTime + Config.Lane.PinResetDelay + Config.Throw.CooldownBuffer)
+	-- Strikes wait for their slow motion too (the client resets the pins after the same time)
+	local resetDelay = Config.Lane.PinResetDelay
+		+ (if isStrike then THROW.SlowMotionStartsAfter + THROW.SlowMotionLength else 0)
+	lane:SetAttribute("ReadyAt", now + result.RollTime + resetDelay + THROW.CooldownBuffer)
 
 	ThrowService.Remotes.ThrowResult:FireAllClients({
 		Lane = lane,
 		UserId = player.UserId,
 		BallId = ball.Id,
-		Aim = aim,
-		Power = power,
+		Charge = charge,
+		Power = result.Strength, -- how hard it was thrown (above 1 for a PERFECT)
+		Perfect = result.Perfect,
+		ResetDelay = resetDelay,
 		Count = result.Count,
 		Tier = result.Tier,
 		Pins = result.Pins,
@@ -166,7 +175,7 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 		ModifierGems = modifierGems,
 	})
 
-	BallService.HideHeldBall(player, result.RollTime + Config.Lane.PinResetDelay)
+	BallService.HideHeldBall(player, result.RollTime + resetDelay)
 	setStatus(lane, "ROLLING...")
 	task.delay(result.RollTime, function()
 		-- Paid when the ball reaches the pins, so the HUD ticks up in sync with the hit
@@ -204,7 +213,7 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 		setStatus(lane, if result.Count == 1 then "1 PIN" else TIER_TEXT[result.Tier]:format(result.Count))
 	end)
 	-- Roll the next rack's Golden Pin as the pins reset
-	task.delay(result.RollTime + Config.Lane.PinResetDelay, GoldenPinService.Roll, lane)
+	task.delay(result.RollTime + resetDelay, GoldenPinService.Roll, lane)
 end
 
 function ThrowService:Start()

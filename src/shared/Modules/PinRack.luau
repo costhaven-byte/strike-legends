@@ -193,6 +193,7 @@ function PinRack.new(headPinCFrame: CFrame, parent: Instance)
 	self.Scale = 1 -- pin size (Giant Pins)
 	self.Offset = 0 -- studs the rack has slid sideways (Moving Pins)
 	self.Golden = 0 -- which pin is golden (0 = none)
+	self.TimeScale = 1 -- below 1 during strike slow motion
 	self:Reset()
 	return self
 end
@@ -251,6 +252,7 @@ end
 
 -- Puts all 10 pins back, standing and anchored (they only move when knocked).
 function PinRack:Reset()
+	self.TimeScale = 1
 	self.Folder:ClearAllChildren()
 	table.clear(self.Pins)
 
@@ -289,41 +291,104 @@ local function addTrail(body: BasePart)
 	trail.Parent = body
 end
 
--- Sends one pin flying away from the ball's path.
--- timeScale below 1 starts it in slow motion (see ScaleMotion to speed it back up).
-function PinRack:Knock(index: number, ballPosition: Vector3, laneDirection: Vector3, timeScale: number?)
+-- Lab numbers were tuned on bigger pins; this scales speeds and gravity so flights look the same here
+local function labScale(): number
+	return LANE.PinSpacing / Config.Throw.LabPinSpacing
+end
+
+-- Flying pins fall with Config.Throw.PinGravity (lighter than the world's, for floatier flights) without
+-- changing the world's gravity for players. A slow-motion timeScale weakens it to match.
+function PinRack:_pullFor(body: BasePart): number
+	local scale = self.TimeScale
+	local wanted = Config.Throw.PinGravity * labScale() * scale * scale
+	return body.AssemblyMass * (workspace.Gravity - wanted)
+end
+
+-- Sends one pin flying away from `from` (the Throw Lab explosion: mostly back, partly sideways, some luck).
+-- force: how hard (1 = a normal ball at full strength).
+-- Returns the force it actually flew with (or nil if it was already down).
+function PinRack:Knock(index: number, from: Vector3, force: number): number?
 	local pin = self.Pins[index]
 	local body = pin and pin.PrimaryPart
 	if not body or not body.Anchored then
-		return
+		return nil
 	end
+	local T = Config.Throw
+	local k = labScale()
+	local forward = self.HeadPinCFrame.LookVector -- down the lane
+	local right = self.HeadPinCFrame.RightVector
 
-	local away = body.Position - ballPosition
+	local away = body.Position - from
 	away = Vector3.new(away.X, 0, away.Z)
-	if away.Magnitude < 0.01 then
-		away = laneDirection
+	if away.Magnitude < 0.05 then
+		away = forward
 	end
-	local direction = (away.Unit + laneDirection * 1.5).Unit
-	local speed = LANE.PinKnockSpeedMin + math.random() * (LANE.PinKnockSpeedMax - LANE.PinKnockSpeedMin)
+	local direction = (away.Unit + forward * 0.6 + right * ((math.random() - 0.5) * 0.8)).Unit
+	local f = force * (0.85 + math.random() * 0.3)
+	local velocity = direction * T.PinLaunchForce * k * f
+		-- upward grows a bit slower than sideways, so pins from the strongest balls still come back into view
+		+ Vector3.new(0, T.PinLaunchUpward * k * f ^ 0.7 * (0.8 + math.random() * 0.4), 0)
+	local spin = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5).Unit
+		* T.PinSpin
+		* math.sqrt(f)
+		* (0.7 + math.random() * 0.6)
 
-	local scale = timeScale or 1
 	addTrail(body)
 	body.Anchored = false
-	body.AssemblyLinearVelocity = (
-		direction * speed + Vector3.new(0, LANE.PinKnockUpSpeed * (0.6 + math.random() * 0.8), 0)
-	) * scale
-	body.AssemblyAngularVelocity = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5)
-		* 30
-		* scale
+	local attachment = Instance.new("Attachment")
+	attachment.Name = "Pull"
+	attachment.Parent = body
+	local pull = Instance.new("VectorForce")
+	pull.Name = "Pull"
+	pull.Attachment0 = attachment
+	pull.RelativeTo = Enum.ActuatorRelativeTo.World
+	pull.ApplyAtCenterOfMass = true
+	pull.Force = Vector3.new(0, self:_pullFor(body), 0)
+	pull.Parent = body
+	body.AssemblyLinearVelocity = velocity * self.TimeScale
+	body.AssemblyAngularVelocity = spin * self.TimeScale
+	return f
 end
 
--- Speeds up (factor > 1) or slows down (factor < 1) every pin that is already flying
-function PinRack:ScaleMotion(factor: number)
+-- A pin that stays standing gives a little wobble when the ball grazes it
+function PinRack:Wobble(index: number)
+	local pin = self.Pins[index]
+	local body = pin and pin.PrimaryPart
+	if not body or not body.Anchored or pin:GetAttribute("Wobbling") then
+		return
+	end
+	pin:SetAttribute("Wobbling", true)
+	local start = pin:GetPivot()
+	local axis = self.HeadPinCFrame.RightVector
+	task.spawn(function()
+		for i = 1, 6 do
+			if not body.Parent or not body.Anchored then
+				return
+			end
+			local tilt = math.rad(9) * (1 - i / 6) * (if i % 2 == 0 then 1 else -1)
+			pin:PivotTo(CFrame.fromAxisAngle(axis, tilt) * start.Rotation + start.Position)
+			task.wait(0.04)
+		end
+		if body.Parent and body.Anchored then
+			pin:PivotTo(start)
+		end
+		pin:SetAttribute("Wobbling", nil)
+	end)
+end
+
+-- Slow motion: every flying pin (and its pull) runs at `scale` of normal speed. 1 = back to normal.
+function PinRack:SetTimeScale(scale: number)
+	local factor = scale / self.TimeScale
+	self.TimeScale = scale
 	for _, pin in self.Pins do
 		local body = pin.PrimaryPart
 		if body and not body.Anchored then
 			body.AssemblyLinearVelocity *= factor
 			body.AssemblyAngularVelocity *= factor
+			local pull = body:FindFirstChild("Pull") :: VectorForce?
+			if pull and pull:IsA("VectorForce") then
+				pull.Force = Vector3.new(0, self:_pullFor(body), 0)
+			end
 		end
 	end
 end

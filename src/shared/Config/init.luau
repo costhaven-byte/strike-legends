@@ -20,39 +20,81 @@ Config.Lane = {
 	PinKnockUpSpeed = 10,
 
 	-- Seconds from the ball reaching the pins until they reset
-	PinResetDelay = 1.4,
+	PinResetDelay = 0.9, -- (strikes add the slow-motion time on top)
 
 	-- How far (studs) a player can be from the lane's approach and still throw
 	ThrowZoneMargin = 0.7, -- small, so it never reaches a neighbouring lane
 }
 
+-- The throw (from the Throw Lab, approved 2026-10-18): hold to charge, let go in the gold.
+-- Lab sizes were bigger than the alley's, so pin speeds and pin gravity are scaled down to match automatically.
 Config.Throw = {
-	-- Meters: full back-and-forth sweeps per second
-	AimMeterSpeed = 0.7,
-	PowerMeterSpeed = 0.9,
-	MeterSpeedPerRank = 0.05, -- meters get 5% faster for every rank above Rookie
+	-- Charging
+	ChargeTime = 0.75, -- seconds for the bar to fill. Lower = faster bar = harder
+	MeterSpeedPerRank = 0.05, -- the bar gets 5% faster for every rank above Rookie
+	SweetSpotCenter = 0.86, -- where the gold zone sits on the bar (0 = empty, 1 = full)
+	SweetSpotSize = 0.14, -- how wide the gold zone is (share of the bar)
+	SweetSpotMax = 0.22, -- ball bonuses never make the gold zone wider than this (keeps a gap above it)
+	ForgivenessScale = 10, -- a ball's Forgiveness 0.05 = gold zone 50% wider
+	PerfectPowerBonus = 1.5, -- a PERFECT release is this much stronger than a full bar
+	WeakestThrow = 0.35, -- strength of a quick tap (0 to 1)
 
-	-- Aim: 0 is dead centre, 1 is the edge of the meter
-	AimSweetSpot = 0.1, -- inside this, aim counts as perfect
-	GutterAim = 0.85, -- at or past this, the ball goes in the gutter
-	PerfectStrikeAim = 0.04, -- tighter window for a Perfect Strike
-
-	-- Power: the ideal zone. Too low = weak hit, too high = loses control.
-	PowerSweetMin = 0.8,
-	PowerSweetMax = 0.95,
-	PerfectStrikePowerMin = 0.85,
-	PerfectStrikePowerMax = 0.92,
-	WeakPowerPenalty = 1.2, -- how fast quality drops below the sweet zone
-	OverPowerPenalty = 8, -- how fast quality drops above the sweet zone
-
-	-- Pins = PinCount * quality^QualityCurve, then +/- RandomVariance
-	QualityCurve = 0.7,
+	-- What gets knocked down. A PERFECT release is always a strike.
+	StrikeChanceWithoutPerfect = 0.3, -- strike chance with a full bar outside the gold (drops fast for weaker throws)
+	CurveStrikeShare = 0.5, -- Curve balls: this share of the trait's strength is added to that chance
+	FewestPinsKnocked = 3, -- fewest pins any throw knocks down
 	GoodShare = 0.7, -- knocking down at least this share of the rack reads as a "Good" throw (7 of 10)
-	RandomVariance = 0.1,
 
-	-- Roll duration (seconds): full power is fastest
-	RollTimeSlow = 2.2,
-	RollTimeFast = 1.1,
+	-- The ball (studs per second at full strength). Higher = less waiting before the crash.
+	BallSpeed = 80,
+
+	-- Pin explosion (Throw Lab numbers)
+	PinLaunchForce = 55, -- backwards and sideways
+	PinLaunchUpward = 42, -- up into the air
+	PinSpin = 30,
+	PinSpreadTime = 0.05, -- seconds between the first and last pin taking off
+	PinGravity = 90, -- pull on flying pins (normal is 196); characters keep normal gravity
+	LabPinSpacing = 2.9, -- pin spacing in the Lab, used to scale the numbers above to this alley
+
+	-- How hard each ball hits, by rarity (Throw Lab Power Levels 1-12; real Power Levels replace this in Milestone 12)
+	RarityLevel = { Common = 2, Uncommon = 4, Rare = 6, Epic = 8, Legendary = 10, Mythic = 12 },
+	Levels = {
+		{ Force = 0.6, Color = Color3.fromRGB(190, 190, 210) },
+		{ Force = 0.75, Color = Color3.fromRGB(90, 230, 120) },
+		{ Force = 0.9, Color = Color3.fromRGB(70, 230, 255) },
+		{ Force = 1.05, Color = Color3.fromRGB(60, 120, 255) },
+		{ Force = 1.2, Color = Color3.fromRGB(150, 70, 255) },
+		{ Force = 1.4, Color = Color3.fromRGB(255, 43, 214) },
+		{ Force = 1.6, Color = Color3.fromRGB(255, 50, 50) },
+		{ Force = 1.8, Color = Color3.fromRGB(255, 130, 20) },
+		{ Force = 2.0, Color = Color3.fromRGB(255, 200, 40) },
+		{ Force = 2.2, Color = Color3.fromRGB(255, 245, 220) },
+		{ Force = 2.45, Color = Color3.fromRGB(255, 80, 200) },
+		{ Force = 2.7, Color = Color3.fromRGB(255, 255, 255) },
+	},
+	MegaCrashFromLevel = 8, -- double shockwave, big flash, deep extra boom
+	CrashGrowthPerLevel = 0.15, -- each level makes the crash 15% bigger
+
+	-- Camera
+	CameraShakeStrength = 0.5,
+	CameraShakeTime = 0.25,
+	CameraPunch = 4, -- how far the camera jolts toward the pins on impact
+
+	-- Strike slow motion
+	SlowMotionStartsAfter = 0.12, -- full-speed explosion first, so the hit feels instant
+	SlowMotionLength = 0.4,
+	SlowMotionSpeed = 0.3,
+
+	-- Number pops out of each pin (coins earned)
+	NumberPopSize = 34,
+	NumberPopTime = 0.7,
+
+	-- Strike streak names on screen; after the last one it says "8 IN A ROW!" and so on
+	StreakNames = { "STRIKE!", "DOUBLE!", "TURKEY!", "HAMBONE!", "WILD TURKEY!", "SIX PACK!", "SEVEN UP!" },
+	SpecialStreaks = { 3, 5 }, -- extra-special celebration
+	StreakGrowth = 0.15, -- each strike in a row celebrates 15% bigger...
+	StreakGrowthStopsAt = 8, -- ...up to this many
+	CelebrationTime = 0.8,
 
 	-- Server waits this long after a roll before the lane takes another throw
 	CooldownBuffer = 0.3,
@@ -227,6 +269,7 @@ Config.Ui = {
 Config.Sounds = {
 	Click = { Id = 114782931135220, Volume = 0.4 }, -- any UI button
 	Tap = { Id = 127036696152728, Volume = 0.7 }, -- locking aim / power
+	Charge = { Id = 127036696152728, Volume = 0.5 }, -- start holding to charge a throw
 	Throw = { Id = 9114156499, Volume = 0.5 }, -- ball released
 	Roll = { Id = 9118661490, Volume = 0.6 }, -- ball rolling down the lane
 	PinHit = { Id = 9113559266, Volume = 0.9 },
@@ -252,11 +295,11 @@ Config.Sounds = {
 -- Sound: a name from Config.Sounds, played at Pitch.
 Config.Traits = {
 	{
-		Id = "Curve", -- Value: share of an off-centre aim the hook takes back (0.3 = 30% closer to the pocket)
+		Id = "Curve", -- Value: extra strike chance on a full bar outside the gold, times Config.Throw.CurveStrikeShare
 		Name = "Curve",
-		Text = "Hooks into the pocket: aiming right is %s%% more forgiving",
-		Short = "CURVE %s%%",
-		Display = 100,
+		Text = "Near misses can hook in: +%s%% strike chance outside the gold",
+		Short = "CURVE +%s%%",
+		Display = 50, -- = 100 * Config.Throw.CurveStrikeShare
 		Popup = "HOOK!",
 		Color = Color3.fromHex("FF2BD6"), -- magenta
 		Sound = "Throw",
@@ -316,9 +359,9 @@ Config.Traits = {
 		Pitch = 1.6,
 	},
 	{
-		Id = "Heavy", -- Value: how much wider the power sweet zone gets (0.5 = 50% wider)
+		Id = "Heavy", -- Value: how much wider the gold zone on the charge bar gets (0.5 = 50% wider)
 		Name = "Heavy",
-		Text = "Power sweet zone %s%% wider",
+		Text = "Gold zone %s%% wider",
 		Short = "HEAVY +%s%%",
 		Display = 100,
 		Popup = "HEAVY HIT!",
@@ -467,8 +510,8 @@ Config.AlmostThere = {
 -- Adding a modifier = adding a row. Each row can use any of these (leave out what it doesn't need):
 --   CoinMultiplier  coins on every throw are multiplied by this
 --   StrikeGemChance / StrikeGemAmount  every strike has this chance of gems
---   PinSway / SwayPeriod  the pins slide side to side this many studs, one full slide every SwayPeriod seconds
---   PinScale / AimBonus  bigger pins (looks), and the perfect-aim zone grows by AimBonus (meter is -1..1)
+--   SweetSway / SwayPeriod  the gold zone slides down the charge bar by up to this much and back, every SwayPeriod seconds
+--   PinScale / SweetBonus  bigger pins (looks), and the gold zone gets this share wider (0.5 = 50%)
 -- Weight: how often it is picked compared to the others.
 Config.LaneModifiers = {
 	Interval = 90,
@@ -483,11 +526,11 @@ Config.LaneModifiers = {
 		},
 		{
 			Id = "MovingPins",
-			Name = "MOVING PINS",
-			Text = "Pins slide! Lock power, then tap when they line up",
+			Name = "MOVING GOLD",
+			Text = "The gold zone slides! Let go when the bar meets it",
 			Color = Color3.fromRGB(60, 230, 255),
 			Weight = 1,
-			PinSway = 1.6,
+			SweetSway = 0.25,
 			SwayPeriod = 3,
 		},
 		{
@@ -507,7 +550,7 @@ Config.LaneModifiers = {
 			Color = Color3.fromRGB(120, 255, 120),
 			Weight = 1,
 			PinScale = 1.4,
-			AimBonus = 0.08,
+			SweetBonus = 0.5,
 			CoinMultiplier = 0.6,
 		},
 	},
@@ -1177,7 +1220,7 @@ Config.Rarities = {
 }
 
 -- Every ball in the game. Adding a ball = adding a row.
--- Multiplier: coin multiplier while equipped. Forgiveness: widens the perfect-aim zone (meter is -1..1).
+-- Multiplier: coin multiplier while equipped. Forgiveness: widens the gold zone (x Config.Throw.ForgivenessScale, 0.05 = 50%).
 -- Color/Material: the ball itself. Trail: the streak it leaves down the lane.
 -- Traits: { TraitId = strength } using the rows in Config.Traits. Leave it out for no trait.
 -- Keep each trait on a ladder so higher rarities are always clearly stronger:

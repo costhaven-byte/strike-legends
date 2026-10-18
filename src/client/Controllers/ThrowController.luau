@@ -1,5 +1,5 @@
--- Runs the aim and power meters and sends the locked values to the server.
--- The UI itself (StarterGui.ThrowUI) is built in Studio; this script only moves it.
+-- The throw from the Throw Lab: hold to charge, let go in the gold. Sends the release to the server.
+-- The UI itself (StarterGui.ThrowUI) is built in Studio; this script turns its AimBar into the charge bar.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -12,6 +12,7 @@ local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local Modifiers = require(Shared.Modules.Modifiers)
 local LaneUtil = require(Shared.Modules.LaneUtil)
+local ThrowRules = require(Shared.Modules.ThrowRules)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
@@ -19,34 +20,22 @@ local UiFx = require(Modules.UiFx)
 local THROW = Config.Throw
 local player = Players.LocalPlayer
 
-local RESULT_TEXT = {
-	Gutter = { "GUTTER", Color3.fromRGB(255, 80, 90) },
-	Weak = { "%d PINS", Color3.fromRGB(255, 255, 255) },
-	Good = { "%d PINS!", Color3.fromRGB(120, 230, 255) },
-	Nine = { "SO CLOSE! 9", Color3.fromRGB(255, 220, 80) },
-	Strike = { "STRIKE!", Color3.fromRGB(255, 60, 210) },
-	PerfectStrike = { "PERFECT STRIKE!", Color3.fromRGB(255, 240, 90) },
-}
+local PINK = Color3.fromRGB(255, 43, 214)
+local GOLD = Color3.fromRGB(255, 200, 40)
+local CYAN = Color3.fromRGB(70, 230, 255)
+local DARK = Color3.fromRGB(28, 16, 52)
+local INK = Color3.fromRGB(40, 10, 60)
 
 local ThrowController = {}
 
-local state = "Hidden" -- Hidden, Aim, Power, Waiting
-local phase = 0
-local aimValue, powerValue = 0, 0
+local state = "Hidden" -- Hidden, Ready, Charging, Waiting
+local charge, chargeClock = 0, 0
 local currentLane: Model? = nil
 local sentAt = 0
--- Moving Pins turn: power first, then the needle stays centred and you tap when the sliding pins line up
-local timingMode = false
+local held: InputObject? = nil
+local lastStreak = 0 -- your streak before the latest throw, to say when it ends
 
--- Triangle waves: aim sweeps -1..1, power goes 0..1..0
-local function aimWave(p: number): number
-	return 4 * math.abs(p - math.floor(p + 0.5)) - 1
-end
-local function powerWave(p: number): number
-	return 1 - math.abs((p % 1) * 2 - 1)
-end
-
--- Meters get a little faster at higher ranks
+-- The bar gets a little faster at higher ranks
 local function meterSpeedScale(): number
 	return 1 + THROW.MeterSpeedPerRank * ((player:GetAttribute("Rank") or 1) - 1)
 end
@@ -55,17 +44,17 @@ local function laneReady(lane: Model): boolean
 	return Workspace:GetServerTimeNow() >= (lane:GetAttribute("ReadyAt") or 0)
 end
 
--- Seconds the ball takes to reach the pins at this power (same maths as the server's ThrowResolver)
-local function rollTime(power: number): number
-	return THROW.RollTimeSlow + (THROW.RollTimeFast - THROW.RollTimeSlow) * power
+local function sweetSpot(): (number, number)
+	local ball = Balls.Get(player:GetAttribute("EquippedBall")) or Config.Balls[1]
+	return ThrowRules.SweetSpot(ball, Modifiers.Current(), Workspace:GetServerTimeNow())
 end
 
 function ThrowController:Start()
 	local gui = player:WaitForChild("PlayerGui"):WaitForChild("ThrowUI")
 	local panel = gui:WaitForChild("Panel")
 	local hint = panel:WaitForChild("Hint")
-	local aimBar = panel:WaitForChild("AimBar")
-	local button = panel:WaitForChild("ThrowButton")
+	local bar = panel:WaitForChild("AimBar") :: Frame
+	local button = panel:WaitForChild("ThrowButton") :: TextButton
 	local powerBar = gui:WaitForChild("PowerBar")
 	local resultText = gui:WaitForChild("ResultText")
 	local resultScale = resultText:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
@@ -77,173 +66,264 @@ function ThrowController:Start()
 	local throwRequest = remotes:WaitForChild("ThrowRequest")
 	local throwResult = remotes:WaitForChild("ThrowResult")
 
-	-- Size the coloured zones from Config and the equipped ball so the UI always matches the rules
-	-- (the same maths as the server's ThrowResolver)
-	local hookZone = Instance.new("Frame")
-	hookZone.Name = "HookZone"
-	hookZone.BorderSizePixel = 0
-	hookZone.BackgroundTransparency = 0.1
-	hookZone.ZIndex = aimBar.SweetZone.ZIndex
-	hookZone.Parent = aimBar
-	local sweetBase = aimBar.SweetZone.Position -- where the zones sit before Moving Pins slides them
-	local hookBase = UDim2.new()
-
-	local function refreshZones()
-		local ball = Balls.Get(player:GetAttribute("EquippedBall")) or Config.Balls[1]
-		local modifier = Modifiers.Current()
-		local sweet = THROW.AimSweetSpot + (ball.Forgiveness or 0) + (modifier and modifier.AimBonus or 0)
-		aimBar.SweetZone.Size = UDim2.fromScale(sweet, 1)
-		aimBar.GutterLeft.Size = UDim2.fromScale((1 - THROW.GutterAim) / 2, 1)
-		aimBar.GutterRight.Size = UDim2.fromScale((1 - THROW.GutterAim) / 2, 1)
-
-		-- Curve: the hook side also counts as perfect aim further out
-		local curve = Balls.TraitValue(ball, "Curve")
-		local curveTrait = Balls.GetTrait("Curve")
-		hookZone.Visible = curve > 0 and curveTrait ~= nil
-		if hookZone.Visible then
-			local edge = math.min(sweet / (1 - curve), THROW.GutterAim)
-			local side = curveTrait.HookSide or 1
-			hookZone.BackgroundColor3 = curveTrait.Color
-			hookZone.AnchorPoint = Vector2.new(if side > 0 then 0 else 1, 0)
-			hookBase = UDim2.fromScale(0.5 + side * sweet / 2, 0)
-			hookZone.Position = hookBase
-			hookZone.Size = UDim2.fromScale((edge - sweet) / 2, 1)
-		end
-
-		-- Heavy: a wider power sweet zone
-		local widen = (THROW.PowerSweetMax - THROW.PowerSweetMin) * Balls.TraitValue(ball, "Heavy") / 2
-		local low, high = THROW.PowerSweetMin - widen, math.min(THROW.PowerSweetMax + widen, 1)
-		powerBar.SweetZone.Position = UDim2.fromScale(0, 1 - low)
-		powerBar.SweetZone.Size = UDim2.fromScale(1, high - low)
+	-- The old aim bar becomes the charge bar: dark track, gold zone, pink fill, white needle
+	powerBar.Visible = false
+	bar.GutterLeft.Visible = false
+	bar.GutterRight.Visible = false
+	bar.BackgroundColor3 = DARK
+	bar.ClipsDescendants = false
+	local barStroke = bar:FindFirstChildOfClass("UIStroke")
+	local barScale = bar:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+	barScale.Parent = bar
+	local sweet = bar.SweetZone :: Frame
+	sweet.AnchorPoint = Vector2.new(0.5, 0.5)
+	sweet.BackgroundColor3 = GOLD
+	sweet.BackgroundTransparency = 0.35
+	sweet.ZIndex = 2
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.BorderSizePixel = 0
+	fill.BackgroundColor3 = PINK
+	fill.Size = UDim2.fromScale(0, 1)
+	fill.ZIndex = 2
+	fill.Parent = bar
+	local fillCorner = bar:FindFirstChildOfClass("UICorner")
+	if fillCorner then
+		fillCorner:Clone().Parent = fill
 	end
-	player:GetAttributeChangedSignal("EquippedBall"):Connect(refreshZones)
-	Workspace:GetAttributeChangedSignal("LaneModifier"):Connect(refreshZones)
-	refreshZones()
+	local needle = bar.Needle :: Frame
+	needle.ZIndex = 3
 
-	-- Moving Pins: the green zones slide to where the pins will be when the ball arrives
-	-- (using the locked power once it's picked, plus the time the tap takes to reach the server)
-	local typicalRoll = rollTime((THROW.PowerSweetMin + THROW.PowerSweetMax) / 2)
-	RunService.RenderStepped:Connect(function()
-		local roll = if timingMode and state == "Aim" then rollTime(powerValue) else typicalRoll
-		local arrival = Workspace:GetServerTimeNow() + roll + player:GetNetworkPing() / 2
-		local offset = Modifiers.RackOffset(Modifiers.Current(), arrival)
-		-- studs -> share of the aim bar (the bar spans aim -1..1, aim GutterAim = 90% of the lane half-width)
-		local shift = offset / (Config.Lane.LaneHalfWidth * 0.9) * THROW.GutterAim / 2
-		aimBar.SweetZone.Position = sweetBase + UDim2.fromScale(shift, 0)
-		hookZone.Position = hookBase + UDim2.fromScale(shift, 0)
-	end)
+	-- PERFECT! pops above the bar the moment you let go in the gold
+	local perfectLabel = Instance.new("TextLabel")
+	perfectLabel.Name = "Perfect"
+	perfectLabel.AnchorPoint = Vector2.new(0.5, 1)
+	perfectLabel.Position = UDim2.new(0.5, 0, 0, -6)
+	perfectLabel.Size = UDim2.new(1, 0, 0, 52)
+	perfectLabel.BackgroundTransparency = 1
+	perfectLabel.Font = Enum.Font.FredokaOne
+	perfectLabel.TextScaled = true
+	perfectLabel.Text = "PERFECT!"
+	perfectLabel.TextColor3 = GOLD
+	perfectLabel.Visible = false
+	perfectLabel.ZIndex = 5
+	perfectLabel.Parent = panel
+	local perfectStroke = Instance.new("UIStroke")
+	perfectStroke.Thickness = 4
+	perfectStroke.Color = INK
+	perfectStroke.Parent = perfectLabel
+	local perfectScale = Instance.new("UIScale")
+	perfectScale.Parent = perfectLabel
+	local perfectToken = 0
+
+	local function showPerfect()
+		perfectToken += 1
+		local token = perfectToken
+		perfectLabel.Visible = true
+		perfectLabel.TextTransparency = 0
+		perfectStroke.Transparency = 0
+		perfectLabel.Rotation = (math.random() - 0.5) * 8
+		perfectScale.Scale = 0.3
+		TweenService:Create(perfectScale, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Scale = 1.12,
+		}):Play()
+		task.delay(0.4, function()
+			if token ~= perfectToken then
+				return
+			end
+			local fade = TweenInfo.new(0.2)
+			TweenService:Create(perfectLabel, fade, { TextTransparency = 1 }):Play()
+			TweenService:Create(perfectStroke, fade, { Transparency = 1 }):Play()
+			task.wait(0.2)
+			if token == perfectToken then
+				perfectLabel.Visible = false
+			end
+		end)
+	end
+
+	local function drawBar(value: number, inGold: boolean, charging: boolean)
+		local center, size = sweetSpot()
+		sweet.Position = UDim2.fromScale(center, 0.5)
+		sweet.Size = UDim2.new(size, 0, 1, 8)
+		fill.Size = UDim2.fromScale(value, 1)
+		needle.Position = UDim2.fromScale(value, 0.5)
+		fill.BackgroundColor3 = if inGold then GOLD else PINK
+		if barStroke then
+			barStroke.Color = if inGold then GOLD elseif charging then PINK else Color3.new(1, 1, 1)
+		end
+		barScale.Scale = if inGold then 1.06 else 1
+	end
 
 	local function setState(newState: string)
 		state = newState
 		panel.Visible = newState ~= "Hidden"
-		powerBar.Visible = newState == "Power"
-		if newState == "Aim" then
-			phase = math.random()
-			hint.Text = if timingMode then "TAP WHEN THE PINS LINE UP!" else "TAP TO LOCK AIM"
-			button.Text = "TAP!"
-			if timingMode then
-				aimValue = 0
-				aimBar.Needle.Position = UDim2.fromScale(0.5, 0.5)
-			end
-		elseif newState == "Power" then
-			phase = 0
-			hint.Text = "TAP TO LOCK POWER"
-			button.Text = "TAP!"
+		if newState == "Ready" then
+			charge = 0
+			hint.Text = "HOLD TO CHARGE - LET GO IN THE GOLD"
+			button.Text = "HOLD!"
+			drawBar(0, false, false)
+		elseif newState == "Charging" then
+			charge, chargeClock = 0, 0
+			hint.Text = "LET GO IN THE GOLD!"
+			button.Text = "LET GO!"
+			Sfx.Play("Charge", 0.9)
 		elseif newState == "Waiting" then
 			hint.Text = "ROLLING..."
 			button.Text = "..."
 		end
 	end
 
-	-- A new throw: Moving Pins flips the order to power first, then timing
-	local function startThrow()
-		local modifier = Modifiers.Current()
-		timingMode = modifier ~= nil and modifier.PinSway ~= nil
-		setState(if timingMode then "Power" else "Aim")
+	-- Back to ready; still holding from before = start charging straight away, no wasted time
+	local function getReady()
+		setState("Ready")
+		if held then
+			setState("Charging")
+		end
 	end
 
-	local function send()
+	local function release()
+		local center, size = sweetSpot()
+		local perfect = ThrowRules.InSpot(charge, center, size)
+		drawBar(charge, perfect, false)
+		if perfect then
+			showPerfect()
+			UiFx.Flash(GOLD, 0.25, 0.2)
+		end
+		UiFx.Pop(bar, if perfect then 1.15 else 1.08, 0.25)
 		sentAt = os.clock()
 		setState("Waiting")
-		throwRequest:FireServer(aimValue, powerValue)
+		throwRequest:FireServer(charge)
 	end
 
-	local function press()
-		local firstStep = (state == "Aim" and not timingMode) or (state == "Power" and timingMode)
-		if firstStep and currentLane and not laneReady(currentLane) then
+	local function press(input: InputObject)
+		if held then
 			return
 		end
-		if state == "Aim" then
-			Sfx.Play("Tap", 1)
-			UiFx.Pop(aimBar, 1.08, 0.25)
-			if timingMode then
-				send()
-			else
-				setState("Power")
-			end
-		elseif state == "Power" then
-			Sfx.Play("Tap", 1.25)
-			UiFx.Pop(powerBar, 1.12, 0.25)
-			if timingMode then
-				setState("Aim")
-			else
-				send()
-			end
+		held = input
+		if state == "Ready" and currentLane and laneReady(currentLane) then
+			setState("Charging")
 		end
 	end
 
-	local function showResult(data)
-		local entry = RESULT_TEXT[data.Tier]
-		resultText.Text = if data.Count == 1 then "1 PIN" else entry[1]:format(data.Count)
-		resultText.TextColor3 = entry[2]
+	-- Is this the same press that started the charge? (the same finger, mouse button or button)
+	local function sameInput(a: InputObject, b: InputObject): boolean
+		if a.UserInputType == Enum.UserInputType.Touch then
+			return a == b
+		end
+		if a.UserInputType == Enum.UserInputType.MouseButton1 then
+			return b.UserInputType == Enum.UserInputType.MouseButton1
+		end
+		return a.KeyCode == b.KeyCode
+	end
+
+	-- Hold the button (touch or mouse), the mouse anywhere on the lane, or R2 on a controller
+	UiFx.Press(button, true)
+	button.InputBegan:Connect(function(input)
+		if
+			input.UserInputType == Enum.UserInputType.Touch
+			or input.UserInputType == Enum.UserInputType.MouseButton1
+		then
+			press(input)
+		end
+	end)
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if processed then
+			return
+		end
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.KeyCode == Enum.KeyCode.ButtonR2 then
+			press(input)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if not held or not sameInput(held, input) then
+			return
+		end
+		held = nil
+		if state == "Charging" then
+			release()
+		end
+	end)
+	-- Clicking off the game window counts as letting go
+	UserInputService.WindowFocusReleased:Connect(function()
+		held = nil
+	end)
+
+	local function showText(message: string, color: Color3, isStrike: boolean, size: number)
+		resultText.Text = message
+		resultText.TextColor3 = color
 		resultText.TextTransparency = 0
 		if resultStroke then
 			resultStroke.Transparency = 0
 		end
 		resultText.Visible = true
 
-		-- Strikes slam in from huge with a twist and stay up longer; everything else pops in
-		local isStrike = data.Tier == "Strike" or data.Tier == "PerfectStrike"
-		resultScale.Scale = if isStrike then Config.Juice.ResultSlamScale else 0.3
-		resultText.Rotation = if isStrike then -12 else 0
-		local slam = TweenInfo.new(if isStrike then 0.45 else 0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-		TweenService:Create(resultScale, slam, { Scale = 1 }):Play()
-		TweenService:Create(resultText, slam, { Rotation = if isStrike then -3 else 0 }):Play()
+		-- Quick pop (from the Throw Lab): in big, settle, out
+		resultScale.Scale = size * 0.3
+		resultText.Rotation = (math.random() - 0.5) * 8
+		TweenService:Create(resultScale, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Scale = size * 1.12,
+		}):Play()
 
 		resultToken += 1
 		local token = resultToken
-		task.delay(if isStrike then Config.Juice.ResultStrikeTime else Config.Juice.ResultTime, function()
+		local time = if isStrike then THROW.CelebrationTime else 0.55
+		task.delay(0.14, function()
+			if token == resultToken then
+				TweenService:Create(resultScale, TweenInfo.new(0.1), { Scale = size }):Play()
+			end
+		end)
+		task.delay(time * 0.65, function()
 			if token ~= resultToken then
 				return
 			end
-			-- Grow and fade away
-			local out = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-			TweenService:Create(resultScale, out, { Scale = 1.15 }):Play()
+			local out = TweenInfo.new(time * 0.35)
+			TweenService:Create(resultScale, out, { Scale = size * 1.1 }):Play()
 			TweenService:Create(resultText, out, { TextTransparency = 1 }):Play()
 			if resultStroke then
 				TweenService:Create(resultStroke, out, { Transparency = 1 }):Play()
 			end
-			task.wait(0.25)
+			task.wait(time * 0.35)
 			if token == resultToken then
 				resultText.Visible = false
 			end
 		end)
 	end
 
-	UiFx.Press(button, true) -- silent: press() plays its own tap sound
-	button.Activated:Connect(press)
-	UserInputService.InputBegan:Connect(function(input, processed)
-		if processed then
-			return
+	local function showResult(data)
+		local previous = lastStreak
+		local streak = data.Streak or 0
+		lastStreak = streak
+		local isStrike = data.Tier == "Strike" or data.Tier == "PerfectStrike"
+		if isStrike then
+			local level = math.min(math.max(streak, 1), THROW.StreakGrowthStopsAt)
+			local grow = 1 + THROW.StreakGrowth * (level - 1)
+			local special = table.find(THROW.SpecialStreaks, streak) ~= nil
+			if special then
+				grow *= 1.3
+			end
+			local name = THROW.StreakNames[math.max(streak, 1)] or (streak .. " IN A ROW!")
+			local color = if special then GOLD elseif streak <= 1 then PINK else CYAN
+			showText(name, color, true, math.min(grow, 1.7)) -- capped so it always fits on screen
+		elseif streak > 0 then
+			-- Streak Saver kept the streak alive: just the pin count
+			showText(data.Count .. " PINS", Color3.new(1, 1, 1), false, 1)
+		elseif previous >= 2 then
+			showText(data.Count .. " PINS - STREAK OVER", Color3.fromRGB(200, 190, 230), false, 1)
+		else
+			showText(
+				if data.Count == 9 then "9 PINS! SO CLOSE" else data.Count .. " PINS",
+				Color3.new(1, 1, 1),
+				false,
+				1
+			)
 		end
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.KeyCode == Enum.KeyCode.ButtonR2 then
-			press()
-		end
-	end)
+	end
 
 	throwResult.OnClientEvent:Connect(function(data)
 		if data.UserId == player.UserId then
-			task.delay(data.RollTime, showResult, data) -- trait popups come from TraitFx (via LaneVisuals)
+			-- Strikes show the moment the ball hits; other results a beat later
+			local isStrike = data.Tier == "Strike" or data.Tier == "PerfectStrike"
+			task.delay(data.RollTime + (if isStrike then 0 else 0.25), showResult, data)
 		end
 	end)
 
@@ -260,27 +340,26 @@ function ThrowController:Start()
 		end
 
 		if state == "Hidden" then
-			startThrow()
-		elseif state == "Aim" then
-			if not timingMode then
-				phase += dt * THROW.AimMeterSpeed * meterSpeedScale()
-				aimValue = aimWave(phase)
-				aimBar.Needle.Position = UDim2.fromScale((aimValue + 1) / 2, 0.5)
-				hint.Text = if laneReady(currentLane) then "TAP TO LOCK AIM" else "WAIT..."
+			getReady()
+		elseif state == "Ready" then
+			if held and laneReady(currentLane) then
+				setState("Charging") -- pressed while the lane was still busy
+			else
+				drawBar(0, false, false) -- the gold zone can slide (Moving Gold)
+				hint.Text = if laneReady(currentLane) then "HOLD TO CHARGE - LET GO IN THE GOLD" else "WAIT..."
 			end
-		elseif state == "Power" then
-			phase += dt * THROW.PowerMeterSpeed * meterSpeedScale()
-			powerValue = powerWave(phase)
-			powerBar.Fill.Size = UDim2.fromScale(1, powerValue)
-			powerBar.Needle.Position = UDim2.fromScale(0.5, 1 - powerValue)
-			if timingMode then
-				hint.Text = if laneReady(currentLane) then "MOVING PINS! LOCK POWER FIRST" else "WAIT..."
-			end
+		elseif state == "Charging" then
+			-- Fills, then slides back down and up again while you keep holding
+			chargeClock += dt / THROW.ChargeTime * meterSpeedScale()
+			local t = chargeClock % 2
+			charge = if t <= 1 then t else 2 - t
+			local center, size = sweetSpot()
+			drawBar(charge, ThrowRules.InSpot(charge, center, size), true)
 		elseif state == "Waiting" then
-			-- Back to aiming once the lane is free (or if the server ignored the throw)
+			-- Ready again once the lane is free (or if the server ignored the throw)
 			local waited = os.clock() - sentAt
 			if (waited > 0.5 and laneReady(currentLane)) or waited > 6 then
-				startThrow()
+				getReady()
 			end
 		end
 	end)
