@@ -15,6 +15,7 @@ local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
 local GoldenPinService = require(script.Parent.GoldenPinService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
+local OnboardingService = require(script.Parent.OnboardingService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionService = require(script.Parent.ProgressionService)
 local TrialService = require(script.Parent.TrialService)
@@ -136,12 +137,18 @@ local function onThrowRequest(player: Player, clientHold: any)
 	-- The gold sits where the lane says and shrinks with the streak (the client draws it the same way)
 	local goldCenter = lane:GetAttribute("GoldCenter")
 	local shownStreak = player:GetAttribute("Streak") or 0
-	local perfect = ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW, nil, goldCenter, shownStreak)
+	-- A brand new player's first throw is an assisted PERFECT (Config.Onboarding; the client shows the whole arc gold)
+	local assisted = OnboardingService.IsAssisted(player)
+	if assisted then
+		OnboardingService.UseAssist(player)
+	end
+	local perfect = assisted
+		or ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW, nil, goldCenter, shownStreak)
 	local hook = ThrowRules.HookWidth(ball)
 	local hooked = not perfect
 		and hook > 0
 		and ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW, hook, goldCenter, shownStreak)
-	local overcharged = ThrowRules.InOvercharge(charge)
+	local overcharged = not assisted and ThrowRules.InOvercharge(charge)
 	-- The next throw's gold is somewhere else on the arc
 	lane:SetAttribute("GoldCenter", ThrowRules.NextGoldCenter(goldCenter))
 	local forward = lane.BallStart.CFrame.LookVector
@@ -250,6 +257,7 @@ local function onThrowRequest(player: Player, clientHold: any)
 			if golden.Crate then
 				BallService.GiveFreeCrate(player)
 			end
+			OnboardingService.OnThrow(player, resetDelay)
 
 			Analytics.Currency(player, "Coins", reward.Coins, "Gameplay", "Throw")
 			Analytics.Currency(player, "Gems", reward.Gems, "Gameplay", "Throw")

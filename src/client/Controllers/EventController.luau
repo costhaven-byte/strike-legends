@@ -1,4 +1,4 @@
--- The surprise layer on screen: the lane modifier banner and timer, the "almost there" bar,
+-- The surprise layer on screen: the lane modifier banner and timer, the "next goal" bar,
 -- and the big popups for Golden Pins, "LUCKY!", bonus gems and free crates.
 -- The UI itself (StarterGui.EventUI) is built in Studio; this script fills it in and animates it.
 -- Everything shown comes from attributes and throw results the server sends.
@@ -13,6 +13,7 @@ local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modifiers = require(Shared.Modules.Modifiers)
+local PowerLevels = require(Shared.Modules.PowerLevels)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local TraitFx = require(Modules.TraitFx)
 local Sfx = require(Modules.Sfx)
@@ -21,6 +22,21 @@ local UiFx = require(Modules.UiFx)
 local GOLD = Config.GoldenPin.Color
 local CRATE_COLOR = Color3.fromRGB(60, 230, 255)
 local GEM_COLOR = Color3.fromRGB(255, 90, 200)
+local POWER_COLOR = Color3.fromRGB(255, 43, 214)
+
+-- 1234 -> "1.23K" (the bar is small)
+local function short(n: number): string
+	if n >= 1e12 then
+		return ("%.3gT"):format(n / 1e12)
+	elseif n >= 1e9 then
+		return ("%.3gB"):format(n / 1e9)
+	elseif n >= 1e6 then
+		return ("%.3gM"):format(n / 1e6)
+	elseif n >= 1e3 then
+		return ("%.3gK"):format(n / 1e3)
+	end
+	return tostring(math.floor(n))
+end
 
 local player = Players.LocalPlayer
 
@@ -119,7 +135,8 @@ function EventController:Start()
 		end
 	end)
 
-	-- "Almost there": progress to the next free crate (rank progress lives in the HUD rank bar)
+	-- "Next goal": always shows the closest goal (rank progress lives in the HUD rank bar):
+	-- the next Power Level, the first-3-minutes gift crate, or the next free crate (ties go to the first one)
 	local pulse = TweenService:Create(
 		barScale,
 		TweenInfo.new(0.45, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
@@ -128,6 +145,33 @@ function EventController:Start()
 	local pulsing = false
 	local function refreshBar()
 		local options = {}
+
+		local nextLevel = PowerLevels.Next(player:GetAttribute("PowerLevel") or 1)
+		if nextLevel then
+			local coins = player:GetAttribute("Coins") or 0
+			table.insert(options, {
+				Progress = math.min(coins / math.max(nextLevel.Price, 1), 1),
+				Text = if coins >= nextLevel.Price
+					then ("NEXT: BUY POWER LV %d NOW!"):format(nextLevel.Level)
+					else ("NEXT: POWER LV %d  %s / %s"):format(
+						nextLevel.Level,
+						short(coins),
+						short(nextLevel.Price)
+					),
+				Color = POWER_COLOR,
+			})
+		end
+
+		local onboard = Config.Onboarding
+		if onboard.Enabled and (player:GetAttribute("Onboarding") or 3) <= 1 then
+			local throws = player:GetAttribute("OnboardThrows") or 0
+			local giftLeft = math.max(onboard.GiftAfterThrows - throws, 1)
+			table.insert(options, {
+				Progress = throws / onboard.GiftAfterThrows,
+				Text = ("FREE GIFT CRATE IN %d THROW%s"):format(giftLeft, if giftLeft == 1 then "" else "S"),
+				Color = GOLD,
+			})
+		end
 
 		local per = Config.FreeCrates.StrikesPerCrate
 		local strikes = player:GetAttribute("CrateStrikes") or 0
@@ -160,7 +204,7 @@ function EventController:Start()
 		end
 		pulsing = close
 	end
-	for _, key in { "CrateStrikes" } do
+	for _, key in { "CrateStrikes", "Coins", "PowerLevel", "Onboarding", "OnboardThrows" } do
 		player:GetAttributeChangedSignal(key):Connect(refreshBar)
 	end
 	refreshBar()

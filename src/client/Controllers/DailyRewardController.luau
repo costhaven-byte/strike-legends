@@ -222,6 +222,13 @@ function DailyRewardController:Start()
 	while player:GetAttribute("DailyClaimable") == nil and waited < 30 do
 		waited += task.wait(0.5)
 	end
+	-- Brand new players see no menus in their first 3 minutes (Config.Onboarding): it waits until that path is done
+	if Config.Onboarding.Enabled and (player:GetAttribute("Onboarding") or 3) < 3 then
+		while (player:GetAttribute("Onboarding") or 3) < 3 do
+			player:GetAttributeChangedSignal("Onboarding"):Wait()
+		end
+		task.wait(8) -- after the showcase camera moment
+	end
 	if player:GetAttribute("DailyClaimable") == true then
 		task.wait(1.5) -- let the game load in first
 		setOpen(true)

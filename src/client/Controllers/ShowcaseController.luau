@@ -641,6 +641,9 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 	}
 end
 
+-- The slot each shown ball sits on, best balls first ({ Ball, Slot }), for the first-3-minutes camera moment
+ShowcaseController.Shown = {}
+
 function ShowcaseController:Start()
 	local showcase = Workspace:WaitForChild("Showcase", 30)
 	local slotFolder = showcase and showcase:WaitForChild("Slots", 10)
@@ -684,6 +687,7 @@ function ShowcaseController:Start()
 		local slot = slots[i]
 		if slot and slot:IsA("BasePart") then
 			table.insert(built, buildCase(slot, ball, cases, diamondTemplate))
+			table.insert(ShowcaseController.Shown, { Ball = ball, Slot = slot })
 		end
 	end
 

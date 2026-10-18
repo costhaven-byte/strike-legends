@@ -168,12 +168,13 @@ end
 
 -- Gives the player one crate's ball (no charge): rolls with pity, adds the ball or sells a duplicate.
 -- Used for bought crates and free ones (like the daily reward). Returns the result the client shows.
-function BallService.GiveCrate(player: Player, crate)
+-- minRarity: optional, the ball is at least this rare (the first-3-minutes gift crate)
+function BallService.GiveCrate(player: Player, crate, minRarity: string?)
 	local counters = {}
 	for _, pity in Config.Pity do
 		counters[pity.Counter] = PlayerDataService.Get(player, pity.Counter) or 0
 	end
-	local ball, newCounters, fromPity = CrateRoller.Roll(crate, counters)
+	local ball, newCounters, fromPity = CrateRoller.Roll(crate, counters, minRarity)
 
 	for counter, value in newCounters do
 		PlayerDataService.Set(player, counter, value)

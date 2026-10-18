@@ -28,10 +28,11 @@ local function rollRarity(crate, minIndex: number): string
 end
 
 -- counters: the player's pity counters ({ CratesSinceRare = 3, ... }) BEFORE this crate.
+-- minRarity: optional, this roll gives at least this rarity (the first-3-minutes gift crate).
 -- Returns the ball and the new counter values.
-function CrateRoller.Roll(crate, counters: { [string]: number })
+function CrateRoller.Roll(crate, counters: { [string]: number }, minRarity: string?)
 	-- A pity kicks in when this crate would be number N in a row without that rarity
-	local minIndex = 1
+	local minIndex = if minRarity then Balls.RarityIndex(minRarity) else 1
 	for _, pity in Config.Pity do
 		if (counters[pity.Counter] or 0) + 1 >= pity.Crates then
 			minIndex = math.max(minIndex, Balls.RarityIndex(pity.Rarity))
@@ -54,7 +55,7 @@ function CrateRoller.Roll(crate, counters: { [string]: number })
 			then 0
 			else (counters[pity.Counter] or 0) + 1
 	end
-	return ball, newCounters, minIndex > 1
+	return ball, newCounters, minIndex > 1 and not minRarity
 end
 
 return CrateRoller

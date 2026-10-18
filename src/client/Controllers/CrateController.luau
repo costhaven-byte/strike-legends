@@ -77,6 +77,7 @@ function CrateController:Start()
 	local continueButton = reveal:WaitForChild("Continue") :: TextButton
 
 	local openCrate = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("OpenCrate") :: RemoteFunction
+	local equipRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("EquipBall") :: RemoteEvent
 
 	local busy = false
 	local toastToken = 0
@@ -287,7 +288,8 @@ function CrateController:Start()
 	end
 
 	-- Plays the crate intro, the reel, then the reveal. Returns when the player taps Continue.
-	local function playOpening(crate, result)
+	-- equipPrompt: the button says EQUIP! and equips the new ball (the first-3-minutes gift crate)
+	local function playOpening(crate, result, equipPrompt: boolean?)
 		local ball = Balls.Get(result.BallId)
 		local rarity = Balls.GetRarity(ball.Rarity)
 		local rarityIndex = Balls.RarityIndex(ball.Rarity)
@@ -422,8 +424,18 @@ function CrateController:Start()
 		end
 
 		task.wait(if big then 1.2 else 0.6)
+		local continueText = continueButton.Text
+		if equipPrompt then
+			continueButton.Text = "EQUIP IT!"
+			UiFx.Pop(continueButton, 1.25)
+		end
 		continueButton.Visible = true
 		continueButton.Activated:Wait()
+		continueButton.Text = continueText
+		if equipPrompt then
+			equipRemote:FireServer(ball.Id)
+			Sfx.Play("StreakUp", 1.2)
+		end
 		if pulse then
 			pulse:Cancel()
 			reveal.Glow.BackgroundTransparency = 0.5
@@ -434,10 +446,10 @@ function CrateController:Start()
 		strip:ClearAllChildren()
 	end
 	-- Lets other screens (like the daily reward) play a crate the server already opened
-	CrateController.PlayOpening = function(crate, result)
+	CrateController.PlayOpening = function(crate, result, equipPrompt: boolean?)
 		busy = true
 		setOpen(false)
-		playOpening(crate, result)
+		playOpening(crate, result, equipPrompt)
 		busy = false
 	end
 

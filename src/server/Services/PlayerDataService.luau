@@ -16,6 +16,7 @@ type Profile = {
 	Data: { [string]: any },
 	Saving: boolean, -- a save is in progress
 	Released: boolean, -- final save started; no more changes
+	NoSave: boolean?, -- Studio new-player test: never loaded or saved
 }
 
 local profiles: { [Player]: Profile } = {}
@@ -24,6 +25,9 @@ local releaseCallbacks: { (Player) -> () } = {}
 local pendingReleases = 0
 
 local function save(player: Player, profile: Profile, release: boolean)
+	if profile.NoSave then
+		return
+	end
 	while profile.Saving do
 		task.wait() -- let an autosave finish first so saves never overlap
 	end
@@ -53,7 +57,14 @@ local function onPlayerAdded(player: Player)
 		return
 	end
 
-	local data = SaveStore.Load(player.UserId)
+	-- Studio test mode (Config.Onboarding.StudioNewPlayer): a brand new player every time, nothing saved
+	local noSave = RunService:IsStudio() and Config.Onboarding.StudioNewPlayer == true
+	local data = if noSave then SaveStore.DefaultData() else SaveStore.Load(player.UserId)
+	if noSave then
+		warn(
+			"[PlayerDataService] Studio new-player test: fresh start, nothing is saved (Config.Onboarding.StudioNewPlayer)"
+		)
+	end
 	if not data then
 		if SaveStore.Enabled or not RunService:IsStudio() then
 			-- Never start from zero when we could not read the save: that would overwrite real progress.
@@ -66,11 +77,13 @@ local function onPlayerAdded(player: Player)
 
 	if player.Parent == nil then
 		-- Left while loading: just hand the lock back
-		SaveStore.Save(player.UserId, data, true)
+		if not noSave then
+			SaveStore.Save(player.UserId, data, true)
+		end
 		return
 	end
 
-	profiles[player] = { Data = data, Saving = false, Released = false }
+	profiles[player] = { Data = data, Saving = false, Released = false, NoSave = noSave }
 	for key, value in data do
 		if type(value) ~= "table" then
 			player:SetAttribute(key, value)

@@ -77,7 +77,21 @@ local function equippedBall()
 	return Balls.Get(player:GetAttribute("EquippedBall")) or Config.Balls[1]
 end
 
+-- A brand new player's first throw is assisted (Config.Onboarding): the server makes it a PERFECT
+local function assisted(): boolean
+	return Config.Onboarding.Enabled and player:GetAttribute("Onboarding") == 0
+end
+
+local function readyHint(): string
+	return if assisted() then "HOLD... THEN LET GO!" else READY_HINT
+end
+
 local function sweetSpot(): (number, number)
+	if assisted() then
+		-- The whole arc is gold: any release is a PERFECT
+		local ceiling = ThrowRules.GoldCeiling()
+		return ceiling / 2, ceiling
+	end
 	return ThrowRules.SweetSpot(
 		equippedBall(),
 		Modifiers.Current(),
@@ -126,6 +140,11 @@ local function faceLane(dt: number)
 		local target = CFrame.lookAt(root.Position, root.Position + Vector3.new(forward.X, 0, forward.Z))
 		root.CFrame = root.CFrame:Lerp(target, math.min(1, dt * 14))
 	end
+end
+
+-- Hidden, Ready, Charging or Waiting (other screens wait for Ready before taking over the camera)
+function ThrowController.State(): string
+	return state
 end
 
 function ThrowController:Start()
@@ -345,7 +364,7 @@ function ThrowController:Start()
 			lockFeet(false)
 		elseif newState == "Ready" then
 			charge = 0
-			hint.Text = READY_HINT
+			hint.Text = readyHint()
 			button.Text = "HOLD!"
 			drawBar(0, false, false)
 			lockFeet(false)
@@ -386,7 +405,7 @@ function ThrowController:Start()
 		elseif hooked then
 			showPerfect("HOOK! PERFECT!", hookColor)
 			UiFx.Flash(hookColor, 0.25, 0.2)
-		elseif ThrowRules.InOvercharge(charge) then
+		elseif ThrowRules.InOvercharge(charge) and not assisted() then
 			-- The gamble: the server says whether it pays off when the ball lands
 			showPerfect("OVERCHARGE...?", RED)
 			UiFx.Flash(RED, 0.25, 0.2)
@@ -559,7 +578,7 @@ function ThrowController:Start()
 				setState("Charging") -- pressed while the lane was still busy
 			else
 				drawBar(0, false, false, dt) -- the gold zone glides to its new spot (and slides with Moving Gold)
-				hint.Text = if laneReady(currentLane) then READY_HINT else "WAIT..."
+				hint.Text = if laneReady(currentLane) then readyHint() else "WAIT..."
 			end
 		elseif state == "Charging" then
 			-- Fills, then slides back down and up again while you keep holding; the arm swings with it
@@ -569,7 +588,7 @@ function ThrowController:Start()
 			local inGold = ThrowRules.InSpot(charge, center, size, hook)
 			drawBar(charge, inGold, true)
 			-- A warning buzz each time the bar climbs into the red cap
-			local inRed = not inGold and ThrowRules.InOvercharge(charge)
+			local inRed = not inGold and not assisted() and ThrowRules.InOvercharge(charge)
 			if inRed and not wasInRed then
 				Sfx.Play("OverchargeWarn")
 			end

@@ -192,18 +192,37 @@ Config.StartingData = {
 	PlayTime = 0, -- total seconds played, for analytics ("bought ball tier 3 after 12 minutes")
 	PowerLevel = 1, -- Power Level bought so far (Config.Economy.PowerLevels)
 	SessionLog = {}, -- the last few play sessions (see Config.SessionLog), newest last
+	Onboarding = 0, -- first 3 minutes (Config.Onboarding): 0 = first throw next, 1 = before the gift, 2 = gift given, 3 = done
+	OnboardThrows = 0, -- throws counted toward the first-3-minutes moments
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 8, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 9, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
 	LockTimeout = 300, -- a session lock older than this belongs to a crashed server and can be taken
 	LockWaitTries = 6, -- if another server still holds the lock, wait and retry this many times...
 	LockWaitDelay = 5, -- ...this many seconds apart, then take over
+}
+
+-- The first 3 minutes (Addendum 2 section 6): one scripted path for brand new players.
+-- 1. The first throw is an assisted PERFECT strike (the whole arc turns gold).
+-- 2. A big "BUY" callout points at the Power Level button the moment Level 2 is affordable.
+-- 3. After GiftAfterThrows throws: a free gift crate, opened right there, at least Config.Economy.FirstCrateMin, with an EQUIP button.
+-- 4. LegendsAfterThrows throws later: the camera swings to a locked ball in the lobby showcase (the chase).
+-- The "next goal" bar on the HUD always shows the closest goal (next Power Level, the gift, the next free crate).
+Config.Onboarding = {
+	Enabled = true,
+	GiftAfterThrows = 35, -- about 2:00 at the measured 3 seconds a throw, plus buying Level 2
+	GiftCrateId = "Basic", -- the gift uses this crate's odds (from FirstCrateMin up)
+	LegendsAfterThrows = 6, -- throws after the gift (about 2:30)
+	LegendsPanTime = 3.5, -- seconds the camera looks at the locked ball
+	-- Studio testing: every play test starts as a brand new player and nothing is saved (your real save is untouched).
+	-- Never affects the live game. Set to false to test with your saved progress.
+	StudioNewPlayer = true,
 }
 
 -- Session log: one line per play session (join, leave, throws, crates, level), printed in Output
@@ -1643,6 +1662,8 @@ Config.Analytics = {
 		"Equipped Ball",
 		"Ranked Up",
 		"Bought Power Level",
+		"Gift Crate",
+		"Saw Legends",
 	},
 	PlayTimeInterval = 30, -- seconds between adding play time to the save
 	-- Every custom event name the game logs (MASTER_PLAN.md section 7). A name not on this list prints a warning in

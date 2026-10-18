@@ -88,6 +88,10 @@ local function migrate(saved: any): { [string]: any }
 		-- v6 added PlayTime: same, it starts at 0
 		-- v7 added SessionLog: same, it starts empty
 		-- v8 added PowerLevel: same, everyone starts at Power Level 1
+		if version < 9 then
+			-- v9 added the first-3-minutes path (Onboarding). Players who already played skip it.
+			data.Onboarding = 3
+		end
 	end
 	data.Rank = math.clamp(math.floor(tonumber(data.Rank) or 1), 1, #Config.Ranks)
 	return data

@@ -1,10 +1,9 @@
 # Project state (max 40 lines, read at the start of every session, update at the end)
-
 Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 2 replaces Addendum 1).
 
-**Current milestone:** Phase 1 step 3 (Power Levels 1 to 12) PASSED 2026-10-18; bigger level effects added after, quick recheck pending.
-Restore point: git tag restore-phase1-step3-before (code only). Real game = cloud place 94254609600041 (NOT Strike Legends.rbxl).
-Next: Phase 1 step 4 (first 3 minutes + onboarding), only when Selim says go.
+**Current milestone:** Phase 1 step 4 (first 3 minutes) BUILT 2026-10-18, Selim's 2-min test pending. Step 3 passed (recheck too).
+Restore point: git tag restore-phase1-step4-before (code) + Studio "Save to Roblox As". Real game = cloud place 94254609600041.
+Next: after step 4 passes, Phase 1 ends (say the one-line 10-minute-watch checkpoint once), then Phase 2 step 5 when Selim says go.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
 
 ## Exists and works
@@ -20,12 +19,13 @@ Next: Phase 1 step 4 (first 3 minutes + onboarding), only when Selim says go.
 - Overcharge (Config.Throw.Overcharge, Enabled = true): red cap at the top of the arc (from 0.94); release there = 50% OVERCHARGE strike (x2 a Perfect, harder hit) or OVERCOOKED gutter (0 pins, streak over). Gold never enters the red.
 - AssetSlots (Shared.AssetSlots): every sound slot; nil Id = borrows a stand-in sound. Strike slow motion 0.2s, hit-stop 0.05s (Addendum spec).
 - Power Levels (save v8 PowerLevel; PowerLevelService + PowerUI button built in code): Config.Economy.PowerLevels live (sim units x10 = real coins). Power caps pins on non-PERFECT throws (LV1 = 6); PERFECT still strikes. Value multiplies coins. Looks per level: Config.Throw.Levels (size, power trail, sparks, fire, mega crash, aura, rainbow, deeper sounds, cleaner pose). Perfect now pays x2. Studio-only TEST +COINS button.
+- First 3 minutes (OnboardingService/Controller, Config.Onboarding, save v9 Onboarding + OnboardThrows; old saves skip it): assisted first PERFECT (whole arc gold), BUY LV 2 callout, gift crate (Rare+, EQUIP button) after 35 throws, camera swing to a locked showcase ball 6 throws later, daily popup held until then. "Next goal" bar = closest of Power Level / gift / free crate. Studio: Config.Onboarding.StudioNewPlayer = true (fresh, unsaved player each test).
 ## Placeholder
 - All sounds (Creator Store picks); 3 overcharge sounds not picked (stand-ins). Crates: only Basic and Neon, old odds and pity.
 - PowerUp sound (stand-in RankUp). Levels 5-12 unreachable without zones 2+ (Phase 3); use TEST button.
 
 ## Not built yet (from Addendum 2)
-- Assisted first throw. Sheet now: Level 2 after 7 throws (0:21), Level 3 1:22, Level 4 4:43 (tune in step 4).
+- Measured 2026-10-18: Level 2 after 5 throws, Level 3 affordable about throw 18 (~1:00, earlier than sheet 1:22), Level 4 4:43 by sheet.
 - First 3 minutes script, 5 crates + Polish Points + collection book, 60 rank levels.
 - Mascots, zones 2-6, bosses, rebirth, return loops, monetization (off switch).
 
@@ -37,4 +37,4 @@ Next: Phase 1 step 4 (first 3 minutes + onboarding), only when Selim says go.
 
 ## Last session
 - 2026-10-18: Addendum 2 kickoff + policy check; Phase 1 step 1 built and passed.
-- 2026-10-18: steps 2 + 3 passed (Selim: "works great"); then level effects exaggerated (Config.Throw.LevelFx), recheck pending.
+- 2026-10-18: steps 2 + 3 passed; level effects exaggerated + recheck passed. Step 4 built and play-tested by Claude (synced via http trick, no Rojo).
