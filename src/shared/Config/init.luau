@@ -89,17 +89,38 @@ Config.Throw = {
 	-- Size = rolling ball size (1 = normal), Force = how hard pins fly, New = what the shop says this level adds
 	Levels = {
 		{ Size = 0.8, Force = 0.6, New = "" },
-		{ Size = 0.95, Force = 0.8, New = "POWER TRAIL" },
-		{ Size = 1.05, Force = 0.95, New = "SPARKS" },
-		{ Size = 1.15, Force = 1.1, New = "BIGGER BALL" },
-		{ Size = 1.25, Force = 1.3, New = "ON FIRE" },
-		{ Size = 1.35, Force = 1.5, New = "HUGE TRAIL" },
-		{ Size = 1.5, Force = 1.7, New = "MEGA CRASH" },
-		{ Size = 1.6, Force = 1.9, New = "POWER AURA" },
-		{ Size = 1.75, Force = 2.1, New = "CLEAN THROW" },
-		{ Size = 1.9, Force = 2.3, New = "GIANT BALL" },
-		{ Size = 2.05, Force = 2.5, New = "RAINBOW FIRE" },
-		{ Size = 2.25, Force = 2.8, New = "MAXIMUM POWER" },
+		{ Size = 1.0, Force = 0.8, New = "POWER TRAIL" },
+		{ Size = 1.15, Force = 0.95, New = "SPARKS" },
+		{ Size = 1.35, Force = 1.1, New = "BIGGER BALL" },
+		{ Size = 1.5, Force = 1.3, New = "ON FIRE" },
+		{ Size = 1.65, Force = 1.5, New = "HUGE TRAIL" },
+		{ Size = 1.85, Force = 1.7, New = "MEGA CRASH" },
+		{ Size = 2.0, Force = 1.9, New = "POWER AURA" },
+		{ Size = 2.15, Force = 2.1, New = "CLEAN THROW" },
+		{ Size = 2.4, Force = 2.3, New = "GIANT BALL" },
+		{ Size = 2.6, Force = 2.5, New = "RAINBOW FIRE" },
+		{ Size = 2.9, Force = 2.8, New = "MAXIMUM POWER" },
+	},
+	-- How loud the level effects are (owner 2026-10-18: "exaggerate them a bit more"). Bigger = stronger.
+	LevelFx = {
+		GlowRange = 8, -- the ball's light: range in studs...
+		GlowRangePerLevel = 2,
+		GlowBrightness = 1, -- ...and brightness
+		GlowBrightnessPerLevel = 0.45,
+		TrailWidth = 0.5, -- power trail: half its width, as a share of the ball (+ per level)...
+		TrailWidthPerLevel = 0.05,
+		TrailMaxWidth = 3.2, -- studs, half width; never wider than the lane (Config.Lane.LaneHalfWidth = 4)
+		TrailLife = 0.35, -- ...and how long it hangs in the air (seconds, + per level)
+		TrailLifePerLevel = 0.04,
+		SparkRate = 35, -- sparks per second at SparklesFromLevel (+ per level)
+		SparkRatePerLevel = 25,
+		SparkSize = 0.5, -- spark size in studs, plus this share of the ball
+		FireSize = 1.5, -- flames, times the ball size
+		AuraFill = 0.45, -- 0 = solid glow, 1 = no glow
+		ReleaseBurst = 12, -- burst of the level's colour from the hand on release: sparks per level...
+		ReleaseRingFromLevel = 4, -- ...plus a shockwave ring from this level
+		LevelSoundDrop = 0.05, -- every level the ball sounds this much deeper...
+		LevelSoundLoud = 0.08, -- ...and this much louder
 	},
 	PowerTrailFromLevel = 2, -- a bright streak behind the rolling ball, wider every level
 	SparklesFromLevel = 3, -- sparks pour off the rolling ball
@@ -107,7 +128,7 @@ Config.Throw = {
 	MegaCrashFromLevel = 7, -- double shockwave, big flash, deep extra boom
 	AuraFromLevel = 8, -- the ball glows with an outline in its own colour
 	RainbowFromLevel = 11, -- rainbow flames and sparks
-	CrashGrowthPerLevel = 0.15, -- each level makes the crash 15% bigger
+	CrashGrowthPerLevel = 0.25, -- each level makes the crash 25% bigger
 
 	-- Camera
 	CameraShakeStrength = 0.5,

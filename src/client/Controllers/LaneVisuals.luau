@@ -30,6 +30,7 @@ local LANE = Config.Lane
 local CAMERA = Config.Camera
 local JUICE = Config.Juice
 local THROW = Config.Throw
+local LEVEL_FX = THROW.LevelFx
 -- Throw Lab distances were tuned on bigger pins; effect sizes scale by this
 local PIN_SCALE = LANE.PinSpacing / THROW.LabPinSpacing
 
@@ -92,8 +93,8 @@ local function makeBall(ballId: string?, level: number): Part
 
 	local glow = Instance.new("PointLight")
 	glow.Color = color
-	glow.Range = 6 + level
-	glow.Brightness = 0.5 + level * 0.25
+	glow.Range = LEVEL_FX.GlowRange + level * LEVEL_FX.GlowRangePerLevel
+	glow.Brightness = LEVEL_FX.GlowBrightness + level * LEVEL_FX.GlowBrightnessPerLevel
 	glow.Parent = ball
 	if level >= THROW.SparklesFromLevel then
 		local e = Instance.new("ParticleEmitter")
@@ -101,12 +102,14 @@ local function makeBall(ballId: string?, level: number): Part
 		e.Texture = SPARKLE
 		e.Color = if rainbow then RAINBOW else ColorSequence.new(color, Color3.new(1, 1, 1))
 		e.LightEmission = 1
-		e.Size =
-			NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.25 + d * 0.12), NumberSequenceKeypoint.new(1, 0) })
+		e.Size = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, LEVEL_FX.SparkSize + d * 0.2),
+			NumberSequenceKeypoint.new(1, 0),
+		})
 		e.Lifetime = NumberRange.new(0.3, 0.6)
 		e.Speed = NumberRange.new(1, 2 + level * 0.5)
 		e.SpreadAngle = Vector2.new(180, 180)
-		e.Rate = 15 + (level - THROW.SparklesFromLevel) * 12
+		e.Rate = LEVEL_FX.SparkRate + (level - THROW.SparklesFromLevel) * LEVEL_FX.SparkRatePerLevel
 		e.Shape = Enum.ParticleEmitterShape.Sphere
 		e.Parent = ball
 	end
@@ -114,7 +117,7 @@ local function makeBall(ballId: string?, level: number): Part
 		local fire = Instance.new("Fire")
 		fire.Name = "PowerFire"
 		-- Kept low and coloured (never white) so the flames don't hide the pins
-		fire.Size = d * 0.9
+		fire.Size = d * LEVEL_FX.FireSize
 		fire.Heat = 2 + level * 0.4
 		fire.Color = if rainbow then Color3.fromRGB(255, 43, 214) else color
 		fire.SecondaryColor = if rainbow then Color3.fromRGB(70, 230, 255) else color:Lerp(Color3.new(0, 0, 0), 0.3)
@@ -125,7 +128,7 @@ local function makeBall(ballId: string?, level: number): Part
 		aura.Name = "PowerAura"
 		aura.FillColor = if rainbow then PINK else color
 		aura.OutlineColor = if rainbow then GOLD else color:Lerp(WHITE, 0.5)
-		aura.FillTransparency = 0.75
+		aura.FillTransparency = LEVEL_FX.AuraFill
 		aura.DepthMode = Enum.HighlightDepthMode.Occluded
 		aura.Parent = ball
 	end
@@ -147,7 +150,8 @@ local function powerTrail(lane: Model, level: number, diameter: number, color: C
 	rig.CanTouch = false
 	rig.Transparency = 1
 	rig.Size = Vector3.one * 0.2
-	local half = diameter * (0.3 + steps * 0.04)
+	local half =
+		math.min(diameter * (LEVEL_FX.TrailWidth + steps * LEVEL_FX.TrailWidthPerLevel), LEVEL_FX.TrailMaxWidth)
 	local low = -diameter * 0.45
 	local left = Instance.new("Attachment")
 	left.Position = Vector3.new(-half, low, 0)
@@ -159,11 +163,24 @@ local function powerTrail(lane: Model, level: number, diameter: number, color: C
 	trail.Attachment0 = left
 	trail.Attachment1 = rightSide
 	trail.Color = if level >= THROW.RainbowFromLevel then RAINBOW else ColorSequence.new(WHITE, color)
-	trail.Transparency = NumberSequence.new(0.15, 1)
+	trail.Transparency = NumberSequence.new(0, 1)
 	trail.LightEmission = 1
 	trail.FaceCamera = false
-	trail.Lifetime = 0.15 + steps * 0.04
+	trail.Lifetime = LEVEL_FX.TrailLife + steps * LEVEL_FX.TrailLifePerLevel
 	trail.Parent = rig
+	-- A second, upright ribbon through the ball, so the streak also reads from the camera behind it
+	local top = Instance.new("Attachment")
+	top.Position = Vector3.new(0, diameter * 0.5, 0)
+	top.Parent = rig
+	local bottom = Instance.new("Attachment")
+	bottom.Position = Vector3.new(0, low, 0)
+	bottom.Parent = rig
+	local upright = trail:Clone()
+	upright.Attachment0 = top
+	upright.Attachment1 = bottom
+	upright.Transparency = NumberSequence.new(0.35, 1)
+	upright.Color = if level >= THROW.RainbowFromLevel then RAINBOW else ColorSequence.new(color)
+	upright.Parent = rig
 	rig.Parent = lane
 	return {
 		Move = function(position: Vector3)
@@ -171,6 +188,7 @@ local function powerTrail(lane: Model, level: number, diameter: number, color: C
 		end,
 		Stop = function()
 			trail.Enabled = false
+			upright.Enabled = false
 			task.delay(trail.Lifetime + 0.1, function()
 				rig:Destroy()
 			end)
@@ -381,8 +399,21 @@ local function playThrow(data)
 	local curveTrail = if table.find(fired, "Curve") then TraitFx.CurveTrail(lane, headDistance) else nil
 	local gemTrail = if table.find(fired, "GemHunter") then TraitFx.GemTrail(lane) else nil
 	-- Stronger balls sound heavier (deeper)
-	local heavy = 1.1 - feel.Level * 0.03
-	local rollSound = Sfx.PlayAt("Roll", ball, (0.9 + feel.Strength * 0.2) * heavy, 0.8 + feel.Level * 0.05)
+	local heavy = 1.1 - feel.Level * LEVEL_FX.LevelSoundDrop
+	local rollSound =
+		Sfx.PlayAt("Roll", ball, (0.9 + feel.Strength * 0.2) * heavy, 0.8 + feel.Level * LEVEL_FX.LevelSoundLoud)
+	-- The release: a burst in the level's colour from the hand (and a ring from ReleaseRingFromLevel)
+	local levelColor = if feel.Level >= THROW.RainbowFromLevel then PINK else ballInfo.Trail or ballInfo.Color
+	ThrowFx.Burst(
+		ball.Position,
+		levelColor,
+		LEVEL_FX.ReleaseBurst * feel.Level,
+		10 + feel.Level * 2,
+		0.4 + ball.Size.X * 0.15
+	)
+	if feel.Level >= LEVEL_FX.ReleaseRingFromLevel then
+		ThrowFx.Shockwave(ballStart.Position + Vector3.new(0, 0.1, 0), levelColor, (3 + feel.Level) * PIN_SCALE, 0.35)
+	end
 	if isOwn then
 		Sfx.Play("Throw", (1 + (feel.Strength - 1) * 0.3) * heavy)
 		if data.Perfect then

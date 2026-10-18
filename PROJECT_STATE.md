@@ -2,7 +2,7 @@
 
 Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 2 replaces Addendum 1).
 
-**Current milestone:** Phase 1 step 3 (Power Levels 1 to 12) BUILT 2026-10-18, waiting for Selim's 2-minute test.
+**Current milestone:** Phase 1 step 3 (Power Levels 1 to 12) PASSED 2026-10-18; bigger level effects added after, quick recheck pending.
 Restore point: git tag restore-phase1-step3-before (code only). Real game = cloud place 94254609600041 (NOT Strike Legends.rbxl).
 Next: Phase 1 step 4 (first 3 minutes + onboarding), only when Selim says go.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
@@ -37,4 +37,4 @@ Next: Phase 1 step 4 (first 3 minutes + onboarding), only when Selim says go.
 
 ## Last session
 - 2026-10-18: Addendum 2 kickoff + policy check; Phase 1 step 1 built and passed.
-- 2026-10-18: Phase 1 step 2 built + passed; step 3 (Power Levels) built b79c551, test pending.
+- 2026-10-18: steps 2 + 3 passed (Selim: "works great"); then level effects exaggerated (Config.Throw.LevelFx), recheck pending.
