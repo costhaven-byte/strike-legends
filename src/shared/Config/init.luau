@@ -68,7 +68,6 @@ Config.Throw = {
 
 	-- What gets knocked down. A PERFECT release is always a strike, and only a PERFECT can strike.
 	StrikeChanceWithoutPerfect = 0, -- strike chance with a full bar outside the gold (0 = strikes only in the gold)
-	CurveHookWindow = 0.1, -- Curve balls: a magenta band this x the trait's strength wide on each side of the gold
 	-- also counts as PERFECT ("HOOK!"). Mythic Curve 0.6 = 6% of the bar on each side.
 	FewestPinsKnocked = 3, -- fewest pins any throw knocks down
 	GoodShare = 0.7, -- knocking down at least this share of the rack reads as a "Good" throw (7 of 10)
@@ -380,11 +379,11 @@ Config.Sounds = require(shared:WaitForChild("AssetSlots") :: any).Sounds
 -- Sound: a name from Config.Sounds, played at Pitch.
 Config.Traits = {
 	{
-		Id = "Curve", -- Value: hook band on each side of the gold, times Config.Throw.CurveHookWindow
+		Id = "Curve", -- Value: how much wider the PERFECT window gets (0.25 = 25% wider), shown as magenta edges on the gold
 		Name = "Curve",
-		Text = "Every throw hooks: near misses (%s%% of the bar each side of the gold) count as PERFECT",
+		Text = "PERFECT window %s%% wider (the magenta edges count as PERFECT), and every throw hooks",
 		Short = "CURVE %s%%",
-		Display = 10, -- = 100 * Config.Throw.CurveHookWindow
+		Display = 100,
 		Popup = "HOOK!",
 		Color = Color3.fromHex("FF2BD6"), -- magenta
 		Sound = "Throw",

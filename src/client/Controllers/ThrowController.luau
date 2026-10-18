@@ -323,7 +323,7 @@ function ThrowController:Start()
 			shownCenter = center
 		end
 		local shown = shownCenter :: number
-		local hook = ThrowRules.HookWidth(equippedBall())
+		local hook = ThrowRules.HookWidth(equippedBall(), size)
 		for _, segment in segments do
 			local offset = math.abs(segment.Value - shown)
 			local zone = if offset <= size / 2
@@ -395,7 +395,7 @@ function ThrowController:Start()
 		charge = chargeNow()
 		local center, size = sweetSpot()
 		local gold = ThrowRules.InSpot(charge, center, size)
-		local hooked = not gold and ThrowRules.InSpot(charge, center, size, ThrowRules.HookWidth(equippedBall()))
+		local hooked = not gold and ThrowRules.InSpot(charge, center, size, ThrowRules.HookWidth(equippedBall(), size))
 		local perfect = gold or hooked
 		releasedPerfect = perfect
 		drawBar(charge, perfect, false)
@@ -584,7 +584,7 @@ function ThrowController:Start()
 			-- Fills, then slides back down and up again while you keep holding; the arm swings with it
 			charge = chargeNow()
 			local center, size = sweetSpot()
-			local hook = ThrowRules.HookWidth(equippedBall())
+			local hook = ThrowRules.HookWidth(equippedBall(), size)
 			local inGold = ThrowRules.InSpot(charge, center, size, hook)
 			drawBar(charge, inGold, true)
 			-- A warning buzz each time the bar climbs into the red cap

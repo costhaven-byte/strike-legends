@@ -144,10 +144,9 @@ local function onThrowRequest(player: Player, clientHold: any)
 	end
 	local perfect = assisted
 		or ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW, nil, goldCenter, shownStreak)
-	local hook = ThrowRules.HookWidth(ball)
 	local hooked = not perfect
-		and hook > 0
-		and ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW, hook, goldCenter, shownStreak)
+		and Balls.TraitValue(ball, "Curve") > 0
+		and ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW, true, goldCenter, shownStreak)
 	local overcharged = not assisted and ThrowRules.InOvercharge(charge)
 	-- The next throw's gold is somewhere else on the arc
 	lane:SetAttribute("GoldCenter", ThrowRules.NextGoldCenter(goldCenter))

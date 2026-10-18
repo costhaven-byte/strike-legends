@@ -68,26 +68,30 @@ function ThrowRules.InSpot(charge: number, center: number, size: number, extra: 
 	return math.abs(charge - center) <= size / 2 + (extra or 0)
 end
 
--- Curve: how much bar on each side of the gold hooks into a PERFECT
-function ThrowRules.HookWidth(ball): number
-	return Balls.TraitValue(ball, "Curve") * THROW.CurveHookWindow
+-- Curve: how much bar on each side of the gold also counts as a PERFECT (the magenta edges).
+-- Curve X% makes the whole PERFECT window X% wider, so each edge is half of that.
+-- size: the gold zone's width right now (from SweetSpot)
+function ThrowRules.HookWidth(ball, size: number): number
+	return size * Balls.TraitValue(ball, "Curve") / 2
 end
 
 -- Server check: was the release in the gold at any moment in the last `window` seconds?
 -- (A sliding zone moves while the release travels to the server, so recent moments count too.)
+-- curve: also count the Curve ball's magenta edges
 function ThrowRules.WasInSpot(
 	charge: number,
 	ball,
 	modifier,
 	now: number,
 	window: number,
-	extra: number?,
+	curve: boolean?,
 	center: number?,
 	streak: number?
 ): boolean
 	local steps = if modifier and modifier.SweetSway then 6 else 0
 	for i = 0, steps do
 		local spot, size = ThrowRules.SweetSpot(ball, modifier, now - window * i / math.max(steps, 1), center, streak)
+		local extra = if curve then ThrowRules.HookWidth(ball, size) else nil
 		if ThrowRules.InSpot(charge, spot, size, extra) then
 			return true
 		end
