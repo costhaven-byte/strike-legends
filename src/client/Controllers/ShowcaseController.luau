@@ -115,6 +115,7 @@ local SIGN_BG = Color3.fromRGB(22, 20, 62)
 local PINK = Color3.fromRGB(255, 70, 190)
 local CYAN = Color3.fromRGB(70, 230, 255)
 local SILHOUETTE = Color3.fromRGB(44, 44, 78)
+local BLACKOUT = Color3.new(0, 0, 0) -- locked balls: solid black, like a fighter you haven't unlocked yet
 local CASE_LIGHT = Color3.fromRGB(190, 205, 255)
 
 local S = CASE.CaseScale -- the design is 1.24 x 2.47 units; this turns it into studs
@@ -418,8 +419,28 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 		}, display)
 		table.insert(holes, { Part = hole, Offset = CFrame.new(-offset.X * S, offset.Y * S, -offset.Z * S) })
 	end
-	-- The ball's 3D model (if it has one), shown once you own it; locked cases keep the plain silhouette
+	-- The ball's 3D model (if it has one). Locked, every piece turns solid black so you see its shape
+	-- but not its colours; owned, each piece gets its real look back.
 	local look = BallLook.Apply(ballPart, ball.Id) and ballPart:FindFirstChild("Look")
+	local lookPieces = {}
+	if look then
+		for _, hole in holes do
+			hole.Part.Transparency = 1 -- the model has its own finger holes
+		end
+		for _, p in look:GetDescendants() do
+			if p:IsA("BasePart") then
+				table.insert(lookPieces, {
+					Part = p,
+					Color = p.Color,
+					Material = p.Material,
+					Reflectance = p.Reflectance,
+					Transparency = p.Transparency,
+					Texture = if p:IsA("MeshPart") then p.TextureID else nil,
+					Skin = p:FindFirstChildOfClass("SurfaceAppearance"),
+				})
+			end
+		end
+	end
 	local ballFx -- the ball's own effects (rings, sparkles, glow), made once the case is in the world
 	local lock = Instance.new("Model")
 	lock.Name = "Padlock"
@@ -555,14 +576,22 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 		Center = center,
 		-- Owned: the real ball, its name and stats. Locked: a dark silhouette, a padlock and ???
 		Refresh = function(isOwned: boolean)
-			ballPart.Color = if isOwned then ball.Color else SILHOUETTE
-			ballPart.Material = if isOwned then ball.Material else Enum.Material.SmoothPlastic
-			ballPart.Reflectance = if isOwned then 0 else 0.1 -- a little shine so the silhouette reads as a ball
-			if look then
-				look.Parent = if isOwned then ballPart else nil
-				ballPart.Transparency = if isOwned then 1 else 0
-				for _, hole in holes do
-					hole.Part.Transparency = if isOwned then 1 else 0
+			ballPart.Color = if isOwned then ball.Color else BLACKOUT
+			ballPart.Material = if isOwned then ball.Material else Enum.Material.Neon
+			ballPart.Reflectance = 0
+			for _, piece in lookPieces do
+				local p = piece.Part
+				p.Color = if isOwned then piece.Color else BLACKOUT
+				-- Black Neon ignores the case lights, so the shape stays flat black with no grey shine
+				p.Material = if isOwned then piece.Material else Enum.Material.Neon
+				p.Reflectance = if isOwned then piece.Reflectance else 0
+				-- See-through glow layers would blur the black shape, so they hide while locked
+				p.Transparency = if isOwned then piece.Transparency elseif piece.Transparency > 0.5 then 1 else 0
+				if piece.Texture then
+					(p :: MeshPart).TextureID = if isOwned then piece.Texture else ""
+				end
+				if piece.Skin then
+					piece.Skin.Parent = if isOwned then p else nil
 				end
 			end
 			lock.Parent = if isOwned then nil else display
