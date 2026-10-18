@@ -31,8 +31,7 @@ Next: Phase 2 step 6 (5 crate tiers, pity, odds screen, Polish Points), only whe
 - 5 crates + Polish Points, 60 rank levels.
 - Mascots, zones 2-6, bosses, rebirth, return loops, monetization (off switch).
 
-## Parked
-- Tournaments, ghost replays, spectator lanes, challenge lane. Master plan M11-M20 replaced by Addendum 2 phases.
+## Parked: Tournaments, ghost replays, spectator lanes, challenge lane. Master plan M11-M20 replaced by Addendum 2 phases.
 
 ## Off-git (saved only in the Studio place file)
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
