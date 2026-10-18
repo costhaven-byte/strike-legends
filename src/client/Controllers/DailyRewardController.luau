@@ -11,6 +11,7 @@ local Config = require(Shared.Config)
 local Calendar = require(Shared.Modules.Calendar)
 local Balls = require(Shared.Modules.Balls)
 local CrateController = require(script.Parent.CrateController)
+local OnboardingController = require(script.Parent.OnboardingController)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
@@ -311,13 +312,24 @@ function DailyRewardController:Start()
 		while onboarding() do
 			player:GetAttributeChangedSignal("Onboarding"):Wait()
 		end
-		task.wait(8) -- after the showcase camera moment
+		-- After the showcase camera moment: it waits for the lane to clear first, so its start time varies
+		local waitedForShow = 0
+		while not OnboardingController.LegendsDone and waitedForShow < 90 do
+			waitedForShow += task.wait(0.25)
+		end
+		task.wait(1.5)
 	end
 	locked = false
 	updateLock()
 	refresh()
 	if player:GetAttribute("DailyClaimable") == true then
 		task.wait(1.5) -- let the game load in first
+		-- Never on top of a crate opening (it waits for that to close)
+		local opening = ballsUi:FindFirstChild("Opening") :: GuiObject?
+		local waitedForCrate = 0
+		while opening and opening.Visible and waitedForCrate < 120 do
+			waitedForCrate += task.wait(0.25)
+		end
 		setOpen(true)
 	end
 end

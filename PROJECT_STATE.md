@@ -1,7 +1,7 @@
 # Project state (max 40 lines, read at the start of every session, update at the end)
 Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 2 replaces Addendum 1).
 
-**Current milestone:** Phase 2 step 5 PASSED 2026-10-19. Two follow-up tweaks BUILT, waiting for Selim's test: DAILY button locked until the first 3 minutes end; BALLS opens the book (equip there).
+**Current milestone:** Phase 2 step 5 PASSED 2026-10-19. Daily lock + book tweaks passed. 3 bug fixes BUILT, test pending: book balls preload (Rookie was blank), BALLS button shows the equipped ball in 3D, daily popup waits for the showcase camera swing.
 Restore point: git tag restore-tweaks-daily-book-before + Studio "Save to Roblox As" "Before daily+book tweaks". Real game = cloud place 94254609600041.
 Next: Phase 2 step 6 (5 crate tiers, pity, odds screen, Polish Points), only when Selim says go.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
@@ -37,4 +37,4 @@ Next: Phase 2 step 6 (5 crate tiers, pity, odds screen, Polish Points), only whe
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
 
 ## Last session
-- 2026-10-18/19: Addendum 2 kickoff, Phase 1 steps 1-4 passed. 2026-10-19: Phase 2 step 5 passed; daily lock + equip-from-book tweaks built, owner test pending.
+- 2026-10-18/19: Addendum 2 kickoff, Phase 1 steps 1-4 passed. 2026-10-19: Phase 2 step 5 passed; daily lock + book tweaks passed; 3 small fixes built, test pending.

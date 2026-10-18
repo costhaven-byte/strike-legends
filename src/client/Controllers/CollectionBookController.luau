@@ -2,6 +2,8 @@
 -- the ones you're missing show as dark silhouettes with their traits, so you know what to chase.
 -- Opened with the BALLS button; owned balls have an EQUIP button (this replaced the old BALLS grid on 2026-10-19).
 -- Built in code (not in Studio), so it lives in git. Ownership comes from the OwnedBalls Player attribute the server sets.
+-- Also puts the equipped ball, spinning in 3D, on the BALLS button.
+local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -67,6 +69,22 @@ local function ballModel(ball): Instance
 	part.Material = ball.Material or Enum.Material.SmoothPlastic
 	part.CFrame = CFrame.new()
 	return part
+end
+
+-- Points a viewport camera so the whole ball fills the view (models differ a little in size)
+local function frameBall(camera: Camera, model: Instance, margin: number)
+	local size = if model:IsA("Model") then select(2, model:GetBoundingBox()) else (model :: BasePart).Size
+	local radius = math.max(size.X, size.Y, size.Z) / 2
+	local distance = radius * margin / math.tan(math.rad(camera.FieldOfView / 2))
+	camera.CFrame = CFrame.lookAt(Vector3.new(0, 0.25, 1).Unit * distance, Vector3.zero)
+end
+
+local function spin(model: Instance, turn: CFrame)
+	if model:IsA("Model") then
+		model:PivotTo(model:GetPivot() * turn)
+	elseif model:IsA("BasePart") then
+		model.CFrame *= turn
+	end
 end
 
 function CollectionBookController:Start()
@@ -136,6 +154,43 @@ function CollectionBookController:Start()
 	detailLimit.Parent = detail
 
 	book.Parent = gui
+
+	-- The equipped ball, spinning in 3D on the BALLS button (it replaces the old colour dot)
+	local swatch = ballsButton:WaitForChild("Swatch") :: Frame
+	swatch.BackgroundTransparency = 1
+	local buttonView = Instance.new("ViewportFrame")
+	buttonView.Name = "Ball3D"
+	buttonView.AnchorPoint = Vector2.new(0.5, 0.5)
+	buttonView.Position = UDim2.fromScale(0.5, 0.5)
+	buttonView.Size = UDim2.fromScale(1.25, 1.25) -- a little bigger than the ring, so the ball reads at this size
+	buttonView.BackgroundTransparency = 1
+	buttonView.Ambient = Color3.fromRGB(190, 190, 210)
+	buttonView.LightColor = Color3.new(1, 1, 1)
+	buttonView.LightDirection = Vector3.new(-1, -1.5, -1)
+	buttonView.Active = false
+	local buttonCamera = Instance.new("Camera")
+	buttonCamera.FieldOfView = 30
+	buttonCamera.Parent = buttonView
+	buttonView.CurrentCamera = buttonCamera
+	buttonView.Parent = swatch
+	local buttonModel: Instance? = nil
+	local buttonBall: string? = nil
+
+	local function updateButton(force: boolean?)
+		local current = Balls.Get(player:GetAttribute("EquippedBall")) or Config.Balls[1]
+		if current.Id == buttonBall and not force then
+			return
+		end
+		buttonBall = current.Id
+		if buttonModel then
+			buttonModel:Destroy()
+		end
+		local model = ballModel(current)
+		frameBall(buttonCamera, model, 1.05)
+		model.Parent = buttonView
+		buttonModel = model
+	end
+	updateButton()
 
 	local page = 1
 	local spinning: { Instance } = {}
@@ -384,23 +439,37 @@ function CollectionBookController:Start()
 		end
 	end)
 	player:GetAttributeChangedSignal("EquippedBall"):Connect(function()
+		updateButton()
 		if book.Visible then
 			render()
 		end
 	end)
 	book.Active = true -- taps on the book don't fall through to the throw meter
 
+	-- Ball meshes download in the background; a ball drawn before its mesh arrived stayed blank
+	-- (the Rookie, 2026-10-19), so once every ball has loaded the book and the button draw again
+	task.spawn(function()
+		local models = ReplicatedStorage:WaitForChild("BallModels", 30)
+		if not models then
+			return
+		end
+		pcall(ContentProvider.PreloadAsync, ContentProvider, { models })
+		updateButton(true)
+		if book.Visible then
+			render()
+		end
+	end)
+
 	RunService.RenderStepped:Connect(function(dt)
+		local turn = CFrame.Angles(0, dt * SPIN_SPEED, 0)
+		if buttonModel and buttonView.Visible then
+			spin(buttonModel, turn)
+		end
 		if not book.Visible then
 			return
 		end
-		local turn = CFrame.Angles(0, dt * SPIN_SPEED, 0)
 		for _, model in spinning do
-			if model:IsA("Model") then
-				model:PivotTo(model:GetPivot() * turn)
-			elseif model:IsA("BasePart") then
-				model.CFrame *= turn
-			end
+			spin(model, turn)
 		end
 	end)
 end

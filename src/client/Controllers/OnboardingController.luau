@@ -30,6 +30,8 @@ local CYAN = Color3.fromRGB(70, 230, 255)
 local player = Players.LocalPlayer
 
 local OnboardingController = {}
+-- True once the showcase camera moment is over (or was skipped); the daily popup waits for it
+OnboardingController.LegendsDone = false
 
 local screen: ScreenGui -- this script's own screen (OnboardingUI)
 local panning = false -- the camera is away at the showcase
@@ -111,6 +113,7 @@ local function showLegends()
 		end
 	end
 	if not target then
+		OnboardingController.LegendsDone = true
 		return
 	end
 	waitForCalm()
@@ -166,6 +169,7 @@ local function showLegends()
 		other.Enabled = true
 	end
 	panning = false
+	OnboardingController.LegendsDone = true
 end
 
 function OnboardingController:Start()
