@@ -37,5 +37,4 @@ Next: Phase 1 step 4 (first 3 minutes + onboarding), only when Selim says go.
 
 ## Last session
 - 2026-10-18: Addendum 2 kickoff + policy check; Phase 1 step 1 built and passed.
-- 2026-10-18: built Phase 1 step 2 (overcharge, AssetSlots, strike timing to spec). Test passed.
-- 2026-10-18: built Phase 1 step 3 (Power Levels). Test pending.
+- 2026-10-18: Phase 1 step 2 built + passed; step 3 (Power Levels) built b79c551, test pending.
