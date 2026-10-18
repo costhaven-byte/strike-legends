@@ -377,17 +377,18 @@ local function impact()
 		end)
 	end
 
-	-- Safety net for the chain reaction: any pin that should fall but wasn't reached gets knocked shortly after
+	-- Every pin that should fall flies within PinSpreadTime of the hit: a quick ripple from front to back,
+	-- so no pin is left hanging. (Pins knocked earlier by the ball or by flying pins are skipped.)
+	local hitPoint = Vector3.new(0, 0.5, World.HeadPinZ + 1.5)
+	local farthest = World.PinSpacing * 3.5
 	for _, pin in rack do
 		if pin.willFall then
-			task.delay(
-				(0.18 + pin.row * 0.07) * (throwInfo.strike and 1 / Settings.SlowMotionSpeed * 0.6 or 1),
-				function()
-					if run == throwRun and not pin.launched then
-						launch(pin, Vector3.new(0, 0, World.HeadPinZ + 1), 0.8)
-					end
+			local distance = (pin.root.Position - hitPoint).Magnitude
+			task.delay(Settings.PinSpreadTime * math.clamp(distance / farthest, 0, 1), function()
+				if run == throwRun and not pin.launched then
+					launch(pin, hitPoint, 1)
 				end
-			)
+			end)
 		end
 	end
 

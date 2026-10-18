@@ -86,6 +86,10 @@ ThrowSettings.PinSpin = 30
 -- 1 = full speed. Higher than 1 = the chain reaction gets MORE violent.
 ThrowSettings.ChainReactionForce = 0.9
 
+-- Seconds between the first and the last pin taking off. Small = all pins explode together.
+-- 0 = every pin at the exact same moment. Bigger (like 0.3) = a visible ripple from front to back.
+ThrowSettings.PinSpreadTime = 0.1
+
 -- Pull of gravity in the test lane. Normal Roblox is 196.
 -- Lower = pins hang in the air longer (floaty, more dramatic).
 ThrowSettings.PinGravity = 90
