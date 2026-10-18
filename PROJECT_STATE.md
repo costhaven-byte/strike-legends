@@ -1,9 +1,9 @@
 # Project state (max 40 lines, read at the start of every session, update at the end)
 Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 2 replaces Addendum 1).
 
-**Current milestone:** Phase 1 step 4 (first 3 minutes) BUILT 2026-10-18, Selim's 2-min test pending. Step 3 passed (recheck too).
-Restore point: git tag restore-phase1-step4-before (code) + Studio "Save to Roblox As". Real game = cloud place 94254609600041.
-Next: after step 4 passes, Phase 1 ends (say the one-line 10-minute-watch checkpoint once), then Phase 2 step 5 when Selim says go.
+**Current milestone:** PHASE 1 DONE. Step 4 (first 3 minutes) PASSED 2026-10-19 ("works amazing"). 10-minute-watch checkpoint given.
+Restore point: git tag restore-phase1-done (code) + Studio "Save to Roblox As". Real game = cloud place 94254609600041.
+Next: Phase 2 step 5 (all 20 balls, traits under the new throw, collection book), only when Selim says go.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
 
 ## Exists and works
@@ -37,4 +37,4 @@ Next: after step 4 passes, Phase 1 ends (say the one-line 10-minute-watch checkp
 
 ## Last session
 - 2026-10-18: Addendum 2 kickoff + policy check; Phase 1 step 1 built and passed.
-- 2026-10-18: steps 2 + 3 passed; level effects exaggerated + recheck passed. Step 4 built and play-tested by Claude (synced via http trick, no Rojo).
+- 2026-10-18: steps 2 + 3 passed; level effects exaggerated + recheck passed. Step 4 built, passed 2026-10-19.
