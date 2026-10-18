@@ -2,7 +2,7 @@
 
 Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 2 replaces Addendum 1).
 
-**Current milestone:** Phase 1 step 1 (Foundation close-out) BUILT 2026-10-18, waiting for Selim's 2-minute test.
+**Current milestone:** Phase 1 step 1 (Foundation close-out) DONE 2026-10-18, Selim's 2-minute test passed (4 throws logged as 4).
 Restore point: cloud copy place 93792316689717 + git tag restore-phase1-step1. Real game = cloud place 94254609600041 (NOT Strike Legends.rbxl, that file is from Oct 14).
 Next after it passes: Phase 1 step 2 (throw juice + overcharge flag), only when Selim says go.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
@@ -36,4 +36,4 @@ Next after it passes: Phase 1 step 2 (throw juice + overcharge flag), only when 
 
 ## Last session
 - 2026-10-18: read Addendum 2, checked the throw against it, ran the policy check, made this file.
-- 2026-10-18: built Phase 1 step 1 (server-timed hold, session log, measured throw time, economy sheet).
+- 2026-10-18: built Phase 1 step 1 (server-timed hold, session log, measured throw time, economy sheet). Test passed.
