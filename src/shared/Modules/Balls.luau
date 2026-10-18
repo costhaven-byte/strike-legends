@@ -16,6 +16,13 @@ end
 local traitsById = {}
 for _, trait in Config.Traits do
 	traitsById[trait.Id] = trait
+	-- While gems are off (Config.Gems), traits that pay gems use their coin wording instead
+	if not Config.Gems.Enabled and trait.NoGemsText then
+		trait.Name = trait.NoGemsName or trait.Name
+		trait.Text = trait.NoGemsText
+		trait.Short = trait.NoGemsShort or trait.Short
+		trait.Popup = trait.NoGemsPopup or trait.Popup
+	end
 end
 
 local cratesById = {}

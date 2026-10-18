@@ -7,6 +7,7 @@ local TextChatService = game:GetService("TextChatService")
 local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
 local Progression = require(Shared.Modules.Progression)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
@@ -16,8 +17,8 @@ local UiFx = require(Modules.UiFx)
 
 local player = Players.LocalPlayer
 
-local SHOW_TIME = 4 -- seconds before the screen closes by itself
-local CONFETTI_COUNT = 40
+local SHOW_TIME = Config.Ui.RankUpShowTime
+local CONFETTI_COUNT = Config.Ui.RankUpConfetti
 
 local RankUpController = {}
 

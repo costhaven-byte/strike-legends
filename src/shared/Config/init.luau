@@ -8,6 +8,7 @@ Config.Lane = {
 	PinSpacing = 2.3, -- distance between neighbouring pins
 	PinDensity = 0.35,
 	BallDiameter = 1.8,
+	PinCount = 10, -- pins in one rack (bigger racks per zone arrive in Milestone 12, see Config.Economy.Zones)
 
 	LaneHalfWidth = 4, -- playable wood, centre to edge
 	GutterOffset = 4.7, -- centre of the gutter, from lane centre
@@ -44,8 +45,9 @@ Config.Throw = {
 	WeakPowerPenalty = 1.2, -- how fast quality drops below the sweet zone
 	OverPowerPenalty = 8, -- how fast quality drops above the sweet zone
 
-	-- Pins = 10 * quality^QualityCurve, then +/- RandomVariance
+	-- Pins = PinCount * quality^QualityCurve, then +/- RandomVariance
 	QualityCurve = 0.7,
+	GoodShare = 0.7, -- knocking down at least this share of the rack reads as a "Good" throw (7 of 10)
 	RandomVariance = 0.1,
 
 	-- Roll duration (seconds): full power is fastest
@@ -74,18 +76,36 @@ Config.StartingData = {
 	DailyLastClaim = 0, -- the day number (see Calendar.Day) it was claimed on
 	CrateStrikes = 0, -- strikes toward the next free crate (see Config.FreeCrates)
 	FreeCrates = 0, -- free crates waiting to be opened in the shop
+	PlayTime = 0, -- total seconds played, for analytics ("bought ball tier 3 after 12 minutes")
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 5, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates. Bump when the save format changes, and add an upgrade step in SaveStore
-	AutosaveInterval = 90, -- seconds between automatic saves
+	SchemaVersion = 6, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime. Bump when the save format changes, and add an upgrade step in SaveStore
+	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
 	LockTimeout = 300, -- a session lock older than this belongs to a crashed server and can be taken
 	LockWaitTries = 6, -- if another server still holds the lock, wait and retry this many times...
 	LockWaitDelay = 5, -- ...this many seconds apart, then take over
+}
+
+-- Requests a player can't send faster than this (seconds). Extra ones are ignored by the server.
+Config.RateLimits = {
+	Throw = 1.5, -- the lane's own roll + pin reset wait is longer than this anyway
+	EquipBall = 0.25,
+	OpenCrate = 1,
+	ClaimDaily = 1,
+	StartTrial = 1,
+}
+
+-- Gems on/off switch. Addendum 1 keeps gems (earned only, a gem sink comes later); set Enabled = false to hide them.
+-- While off: no gem drops, the HUD hides the gem counter, and Gem Hunter pays bonus coins instead.
+-- Saved gem balances are kept untouched either way, so switching loses nothing.
+Config.Gems = {
+	Enabled = true,
+	HunterCoinBonus = 1, -- while gems are off, a Gem Hunter hit adds this share of the throw's coins (1 = +100%)
 }
 
 -- Strike streaks: the highest row you have reached sets the coin multiplier (Multiplier) and the XP multiplier
@@ -198,6 +218,9 @@ Config.Juice = {
 -- Screen layout
 Config.Ui = {
 	CompactHeight = 500, -- screens shorter than this (phones held sideways) use the compact phone layout
+	CountTime = 0.6, -- seconds for a HUD number to tick up to its new value
+	RankUpShowTime = 4, -- seconds before the rank-up screen closes by itself
+	RankUpConfetti = 40, -- confetti pieces on the rank-up screen
 }
 
 -- Sound effects. Placeholders from the Creator Store: change an Id to swap a sound.
@@ -283,6 +306,11 @@ Config.Traits = {
 		Short = "GEMS +%s%%",
 		Display = 100,
 		Popup = "+%d GEM", -- %d = gems paid
+		-- Used while Config.Gems.Enabled is false: the same chance pays bonus coins
+		NoGemsName = "Coin Hunter",
+		NoGemsText = "+%s%% chance of bonus coins on Perfect Strikes",
+		NoGemsShort = "COINS +%s%%",
+		NoGemsPopup = "+%s COINS", -- %s = coins paid
 		Color = Color3.fromHex("19E3C0"), -- gem
 		Sound = "Coin",
 		Pitch = 1.6,
@@ -470,6 +498,7 @@ Config.LaneModifiers = {
 			Weight = 1,
 			StrikeGemChance = 0.2,
 			StrikeGemAmount = 1,
+			NeedsGems = true, -- left out of the rotation while Config.Gems.Enabled is false
 		},
 		{
 			Id = "GiantPins",
@@ -1431,6 +1460,7 @@ Config.CrateShop = {
 	},
 	AnimateDistance = 90, -- only animate while your camera is this close (saves phone battery)
 	IntroTime = 1.1, -- seconds the crate shakes on screen before the reel starts
+	SpinTime = 4.5, -- seconds the crate reel spins before it stops on the result
 	ScreenBrightness = 1.15, -- glow of the kiosk screens (marquee, odds, prices); higher = more vibrant
 }
 
@@ -1504,6 +1534,180 @@ Config.Analytics = {
 		"Equipped Ball",
 		"Ranked Up",
 	},
+	PlayTimeInterval = 30, -- seconds between adding play time to the save
+	-- Every custom event name the game logs (MASTER_PLAN.md section 7). A name not on this list prints a warning in
+	-- Studio, so typos get caught. Rows marked "later" are stubs: the milestone that adds the system starts logging them.
+	Events = {
+		"SessionStart",
+		"SessionEnd", -- value = session minutes; labels = last action before leaving, minutes played in total
+		"Throw", -- value = pins; labels = tier, ball
+		"FirstCoins",
+		"StreakRecord", -- value = new best strike streak
+		"RankUp", -- value = new rank; labels = rank name
+		"CrateOpened", -- labels = crate, rarity, New/Duplicate
+		"DailyClaimed", -- value = day
+		"TrialFinished",
+		"Purchase", -- value = minutes played in total; labels = kind (Crate/Ball/Egg), item  (balls and eggs: later)
+		"ZoneUnlocked", -- later (Milestone 12)
+		"LuckyThrow", -- later (Milestone 13)
+		"MascotHatched", -- later (Milestone 14)
+		"BossDefeated", -- later (Milestone 15)
+		"PityHit", -- later (Milestone 16)
+		"Rebirth", -- later (Milestone 17)
+		"QuestCompleted", -- later (Milestone 18)
+	},
+}
+
+-- ================================================================================================
+-- SIMULATOR ECONOMY (MASTER_PLAN.md section 3, with STRIKE_LEGENDS_ADDENDUM_1.md on top). The economy simulator (ServerStorage.Tools.EconomySim)
+-- runs on these numbers today. The live game moves onto them one milestone at a time: zones, Power Levels
+-- and ranks in Milestone 12, streak/lucky in 13, mascots in 14, bosses in 15, crate tiers in 16 and
+-- rebirth in 17. When a table goes live, the old table it replaces (Config.Ranks, Config.Crates, ...) goes.
+-- Tuning: change a number here, re-run the simulator, compare with Economy.Timeline (MASTER_PLAN.md section 8).
+-- ================================================================================================
+Config.Economy = {}
+
+-- One throw:
+--   pinsHit = min(zone pins, ball power * throw quality)
+--   coins   = pinsHit * zone pin value * Power Level value * ball Multiplier (with Polish)
+--             * (1 + mascot bonuses) * (1 + RankBonus * rank)
+--             * (1 + RebirthBonus * rebirths) * streak * boosts * crit (Perfect) * lucky
+--   xp      = pinsHit * zone XP per pin
+Config.Economy.Formula = {
+	QualityMin = 0.6, -- the worst timing still knocks down this share of the ball's power
+	QualityMax = 1.0,
+	PerfectCrit = 2.0, -- a Perfect throw (quality 1.0, sweet spot) pays this much more
+	RankBonus = 0.03, -- +3% coins per rank
+	RebirthBonus = 0.5, -- +50% coins per rebirth
+	StreakPerStrike = 0.1, -- streak multiplier = 1 + this * strikes in a row...
+	StreakMax = 3.0, -- ...capped here. Any non-strike sets it back to 1
+	LuckyChance = 0.03, -- Lucky Throw: chance on any throw (Milestone 13)...
+	LuckyMultiplier = 5, -- ...and its payout multiplier
+}
+
+-- Zones: you need Power >= Pins to strike a zone's lane. Rank = rank needed to enter.
+Config.Economy.Zones = {
+	{ Id = "StarterAlley", Name = "Starter Alley", Pins = 10, PinValue = 1, XpPerPin = 1, Rank = 1 },
+	{ Id = "NeonLanes", Name = "Neon Lanes", Pins = 30, PinValue = 5, XpPerPin = 2, Rank = 5 },
+	{ Id = "ArcadeArena", Name = "Arcade Arena", Pins = 100, PinValue = 25, XpPerPin = 4, Rank = 12 },
+	{ Id = "SkylineLanes", Name = "Skyline Lanes", Pins = 300, PinValue = 125, XpPerPin = 8, Rank = 22 },
+	{ Id = "VolcanoStrike", Name = "Volcano Strike", Pins = 1000, PinValue = 600, XpPerPin = 16, Rank = 35 },
+	{ Id = "CosmicAlley", Name = "Cosmic Alley", Pins = 3000, PinValue = 3000, XpPerPin = 32, Rank = 50 },
+}
+
+-- Power Levels (Addendum 1; the plan's "Ball Shop"): upgrades bought with coins, in order. Power = pins knocked
+-- per throw at quality 1.0. Value = payout multiplier, which multiplies with the equipped ball's own Multiplier
+-- (Config.Balls). Each level will also change how the ball looks and sounds (Milestone 12).
+-- Tuned with the simulator. Plan prices: 0, 100, 500, 2.5K, 12K, 60K, 300K, 1.5M, 7M, 35M, 175M, 1B; plan values went
+-- up to x75, lowered to x12 because ball multipliers (up to x25) stack on top. Prices jump right after each new
+-- zone opens (levels 5 and 7), because a new zone pays far more per throw.
+Config.Economy.PowerLevels = {
+	{ Level = 1, Price = 0, Power = 6, Value = 1.0 },
+	{ Level = 2, Price = 160, Power = 10, Value = 1.25 },
+	{ Level = 3, Price = 460, Power = 16, Value = 1.5 },
+	{ Level = 4, Price = 2700, Power = 30, Value = 2 },
+	{ Level = 5, Price = 84000, Power = 50, Value = 2.5 },
+	{ Level = 6, Price = 420000, Power = 100, Value = 3 },
+	{ Level = 7, Price = 10000000, Power = 180, Value = 4 },
+	{ Level = 8, Price = 150000000, Power = 350, Value = 5 },
+	{ Level = 9, Price = 820000000, Power = 700, Value = 6 },
+	{ Level = 10, Price = 4100000000, Power = 1400, Value = 8 },
+	{ Level = 11, Price = 21000000000, Power = 2800, Value = 10 },
+	{ Level = 12, Price = 120000000000, Power = 5000, Value = 12 },
+}
+
+-- Crate tiers (Addendum 1). Crates drop only the balls in Config.Balls: roll a rarity with these odds, then every
+-- ball of that rarity is equally likely. Every row adds up to 100.
+-- Prices move with the Power Level they sit next to (plan: 100, 1K, 15K, 250K, 5M).
+Config.Economy.Crates = {
+	{ Id = "Basic", Price = 160, Odds = { Common = 70, Uncommon = 25, Rare = 5 } },
+	{ Id = "Bronze", Price = 920, Odds = { Common = 45, Uncommon = 35, Rare = 17, Epic = 3 } },
+	{ Id = "Silver", Price = 100000, Odds = { Common = 20, Uncommon = 35, Rare = 32, Epic = 11, Legendary = 2 } },
+	{ Id = "Gold", Price = 8700000, Odds = { Uncommon = 20, Rare = 45, Epic = 28, Legendary = 6.5, Mythic = 0.5 } },
+	{ Id = "Neon", Price = 590000000, Odds = { Rare = 40, Epic = 38, Legendary = 18, Mythic = 4 } },
+}
+-- Pity: a pull of one of these Crates is at least Rarity once that many pulls in a row (of that crate) missed it
+Config.Economy.CratePity = {
+	{ Crates = { Basic = true, Bronze = true }, Rarity = "Rare", After = 10 },
+	{ Crates = { Silver = true, Gold = true }, Rarity = "Epic", After = 20 },
+	{ Crates = { Gold = true, Neon = true }, Rarity = "Legendary", After = 80 },
+}
+Config.Economy.FirstCrateMin = "Rare" -- the very first crate a player opens gives at least this
+-- Duplicates become Polish Points; Polish levels raise one ball's Multiplier. A maxed ball's duplicates pay coins.
+Config.Economy.Polish = {
+	ValuePerLevel = 0.05, -- each level adds +5% of that ball's Multiplier
+	MaxLevel = 10,
+	PointsPerDuplicate = 1, -- starting guess (Milestone 16)...
+	PointsPerLevel = 1, -- ...so one duplicate = one level for now
+}
+
+-- Mascots (Milestone 14). Unlock: Rank = rank needed, or Zone = zone number that must be unlocked.
+-- BonusScale: this egg's mascots get Mascots.Bonus times this (not in the plan, where every egg gave the same
+-- bonuses: cheap eggs made coins explode and expensive eggs were pointless). Plan prices: 400, 6K, 90K, 1.5M, 30M.
+Config.Economy.Eggs = {
+	{ Id = "Alley", Price = 370, Rank = 3, BonusScale = 0.1 },
+	{ Id = "Neon", Price = 42000, Zone = 2, BonusScale = 0.2 },
+	{ Id = "Arcade", Price = 630000, Zone = 3, BonusScale = 0.4 },
+	{ Id = "Skyline", Price = 150000000, Zone = 4, BonusScale = 0.7 },
+	{ Id = "Volcano", Price = 3500000000, Zone = 5, BonusScale = 1 },
+}
+Config.Economy.Mascots = {
+	Odds = { Common = 60, Uncommon = 25, Rare = 10, Epic = 4, Legendary = 0.9, Mythic = 0.1 },
+	Bonus = { Common = 0.2, Uncommon = 0.5, Rare = 1.0, Epic = 2.5, Legendary = 6, Mythic = 15 }, -- added together
+	ShinyMerge = 3, -- this many of the same mascot make a Shiny...
+	ShinyMultiplier = 2, -- ...with this much more bonus
+	StartSlots = 3,
+	MaxSlots = 6,
+	SlotRanks = { 15, 30 }, -- each of these ranks adds a slot
+	SlotRebirths = { 1 }, -- each of these rebirth counts adds a slot
+}
+
+-- Ranks: XP to go from rank r to r+1 = Base * Growth^(r-1) up to rank LateFrom,
+-- then it grows by LateGrowth per rank so ranks LateFrom..MaxRank feel steady.
+Config.Economy.Ranks = {
+	MaxRank = 60,
+	Base = 180, -- plan: 50 (far too fast, see the changelog)
+	Growth = 1.42, -- plan: 1.35
+	LateFrom = 30,
+	LateGrowth = 1.06,
+}
+
+-- Rebirth ("Go Pro Tour", Milestone 17)
+Config.Economy.Rebirth = {
+	FirstRank = 20, -- rank needed for the first rebirth...
+	RankStep = 3, -- ...and this many more ranks for each one after
+	FirstCost = 400000000, -- coins needed for the first rebirth... (plan: none given)
+	CostGrowth = 1.6, -- ...times this for each one after
+	DiscountLevels = 5, -- after a rebirth, Power Levels up to this one...
+	DiscountPrice = 0.1, -- ...cost this share of their price
+	XpBonus = 1, -- +100% XP per rebirth (owner approved). Not in the plan's formula: without it a second run is barely faster
+}
+
+-- The timeline the simulator checks (MASTER_PLAN.md section 2), in minutes from a brand new player's first join
+Config.Economy.Timeline = {
+	{ Goal = "Level2", Text = "Buy Power Level 2", From = 1.5, To = 2 },
+	{ Goal = "FirstCrate", Text = "Afford first crate", From = 1.5, To = 2 },
+	{ Goal = "Rank3", Text = "Reach rank 3", From = 4, To = 5 },
+	{ Goal = "FirstEgg", Text = "Afford first mascot egg", From = 4, To = 5 },
+	{ Goal = "Zone2", Text = "Unlock Zone 2 (rank 5)", From = 8, To = 10 },
+	{ Goal = "Zone3", Text = "Unlock Zone 3", From = 30, To = 45 },
+	{ Goal = "RebirthReady", Text = "First rebirth available", From = 60, To = 90 },
+}
+
+-- The pretend player the simulator plays as (MASTER_PLAN.md Milestone 10 step 4)
+Config.Economy.Sim = {
+	Runs = 40, -- players simulated; the report shows the median
+	ThrowSeconds = 4, -- one throw this often
+	GoodShare = 0.7, -- share of throws with good timing...
+	GoodQuality = { 0.9, 1.0 }, -- ...and their quality
+	BadQuality = { 0.6, 0.85 }, -- the rest
+	PerfectShare = 0.15, -- share of all throws that are Perfect (counted inside the good ones)
+	SpendShare = 0.25, -- buys an egg or crate only when it costs at most this share of the next Power Level
+	MaxEggs = 8, -- stops hatching an egg type after this many
+	MaxCrates = 10, -- stops buying a crate type after this many
+	Minutes = 150, -- how long each pretend player plays
+	Rebirths = 2, -- rebirths as soon as it can, up to this many times
+	ToleranceShare = 0.2, -- a result more than 20% outside a timeline window counts as a mismatch
 }
 
 return Config

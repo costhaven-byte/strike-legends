@@ -18,7 +18,7 @@ local UiFx = require(Modules.UiFx)
 local player = Players.LocalPlayer
 
 local STATS = { "Coins", "Gems" }
-local COUNT_TIME = 0.6 -- seconds for a number to tick up to its new value
+local COUNT_TIME = Config.Ui.CountTime
 
 local JUICE = Config.Juice
 local NO_STREAK_COLOR = Color3.fromRGB(120, 110, 150)
@@ -234,7 +234,11 @@ function HudController:Start()
 	local gui = player:WaitForChild("PlayerGui"):WaitForChild("HUD")
 	local bar = gui:WaitForChild("Bar")
 	for _, key in STATS do
-		bindStat(bar:WaitForChild(key), key)
+		if key == "Gems" and not Config.Gems.Enabled then
+			bar:WaitForChild(key).Visible = false -- gems are switched off (Config.Gems)
+		else
+			bindStat(bar:WaitForChild(key), key)
+		end
 	end
 	bindRankBar(gui:WaitForChild("RankBar"))
 	bindStreak(gui:WaitForChild("Streak"))
@@ -291,7 +295,8 @@ function HudController:Start()
 					flyIcons(bar.Coins, math.clamp(icons, JUICE.CoinIconsMin, JUICE.CoinIconsMax), from)
 				end
 				-- A Gem Hunter gem flies in on its own (TraitFx.GemPayout)
-				local gems = data.Reward.Gems - (if data.Reward.GemHunter then Config.Rewards.PerfectGemAmount else 0)
+				local hunterGem = data.Reward.GemHunter and Config.Gems.Enabled
+				local gems = data.Reward.Gems - (if hunterGem then Config.Rewards.PerfectGemAmount else 0)
 				if gems > 0 then
 					flyIcons(bar.Gems, math.min(gems, 5), from)
 				end

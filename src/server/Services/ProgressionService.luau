@@ -85,6 +85,7 @@ function ProgressionService.ShowStreak(player: Player, streak: number)
 	player:SetAttribute("Streak", streak)
 	if streak > (PlayerDataService.Get(player, "BestStreak") or 0) then
 		PlayerDataService.Set(player, "BestStreak", streak)
+		Analytics.Event(player, "StreakRecord", streak)
 	end
 end
 
@@ -110,9 +111,10 @@ function ProgressionService.PromoteRank(player: Player)
 		return
 	end
 	local rank = Progression.GetRank(index)
-	if rank.Gems > 0 then
-		PlayerDataService.Add(player, "Gems", rank.Gems)
-		Analytics.Currency(player, "Gems", rank.Gems, "Gameplay", "RankUp")
+	local gems = if Config.Gems.Enabled then rank.Gems else 0
+	if gems > 0 then
+		PlayerDataService.Add(player, "Gems", gems)
+		Analytics.Currency(player, "Gems", gems, "Gameplay", "RankUp")
 	end
 	Analytics.Event(player, "RankUp", index, { rank.Name })
 	Analytics.Step(player, "Ranked Up")
@@ -121,7 +123,7 @@ function ProgressionService.PromoteRank(player: Player)
 		UserId = player.UserId,
 		DisplayName = player.DisplayName,
 		Rank = index,
-		Gems = rank.Gems,
+		Gems = gems,
 	})
 	ProgressionService.RefreshRankUpReady(player)
 end

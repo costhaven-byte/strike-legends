@@ -11,6 +11,7 @@ local Balls = require(Shared.Modules.Balls)
 local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local BallService = require(script.Parent.BallService)
+local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
 
 local DAILY = Config.Daily
 
@@ -56,7 +57,7 @@ local function claim(player: Player)
 		PlayerDataService.Add(player, "Coins", reward.Coins)
 		Analytics.Currency(player, "Coins", reward.Coins, "TimedReward", "Daily")
 	end
-	if reward.Gems then
+	if reward.Gems and Config.Gems.Enabled then
 		PlayerDataService.Add(player, "Gems", reward.Gems)
 		Analytics.Currency(player, "Gems", reward.Gems, "TimedReward", "Daily")
 	end
@@ -72,7 +73,7 @@ local function claim(player: Player)
 end
 
 local function onClaim(player: Player)
-	if busy[player] then
+	if busy[player] or not RateLimit.Allow(player, "ClaimDaily") then
 		return { Ok = false, Error = "Slow down!" }
 	end
 	busy[player] = true

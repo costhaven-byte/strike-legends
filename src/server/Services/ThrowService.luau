@@ -17,6 +17,7 @@ local ProgressionService = require(script.Parent.ProgressionService)
 local TrialService = require(script.Parent.TrialService)
 local ThrowResolver = require(script.Parent.Parent.Modules.ThrowResolver)
 local RewardResolver = require(script.Parent.Parent.Modules.RewardResolver)
+local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
 
 local GOLDEN = Config.GoldenPin
 
@@ -89,6 +90,9 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 	if now < (lane:GetAttribute("ReadyAt") or 0) then
 		return
 	end
+	if not RateLimit.Allow(player, "Throw") then
+		return
+	end
 
 	local ball = BallService.GetEquipped(player)
 	local modifier = Modifiers.Current()
@@ -113,13 +117,19 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 	-- Surprise bonuses: Golden Pin gems and free crate, and the Bonus Gems lane modifier
 	local golden = { Pin = goldenPin, Hit = goldenHit, Gems = 0, Crate = false }
 	if goldenHit then
-		if math.random() < GOLDEN.GemChance then
+		if Config.Gems.Enabled and math.random() < GOLDEN.GemChance then
 			golden.Gems = GOLDEN.GemAmount
 		end
 		golden.Crate = math.random() < GOLDEN.CrateChance
 	end
 	local modifierGems = 0
-	if isStrike and modifier and modifier.StrikeGemChance and math.random() < modifier.StrikeGemChance then
+	if
+		Config.Gems.Enabled
+		and isStrike
+		and modifier
+		and modifier.StrikeGemChance
+		and math.random() < modifier.StrikeGemChance
+	then
 		modifierGems = modifier.StrikeGemAmount or 1
 	end
 	reward.Gems += golden.Gems + modifierGems
@@ -161,6 +171,7 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 	task.delay(result.RollTime, function()
 		-- Paid when the ball reaches the pins, so the HUD ticks up in sync with the hit
 		if player.Parent then
+			local firstCoins = reward.Coins > 0 and (PlayerDataService.Get(player, "LifetimePins") or 0) == 0
 			PlayerDataService.Add(player, "Coins", reward.Coins)
 			if reward.Gems > 0 then
 				PlayerDataService.Add(player, "Gems", reward.Gems)
@@ -180,6 +191,9 @@ local function onThrowRequest(player: Player, aim: any, power: any)
 			Analytics.Currency(player, "Gems", reward.Gems, "Gameplay", "Throw")
 			Analytics.Event(player, "Throw", result.Count, { result.Tier, ball.Id })
 			Analytics.Step(player, "First Throw")
+			if firstCoins then
+				Analytics.Event(player, "FirstCoins", reward.Coins)
+			end
 			if isStrike then
 				Analytics.Step(player, "First Strike")
 			end

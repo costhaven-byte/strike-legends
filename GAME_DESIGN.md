@@ -206,3 +206,27 @@ Live-ops plan: after launch, plan an update about every week or two. Games that 
 - If something in this doc seems wrong or conflicts with how Roblox works, say so and propose a fix instead of silently deviating.
 - Do not add features that are not in the v1 scope.
 - The owner does not write code. Explain things in plain language, no jargon.
+
+---
+
+## 12. Changelog
+
+From Milestone 10 on, MASTER_PLAN.md (plus STRIKE_LEGENDS_ADDENDUM_1.md) is the roadmap. Each milestone logs what changed and why.
+
+### Milestone 10: Foundation (2026-10-18)
+- **Simulator economy in Config.** Every number from the plan's section 3 (with Addendum 1 on top) now lives in `Config.Economy`: formula, zones, Power Levels, crate tiers and odds, pity, Polish, eggs and mascots, ranks, rebirth, the target timeline and the pretend player. The live game does not use these tables yet; each system moves onto them in its own milestone. (The plan's `GameConfig` is the existing `Config` module, not a second file.)
+- **Economy simulator** in `ServerStorage.Tools.EconomySim` (file `tools/EconomySim.luau`). Run it from Studio's command bar in edit mode: `require(game.ServerStorage.Tools.EconomySim).Run()`. It also checks that crate odds add up to 100 and that every ball is in some crate.
+- **Tuning done with the simulator** (the plan's numbers made a new player reach the first rebirth in 14 minutes instead of 60-90):
+  - Rank XP: base 50 → 180, growth 1.35 → 1.42.
+  - Power Level prices: 0, 160, 460, 2.7K, 84K, 420K, 10M, 150M, 820M, 4.1B, 21B, 120B (big jumps right after Zones 2 and 3 open, because a new zone pays far more per throw).
+  - Power Level multipliers lowered from up to x75 to up to x12, because ball multipliers (up to x25) stack on top (Addendum 1 asked for this check).
+  - Crate prices follow the Power Level next to them: 160, 920, 100K, 8.7M, 590M. Egg prices: 370, 42K, 630K, 150M, 3.5B.
+  - New: each egg tier scales its mascots' bonuses (Alley x0.1 up to Volcano x1). In the plan every egg gave the same bonuses, so 8 cheap eggs multiplied coins by 5 by minute 7 and expensive eggs were pointless.
+  - New: rebirth gives +100% XP per rebirth (proposed for Milestone 17). Without it a second run to Zone 3 takes 93% as long as the first; with it, 47% (plan wants about 40%).
+  - First rebirth costs 400M coins at rank 20.
+- **Server safety.** New `RateLimit` module: throws (1.5s), ball equips, crate opens, daily claims and trial starts are ignored if sent too fast.
+- **Saving.** Autosave every 60s (was 90). Save format v6 adds `PlayTime` (total seconds played); old saves load with it at 0.
+- **Analytics.** Every event name is listed in `Config.Analytics.Events` (stubs for later systems included). New: session start/end with session length and the last thing the player did before leaving, first coins, streak records, and crate purchases with total minutes played.
+- **Gems switch.** `Config.Gems.Enabled` turns gems on or off in one place (on, per Addendum 1). Off hides the gem counter, stops gem drops and makes Gem Hunter pay bonus coins ("Coin Hunter").
+- **Moved into Config:** pins per rack, the "Good throw" share, crate reel spin time, HUD count-up time, rank-up screen time and confetti, the crate-open cooldown.
+- **Owner decisions (2026-10-18):** gems stay on; the gem sink will be buying Polish levels with gems (earned only). Per-egg bonus scaling approved. Rebirth +100% XP approved for Milestone 17.

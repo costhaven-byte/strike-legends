@@ -12,6 +12,7 @@ local Config = require(Shared.Config)
 local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionService = require(script.Parent.ProgressionService)
+local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
 
 local TRIALS = Config.Trials
 
@@ -73,6 +74,9 @@ local function finish(player: Player, passed: boolean)
 end
 
 local function startTrial(player: Player)
+	if not RateLimit.Allow(player, "StartTrial") then
+		return { Ok = false, Error = "Slow down!" }
+	end
 	if not PlayerDataService.IsLoaded(player) then
 		return { Ok = false, Error = "Still loading" }
 	end

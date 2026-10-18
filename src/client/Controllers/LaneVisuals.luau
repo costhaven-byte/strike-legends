@@ -149,7 +149,11 @@ local function playTraits(data, position: Vector3, isOwn: boolean)
 		elseif traitId == "StreakSaver" and isOwn then
 			TraitFx.StreakSaved()
 		elseif traitId == "GemHunter" and isOwn then
-			TraitFx.GemPayout(lane, Config.Rewards.PerfectGemAmount)
+			local reward = data.Reward or {}
+			TraitFx.GemPayout(
+				lane,
+				if Config.Gems.Enabled then Config.Rewards.PerfectGemAmount else reward.HunterCoins or 0
+			)
 		end
 	end
 end

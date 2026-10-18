@@ -226,7 +226,8 @@ function TraitFx.Popup(text: string, color: Color3, target: Vector3 | () -> Vect
 		local x = math.min(math.max(point.X, P.Margin + half), screen.X - P.Margin - half)
 		-- keep it on screen first, then stack, so popups pushed in from an edge still sit apart
 		local stack = entry.Slot * P.StackGap * scale
-		local y = math.min(math.max(point.Y, P.Margin + holder.AbsoluteSize.Y + stack), screen.Y - P.BottomMargin * scale)
+		local y =
+			math.min(math.max(point.Y, P.Margin + holder.AbsoluteSize.Y + stack), screen.Y - P.BottomMargin * scale)
 		holder.Position = UDim2.fromOffset(x, y - stack - entry.Rise * scale)
 	end
 	place()
@@ -631,15 +632,17 @@ function TraitFx.GemTrail(lane: Model)
 	return handle
 end
 
--- The gem pops up at the pins, then flies into the HUD gem counter, which bumps
+-- The gem pops up at the pins, then flies into the HUD gem counter, which bumps.
+-- While gems are off (Config.Gems) amount is bonus coins, and a coin flies into the coin counter instead.
 function TraitFx.GemPayout(lane: Model, amount: number)
 	local G = FX.GemHunter
 	local above = rackPoint(lane, RACK_DEPTH, LANE.PinHeight + 1)
-	traitPopup("GemHunter", above + Vector3.new(0, 1.5, 0), amount)
+	traitPopup("GemHunter", above + Vector3.new(0, 1.5, 0), if Config.Gems.Enabled then amount else tostring(amount))
 	playSound("GemHunter")
 
 	local hud = player:WaitForChild("PlayerGui"):FindFirstChild("HUD")
-	local pill = hud and hud:FindFirstChild("Bar") and hud.Bar:FindFirstChild("Gems") :: GuiObject?
+	local counter = if Config.Gems.Enabled then "Gems" else "Coins"
+	local pill = hud and hud:FindFirstChild("Bar") and hud.Bar:FindFirstChild(counter) :: GuiObject?
 	local icon = pill and pill:FindFirstChild("Icon") :: GuiObject?
 	if not icon then
 		return

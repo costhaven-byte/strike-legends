@@ -4,6 +4,7 @@
 local AnalyticsService = game:GetService("AnalyticsService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -19,6 +20,14 @@ local FIELD_KEYS = {
 local Analytics = {}
 
 local loggedSteps: { [Player]: { [string]: boolean } } = {}
+local sessionStart: { [Player]: number } = {}
+local lastAction: { [Player]: string } = {} -- for "where do players stop": logged with SessionEnd
+local playTimeCounted: { [Player]: number } = {} -- os.clock() up to which PlayTime has been saved
+local knownEvents = {}
+for _, name in SETTINGS.Events do
+	knownEvents[name] = true
+end
+local warned = {}
 
 local function try(fn, ...)
 	if not SETTINGS.Enabled then
@@ -55,9 +64,38 @@ function Analytics.Step(player: Player, stepName: string)
 	try(AnalyticsService.LogOnboardingFunnelStepEvent, player, index, stepName)
 end
 
--- Something worth counting, like a throw or a crate opened
+-- Something worth counting, like a throw or a crate opened. eventName must be on Config.Analytics.Events.
 function Analytics.Event(player: Player, eventName: string, value: number?, labels: { string }?)
+	if not knownEvents[eventName] and not warned[eventName] and RunService:IsStudio() then
+		warned[eventName] = true
+		warn("[Analytics] '" .. eventName .. "' is not in Config.Analytics.Events")
+	end
+	if eventName ~= "SessionEnd" then
+		lastAction[player] = eventName
+	end
 	try(AnalyticsService.LogCustomEvent, player, eventName, value or 1, toFields(labels))
+end
+
+-- Adds the play time since it was last counted to the saved PlayTime
+local function countPlayTime(player: Player)
+	local since = playTimeCounted[player]
+	if not since then
+		return
+	end
+	local now = os.clock()
+	playTimeCounted[player] = now
+	PlayerDataService.Add(player, "PlayTime", now - since)
+end
+
+-- Total minutes this player has played, all sessions together
+function Analytics.MinutesPlayed(player: Player): number
+	local unsaved = if playTimeCounted[player] then os.clock() - playTimeCounted[player] else 0
+	return math.floor(((PlayerDataService.Get(player, "PlayTime") or 0) + unsaved) / 6) / 10
+end
+
+-- Anything bought: kind = "Crate", "Ball", "Egg"...; logged with the player's total minutes played
+function Analytics.Purchase(player: Player, kind: string, item: string)
+	Analytics.Event(player, "Purchase", Analytics.MinutesPlayed(player), { kind, item })
 end
 
 -- Coins or Gems coming in (amount > 0) or going out (amount < 0). Call after the balance has changed.
@@ -74,10 +112,32 @@ end
 function Analytics:Start()
 	PlayerDataService.OnLoaded(function(player)
 		loggedSteps[player] = loggedSteps[player] or {}
+		sessionStart[player] = os.clock()
+		playTimeCounted[player] = os.clock()
 		Analytics.Step(player, "Joined")
+		Analytics.Event(player, "SessionStart")
 	end)
 	Players.PlayerRemoving:Connect(function(player)
+		countPlayTime(player) -- may miss the final save; at most PlayTimeInterval seconds are lost
+		if sessionStart[player] then
+			local minutes = math.floor((os.clock() - sessionStart[player]) / 6) / 10
+			Analytics.Event(player, "SessionEnd", minutes, {
+				lastAction[player] or "None",
+				tostring(Analytics.MinutesPlayed(player)),
+			})
+		end
 		loggedSteps[player] = nil
+		sessionStart[player] = nil
+		lastAction[player] = nil
+		playTimeCounted[player] = nil
+	end)
+	task.spawn(function()
+		while true do
+			task.wait(SETTINGS.PlayTimeInterval)
+			for player in playTimeCounted do
+				countPlayTime(player)
+			end
+		end
 	end)
 end
 

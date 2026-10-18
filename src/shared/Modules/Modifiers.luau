@@ -30,11 +30,18 @@ function Modifiers.RackOffset(modifier, serverTime: number): number
 	return modifier.PinSway * math.sin(serverTime / (modifier.SwayPeriod or 3) * math.pi * 2)
 end
 
--- A random modifier by Weight, never the same one twice in a row
+-- A random modifier by Weight, never the same one twice in a row.
+-- Modifiers marked NeedsGems sit out while gems are switched off (Config.Gems).
 function Modifiers.PickNext(previousId: string?)
-	local pool, total = {}, 0
+	local allowed = {}
 	for _, modifier in Config.LaneModifiers.List do
-		if modifier.Id ~= previousId or #Config.LaneModifiers.List == 1 then
+		if Config.Gems.Enabled or not modifier.NeedsGems then
+			table.insert(allowed, modifier)
+		end
+	end
+	local pool, total = {}, 0
+	for _, modifier in allowed do
+		if modifier.Id ~= previousId or #allowed == 1 then
 			table.insert(pool, modifier)
 			total += modifier.Weight or 1
 		end

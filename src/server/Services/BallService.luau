@@ -11,14 +11,13 @@ local BallLook = require(Shared.Modules.BallLook)
 local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local CrateRoller = require(script.Parent.Parent.Modules.CrateRoller)
+local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
 
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
-local CRATE_COOLDOWN = 1 -- seconds between crate opens, so spam-clicking can't flood the server
 
 local BallService = {}
 
 local busy: { [Player]: boolean } = {}
-local lastOpen: { [Player]: number } = {}
 
 local function getOwned(player: Player): { [string]: boolean }
 	return PlayerDataService.Get(player, "OwnedBalls") or {}
@@ -150,7 +149,7 @@ function BallService.HideHeldBall(player: Player, seconds: number)
 end
 
 local function onEquip(player: Player, ballId: any)
-	if typeof(ballId) ~= "string" or not Balls.Get(ballId) then
+	if typeof(ballId) ~= "string" or not Balls.Get(ballId) or not RateLimit.Allow(player, "EquipBall") then
 		return
 	end
 	if not getOwned(player)[ballId] then
@@ -223,21 +222,21 @@ local function openCrate(player: Player, crateId: any)
 	if not PlayerDataService.IsLoaded(player) then
 		return { Ok = false, Error = "Still loading" }
 	end
-	if os.clock() - (lastOpen[player] or 0) < CRATE_COOLDOWN then
-		return { Ok = false, Error = "Slow down!" }
-	end
 	-- A waiting free crate is used before any coins are spent
 	local useFree = crate.Id == Config.FreeCrates.CrateId and (PlayerDataService.Get(player, "FreeCrates") or 0) > 0
 	if not useFree and (PlayerDataService.Get(player, "Coins") or 0) < crate.Price then
 		return { Ok = false, Error = "Not enough coins" }
 	end
-	lastOpen[player] = os.clock()
+	if not RateLimit.Allow(player, "OpenCrate") then
+		return { Ok = false, Error = "Slow down!" }
+	end
 
 	if useFree then
 		PlayerDataService.Add(player, "FreeCrates", -1)
 	else
 		PlayerDataService.Add(player, "Coins", -crate.Price)
 		Analytics.Currency(player, "Coins", -crate.Price, "Shop", crate.Id)
+		Analytics.Purchase(player, "Crate", crate.Id)
 	end
 	return BallService.GiveCrate(player, crate)
 end
@@ -302,7 +301,6 @@ function BallService:Start()
 
 	Players.PlayerRemoving:Connect(function(player)
 		busy[player] = nil
-		lastOpen[player] = nil
 	end)
 end
 

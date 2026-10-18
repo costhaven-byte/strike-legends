@@ -28,7 +28,7 @@ function GoldenPinService.Roll(lane: Model)
 	local roll = math.random()
 	local golden = roll < chance
 	lane:SetAttribute("GoldenLucky", golden and roll >= GOLDEN.Chance) -- only there thanks to Lucky
-	lane:SetAttribute("GoldenPin", if golden then math.random(1, 10) else 0)
+	lane:SetAttribute("GoldenPin", if golden then math.random(1, Config.Lane.PinCount) else 0)
 end
 
 -- The golden pin number on this lane right now (0 = none)

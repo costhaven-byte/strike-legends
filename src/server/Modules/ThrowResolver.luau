@@ -8,6 +8,7 @@ local PinRack = require(Shared.Modules.PinRack)
 
 local THROW = Config.Throw
 local LANE = Config.Lane
+local PINS = LANE.PinCount
 
 local ThrowResolver = {}
 
@@ -126,10 +127,10 @@ function ThrowResolver.Resolve(aim: number, power: number, ball, lane: LaneEffec
 	local quality = aimQuality(aimUsed - rackAim, forgiveness) * power1
 	local count
 	if quality >= 0.999 then
-		count = 10 -- a perfect throw always strikes
+		count = PINS -- a perfect throw always strikes
 	else
 		local variance = (math.random() * 2 - 1) * THROW.RandomVariance
-		count = math.clamp(math.round(10 * quality ^ THROW.QualityCurve * (1 + variance)), 0, 10)
+		count = math.clamp(math.round(PINS * quality ^ THROW.QualityCurve * (1 + variance)), 0, PINS)
 	end
 	if count == 0 then
 		return gutterBall() -- missing every pin always reads (and rolls) as a gutter ball
@@ -137,22 +138,22 @@ function ThrowResolver.Resolve(aim: number, power: number, ball, lane: LaneEffec
 
 	-- Blast: a chance that a hit knocks down extra pins
 	local blast = Balls.TraitValue(ball, "Blast")
-	if blast > 0 and count < 10 and math.random() < blast then
-		count = math.min(10, count + ((Balls.GetTrait("Blast") or {}).ExtraPins or 1))
+	if blast > 0 and count < PINS and math.random() < blast then
+		count = math.min(PINS, count + ((Balls.GetTrait("Blast") or {}).ExtraPins or 1))
 		table.insert(fired, "Blast")
 	end
 
 	-- Perfect Strikes still need truly perfect timing: traits never make them easier
-	local perfect = count == 10
+	local perfect = count == PINS
 		and math.abs(aim - rackAim) <= THROW.PerfectStrikeAim
 		and power >= THROW.PerfectStrikePowerMin
 		and power <= THROW.PerfectStrikePowerMax
 
 	local tier = if perfect
 		then "PerfectStrike"
-		elseif count == 10 then "Strike"
-		elseif count == 9 then "Nine"
-		elseif count >= 7 then "Good"
+		elseif count == PINS then "Strike"
+		elseif count == PINS - 1 then "Nine"
+		elseif count >= PINS * THROW.GoodShare then "Good"
 		else "Weak"
 
 	local hitX = aimToX(aimUsed)
