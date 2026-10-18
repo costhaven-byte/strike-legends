@@ -505,4 +505,62 @@ function EconomySim.Run(config: any?): string
 	return report
 end
 
+-- The short economy sheet (Addendum 2, Phase 1 step 1): how long each upgrade takes a new player,
+-- using the measured time per throw (Config.Economy.Sim.ThrowSeconds). Paste in Studio's command bar (edit mode):
+--   require(game.ServerStorage.Tools.EconomySim).Sheet()
+function EconomySim.Sheet(config: any?): string
+	local results
+	results, config = EconomySim.Simulate(config)
+	local E = config.Economy
+	local S = E.Sim
+	local lines = {}
+	local function add(text: string)
+		table.insert(lines, text)
+	end
+	local function at(goal: string): number?
+		return results[goal] and results[goal].Median
+	end
+	add(
+		("ECONOMY SHEET - 1 throw every %gs, PERFECT on %d%% of throws, median of %d pretend players"):format(
+			S.ThrowSeconds,
+			S.PerfectShare * 100,
+			S.Runs
+		)
+	)
+	add("UPGRADE              PRICE     REACHED   WAIT      THROWS")
+	local previous = 0
+	local function row(name: string, price: number, goal: string)
+		local seconds = at(goal)
+		if not seconds then
+			add(("%-20s %-9s never"):format(name, short(price)))
+			return
+		end
+		local wait = seconds - previous
+		previous = seconds
+		add(
+			("%-20s %-9s %-9s %-9s %d"):format(
+				name,
+				short(price),
+				clock(seconds),
+				clock(wait),
+				math.floor(wait / S.ThrowSeconds + 0.5)
+			)
+		)
+	end
+	row("First crate (Basic)", E.Crates[1].Price, "FirstCrate")
+	previous = 0 -- the crate is a side purchase; Power Level waits count from the start
+	for level = 2, #E.PowerLevels do
+		row("Power Level " .. level, E.PowerLevels[level].Price, "Level" .. level)
+	end
+	local zones = {}
+	for index = 2, #E.Zones do
+		table.insert(zones, ("%d at %s"):format(index, clock(at("Zone" .. index))))
+	end
+	add("Zones open: " .. table.concat(zones, ", "))
+	add("First rebirth ready: " .. clock(at("RebirthReady")))
+	local report = table.concat(lines, "\n")
+	print(report)
+	return report
+end
+
 return EconomySim

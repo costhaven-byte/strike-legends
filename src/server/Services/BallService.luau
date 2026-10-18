@@ -12,6 +12,7 @@ local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local CrateRoller = require(script.Parent.Parent.Modules.CrateRoller)
 local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
+local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 
@@ -186,6 +187,7 @@ function BallService.GiveCrate(player: Player, crate)
 		PlayerDataService.Add(player, "Coins", sellCoins)
 		Analytics.Currency(player, "Coins", sellCoins, "Gameplay", "DuplicateSold")
 	end
+	SessionLog.Crate(player)
 	Analytics.Event(player, "CrateOpened", 1, { crate.Id, ball.Rarity, if isNew then "New" else "Duplicate" })
 	Analytics.Step(player, "Opened Crate")
 

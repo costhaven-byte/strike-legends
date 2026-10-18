@@ -20,6 +20,7 @@ type Profile = {
 
 local profiles: { [Player]: Profile } = {}
 local loadedCallbacks: { (Player) -> () } = {}
+local releaseCallbacks: { (Player) -> () } = {}
 local pendingReleases = 0
 
 local function save(player: Player, profile: Profile, release: boolean)
@@ -36,6 +37,9 @@ local function saveAndRelease(player: Player)
 	local profile = profiles[player]
 	if not profile or profile.Released then
 		return
+	end
+	for _, callback in releaseCallbacks do
+		pcall(callback, player) -- last changes before the final save; never blocks saving
 	end
 	profile.Released = true
 	pendingReleases += 1
@@ -84,6 +88,12 @@ function PlayerDataService.OnLoaded(callback: (Player) -> ())
 	for player in profiles do
 		task.spawn(callback, player)
 	end
+end
+
+-- Runs callback for a player just before their final save (leaving, or the server closing).
+-- It must not wait: the save starts right after.
+function PlayerDataService.OnRelease(callback: (Player) -> ())
+	table.insert(releaseCallbacks, callback)
 end
 
 function PlayerDataService.IsLoaded(player: Player): boolean

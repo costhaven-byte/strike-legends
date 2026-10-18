@@ -86,6 +86,7 @@ local function migrate(saved: any): { [string]: any }
 		end
 		-- v5 added CrateStrikes and FreeCrates: new keys start at their starting value (0), nothing to upgrade
 		-- v6 added PlayTime: same, it starts at 0
+		-- v7 added SessionLog: same, it starts empty
 	end
 	data.Rank = math.clamp(math.floor(tonumber(data.Rank) or 1), 1, #Config.Ranks)
 	return data

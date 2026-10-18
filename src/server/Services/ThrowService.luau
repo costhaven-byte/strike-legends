@@ -1,4 +1,5 @@
--- Receives charge-bar releases from players, validates it, works out the result and tells every client.
+-- Times each player's hold on the charge bar, validates the release, works out the result and tells every client.
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
@@ -19,6 +20,7 @@ local TrialService = require(script.Parent.TrialService)
 local ThrowResolver = require(script.Parent.Parent.Modules.ThrowResolver)
 local RewardResolver = require(script.Parent.Parent.Modules.RewardResolver)
 local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
+local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
 local GOLDEN = Config.GoldenPin
 local THROW = Config.Throw
@@ -28,6 +30,9 @@ local THROW = Config.Throw
 local SWAY_WINDOW = 0.35
 
 local ThrowService = {}
+
+-- When each player started holding (server clock). A release only counts if a hold started first.
+local holdStarts: { [Player]: number } = {}
 
 local TIER_TEXT = {
 	Gutter = "GUTTER",
@@ -69,11 +74,34 @@ local function isValidNumber(value: any): boolean
 	return typeof(value) == "number" and value == value and math.abs(value) ~= math.huge
 end
 
-local function onThrowRequest(player: Player, charge: any)
-	if not isValidNumber(charge) then
+local function onHoldStart(player: Player)
+	if RateLimit.Allow(player, "ThrowHold") then
+		holdStarts[player] = os.clock()
+	end
+end
+
+-- How long the hold really was. The server's own timing decides; the client's number (which has no
+-- internet lag in it) is only used to smooth that out, within Config.Throw.HoldTolerance seconds.
+local function measuredHold(player: Player, clientHold: number): number?
+	local started = holdStarts[player]
+	holdStarts[player] = nil
+	if not started then
+		return nil
+	end
+	local serverHold = os.clock() - started
+	local hold = math.clamp(clientHold, serverHold - THROW.HoldTolerance, serverHold + THROW.HoldTolerance)
+	return math.clamp(hold, 0, THROW.MaxHoldTime)
+end
+
+local function onThrowRequest(player: Player, clientHold: any)
+	if not isValidNumber(clientHold) then
 		return
 	end
-	charge = math.clamp(charge, 0, 1)
+	local hold = measuredHold(player, clientHold)
+	if not hold then
+		return
+	end
+	local charge = ThrowRules.ChargeAt(hold, ProgressionService.GetCurrentRankIndex(player))
 
 	-- No throws until the player's save has loaded, so rewards always have somewhere to go
 	if not PlayerDataService.IsLoaded(player) then
@@ -156,6 +184,13 @@ local function onThrowRequest(player: Player, charge: any)
 	if reward.GemHunter then
 		table.insert(traits, "GemHunter")
 	end
+	-- The arm swings down before the ball leaves the hand
+	task.wait(THROW.ReleaseDelay)
+	if not player.Parent then
+		return
+	end
+	now += THROW.ReleaseDelay
+
 	-- Strikes wait for their slow motion too (the client resets the pins after the same time)
 	local resetDelay = Config.Lane.PinResetDelay
 		+ (if isStrike then THROW.SlowMotionStartsAfter + THROW.SlowMotionLength else 0)
@@ -183,6 +218,7 @@ local function onThrowRequest(player: Player, charge: any)
 		ModifierGems = modifierGems,
 	})
 
+	SessionLog.Throw(player, ThrowRules.Level(ball))
 	BallService.HideHeldBall(player, result.RollTime + resetDelay)
 	setStatus(lane, "ROLLING...")
 	task.delay(result.RollTime, function()
@@ -237,7 +273,11 @@ function ThrowService:Start()
 	resultEvent.Parent = folder
 
 	folder.Parent = ReplicatedStorage
-	self.Remotes = { ThrowRequest = request, ThrowResult = resultEvent }
+	local hold = Instance.new("RemoteEvent")
+	hold.Name = "ThrowHold"
+	hold.Parent = folder
+
+	self.Remotes = { ThrowRequest = request, ThrowResult = resultEvent, ThrowHold = hold }
 
 	for _, lane in LaneUtil.GetLanes() do
 		lane:SetAttribute("ReadyAt", 0)
@@ -245,7 +285,11 @@ function ThrowService:Start()
 		setStatus(lane, "READY")
 	end
 
+	hold.OnServerEvent:Connect(onHoldStart)
 	request.OnServerEvent:Connect(onThrowRequest)
+	Players.PlayerRemoving:Connect(function(player)
+		holdStarts[player] = nil
+	end)
 end
 
 return ThrowService

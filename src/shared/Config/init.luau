@@ -32,6 +32,11 @@ Config.Throw = {
 	-- Charging
 	ChargeTime = 0.75, -- seconds for the bar to fill. Lower = faster bar = harder
 	MeterSpeedPerRank = 0.05, -- the bar gets 5% faster for every rank above Rookie
+	-- The server times every hold itself (the client only says "started holding" and "let go").
+	-- Internet lag makes the two clocks differ a little, so the client's own hold time is trusted
+	-- only within this many seconds of the server's. Bigger = kinder to laggy players, easier to cheat.
+	HoldTolerance = 0.1,
+	MaxHoldTime = 30, -- holds longer than this count as this long
 	SweetSpotCenter = 0.86, -- where the gold zone sits before a lane's first throw (0 = empty, 1 = full)
 	SweetSpotSize = 0.08, -- how wide the gold zone is (share of the bar). Narrow on purpose: a PERFECT should feel earned
 	SweetSpotMax = 0.14, -- ball bonuses never make the gold zone wider than this
@@ -151,12 +156,13 @@ Config.StartingData = {
 	CrateStrikes = 0, -- strikes toward the next free crate (see Config.FreeCrates)
 	FreeCrates = 0, -- free crates waiting to be opened in the shop
 	PlayTime = 0, -- total seconds played, for analytics ("bought ball tier 3 after 12 minutes")
+	SessionLog = {}, -- the last few play sessions (see Config.SessionLog), newest last
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 6, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 7, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -165,9 +171,17 @@ Config.Data = {
 	LockWaitDelay = 5, -- ...this many seconds apart, then take over
 }
 
+-- Session log: one line per play session (join, leave, throws, crates, level), printed in Output
+-- when the player leaves and saved with the player (only the newest Keep sessions).
+Config.SessionLog = {
+	Keep = 10,
+	Print = true,
+}
+
 -- Requests a player can't send faster than this (seconds). Extra ones are ignored by the server.
 Config.RateLimits = {
-	Throw = 1.5, -- the lane's own roll + pin reset wait is longer than this anyway
+	Throw = 2, -- the fastest real throw cycle measured 2026-10-18 is 2.2s (lane free again after letting go)
+	ThrowHold = 0.1, -- "started holding" messages
 	EquipBall = 0.25,
 	OpenCrate = 1,
 	ClaimDaily = 1,
@@ -1772,7 +1786,9 @@ Config.Economy.Timeline = {
 -- The pretend player the simulator plays as (MASTER_PLAN.md Milestone 10 step 4)
 Config.Economy.Sim = {
 	Runs = 40, -- players simulated; the report shows the median
-	ThrowSeconds = 4, -- one throw this often
+	-- One throw this often. Measured in Studio 2026-10-18 with the new throw: the lane is free again 2.2s after
+	-- letting go (2.45s after a strike), plus about 0.5s holding and a moment to react = about 3s.
+	ThrowSeconds = 3,
 	GoodShare = 0.7, -- share of throws with good timing...
 	GoodQuality = { 0.9, 1.0 }, -- ...and their quality
 	BadQuality = { 0.6, 0.85 }, -- the rest

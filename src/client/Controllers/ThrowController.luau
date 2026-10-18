@@ -49,7 +49,8 @@ local LABEL_ROOM = if IS_SIDE then 32 else 0 -- the standing arc's label sits on
 local ThrowController = {}
 
 local state = "Hidden" -- Hidden, Ready, Charging, Waiting
-local charge, chargeClock = 0, 0
+local charge = 0
+local holdStartedAt = 0 -- os.clock() when this charge began
 local currentLane: Model? = nil
 local sentAt = 0
 local held: InputObject? = nil
@@ -57,9 +58,9 @@ local lastStreak = 0 -- your streak before the latest throw, to say when it ends
 local savedWalkSpeed: number? = nil -- you stand still while you charge and throw
 local releasedPerfect = false -- the arc stays lit gold after a PERFECT release
 
--- The bar gets a little faster at higher ranks
-local function meterSpeedScale(): number
-	return 1 + THROW.MeterSpeedPerRank * ((player:GetAttribute("Rank") or 1) - 1)
+-- Where the bar is now (the server works out the same thing from its own timing of the hold)
+local function chargeNow(): number
+	return ThrowRules.ChargeAt(os.clock() - holdStartedAt, player:GetAttribute("Rank") or 1)
 end
 
 local function laneReady(lane: Model): boolean
@@ -136,6 +137,7 @@ function ThrowController:Start()
 
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
 	local throwRequest = remotes:WaitForChild("ThrowRequest")
+	local throwHold = remotes:WaitForChild("ThrowHold")
 	local throwResult = remotes:WaitForChild("ThrowResult")
 
 	-- The old straight bars are replaced by the half-circle arc
@@ -339,7 +341,8 @@ function ThrowController:Start()
 			drawBar(0, false, false)
 			lockFeet(false)
 		elseif newState == "Charging" then
-			charge, chargeClock = 0, 0
+			charge, holdStartedAt = 0, os.clock()
+			throwHold:FireServer() -- the server starts its own clock for this hold
 			hint.Text = "LET GO IN THE GOLD!"
 			button.Text = "LET GO!"
 			Sfx.Play("Charge", 0.9)
@@ -359,6 +362,8 @@ function ThrowController:Start()
 	end
 
 	local function release()
+		local holdTime = os.clock() - holdStartedAt
+		charge = chargeNow()
 		local center, size = sweetSpot()
 		local gold = ThrowRules.InSpot(charge, center, size)
 		local hooked = not gold and ThrowRules.InSpot(charge, center, size, ThrowRules.HookWidth(equippedBall()))
@@ -377,10 +382,8 @@ function ThrowController:Start()
 		setState("Waiting")
 		-- The arm swings down first; the ball leaves the hand (and the server hears about it) at the bottom
 		ThrowPose.Release(player.Character, ThrowRules.Level(equippedBall()))
-		local released = charge
-		task.delay(THROW.ReleaseDelay, function()
-			throwRequest:FireServer(released)
-		end)
+		-- Only how long you held; the server checks it against its own timing and waits out the down-swing
+		throwRequest:FireServer(holdTime)
 	end
 
 	local function press(input: InputObject)
@@ -540,9 +543,7 @@ function ThrowController:Start()
 			end
 		elseif state == "Charging" then
 			-- Fills, then slides back down and up again while you keep holding; the arm swings with it
-			chargeClock += dt / THROW.ChargeTime * meterSpeedScale()
-			local t = chargeClock % 2
-			charge = if t <= 1 then t else 2 - t
+			charge = chargeNow()
 			local center, size = sweetSpot()
 			local hook = ThrowRules.HookWidth(equippedBall())
 			drawBar(charge, ThrowRules.InSpot(charge, center, size, hook), true)

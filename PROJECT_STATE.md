@@ -2,8 +2,9 @@
 
 Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 2 replaces Addendum 1).
 
-**Current milestone:** Phase 1 step 1 (Foundation close-out), APPROVED by Selim 2026-10-18, not started yet.
-Scope: restore point first; server times the hold (client sends hold-start/release only, server clamps + rate limits from the measured cycle); simple session log (join, leave, throws, crates, level); measure real throw time in Studio; economy sheet (short table of time per upgrade) re-run with the new throw. Then a 2-minute test for Selim.
+**Current milestone:** Phase 1 step 1 (Foundation close-out) BUILT 2026-10-18, waiting for Selim's 2-minute test.
+Restore point: cloud copy place 93792316689717 + git tag restore-phase1-step1. Real game = cloud place 94254609600041 (NOT Strike Legends.rbxl, that file is from Oct 14).
+Next after it passes: Phase 1 step 2 (throw juice + overcharge flag), only when Selim says go.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
 
 ## Exists and works
@@ -12,15 +13,18 @@ Scope: restore point first; server times the hold (client sends hold-start/relea
 - Throw animation per ball level; strike juice (hit-stop, slow motion, number pops, payout pop, shake).
 - 20-ball roster with real 3D models (light meshes, 51k triangles total), per-ball VFX and trails, 6 traits with effects.
 - 10 ranks + rank trials, named streak tiers, Golden Pin, 4 lane modifiers, gems (earned only), daily reward, leaderboards.
-- Saving (save v6, old saves migrate), rate limits, analytics, Config with every number, economy simulator (tools/EconomySim.luau).
+- Saving (save v7, old saves migrate), rate limits, analytics, Config with every number, economy simulator (tools/EconomySim.luau).
+- Server times the hold (ThrowHold + ThrowRequest(holdSeconds), Config.Throw.HoldTolerance 0.1s); throw rate limit 2s.
+- Session log (server/Modules/SessionLog): printed in Output on leave, last 10 saved in SessionLog.
+- Economy sheet: require(game.ServerStorage.Tools.EconomySim).Sheet(). Measured throw = about 3s (lane free 2.2s after release).
 
 ## Placeholder
 - All sounds (Creator Store picks). Crates: only Basic and Neon, old odds and pity.
 - Ball "level" comes from rarity until real Power Levels exist.
 
 ## Not built yet (from Addendum 2)
-- Server-timed hold (today the client sends how full the bar was), overcharge flag, assisted first throw.
-- Session log + economy sheet re-run with the new throw. AssetSlots module.
+- Overcharge flag, assisted first throw. AssetSlots module.
+- Economy tuning for the first 3 minutes: sheet says Level 2 after 26 throws (1:18); Addendum wants about 6 throws.
 - Power Levels, first 3 minutes script, 5 crates + Polish Points + collection book, 60 rank levels.
 - Mascots, zones 2-6, bosses, rebirth, return loops, monetization (off switch).
 
@@ -32,3 +36,4 @@ Scope: restore point first; server times the hold (client sends hold-start/relea
 
 ## Last session
 - 2026-10-18: read Addendum 2, checked the throw against it, ran the policy check, made this file.
+- 2026-10-18: built Phase 1 step 1 (server-timed hold, session log, measured throw time, economy sheet).

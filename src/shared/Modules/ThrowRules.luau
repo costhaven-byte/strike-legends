@@ -44,6 +44,14 @@ function ThrowRules.NextGoldCenter(previous: number?): number
 	return if pick < below then low + pick else previous + jump + (pick - below)
 end
 
+-- Where the bar is after holding `seconds`: it fills, slides back down, and up again while you keep holding.
+-- It runs a little faster at higher ranks. The server works the charge out with this from its own hold timing.
+function ThrowRules.ChargeAt(seconds: number, rank: number): number
+	local speed = 1 + THROW.MeterSpeedPerRank * (rank - 1)
+	local t = (math.max(seconds, 0) / THROW.ChargeTime * speed) % 2
+	return if t <= 1 then t else 2 - t
+end
+
 -- extra: more bar on each side that also counts (a Curve ball's hook band)
 function ThrowRules.InSpot(charge: number, center: number, size: number, extra: number?): boolean
 	return math.abs(charge - center) <= size / 2 + (extra or 0)
