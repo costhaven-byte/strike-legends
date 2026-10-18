@@ -2,9 +2,9 @@
 
 Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 2 replaces Addendum 1).
 
-**Current milestone:** Phase 1 step 2 (throw juice + overcharge flag) BUILT 2026-10-18, waiting for Selim's 2-minute test.
+**Current milestone:** Phase 1 step 2 (throw juice + overcharge flag) DONE 2026-10-18, Selim's 2-minute test passed ("works good").
 Restore point: git tag restore-phase1-step2-before (code only, no Studio map/UI changes this step). Real game = cloud place 94254609600041 (NOT Strike Legends.rbxl).
-Next after it passes: Phase 1 step 3 (Power Levels 1 to 12), only when Selim says go.
+Next: Phase 1 step 3 (Power Levels 1 to 12), only when Selim says go.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
 
 ## Exists and works
@@ -37,4 +37,4 @@ Next after it passes: Phase 1 step 3 (Power Levels 1 to 12), only when Selim say
 
 ## Last session
 - 2026-10-18: Addendum 2 kickoff + policy check; Phase 1 step 1 built and passed.
-- 2026-10-18: built Phase 1 step 2 (overcharge, AssetSlots, strike timing to spec). Synced via http trick, Rojo not running.
+- 2026-10-18: built Phase 1 step 2 (overcharge, AssetSlots, strike timing to spec). Test passed.
