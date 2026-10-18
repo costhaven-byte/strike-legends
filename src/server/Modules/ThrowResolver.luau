@@ -1,6 +1,6 @@
 -- Turns a charge-bar release into a throw result. Pure math, no side effects.
 -- Rules from the Throw Lab: a release in the gold is a PERFECT and always a strike;
--- otherwise the fuller the bar, the more pins (and a small strike chance on a full bar).
+-- otherwise the fuller the bar, the more pins, but never all ten (a strike only comes from the gold).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -67,10 +67,13 @@ function ThrowResolver.Resolve(charge: number, perfect: boolean, hooked: boolean
 		count = math.clamp(math.floor(wanted + 0.5), math.max(fewest, 2), PINS - 1)
 	end
 
-	-- Blast: a chance on every throw. A miss knocks down extra pins; a strike gets a giant explosion.
+	-- Blast: a chance on every throw. A miss knocks down extra pins (up to 9: it can't turn a miss into a strike);
+	-- a strike gets a giant explosion.
 	local blast = Balls.TraitValue(ball, "Blast")
 	if blast > 0 and math.random() < blast then
-		count = math.min(PINS, count + (if count < PINS then (Balls.GetTrait("Blast") or {}).ExtraPins or 1 else 0))
+		if count < PINS then
+			count = math.min(PINS - 1, count + ((Balls.GetTrait("Blast") or {}).ExtraPins or 1))
+		end
 		table.insert(fired, "Blast")
 	end
 

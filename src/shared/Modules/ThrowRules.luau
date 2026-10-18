@@ -7,13 +7,16 @@ local THROW = Config.Throw
 
 local ThrowRules = {}
 
--- The gold zone for this ball and lane modifier at a server time: its centre and width (shares of the bar)
-function ThrowRules.SweetSpot(ball, modifier, serverTime: number): (number, number)
+-- The gold zone for this ball and lane modifier at a server time: its centre and width (shares of the bar).
+-- center: where the lane's gold sits right now (the lane's GoldCenter attribute; it jumps after every throw)
+-- streak: strikes in a row; each one makes the gold narrower
+function ThrowRules.SweetSpot(ball, modifier, serverTime: number, center: number?, streak: number?): (number, number)
 	local bonus = (ball.Forgiveness or 0) * THROW.ForgivenessScale
 		+ Balls.TraitValue(ball, "Heavy")
 		+ (modifier and modifier.SweetBonus or 0)
 	local size = math.min(THROW.SweetSpotSize * (1 + bonus), THROW.SweetSpotMax)
-	local center = THROW.SweetSpotCenter
+	size = math.max(size * (1 - THROW.GoldShrinkPerStrike) ^ (streak or 0), math.min(size, THROW.GoldSpotSmallest))
+	center = center or THROW.SweetSpotCenter
 	if modifier and modifier.SweetSway then
 		-- Moving Gold: slides down the bar and back on the server clock, so everyone sees the same zone
 		local wave = 0.5 - 0.5 * math.cos(serverTime / (modifier.SwayPeriod or 3) * math.pi * 2)
@@ -22,6 +25,23 @@ function ThrowRules.SweetSpot(ball, modifier, serverTime: number): (number, numb
 	-- Keep the whole zone on the bar
 	center = math.clamp(center, size / 2, 1 - size / 2)
 	return center, size
+end
+
+-- Server: where the gold jumps to after a throw (always a clear move away from the last spot)
+function ThrowRules.NextGoldCenter(previous: number?): number
+	local low, high = THROW.GoldSpotLowest, THROW.GoldSpotHighest
+	if not previous then
+		return low + math.random() * (high - low)
+	end
+	-- The spots far enough away: below the last one and above it. Pick a point along both stretches.
+	local jump = THROW.GoldSpotMinJump
+	local below = math.max(0, (previous - jump) - low)
+	local above = math.max(0, high - (previous + jump))
+	if below + above <= 0 then
+		return low + math.random() * (high - low)
+	end
+	local pick = math.random() * (below + above)
+	return if pick < below then low + pick else previous + jump + (pick - below)
 end
 
 -- extra: more bar on each side that also counts (a Curve ball's hook band)
@@ -36,11 +56,20 @@ end
 
 -- Server check: was the release in the gold at any moment in the last `window` seconds?
 -- (A sliding zone moves while the release travels to the server, so recent moments count too.)
-function ThrowRules.WasInSpot(charge: number, ball, modifier, now: number, window: number, extra: number?): boolean
+function ThrowRules.WasInSpot(
+	charge: number,
+	ball,
+	modifier,
+	now: number,
+	window: number,
+	extra: number?,
+	center: number?,
+	streak: number?
+): boolean
 	local steps = if modifier and modifier.SweetSway then 6 else 0
 	for i = 0, steps do
-		local center, size = ThrowRules.SweetSpot(ball, modifier, now - window * i / math.max(steps, 1))
-		if ThrowRules.InSpot(charge, center, size, extra) then
+		local spot, size = ThrowRules.SweetSpot(ball, modifier, now - window * i / math.max(steps, 1), center, streak)
+		if ThrowRules.InSpot(charge, spot, size, extra) then
 			return true
 		end
 	end

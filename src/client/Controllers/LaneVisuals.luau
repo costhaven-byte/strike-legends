@@ -24,6 +24,7 @@ local UiFx = require(Modules.UiFx)
 local BallFx = require(Modules.BallFx)
 local TraitFx = require(Modules.TraitFx)
 local ThrowFx = require(Modules.ThrowFx)
+local ThrowPose = require(Modules.ThrowPose)
 
 local LANE = Config.Lane
 local CAMERA = Config.Camera
@@ -283,7 +284,22 @@ local function playThrow(data)
 	local coins = if data.Reward then data.Reward.Coins else 0
 	local coinsEach = if #data.Pins > 0 then math.max(1, math.floor(coins / #data.Pins + 0.5)) else 0
 
-	ball.CFrame = ballStart.CFrame + lift
+	-- The ball leaves from the thrower's hand and drops onto the lane over the first few studs
+	local thrower = Players:GetPlayerByUserId(data.UserId)
+	local character = thrower and thrower.Character
+	if character and not isOwn then
+		ThrowPose.Release(character, ThrowRules.Level(ballInfo)) -- your own swing already started when you let go
+	end
+	local heldBall = character and character:FindFirstChild("HeldBall", true) :: BasePart?
+	local handOffset = Vector3.zero
+	if heldBall then
+		handOffset = heldBall.Position - (ballStart.Position + lift)
+		if handOffset.Magnitude > 25 then
+			handOffset = Vector3.zero -- standing somewhere odd: just start on the lane
+		end
+	end
+
+	ball.CFrame = ballStart.CFrame + lift + handOffset
 	ball.Parent = lane
 	local fx = BallFx.Attach(ball, data.BallId, "Lane", forward)
 	local lights = LaneFx.FollowLights(lane, ballInfo.Trail)
@@ -401,6 +417,10 @@ local function playThrow(data)
 		end
 
 		position = ballStart.Position + lift + forward * travelled + right * x
+		if travelled < THROW.HandBlendDistance then
+			local s = travelled / THROW.HandBlendDistance
+			position += handOffset * (1 - s * s * (3 - 2 * s))
+		end
 		ball.CFrame = CFrame.new(position) * CFrame.fromAxisAngle(spinAxis, travelled / radius)
 		fx:Move(position)
 		lights.Update(position)

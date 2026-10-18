@@ -32,16 +32,37 @@ Config.Throw = {
 	-- Charging
 	ChargeTime = 0.75, -- seconds for the bar to fill. Lower = faster bar = harder
 	MeterSpeedPerRank = 0.05, -- the bar gets 5% faster for every rank above Rookie
-	SweetSpotCenter = 0.86, -- where the gold zone sits on the bar (0 = empty, 1 = full)
+	SweetSpotCenter = 0.86, -- where the gold zone sits before a lane's first throw (0 = empty, 1 = full)
 	SweetSpotSize = 0.08, -- how wide the gold zone is (share of the bar). Narrow on purpose: a PERFECT should feel earned
 	SweetSpotMax = 0.14, -- ball bonuses never make the gold zone wider than this
+	-- After every throw the gold jumps to a new spot on the arc, so you can't just repeat the same timing
+	GoldSpotLowest = 0.45, -- lowest spot the gold can jump to (centre of the zone)
+	GoldSpotHighest = 0.92, -- highest
+	GoldSpotMinJump = 0.15, -- it always moves at least this far from where it was
+	-- Every strike in a row makes the gold this much narrower (0.1 = 10%), down to GoldSpotSmallest
+	GoldShrinkPerStrike = 0.1,
+	GoldSpotSmallest = 0.04,
+	-- The throw animation: the arm swings back as the meter fills
+	ReleaseDelay = 0.1, -- seconds from letting go until the ball leaves the hand (the down-swing)
+	DownSwingTime = 0.13,
+	FollowThroughTime = 0.2,
+	PoseHoldTime = 0.35, -- holds the follow-through pose this long, then relaxes
+	PoseRelaxTime = 0.35,
+	PoseExaggeration = 1.3, -- every bend of the throw animation is this much bigger (1 = the original pose)
+	-- Worse balls throw worse: level 1 is stiff, wobbly and flailing, and it gets cleaner every level
+	PoseCleanLevel = 9, -- from this level (Legendary) the throw is fully clean
+	PoseWobble = 14, -- how far (degrees) a level 1 throw shakes; none at PoseCleanLevel
+	PoseWobbleSpeed = 4, -- how fast the shaking is
+	PoseFlairPerLevel = 0.06, -- each level above PoseCleanLevel swings this much bigger (level 12 = +18%)
+	MeterStyle = "Side", -- "Side" = half circle standing up right of your bowler; "Arc" = lying flat
+	HandBlendDistance = 10, -- the rolling ball drops from the hand onto the lane over this many studs
 	ForgivenessScale = 6, -- a ball's Forgiveness 0.05 = gold zone 30% wider
 	HitStop = 0.07, -- a PERFECT freezes the crash for this many seconds before the pins explode (makes it feel heavy)
 	PerfectPowerBonus = 1.5, -- a PERFECT release is this much stronger than a full bar
 	WeakestThrow = 0.35, -- strength of a quick tap (0 to 1)
 
-	-- What gets knocked down. A PERFECT release is always a strike.
-	StrikeChanceWithoutPerfect = 0.3, -- strike chance with a full bar outside the gold (drops fast for weaker throws)
+	-- What gets knocked down. A PERFECT release is always a strike, and only a PERFECT can strike.
+	StrikeChanceWithoutPerfect = 0, -- strike chance with a full bar outside the gold (0 = strikes only in the gold)
 	CurveHookWindow = 0.1, -- Curve balls: a magenta band this x the trait's strength wide on each side of the gold
 	-- also counts as PERFECT ("HOOK!"). Mythic Curve 0.6 = 6% of the bar on each side.
 	FewestPinsKnocked = 3, -- fewest pins any throw knocks down

@@ -1,5 +1,6 @@
 -- The throw from the Throw Lab: hold to charge, let go in the gold. Sends the release to the server.
--- The UI itself (StarterGui.ThrowUI) is built in Studio; this script turns its AimBar into the charge bar.
+-- The UI itself (StarterGui.ThrowUI) is built in Studio; this script hides its old AimBar and builds the
+-- half-circle power arc above the panel. The character's throw animation follows the meter (ThrowPose).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -16,6 +17,7 @@ local ThrowRules = require(Shared.Modules.ThrowRules)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
+local ThrowPose = require(Modules.ThrowPose)
 
 local THROW = Config.Throw
 local player = Players.LocalPlayer
@@ -25,6 +27,24 @@ local GOLD = Color3.fromRGB(255, 200, 40)
 local CYAN = Color3.fromRGB(70, 230, 255)
 local DARK = Color3.fromRGB(28, 16, 52)
 local INK = Color3.fromRGB(40, 10, 60)
+local WHITE = Color3.new(1, 1, 1)
+
+-- The arc: a half circle like the top of a bowling ball. Empty on the left, full on the right.
+local ARC_SEGMENTS = 100
+local ARC_RADIUS = 112 -- pixels to the middle of the ring
+local ARC_THICKNESS = 22
+local ARC_RIDER = 30 -- the little ball that rides the arc
+local ARC_HEIGHT = ARC_RADIUS + ARC_THICKNESS
+local ARC_SIDE = 250 -- pixels right of the screen centre, so the arc sits beside your bowler, not over them
+local ARC_LIFT = 20 -- pixels above the panel, clear of the hint text
+-- Or the same half circle standing up, curving around your bowler's right side like ")":
+-- empty at the bottom, full at the top (Config.Throw.MeterStyle picks)
+local IS_SIDE = THROW.MeterStyle == "Side"
+local SIDE_SIDE = 250 -- pixels right of the screen centre to the middle of the standing arc
+local METER_WIDTH = if IS_SIDE then ARC_HEIGHT else ARC_HEIGHT * 2
+local METER_HEIGHT = if IS_SIDE then ARC_HEIGHT * 2 else ARC_HEIGHT
+local METER_SIDE = if IS_SIDE then SIDE_SIDE else ARC_SIDE
+local LABEL_ROOM = if IS_SIDE then 32 else 0 -- the standing arc's label sits on top of it, not inside
 
 local ThrowController = {}
 
@@ -34,6 +54,8 @@ local currentLane: Model? = nil
 local sentAt = 0
 local held: InputObject? = nil
 local lastStreak = 0 -- your streak before the latest throw, to say when it ends
+local savedWalkSpeed: number? = nil -- you stand still while you charge and throw
+local releasedPerfect = false -- the arc stays lit gold after a PERFECT release
 
 -- The bar gets a little faster at higher ranks
 local function meterSpeedScale(): number
@@ -49,7 +71,54 @@ local function equippedBall()
 end
 
 local function sweetSpot(): (number, number)
-	return ThrowRules.SweetSpot(equippedBall(), Modifiers.Current(), Workspace:GetServerTimeNow())
+	return ThrowRules.SweetSpot(
+		equippedBall(),
+		Modifiers.Current(),
+		Workspace:GetServerTimeNow(),
+		currentLane and currentLane:GetAttribute("GoldCenter"),
+		player:GetAttribute("Streak") or 0
+	)
+end
+
+-- Where a meter value sits on the arc or bar (a GUI position) and which way it runs there (degrees)
+local function arcPoint(value: number, radius: number): (UDim2, number)
+	if IS_SIDE then
+		local angle = math.pi * (value - 0.5) -- -90 degrees (bottom) to 90 (top)
+		return UDim2.new(0, math.cos(angle) * radius, 0.5, -math.sin(angle) * radius), 90 - math.deg(angle)
+	end
+	local angle = math.pi * (1 - value) -- 180 degrees (left) to 0 (right)
+	return UDim2.new(0.5, math.cos(angle) * radius, 1, -math.sin(angle) * radius), 90 - math.deg(angle)
+end
+
+local function humanoid(): Humanoid?
+	return player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+end
+
+-- Plant your feet facing the pins while you charge and throw; walk again once it's over
+local function lockFeet(locked: boolean)
+	local human = humanoid()
+	if not human then
+		return
+	end
+	if locked and not savedWalkSpeed then
+		savedWalkSpeed = human.WalkSpeed
+		human.WalkSpeed = 0
+		human.AutoRotate = false
+	elseif not locked and savedWalkSpeed then
+		human.WalkSpeed = savedWalkSpeed
+		human.AutoRotate = true
+		savedWalkSpeed = nil
+	end
+end
+
+local function faceLane(dt: number)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local start = currentLane and currentLane:FindFirstChild("BallStart") :: BasePart?
+	if root and start then
+		local forward = start.CFrame.LookVector
+		local target = CFrame.lookAt(root.Position, root.Position + Vector3.new(forward.X, 0, forward.Z))
+		root.CFrame = root.CFrame:Lerp(target, math.min(1, dt * 14))
+	end
 end
 
 function ThrowController:Start()
@@ -69,50 +138,109 @@ function ThrowController:Start()
 	local throwRequest = remotes:WaitForChild("ThrowRequest")
 	local throwResult = remotes:WaitForChild("ThrowResult")
 
-	-- The old aim bar becomes the charge bar: dark track, gold zone, pink fill, white needle
+	-- The old straight bars are replaced by the half-circle arc
 	powerBar.Visible = false
-	bar.GutterLeft.Visible = false
-	bar.GutterRight.Visible = false
-	bar.BackgroundColor3 = DARK
-	bar.ClipsDescendants = false
-	local barStroke = bar:FindFirstChildOfClass("UIStroke")
-	local barScale = bar:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
-	barScale.Parent = bar
-	local sweet = bar.SweetZone :: Frame
-	sweet.AnchorPoint = Vector2.new(0.5, 0.5)
-	sweet.BackgroundColor3 = GOLD
-	sweet.BackgroundTransparency = 0.35
-	sweet.ZIndex = 2
-	-- Curve balls: a magenta hook band on each side of the gold also counts as PERFECT
+	bar.Visible = false
 	local hookColor = (Balls.GetTrait("Curve") or {}).Color or PINK
-	local hookBand = Instance.new("Frame")
-	hookBand.Name = "HookBand"
-	hookBand.AnchorPoint = Vector2.new(0.5, 0.5)
-	hookBand.BorderSizePixel = 0
-	hookBand.BackgroundColor3 = hookColor
-	hookBand.BackgroundTransparency = 0.45
-	hookBand.ZIndex = 2
-	hookBand.Parent = bar
-	sweet.ZIndex = 3
-	local fill = Instance.new("Frame")
-	fill.Name = "Fill"
-	fill.BorderSizePixel = 0
-	fill.BackgroundColor3 = PINK
-	fill.Size = UDim2.fromScale(0, 1)
-	fill.ZIndex = 4 -- over the zones; they stick out above and below it
-	fill.Parent = bar
-	local fillCorner = bar:FindFirstChildOfClass("UICorner")
-	if fillCorner then
-		fillCorner:Clone().Parent = fill
-	end
-	local needle = bar.Needle :: Frame
-	needle.ZIndex = 5
 
-	-- PERFECT! pops above the bar the moment you let go in the gold
+	-- Holder (scaled to the screen) > arc (pops on release) > ring segments and the rider ball
+	local holder = Instance.new("Frame")
+	holder.Name = "PowerArc"
+	holder.AnchorPoint = Vector2.new(0.5, 1)
+	holder.Position = UDim2.new(0.5, METER_SIDE, 0, -ARC_LIFT)
+	holder.Size = UDim2.fromOffset(METER_WIDTH, METER_HEIGHT)
+	holder.BackgroundTransparency = 1
+	holder.Parent = panel
+	local holderScale = Instance.new("UIScale")
+	holderScale.Parent = holder
+	local arc = Instance.new("Frame")
+	arc.Name = "Arc"
+	arc.AnchorPoint = Vector2.new(0.5, 1)
+	arc.Position = UDim2.fromScale(0.5, 1)
+	arc.Size = UDim2.fromScale(1, 1)
+	arc.BackgroundTransparency = 1
+	arc.Parent = holder
+
+	local function round(object: GuiObject)
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0.5, 0)
+		corner.Parent = object
+	end
+
+	local segmentLength = math.pi * ARC_RADIUS / ARC_SEGMENTS + 1.5
+	local function makeSegment(value: number, thickness: number, color: Color3, z: number): Frame
+		local segment = Instance.new("Frame")
+		segment.AnchorPoint = Vector2.new(0.5, 0.5)
+		segment.BorderSizePixel = 0
+		segment.BackgroundColor3 = color
+		segment.Size = UDim2.fromOffset(segmentLength, thickness)
+		segment.Position, segment.Rotation = arcPoint(value, ARC_RADIUS)
+		segment.ZIndex = z
+		segment.Parent = arc
+		return segment
+	end
+	local segments = {}
+	for i = 1, ARC_SEGMENTS do
+		local value = (i - 0.5) / ARC_SEGMENTS
+		makeSegment(value, ARC_THICKNESS + 8, INK, 1) -- dark outline behind the ring
+		segments[i] = { Frame = makeSegment(value, ARC_THICKNESS, DARK, 2), Value = value, Key = "" }
+	end
+	-- Rounded ends
+	for _, value in { 0, 1 } do
+		local cap = Instance.new("Frame")
+		cap.AnchorPoint = Vector2.new(0.5, 0.5)
+		cap.Position = arcPoint(value, ARC_RADIUS)
+		cap.Size = UDim2.fromOffset(ARC_THICKNESS + 8, ARC_THICKNESS + 8)
+		cap.BackgroundColor3 = INK
+		cap.ZIndex = 1
+		round(cap)
+		cap.Parent = arc
+	end
+
+	-- The rider: a little bowling ball in your ball's colour, with three finger holes
+	local rider = Instance.new("Frame")
+	rider.Name = "Rider"
+	rider.AnchorPoint = Vector2.new(0.5, 0.5)
+	rider.Size = UDim2.fromOffset(ARC_RIDER, ARC_RIDER)
+	rider.ZIndex = 6
+	round(rider)
+	rider.Parent = arc
+	local riderStroke = Instance.new("UIStroke")
+	riderStroke.Thickness = 3
+	riderStroke.Color = WHITE
+	riderStroke.Parent = rider
+	for _, hole in { Vector2.new(0.36, 0.3), Vector2.new(0.62, 0.3), Vector2.new(0.5, 0.62) } do
+		local dot = Instance.new("Frame")
+		dot.AnchorPoint = Vector2.new(0.5, 0.5)
+		dot.Position = UDim2.fromScale(hole.X, hole.Y)
+		dot.Size = UDim2.fromScale(0.2, 0.2)
+		dot.BackgroundColor3 = INK
+		dot.ZIndex = 7
+		round(dot)
+		dot.Parent = rider
+	end
+
+	-- "POWER" inside the arc (on top of the bar); during a strike streak it warns that the gold is shrinking
+	local arcLabel = Instance.new("TextLabel")
+	arcLabel.AnchorPoint = Vector2.new(0.5, 1)
+	arcLabel.Position = if IS_SIDE then UDim2.new(0, 0, 0, -4) else UDim2.new(0.5, 0, 1, -4)
+	arcLabel.Size = UDim2.fromOffset(160, 26)
+	arcLabel.BackgroundTransparency = 1
+	arcLabel.Font = Enum.Font.FredokaOne
+	arcLabel.TextScaled = true
+	arcLabel.TextColor3 = WHITE
+	arcLabel.ZIndex = 5
+	arcLabel.Parent = arc
+	local arcLabelStroke = Instance.new("UIStroke")
+	arcLabelStroke.Thickness = 2
+	arcLabelStroke.Color = INK
+	arcLabelStroke.Parent = arcLabel
+
+	-- PERFECT! pops above the arc the moment you let go in the gold
 	local perfectLabel = Instance.new("TextLabel")
 	perfectLabel.Name = "Perfect"
 	perfectLabel.AnchorPoint = Vector2.new(0.5, 1)
-	perfectLabel.Position = UDim2.new(0.5, 0, 0, -6)
+	perfectLabel.Position = UDim2.new(0.5, 0, 0, -METER_HEIGHT - LABEL_ROOM - 8)
 	perfectLabel.Size = UDim2.new(1, 0, 0, 52)
 	perfectLabel.BackgroundTransparency = 1
 	perfectLabel.Font = Enum.Font.FredokaOne
@@ -157,36 +285,65 @@ function ThrowController:Start()
 		end)
 	end
 
-	local function drawBar(value: number, inGold: boolean, charging: boolean)
+	-- After each throw the gold glides to its new spot. It only glides while you can't throw,
+	-- so what you see while charging is always exactly what the server checks.
+	local shownCenter: number? = nil
+	local function drawBar(value: number, inGold: boolean, charging: boolean, dt: number?)
 		local center, size = sweetSpot()
-		sweet.Position = UDim2.fromScale(center, 0.5)
-		sweet.Size = UDim2.new(size, 0, 1, 8)
-		local hook = ThrowRules.HookWidth(equippedBall())
-		hookBand.Visible = hook > 0
-		hookBand.Position = sweet.Position
-		hookBand.Size = UDim2.new(size + hook * 2, 0, 1, 4)
-		fill.Size = UDim2.fromScale(value, 1)
-		needle.Position = UDim2.fromScale(value, 0.5)
-		fill.BackgroundColor3 = if inGold then GOLD else PINK
-		if barStroke then
-			barStroke.Color = if inGold then GOLD elseif charging then PINK else Color3.new(1, 1, 1)
+		if dt and shownCenter and not charging then
+			shownCenter += (center - shownCenter) * math.min(1, dt * 8)
+		else
+			shownCenter = center
 		end
-		barScale.Scale = if inGold then 1.06 else 1
+		local shown = shownCenter :: number
+		local hook = ThrowRules.HookWidth(equippedBall())
+		for _, segment in segments do
+			local offset = math.abs(segment.Value - shown)
+			local zone = if offset <= size / 2
+				then "Gold"
+				elseif hook > 0 and offset <= size / 2 + hook then "Hook"
+				else ""
+			local filled = segment.Value <= value
+			local key = zone .. (if filled then "F" else "") .. (if filled and inGold then "G" else "")
+			if key ~= segment.Key then
+				segment.Key = key
+				local frame = segment.Frame
+				frame.Size = UDim2.fromOffset(segmentLength, ARC_THICKNESS + (if zone == "Gold" then 10 else 0))
+				frame.ZIndex = if zone == "Gold" then 3 else 2
+				frame.BackgroundColor3 = if zone == "Gold"
+					then (if filled then Color3.new(1, 0.95, 0.6) else GOLD)
+					elseif zone == "Hook" then (if filled then hookColor:Lerp(WHITE, 0.35) else hookColor)
+					elseif filled then (if inGold then GOLD else PINK)
+					else DARK
+			end
+		end
+		rider.Position, rider.Rotation = arcPoint(math.clamp(value, 0, 1), ARC_RADIUS)
+		rider.BackgroundColor3 = equippedBall().Color
+		riderStroke.Color = if inGold then GOLD elseif charging then PINK else WHITE
+		riderStroke.Thickness = if inGold then 5 else 3
+		local streak = player:GetAttribute("Streak") or 0
+		arcLabel.Text = if streak > 0 then "GOLD SHRINKS x" .. streak else "POWER"
+		arcLabel.TextColor3 = if streak > 0 then GOLD else WHITE
 	end
 
 	local function setState(newState: string)
 		state = newState
 		panel.Visible = newState ~= "Hidden"
-		if newState == "Ready" then
+		if newState == "Hidden" then
+			ThrowPose.Stop(player.Character)
+			lockFeet(false)
+		elseif newState == "Ready" then
 			charge = 0
 			hint.Text = "HOLD TO CHARGE - LET GO IN THE GOLD"
 			button.Text = "HOLD!"
 			drawBar(0, false, false)
+			lockFeet(false)
 		elseif newState == "Charging" then
 			charge, chargeClock = 0, 0
 			hint.Text = "LET GO IN THE GOLD!"
 			button.Text = "LET GO!"
 			Sfx.Play("Charge", 0.9)
+			lockFeet(true)
 		elseif newState == "Waiting" then
 			hint.Text = "ROLLING..."
 			button.Text = "..."
@@ -206,6 +363,7 @@ function ThrowController:Start()
 		local gold = ThrowRules.InSpot(charge, center, size)
 		local hooked = not gold and ThrowRules.InSpot(charge, center, size, ThrowRules.HookWidth(equippedBall()))
 		local perfect = gold or hooked
+		releasedPerfect = perfect
 		drawBar(charge, perfect, false)
 		if gold then
 			showPerfect("PERFECT!", GOLD)
@@ -214,10 +372,15 @@ function ThrowController:Start()
 			showPerfect("HOOK! PERFECT!", hookColor)
 			UiFx.Flash(hookColor, 0.25, 0.2)
 		end
-		UiFx.Pop(bar, if perfect then 1.15 else 1.08, 0.25)
+		UiFx.Pop(arc, if perfect then 1.15 else 1.08, 0.25)
 		sentAt = os.clock()
 		setState("Waiting")
-		throwRequest:FireServer(charge)
+		-- The arm swings down first; the ball leaves the hand (and the server hears about it) at the bottom
+		ThrowPose.Release(player.Character, ThrowRules.Level(equippedBall()))
+		local released = charge
+		task.delay(THROW.ReleaseDelay, function()
+			throwRequest:FireServer(released)
+		end)
 	end
 
 	local function press(input: InputObject)
@@ -331,16 +494,11 @@ function ThrowController:Start()
 			showText(name, color, true, math.min(grow, 1.7)) -- capped so it always fits on screen
 		elseif streak > 0 then
 			-- Streak Saver kept the streak alive: just the pin count
-			showText(data.Count .. " PINS", Color3.new(1, 1, 1), false, 1)
+			showText(data.Count .. " PINS", WHITE, false, 1)
 		elseif previous >= 2 then
 			showText(data.Count .. " PINS - STREAK OVER", Color3.fromRGB(200, 190, 230), false, 1)
 		else
-			showText(
-				if data.Count == 9 then "9 PINS! SO CLOSE" else data.Count .. " PINS",
-				Color3.new(1, 1, 1),
-				false,
-				1
-			)
+			showText(if data.Count == 9 then "9 PINS! SO CLOSE" else data.Count .. " PINS", WHITE, false, 1)
 		end
 	end
 
@@ -353,6 +511,13 @@ function ThrowController:Start()
 	end)
 
 	RunService.RenderStepped:Connect(function(dt)
+		-- Smaller arc on short screens (phones held sideways)
+		local screenScale = math.clamp(Workspace.CurrentCamera.ViewportSize.Y / 720, 0.6, 1)
+		holderScale.Scale = screenScale
+		holder.Position = UDim2.new(0.5, METER_SIDE * screenScale, 0, -ARC_LIFT * screenScale)
+		perfectLabel.Position =
+			UDim2.new(0.5, METER_SIDE * screenScale, 0, -(METER_HEIGHT + LABEL_ROOM + ARC_LIFT + 8) * screenScale)
+
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 		local ownLane = LaneUtil.GetOwnedLane(player.UserId)
 		currentLane = if root and ownLane and LaneUtil.IsInThrowZone(ownLane, root.Position) then ownLane else nil
@@ -370,18 +535,24 @@ function ThrowController:Start()
 			if held and laneReady(currentLane) then
 				setState("Charging") -- pressed while the lane was still busy
 			else
-				drawBar(0, false, false) -- the gold zone can slide (Moving Gold)
+				drawBar(0, false, false, dt) -- the gold zone glides to its new spot (and slides with Moving Gold)
 				hint.Text = if laneReady(currentLane) then "HOLD TO CHARGE - LET GO IN THE GOLD" else "WAIT..."
 			end
 		elseif state == "Charging" then
-			-- Fills, then slides back down and up again while you keep holding
+			-- Fills, then slides back down and up again while you keep holding; the arm swings with it
 			chargeClock += dt / THROW.ChargeTime * meterSpeedScale()
 			local t = chargeClock % 2
 			charge = if t <= 1 then t else 2 - t
 			local center, size = sweetSpot()
 			local hook = ThrowRules.HookWidth(equippedBall())
 			drawBar(charge, ThrowRules.InSpot(charge, center, size, hook), true)
+			ThrowPose.Charge(player.Character, charge, ThrowRules.Level(equippedBall()))
+			faceLane(dt)
 		elseif state == "Waiting" then
+			drawBar(charge, releasedPerfect, false, dt)
+			if not ThrowPose.IsBusy(player.Character) then
+				lockFeet(false)
+			end
 			-- Ready again once the lane is free (or if the server ignored the throw)
 			local waited = os.clock() - sentAt
 			if (waited > 0.5 and laneReady(currentLane)) or waited > 6 then

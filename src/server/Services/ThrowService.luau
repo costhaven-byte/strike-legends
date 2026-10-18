@@ -101,9 +101,16 @@ local function onThrowRequest(player: Player, charge: any)
 
 	local ball = BallService.GetEquipped(player)
 	local modifier = Modifiers.Current()
-	local perfect = ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW)
+	-- The gold sits where the lane says and shrinks with the streak (the client draws it the same way)
+	local goldCenter = lane:GetAttribute("GoldCenter")
+	local shownStreak = player:GetAttribute("Streak") or 0
+	local perfect = ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW, nil, goldCenter, shownStreak)
 	local hook = ThrowRules.HookWidth(ball)
-	local hooked = not perfect and hook > 0 and ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW, hook)
+	local hooked = not perfect
+		and hook > 0
+		and ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW, hook, goldCenter, shownStreak)
+	-- The next throw's gold is somewhere else on the arc
+	lane:SetAttribute("GoldCenter", ThrowRules.NextGoldCenter(goldCenter))
 	local forward = lane.BallStart.CFrame.LookVector
 	local distance = (lane.PinSpot.Position - lane.BallStart.Position):Dot(forward)
 	local result = ThrowResolver.Resolve(charge, perfect, hooked, ball, distance)
@@ -234,6 +241,7 @@ function ThrowService:Start()
 
 	for _, lane in LaneUtil.GetLanes() do
 		lane:SetAttribute("ReadyAt", 0)
+		lane:SetAttribute("GoldCenter", ThrowRules.NextGoldCenter())
 		setStatus(lane, "READY")
 	end
 
