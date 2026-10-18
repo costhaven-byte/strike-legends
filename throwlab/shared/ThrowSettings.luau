@@ -88,7 +88,7 @@ ThrowSettings.ChainReactionForce = 0.9
 
 -- Seconds between the first and the last pin taking off. Small = all pins explode together.
 -- 0 = every pin at the exact same moment. Bigger (like 0.3) = a visible ripple from front to back.
-ThrowSettings.PinSpreadTime = 0.1
+ThrowSettings.PinSpreadTime = 0.05
 
 -- Pull of gravity in the test lane. Normal Roblox is 196.
 -- Lower = pins hang in the air longer (floaty, more dramatic).
@@ -131,6 +131,10 @@ ThrowSettings.CameraFollow = 0.75
 
 -- How many seconds slow motion lasts on a strike. 0 = no slow motion.
 ThrowSettings.SlowMotionLength = 0.4
+
+-- Seconds of full-speed explosion before slow motion kicks in, so the hit always feels instant.
+-- 0 = slow motion starts the moment the ball touches the pins (feels like a delay).
+ThrowSettings.SlowMotionStartsAfter = 0.12
 
 -- How slow the slow motion is. 0.3 = pins move at 30% speed.
 ThrowSettings.SlowMotionSpeed = 0.3

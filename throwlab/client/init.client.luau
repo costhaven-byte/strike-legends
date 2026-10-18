@@ -367,7 +367,12 @@ local function impact()
 	Juice.Shake(Settings.CameraShakeStrength * math.min(force, 2) * (0.4 + knocked * 0.06), Settings.CameraShakeTime)
 	Hud.Flash(WHITE, 0.08 + knocked * 0.012, 0.12)
 	if throwInfo.strike then
-		Juice.SlowMotion(Settings.SlowMotionLength, Settings.SlowMotionSpeed, flyingRoots)
+		-- The pins burst at full speed first (instant payoff), then slow motion kicks in mid-air
+		task.delay(Settings.SlowMotionStartsAfter, function()
+			if run == throwRun then
+				Juice.SlowMotion(Settings.SlowMotionLength, Settings.SlowMotionSpeed, flyingRoots)
+			end
+		end)
 		showResult(knocked)
 	else
 		task.delay(0.25, function()
@@ -392,7 +397,8 @@ local function impact()
 		end
 	end
 
-	local wait = Settings.ResetDelay + (throwInfo.strike and Settings.SlowMotionLength or 0)
+	local wait = Settings.ResetDelay
+		+ (throwInfo.strike and Settings.SlowMotionStartsAfter + Settings.SlowMotionLength or 0)
 	task.delay(wait, function()
 		if run == throwRun then
 			resetLane()
