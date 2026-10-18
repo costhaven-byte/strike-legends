@@ -224,8 +224,9 @@ Config.Sounds = {
 -- (and, for a brand-new kind of power, a few lines where the server applies it).
 -- A ball's strength number means something different per trait, see Value below.
 -- Text: full description (%s = the strength, already scaled by Display). Short: the tag on inventory tiles.
--- Popup: the text that flashes on screen when the trait kicks in. Fx: which 3D effect plays
--- (Swirl, Ring, Dome, Burst). Sound: a name from Config.Sounds, played at Pitch.
+-- Popup: the text that flashes on screen when the trait kicks in (PopupColor if set, else Color).
+-- Colours come from the design system. The effect itself lives in Config.TraitFx (client TraitFx module).
+-- Sound: a name from Config.Sounds, played at Pitch.
 Config.Traits = {
 	{
 		Id = "Curve", -- Value: share of an off-centre aim the hook takes back (0.3 = 30% closer to the pocket)
@@ -234,8 +235,7 @@ Config.Traits = {
 		Short = "CURVE %s%%",
 		Display = 100,
 		Popup = "HOOK!",
-		Color = Color3.fromRGB(80, 220, 255),
-		Fx = "Swirl",
+		Color = Color3.fromHex("FF2BD6"), -- magenta
 		Sound = "Throw",
 		Pitch = 1.5,
 		HookSide = 1, -- 1 = aims right of centre hook back in, -1 = left
@@ -248,9 +248,7 @@ Config.Traits = {
 		Display = 100,
 		ExtraPins = 1,
 		Popup = "BLAST!",
-		Color = Color3.fromRGB(255, 120, 40),
-		Fx = "Ring",
-		FxSize = 24, -- ring width in studs
+		Color = Color3.fromHex("FFE600"), -- yellow
 		Sound = "StrikeCrash",
 		Pitch = 0.7,
 	},
@@ -261,8 +259,8 @@ Config.Traits = {
 		Short = "SAVER %ss",
 		Display = 1,
 		Popup = "STREAK SAVED!",
-		Color = Color3.fromRGB(90, 160, 255),
-		Fx = "Dome",
+		Color = Color3.fromHex("19E3FF"), -- cyan (the shield bubble)
+		PopupColor = Color3.fromHex("7CFF3A"), -- lime
 		Sound = "StreakUp",
 		Pitch = 1.3,
 		MinStreak = 2, -- only saves streaks of at least this many strikes
@@ -274,8 +272,7 @@ Config.Traits = {
 		Short = "LUCKY +%s%%",
 		Display = 100,
 		Popup = "LUCKY!",
-		Color = Color3.fromRGB(255, 215, 60),
-		Fx = "Burst",
+		Color = Color3.fromHex("7CFF3A"), -- lime
 		Sound = "Coin",
 		Pitch = 1.2,
 	},
@@ -285,9 +282,8 @@ Config.Traits = {
 		Text = "+%s%% gem chance on Perfect Strikes",
 		Short = "GEMS +%s%%",
 		Display = 100,
-		Popup = "GEM HUNTER! +1 GEM",
-		Color = Color3.fromRGB(255, 90, 200),
-		Fx = "Burst",
+		Popup = "+%d GEM", -- %d = gems paid
+		Color = Color3.fromHex("19E3C0"), -- gem
 		Sound = "Coin",
 		Pitch = 1.6,
 	},
@@ -298,11 +294,120 @@ Config.Traits = {
 		Short = "HEAVY +%s%%",
 		Display = 100,
 		Popup = "HEAVY HIT!",
-		Color = Color3.fromRGB(190, 190, 215),
-		Fx = "Ring",
-		FxSize = 12,
+		Color = Color3.fromHex("FF3B5C"), -- red
 		Sound = "PinHit",
 		Pitch = 0.6,
+	},
+}
+
+-- Trait trigger effects, from the owner's "Trait Effects" handoff sheet (times in seconds).
+-- Sizes on the sheet are drawn next to a 26px ball, so here they're in studs (ball = 1.8 studs).
+local INK = Color3.fromHex("06060F")
+Config.TraitFx = {
+	Ink = INK,
+	PixelsPerStud = 40, -- detail of the flat effects drawn on the lane (rings, cracks)
+	Brightness = 2.5, -- how hard the flat effects glow
+	FloorLift = 0.04, -- flat effects sit this far above the lane so they don't flicker
+	-- Popup text for every trait: Luckiest Guy, ink drop shadow, a glow in the trait colour
+	Popup = {
+		TextSize = 40, -- pixels on a 1080p screen, scaled with the screen
+		MinTextSize = 26,
+		Shadow = 4, -- ink drop shadow, pixels down
+		GlowTransparency = 0.6,
+		PopFrom = 0.6, -- pops in from this size (ease-pop overshoots to ~1.08)
+		PopTime = 0.36,
+		HoldTime = 0.9,
+		ExitTime = 0.14,
+		Rise = 12, -- pixels it rises while fading out
+		StackGap = 48, -- each extra popup sits this far above the last
+		Margin = 64, -- keep out of the screen corners...
+		BottomMargin = 180, -- ...and the thumb area at the bottom
+	},
+	Curve = {
+		Core = Color3.fromHex("FFFFFF"),
+		Glow = Color3.fromHex("FF2BD6"),
+		Tail = Color3.fromHex("B3109A"),
+		Width = 1.25, -- glow ribbon width at the ball (tapers to 0 at the tail)
+		CoreWidth = 0.28,
+		Lifetime = 0.6, -- each piece of ribbon fades over this
+		MaxLength = 1 / 3, -- share of the lane
+		FadeOut = 0.3, -- whole trail fades after the ball hits the pins
+		Brightness = 3,
+	},
+	Blast = {
+		Flash = Color3.fromHex("FFFFFF"),
+		Ring1 = Color3.fromHex("FFE600"),
+		Ring2 = Color3.fromHex("FF2BD6"),
+		FlashSize = 2.2, -- 1.2x the ball
+		FlashTime = 0.12,
+		RingRadius = 3, -- in pin spacings
+		RingTime = 0.5,
+		Ring2Delay = 0.08,
+		StrokeStart = 0.42, -- ring line thickness in studs, thinning as it grows
+		StrokeEnd = 0.07,
+		Shake = 0.35,
+	},
+	StreakSaver = {
+		Bubble = Color3.fromHex("19E3FF"),
+		Rim = Color3.fromHex("0A8FB8"),
+		Size = 1.4, -- bubble width vs the streak counter
+		Tint = 0.8, -- how clear the middle of the bubble is
+		PopFrom = 0.4,
+		PopTime = 0.36,
+		JoltAt = 0.24, -- the counter gets knocked sideways near the end of the pop
+		Jolt = 6, -- pixels
+		JoltTime = 0.12,
+		WobbleTime = 0.2, -- 0.94 -> 1.03 -> 1
+		HoldTime = 0.6,
+		ExitTime = 0.24, -- grows to ExitScale and fades, bursting into sparkles
+		ExitScale = 1.25,
+		Sparkles = 10,
+	},
+	Lucky = {
+		Clover = Color3.fromHex("7CFF3A"),
+		Shade = Color3.fromHex("3DAA10"),
+		Sparkles = { Color3.fromHex("FFE600"), Color3.fromHex("FFFFFF") },
+		CloverSize = 64, -- pixels
+		Ledge = 4, -- ink ledge under the clover, pixels
+		Tilt = 15, -- degrees it settles at (spins in from -30)
+		PopTime = 0.36,
+		HoldTime = 0.6,
+		ExitTime = 0.14,
+		SparkleCount = 6,
+		SparkleSize = { 16, 24 }, -- pixels
+		SparkleTime = 0.45,
+		SparkleStagger = 0.14,
+		RingScale = 1.2, -- sparkle ring vs the rack's width
+	},
+	GemHunter = {
+		Sparkle = Color3.fromHex("19E3FF"),
+		Gem = Color3.fromHex("19E3C0"),
+		Interval = 0.06, -- one sparkle this often behind the ball
+		Jitter = 0.55, -- studs either side
+		Size = 0.7, -- studs, +-SizeRange
+		SizeRange = 0.27,
+		Lifetime = 0.5,
+		GemSize = 48, -- payout gem, pixels
+		PopTime = 0.36,
+		FlyTime = 0.24,
+		Bump = 1.15, -- the HUD gem counter bumps to this
+	},
+	Heavy = {
+		Ink = INK,
+		Glow = Color3.fromHex("FF3B5C"),
+		Deep = Color3.fromHex("B3132F"),
+		Dust = Color3.fromHex("A9A3D6"),
+		FlashTime = 0.1,
+		Shake = 0.55,
+		Branches = { 5, 7 },
+		Length = { 4.2, 8.3 }, -- studs per crack branch
+		InkWidth = 0.21,
+		GlowWidth = 0.62,
+		DrawTime = 0.2,
+		HoldTime = 1.5,
+		FadeTime = 0.4, -- glow cools to Deep and fades
+		DustTime = 0.5,
+		DustGrow = 1.6,
 	},
 }
 
@@ -466,6 +571,9 @@ Config.BallFx = {
 -- Played on the lane ball, the ball in your hand and the Vault cases (BallFx module on the client).
 -- Every size is in ball widths (1 = the ball's diameter), so one look fits every place the ball shows up.
 --   Trails:    comet streaks behind a rolling ball. Colors run from the ball back to the tail.
+--              Glow (0-1): how additive the body is; lower keeps strong colours from washing out to white.
+--              BodyTexture: an image name whose own colours replace the body's (Supernova's rainbow).
+--              Each row is drawn in the layers of TrailLayers below.
 --   Particles: Image, Colors, Rate (per second), Size, Life, Speed, Rise (pull upward),
 --              Radius (spawn on a shell this far out), Twinkle (grow then shrink), Spin (degrees/second)
 --   Rings:     thin glowing orbit rings. Tilt = { x, z } degrees, Spin = turns per second around the ball
@@ -488,11 +596,111 @@ Config.BallVfx = {
 		Spiral = "rbxassetid://135987951766702",
 		Clover = "rbxassetid://78517109940877",
 		Burst = "rbxassetid://71546142790002",
+		TrailSoft = "rbxassetid://109547705047240", -- soft falloff across the width (SL_Trail_Soft)
+		TrailCore = "rbxassetid://135350987657237", -- tight bright line (SL_Trail_Core)
+		TrailWisp = "rbxassetid://124462490268355", -- flowing vapour strands, tiles along the trail (SL_Trail_Wisp)
+		TrailRainbow = "rbxassetid://109513255032556", -- rainbow bands across the width + vapour (SL_Trail_Rainbow)
+	},
+	-- Every trail row is drawn as these layers so it reads as real light: a wide soft glow, a wispy body
+	-- that spreads out and thins as it ages, and a short hot core in the row's colours (lightened).
+	-- Width/Lifetime multiply the row's. Fade = extra see-through on top of the row's Transparency.
+	-- Spread = width at the ball -> width at the tail. Emission = how additive (1 = pure glow); the body
+	-- uses the row's Glow if set. Repeat = ball widths per repeat of a tiling texture (it stays put in the
+	-- world as the ball rolls on, like vapour left behind). Rows with their own Texture (Bolt) stay one layer.
+	-- Motion (keeps a trail alive instead of a fixed shape behind the ball): Twist = turns per second the
+	-- ribbon spirals around the ball's path (+/- = direction, Phase = its starting angle), Wobble = how far
+	-- it sways (ball widths), Shimmer = how much its brightness flickers.
+	TrailLayers = {
+		{
+			Texture = "TrailSoft",
+			Width = 1.5,
+			Lifetime = 1.2,
+			Fade = 0.8,
+			Spread = { 1, 1.25 },
+			Emission = 0.8,
+			Wobble = 0.12,
+			Shimmer = 0.25,
+		},
+		{
+			Texture = "TrailWisp",
+			Body = true, -- a row's BodyTexture replaces this layer's texture, and its Glow its Emission
+			Width = 1.1,
+			Lifetime = 1,
+			Fade = 0.15,
+			Spread = { 0.85, 1.3 },
+			Emission = 0.55,
+			Repeat = 2.5,
+			Wobble = 0.08,
+		},
+		-- two streamers spiralling around each other
+		{
+			Texture = "TrailWisp",
+			Body = true,
+			Width = 0.8,
+			Lifetime = 0.9,
+			Fade = 0.3,
+			Spread = { 0.7, 1.4 },
+			Emission = 0.7,
+			Repeat = 3,
+			Twist = 3,
+		},
+		{
+			Texture = "TrailWisp",
+			Body = true,
+			Width = 0.8,
+			Lifetime = 0.9,
+			Fade = 0.3,
+			Spread = { 0.7, 1.4 },
+			Emission = 0.7,
+			Repeat = 3,
+			Twist = -2.2,
+			Phase = 90,
+		},
+		{
+			Texture = "TrailCore",
+			Width = 0.25,
+			Lifetime = 0.35,
+			Fade = 0.3,
+			Spread = { 1, 0.15 },
+			Emission = 0.5,
+			Lighten = 0.1,
+			Wobble = 0.04,
+			Shimmer = 0.4,
+		},
+	},
+	-- Soft puffs in the trail's colours that peel off behind the ball, drift up, grow, turn and fade.
+	-- Size = ball widths at birth -> at death (times the row's Width). Rise = upward pull. Spin = degrees/second
+	TrailWisps = {
+		Image = "Dot",
+		Rate = 40,
+		Size = { 0.4, 1.6 },
+		Life = { 0.5, 0.9 },
+		Speed = { 0.3, 1 },
+		Rise = 0.8,
+		Transparency = 0.4,
+		Spin = 40,
+		Emission = 0.6,
 	},
 	Balls = {
 		-- Uncommon: a soft streak in the ball's colour
-		Electric = { Trails = { { Colors = { WHITE, Color3.fromRGB(60, 200, 255) }, Width = 0.8, Lifetime = 0.25 } } },
-		Toxic = { Trails = { { Colors = { WHITE, Color3.fromRGB(120, 255, 60) }, Width = 0.8, Lifetime = 0.25 } } },
+		Electric = {
+			Trails = {
+				{
+					Colors = { Color3.fromRGB(138, 222, 255), Color3.fromRGB(60, 200, 255) },
+					Width = 0.8,
+					Lifetime = 0.25,
+				},
+			},
+		},
+		Toxic = {
+			Trails = {
+				{
+					Colors = { Color3.fromRGB(174, 255, 138), Color3.fromRGB(120, 255, 60) },
+					Width = 0.8,
+					Lifetime = 0.25,
+				},
+			},
+		},
 		Sunset = {
 			Trails = {
 				{
@@ -502,13 +710,25 @@ Config.BallVfx = {
 				},
 			},
 		},
-		Frostbite = { Trails = { { Colors = { WHITE, Color3.fromRGB(150, 220, 255) }, Width = 0.8, Lifetime = 0.25 } } },
+		Frostbite = {
+			Trails = {
+				{
+					Colors = { Color3.fromRGB(192, 234, 255), Color3.fromRGB(150, 220, 255) },
+					Width = 0.8,
+					Lifetime = 0.25,
+				},
+			},
+		},
 
 		-- Rare: blue comet trail with sparkles, plus the trait icon floating above
 		Magma = {
 			Trails = {
 				{
-					Colors = { WHITE, Color3.fromRGB(80, 170, 255), Color3.fromRGB(40, 80, 255) },
+					Colors = {
+						Color3.fromRGB(150, 204, 255),
+						Color3.fromRGB(80, 170, 255),
+						Color3.fromRGB(40, 80, 255),
+					},
 					Width = 1,
 					Lifetime = 0.35,
 				},
@@ -530,7 +750,11 @@ Config.BallVfx = {
 		Galaxy = {
 			Trails = {
 				{
-					Colors = { WHITE, Color3.fromRGB(150, 140, 255), Color3.fromRGB(60, 70, 255) },
+					Colors = {
+						Color3.fromRGB(192, 186, 255),
+						Color3.fromRGB(150, 140, 255),
+						Color3.fromRGB(60, 70, 255),
+					},
 					Width = 1,
 					Lifetime = 0.35,
 				},
@@ -552,7 +776,11 @@ Config.BallVfx = {
 		Thunder = {
 			Trails = {
 				{
-					Colors = { WHITE, Color3.fromRGB(40, 210, 255), Color3.fromRGB(30, 110, 255) },
+					Colors = {
+						Color3.fromRGB(126, 228, 255),
+						Color3.fromRGB(40, 210, 255),
+						Color3.fromRGB(30, 110, 255),
+					},
 					Width = 1,
 					Lifetime = 0.35,
 				},
@@ -574,7 +802,11 @@ Config.BallVfx = {
 		Phantom = {
 			Trails = {
 				{
-					Colors = { WHITE, Color3.fromRGB(150, 210, 255), Color3.fromRGB(70, 130, 255) },
+					Colors = {
+						Color3.fromRGB(192, 228, 255),
+						Color3.fromRGB(150, 210, 255),
+						Color3.fromRGB(70, 130, 255),
+					},
 					Width = 1,
 					Lifetime = 0.35,
 				},
@@ -598,7 +830,11 @@ Config.BallVfx = {
 		Plasma = {
 			Trails = {
 				{
-					Colors = { WHITE, Color3.fromRGB(80, 220, 255), Color3.fromRGB(140, 60, 255) },
+					Colors = {
+						Color3.fromRGB(150, 234, 255),
+						Color3.fromRGB(80, 220, 255),
+						Color3.fromRGB(140, 60, 255),
+					},
 					Width = 0.9,
 					Lifetime = 0.3,
 				},
@@ -622,7 +858,11 @@ Config.BallVfx = {
 		Nebula = {
 			Trails = {
 				{
-					Colors = { WHITE, Color3.fromRGB(255, 90, 210), Color3.fromRGB(90, 130, 255) },
+					Colors = {
+						Color3.fromRGB(255, 156, 228),
+						Color3.fromRGB(255, 90, 210),
+						Color3.fromRGB(90, 130, 255),
+					},
 					Width = 0.9,
 					Lifetime = 0.3,
 				},
@@ -660,7 +900,11 @@ Config.BallVfx = {
 		Inferno = {
 			Trails = {
 				{
-					Colors = { WHITE, Color3.fromRGB(255, 90, 220), Color3.fromRGB(255, 200, 60) },
+					Colors = {
+						Color3.fromRGB(255, 156, 234),
+						Color3.fromRGB(255, 90, 220),
+						Color3.fromRGB(255, 200, 60),
+					},
 					Width = 0.9,
 					Lifetime = 0.3,
 				},
@@ -798,7 +1042,11 @@ Config.BallVfx = {
 					Width = 1.2,
 					Lifetime = 0.45,
 				},
-				{ Colors = { WHITE, Color3.fromRGB(255, 90, 230) }, Width = 0.35, Lifetime = 0.3 },
+				{
+					Colors = { Color3.fromRGB(255, 156, 240), Color3.fromRGB(255, 90, 230) },
+					Width = 0.35,
+					Lifetime = 0.3,
+				},
 			},
 			Particles = {
 				{
@@ -829,23 +1077,30 @@ Config.BallVfx = {
 		Supernova = {
 			Trails = {
 				{
+					-- full-strength rainbow from the ball to the tail; no white, and a low Glow so the
+					-- colours don't add up to white under bloom
 					Colors = {
-						WHITE,
-						Color3.fromRGB(255, 250, 120),
-						Color3.fromRGB(110, 255, 110),
-						Color3.fromRGB(60, 220, 255),
-						Color3.fromRGB(150, 80, 255),
-						Color3.fromRGB(255, 60, 120),
+						Color3.fromRGB(255, 40, 60),
+						Color3.fromRGB(255, 140, 0),
+						Color3.fromRGB(255, 230, 0),
+						Color3.fromRGB(40, 230, 60),
+						Color3.fromRGB(0, 180, 255),
+						Color3.fromRGB(90, 60, 255),
+						Color3.fromRGB(200, 40, 255),
 					},
 					Width = 1.3,
 					Lifetime = 0.5,
+					Transparency = 0.15,
+					Glow = 0.25,
+					-- the body carries the rainbow as bands across its width, so the follow camera (which only
+					-- sees the front of the trail) still sees every colour
+					BodyTexture = "TrailRainbow",
 				},
-				{ Colors = { WHITE, Color3.fromRGB(255, 250, 220) }, Width = 0.5, Lifetime = 0.25 },
 			},
 			Particles = {
 				{
 					Image = "Star",
-					Colors = { Color3.fromRGB(255, 245, 190), Color3.fromRGB(255, 225, 140) },
+					Colors = { Color3.fromRGB(255, 220, 40), Color3.fromRGB(255, 120, 30) },
 					Rate = 16,
 					Size = 0.2,
 					Life = { 0.6, 1.2 },
@@ -856,7 +1111,12 @@ Config.BallVfx = {
 				},
 				{
 					Image = "Dot",
-					Colors = { WHITE, Color3.fromRGB(200, 240, 255) },
+					Colors = {
+						Color3.fromRGB(255, 60, 120),
+						Color3.fromRGB(60, 200, 255),
+						Color3.fromRGB(120, 255, 90),
+						Color3.fromRGB(190, 80, 255),
+					},
 					Rate = 40,
 					Size = 0.05,
 					Life = { 0.5, 1 },
@@ -870,8 +1130,9 @@ Config.BallVfx = {
 				{ Color = Color3.fromRGB(255, 80, 230), Radius = 0.82, Width = 0.035, Tilt = { 75, -30 }, Spin = -0.2 },
 				{ Color = Color3.fromRGB(60, 225, 255), Radius = 0.7, Width = 0.05, Tilt = { 8, -6 }, Spin = 0.1 },
 			},
-			Halos = { { Image = "Dot", Color = Color3.fromRGB(230, 200, 255), Size = 2.6, Transparency = 0.5 } },
-			Light = { Color = Color3.fromRGB(200, 220, 255), Brightness = 4, Range = 7 },
+			-- tinted glow and light: a white glow reflects off the shiny lane as a white streak behind the ball
+			Halos = { { Image = "Dot", Color = Color3.fromRGB(150, 70, 255), Size = 2.4, Transparency = 0.6 } },
+			Light = { Color = Color3.fromRGB(255, 70, 190), Brightness = 2.5, Range = 6 },
 		},
 	},
 }

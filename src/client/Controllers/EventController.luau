@@ -14,7 +14,7 @@ local Balls = require(Shared.Modules.Balls)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modifiers = require(Shared.Modules.Modifiers)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
-local LaneFx = require(Modules.LaneFx)
+local TraitFx = require(Modules.TraitFx)
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
 
@@ -191,12 +191,11 @@ function EventController:Start()
 			local lucky = lane:GetAttribute("GoldenLucky") == true
 			local luckyTrait = Balls.GetTrait("Lucky")
 			if lucky and luckyTrait then
-				showPopup(luckyTrait.Popup, luckyTrait.Color, "Your ball found a Golden Pin!")
-				LaneFx.Trait(luckyTrait, lane.PinSpot.Position + Vector3.new(0, 2, 0))
+				TraitFx.Lucky(lane) -- clover, sparkles, sound and "LUCKY!"
 			else
 				showPopup("GOLDEN PIN!", GOLD, "Knock it down for a big bonus")
+				Sfx.Play("Coin", 0.8, 1.5)
 			end
-			Sfx.Play("Coin", 0.8, 1.5)
 		end)
 	end
 	for _, lane in LaneUtil.GetLanes() do

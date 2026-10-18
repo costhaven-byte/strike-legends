@@ -21,6 +21,7 @@ local LaneFx = require(Modules.LaneFx)
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
 local BallFx = require(Modules.BallFx)
+local TraitFx = require(Modules.TraitFx)
 
 local LANE = Config.Lane
 local CAMERA = Config.Camera
@@ -136,17 +137,19 @@ local function onImpact(data, rack, position: Vector3, isOwn: boolean, setTimeSc
 	end
 end
 
--- Effects for the ball traits that kicked in (everything except Curve, which plays mid-roll)
+-- Effects for the ball traits that kicked in, the moment the ball reaches the pins
+-- (Curve and the Gem Hunter trail play during the roll). Streak Saver and the gem payout are HUD effects.
 local function playTraits(data, position: Vector3, isOwn: boolean)
+	local lane: Model = data.Lane
 	for _, traitId in data.Traits or {} do
-		local trait = Balls.GetTrait(traitId)
-		if not trait or traitId == "Curve" then
-			continue
-		end
-		local at = if trait.Fx == "Dome" then data.Lane.PinSpot.Position + Vector3.new(0, 1.5, 0) else position
-		LaneFx.Trait(trait, at)
-		if isOwn and trait.Fx == "Ring" then
-			CameraShake.Add((trait.FxSize or 16) * 0.02)
+		if traitId == "Blast" then
+			TraitFx.Blast(lane, position, isOwn)
+		elseif traitId == "Heavy" then
+			TraitFx.Heavy(lane, position, isOwn)
+		elseif traitId == "StreakSaver" and isOwn then
+			TraitFx.StreakSaved()
+		elseif traitId == "GemHunter" and isOwn then
+			TraitFx.GemPayout(lane, Config.Rewards.PerfectGemAmount)
 		end
 	end
 end
@@ -190,6 +193,9 @@ local function playThrow(data)
 	local fx = BallFx.Attach(ball, data.BallId, "Lane", forward)
 	local ballInfo = Balls.Get(data.BallId) or Config.Balls[1]
 	local lights = LaneFx.FollowLights(lane, ballInfo.Trail)
+	local fired = data.Traits or {}
+	local curveTrail = if table.find(fired, "Curve") then TraitFx.CurveTrail(lane, headDistance) else nil
+	local gemTrail = if table.find(fired, "GemHunter") then TraitFx.GemTrail(lane) else nil
 	local rollSound = Sfx.PlayAt("Roll", ball, 1.1 + data.Power * 0.2)
 	if isOwn then
 		Sfx.Play("Throw", 0.9 + data.Power * 0.3)
@@ -222,10 +228,7 @@ local function playThrow(data)
 			drop = 0
 			if not hooked and progress >= 0.55 then
 				hooked = true
-				local trait = Balls.GetTrait("Curve")
-				if trait then
-					LaneFx.Trait(trait, ball.Position, ball)
-				end
+				TraitFx.Hooked(lane, ball, isOwn)
 			end
 		else
 			x = data.HitX * progress ^ 1.6 -- slight curve toward the aim point
@@ -236,6 +239,12 @@ local function playThrow(data)
 		ball.CFrame = CFrame.new(position) * CFrame.fromAxisAngle(spinAxis, travelled / radius)
 		fx:Move(position)
 		lights.Update(position)
+		if curveTrail then
+			curveTrail.Move(position)
+		end
+		if gemTrail then
+			gemTrail.Move(position)
+		end
 
 		if not hit and travelled >= firstHit then
 			hit = true
@@ -243,6 +252,12 @@ local function playThrow(data)
 		end
 		if not traitsPlayed and (hit or travelled >= headDistance) then
 			traitsPlayed = true
+			if curveTrail then
+				curveTrail.Stop()
+			end
+			if gemTrail then
+				gemTrail.Stop()
+			end
 			playTraits(data, position, isOwn)
 		end
 

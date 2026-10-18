@@ -133,37 +133,6 @@ function ThrowController:Start()
 		hookZone.Position = hookBase + UDim2.fromScale(shift, 0)
 	end)
 
-	-- Trait popups ("STREAK SAVED!") stack under the result text (the TraitPopups frame is built in Studio)
-	local popups = gui:WaitForChild("TraitPopups") :: Frame
-	local popupOrder = 0
-
-	local function showTraitPopup(trait)
-		popupOrder += 1
-		local label = Instance.new("TextLabel")
-		label.LayoutOrder = popupOrder
-		label.Size = UDim2.new(1, 0, 0, 40)
-		label.BackgroundTransparency = 1
-		label.Text = trait.Popup
-		label.TextColor3 = trait.Color
-		label.TextScaled = true
-		label.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
-		local stroke = Instance.new("UIStroke")
-		stroke.Color = Color3.fromRGB(20, 10, 40)
-		stroke.Thickness = 2.5
-		stroke.Parent = label
-		local scale = Instance.new("UIScale")
-		scale.Scale = 2
-		scale.Parent = label
-		label.Parent = popups
-		TweenService:Create(scale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Scale = 1,
-		}):Play()
-		local fade = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 1.4)
-		TweenService:Create(label, fade, { TextTransparency = 1 }):Play()
-		TweenService:Create(stroke, fade, { Transparency = 1 }):Play()
-		task.delay(1.8, label.Destroy, label)
-	end
-
 	local function setState(newState: string)
 		state = newState
 		panel.Visible = newState ~= "Hidden"
@@ -274,18 +243,7 @@ function ThrowController:Start()
 
 	throwResult.OnClientEvent:Connect(function(data)
 		if data.UserId == player.UserId then
-			task.delay(data.RollTime, showResult, data)
-			-- Curve shows as the ball hooks; the rest when it reaches the pins, one after another
-			local delayAfter = 0.15
-			for _, traitId in data.Traits or {} do
-				local trait = Balls.GetTrait(traitId)
-				if trait and traitId == "Curve" then
-					task.delay(data.RollTime * 0.55, showTraitPopup, trait)
-				elseif trait then
-					task.delay(data.RollTime + delayAfter, showTraitPopup, trait)
-					delayAfter += 0.3
-				end
-			end
+			task.delay(data.RollTime, showResult, data) -- trait popups come from TraitFx (via LaneVisuals)
 		end
 	end)
 

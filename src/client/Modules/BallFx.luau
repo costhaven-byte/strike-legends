@@ -65,36 +65,139 @@ local function lookFor(ball)
 	}
 end
 
-local function addTrail(rig: BasePart, row, size: number)
-	-- Spans the ball top to bottom, so the follow camera sees it streaming down the lane
-	local half = row.Width * size / 2
+-- One trail ribbon. Spans the ball top to bottom, so the follow camera sees it streaming down the lane.
+-- layer: see Config.BallVfx.TrailLayers. Returns its motion (twist/wobble/shimmer) for the frame loop, if any.
+local function addTrailLayer(rig: BasePart, row, layer, size: number)
+	local width = row.Width * layer.Width * size
 	local top = Instance.new("Attachment")
-	top.Position = Vector3.new(0, half, 0)
+	top.Position = Vector3.new(0, width / 2, 0)
 	top.Parent = rig
 	local bottom = Instance.new("Attachment")
-	bottom.Position = Vector3.new(0, -half, 0)
+	bottom.Position = Vector3.new(0, -width / 2, 0)
 	bottom.Parent = rig
 	local trail = Instance.new("Trail")
 	trail.Attachment0 = top
 	trail.Attachment1 = bottom
-	trail.Color = colorSequence(row.Colors)
-	local start = row.Transparency or 0
+
+	local texture = if layer.Body and row.BodyTexture then row.BodyTexture else layer.Texture
+	local colors = row.Colors
+	if texture ~= layer.Texture then
+		colors = { Color3.new(1, 1, 1) } -- the row's own texture carries the colours
+	elseif layer.Lighten then
+		colors = {}
+		for i, color in row.Colors do
+			colors[i] = color:Lerp(Color3.new(1, 1, 1), layer.Lighten)
+		end
+	end
+	trail.Color = colorSequence(colors)
+
+	-- Stays strong behind the ball, then dies away toward the tail (so every colour in the row shows)
+	local start = 1 - (1 - (row.Transparency or 0)) * (1 - layer.Fade)
 	trail.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, start),
-		NumberSequenceKeypoint.new(0.6, start + (1 - start) * 0.35),
+		NumberSequenceKeypoint.new(0.3, start + (1 - start) * 0.15),
+		NumberSequenceKeypoint.new(0.7, start + (1 - start) * 0.5),
 		NumberSequenceKeypoint.new(1, 1),
 	})
-	trail.WidthScale = NumberSequence.new(1, 0.05) -- comet: wide at the ball, a point at the tail
-	trail.Lifetime = row.Lifetime
-	trail.LightEmission = 1
+	trail.WidthScale = NumberSequence.new(layer.Spread[1], layer.Spread[2])
+	trail.Lifetime = row.Lifetime * layer.Lifetime
+	trail.LightEmission = if layer.Body and row.Glow then row.Glow else layer.Emission
 	trail.LightInfluence = 0
-	trail.FaceCamera = true
+	trail.FaceCamera = layer.Twist == nil -- twisting ribbons turn in 3D, so they spiral instead
 	trail.MinLength = 0.05
-	if row.Texture then
-		trail.Texture = IMAGES[row.Texture]
+	trail.Texture = IMAGES[texture]
+	if layer.Repeat then
+		trail.TextureMode = Enum.TextureMode.Wrap
+		trail.TextureLength = layer.Repeat * size
+	else
 		trail.TextureMode = Enum.TextureMode.Stretch
 	end
 	trail.Parent = rig
+
+	if not (layer.Twist or layer.Wobble or layer.Shimmer) then
+		return nil
+	end
+	return {
+		Trail = trail,
+		Top = top,
+		Bottom = bottom,
+		Half = width / 2,
+		Twist = layer.Twist or 0,
+		Phase = math.rad(layer.Phase or 0),
+		Wobble = (layer.Wobble or 0) * size,
+		Shimmer = layer.Shimmer or 0,
+		Seed = math.random() * 100,
+	}
+end
+
+-- Wisps of the trail's colour peeling off behind the ball, drifting up and curling away
+local function addWisps(rig: BasePart, row, size: number)
+	local wisps = VFX.TrailWisps
+	local holder = weldedPart(rig, "Wisps", Vector3.one * size * 0.7, CFrame.identity)
+	holder.Shape = Enum.PartType.Ball
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Texture = IMAGES[wisps.Image]
+	emitter.Color = colorSequence(row.Colors)
+	emitter.LightEmission = wisps.Emission
+	emitter.LightInfluence = 0
+	emitter.Shape = Enum.ParticleEmitterShape.Sphere
+	emitter.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+	emitter.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
+	emitter.Size = NumberSequence.new(wisps.Size[1] * size * row.Width, wisps.Size[2] * size * row.Width)
+	emitter.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.15, wisps.Transparency),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	emitter.Lifetime = NumberRange.new(wisps.Life[1], wisps.Life[2])
+	emitter.Speed = NumberRange.new(wisps.Speed[1] * size, wisps.Speed[2] * size)
+	emitter.Acceleration = Vector3.new(0, wisps.Rise * size, 0)
+	emitter.Drag = 2
+	emitter.Rotation = NumberRange.new(0, 360)
+	emitter.RotSpeed = NumberRange.new(-wisps.Spin, wisps.Spin)
+	emitter.Rate = wisps.Rate
+	emitter.Parent = holder
+	return emitter
+end
+
+-- Draws one Trails row; motions and emitters go into the handle so the frame loop can animate them
+local function addTrail(rig: BasePart, row, size: number, handle)
+	if row.Texture then
+		-- A special streak (lightning bolts): drawn as-is, one layer
+		addTrailLayer(rig, row, {
+			Texture = row.Texture,
+			Width = 1,
+			Lifetime = 1,
+			Fade = 0,
+			Spread = { 1, 0.05 },
+			Emission = row.Glow or 1,
+		}, size)
+		return
+	end
+	for _, layer in VFX.TrailLayers do
+		local motion = addTrailLayer(rig, row, layer, size)
+		if motion then
+			table.insert(handle.Motions, motion)
+		end
+	end
+	if VFX.TrailWisps then
+		table.insert(handle.Emitters, addWisps(rig, row, size))
+	end
+end
+
+-- Spins a twisting ribbon around the ball's path, sways it and flickers its brightness
+local function moveTrail(motion, t: number)
+	local angle = motion.Phase + t * motion.Twist * 2 * math.pi
+	local half = Vector3.new(math.sin(angle), math.cos(angle), 0) * motion.Half
+	local sway = Vector3.zero
+	if motion.Wobble > 0 then
+		sway = Vector3.new(math.noise(t * 3, motion.Seed), math.noise(t * 3, motion.Seed + 7), 0) * motion.Wobble * 2
+	end
+	motion.Top.Position = sway + half
+	motion.Bottom.Position = sway - half
+	if motion.Shimmer > 0 then
+		motion.Trail.Brightness = math.max(0.2, 1 + motion.Shimmer * math.noise(t * 9, motion.Seed + 13) * 2)
+	end
 end
 
 local function addParticles(rig: BasePart, row, size: number, rateScale: number)
@@ -242,12 +345,15 @@ function BallFx.Attach(ball: BasePart, ballId: string?, mode: Mode, forward: Vec
 		BadgeHeight = 0,
 		Emitters = {},
 		Trails = {},
+		Motions = {},
+		Clock = 0,
+		MotionSpeed = 1, -- slow-motion can lower this so the trail's motion slows with the ball
 		Enabled = true,
 	}
 
 	if isLane then
 		for _, row in look.Trails or {} do
-			addTrail(rig, row, size)
+			addTrail(rig, row, size, handle)
 		end
 	end
 	for _, row in look.Particles or {} do
@@ -336,7 +442,7 @@ function BallFx.Attach(ball: BasePart, ballId: string?, mode: Mode, forward: Vec
 end
 
 -- One loop turns every ring, spins the disks, bobs the badges and keeps held effects on their ball
-RunService.RenderStepped:Connect(function()
+RunService.RenderStepped:Connect(function(dt)
 	local t = os.clock()
 	local camera = workspace.CurrentCamera
 	local cameraPosition = camera and camera.CFrame.Position or Vector3.zero
@@ -355,6 +461,10 @@ RunService.RenderStepped:Connect(function()
 		-- Far-away effects keep their last pose (cheap for lots of players)
 		if (rig.Position - cameraPosition).Magnitude > 150 then
 			continue
+		end
+		handle.Clock += dt * handle.MotionSpeed
+		for _, motion in handle.Motions do
+			moveTrail(motion, handle.Clock)
 		end
 		for _, ring in handle.Rings do
 			placeRing(ring, t)

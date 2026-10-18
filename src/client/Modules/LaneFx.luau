@@ -192,7 +192,8 @@ function LaneFx.Number(position: Vector3, text: string, color: Color3)
 	TweenService:Create(stroke, fade, { Transparency = 1 }):Play()
 end
 
--- A ball trait kicking in. trait = its row in Config.Traits; the row's Fx picks the look:
+-- A burst effect (the Golden Pin uses it; ball traits have their own looks in TraitFx).
+-- trait = { Fx, FxSize, Color, Sound, Pitch }; Fx picks the look:
 -- Swirl (sparkles spinning off the ball), Ring (a shockwave across the lane),
 -- Dome (a shield bubble over the pins), Burst (sparkles shooting up).
 -- position: where it happens. ball: the rolling ball, for effects that ride along with it.

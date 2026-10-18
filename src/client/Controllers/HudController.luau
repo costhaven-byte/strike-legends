@@ -290,8 +290,10 @@ function HudController:Start()
 					local icons = math.floor(data.Reward.Coins / JUICE.CoinsPerIcon)
 					flyIcons(bar.Coins, math.clamp(icons, JUICE.CoinIconsMin, JUICE.CoinIconsMax), from)
 				end
-				if data.Reward.Gems > 0 then
-					flyIcons(bar.Gems, math.min(data.Reward.Gems, 5), from)
+				-- A Gem Hunter gem flies in on its own (TraitFx.GemPayout)
+				local gems = data.Reward.Gems - (if data.Reward.GemHunter then Config.Rewards.PerfectGemAmount else 0)
+				if gems > 0 then
+					flyIcons(bar.Gems, math.min(gems, 5), from)
 				end
 			end)
 		end
