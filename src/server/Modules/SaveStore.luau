@@ -118,6 +118,7 @@ local function migrate(saved: any): { [string]: any }
 			data.XP = math.max(tonumber(data.XP) or 0, Progression.TierXP(tier))
 			data.RankLevel = Progression.LevelFromXP(data.XP, tier)
 		end
+		-- v13 added Mascots, EquippedMascots and EggsHatched: new keys start empty / at 0, nothing to upgrade
 	end
 	data.Rank = math.clamp(math.floor(tonumber(data.Rank) or 1), 1, #Config.Ranks)
 	return data

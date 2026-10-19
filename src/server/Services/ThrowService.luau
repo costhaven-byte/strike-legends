@@ -15,6 +15,7 @@ local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
 local GoldenPinService = require(script.Parent.GoldenPinService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
+local MascotService = require(script.Parent.MascotService)
 local OnboardingService = require(script.Parent.OnboardingService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionService = require(script.Parent.ProgressionService)
@@ -59,6 +60,7 @@ local function getCoinMultipliers(player: Player, ball, level, streak: number, m
 	return {
 		PowerLevel = level.Value,
 		Ball = BallService.GetMultiplier(player, ball), -- Polish included
+		Mascots = MascotService.GetMultiplier(player), -- 1 + equipped mascots' bonuses
 		Rank = Progression.GetRank(ProgressionService.GetCurrentRankIndex(player)).Multiplier,
 		Streak = Progression.GetStreakMultiplier(streak),
 		Modifier = modifier and modifier.CoinMultiplier or 1,

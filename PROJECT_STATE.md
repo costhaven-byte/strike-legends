@@ -1,8 +1,7 @@
 # Project state (max 40 lines, read at the start of every session, update at the end)
 Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 2 replaces Addendum 1).
-
-**Current milestone:** Phase 2 step 7c (streaks/modifiers/Golden Pin checks) built, owner test PENDING. 7a, 7b passed.
-Restore point: git tag restore-step7c-before. Real game = cloud place 94254609600041.
+**Current milestone:** Phase 3 step 8a (mascots: Alley Egg, hatch, follow, equip) built, owner test PENDING. Next 8b (shiny merge, strike reactions, lobby showcase, multiplier panel, AUTO_BOWL flag).
+Restore point: git tag restore-step8a-before. Real game = cloud place 94254609600041.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
 ## Exists and works
 - 6 lanes, real physics pins (Standard/Golden/Golden Star meshes), lobby hub, kiosk, leaderboard wall, Vault (11 cases).
@@ -24,17 +23,15 @@ Restore point: git tag restore-step7c-before. Real game = cloud place 9425460960
 - Collection book (CollectionBookController, built in code): the BALLS button opens it (old Inventory grid retired, kept hidden as a template), one page per rarity, owned balls spin in 3D with EQUIP buttons, missing = silhouette + traits.
 - DAILY button: grey + lock + throws-left countdown during onboarding; server refuses claims until Onboarding stage 3.
 - 5 crates (Basic 1.6K, Bronze 9.2K, Silver 1M, Gold 87M, Neon 5.9B; Config.Economy.Crates), pity per crate (save v10 CratePity, attributes Pity_<Crate>_<Rarity>), first crate ever Rare+ (CratesOpened), ODDS button per shop card = every ball's chance. Duplicates = Polish (save Polish, +5% mult per level, max 10, then coins); book shows POLISH n/10. Gem sink (7b): book POLISH button buys the next level with gems (Config.Economy.Polish.GemPrice x level; Common 4..40), remote BuyPolish.
+- Mascots 8a (save v13 Mascots {Id=count}, EquippedMascots, EggsHatched; MascotService, MascotController/FollowController, Shared.Modules.Mascots, Config.Mascots/EggLooks/MascotFx): Alley Egg 3,700 at rank level 3 (Config.Economy.Eggs), 12 mascots (2 per rarity), bonus = rarity bonus x egg BonusScale (Alley 0.1: Common +2% .. Mythic +150%), coins x (1 + total). 3 slots (+1 at levels 15, 30), EQUIP BEST, new mascot fills a free slot. PETS button (right of DAILY, shows from level 3) opens the panel (egg + ODDS, slots, all 12 with silhouettes). Lobby: old daily pad = Workspace.Hub.EggPad (pink, "MASCOT EGGS"), hold-to-hatch egg on the plinth. Daily stays on the DAILY button. Studio: TEST: EGG button in the panel.
 ## Placeholder
-- All sounds (Creator Store picks); 3 overcharge stand-ins; PowerUp = RankUp stand-in. Bronze/Silver/Gold crate models = recoloured Basic; kiosk has Basic + Neon stations only. Gold/Neon and Levels 5-12 need zones 2+ (TEST button).
+- Mascots = coloured balls with eyes; egg = spotted ellipsoid; hatch sounds borrow ReelTick/Reveal. All sounds (Creator Store picks); 3 overcharge stand-ins; PowerUp = RankUp stand-in. Bronze/Silver/Gold crate models = recoloured Basic; kiosk has Basic + Neon stations only. Gold/Neon and Levels 5-12 need zones 2+ (TEST button).
 ## Not built yet (from Addendum 2)
-- Mascots, zones 2-6, bosses, rebirth, return loops, monetization (off switch).
-
+- Mascot 8b items, zones 2-6 (Neon..Volcano eggs locked until then), bosses, rebirth, return loops, monetization (off switch).
 ## Parked: Tournaments, ghost replays, spectator lanes, challenge lane (M11-M20 replaced by Addendum 2).
-
 ## Off-git (saved only in the Studio place file)
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
-
 ## Last session
-- 2026-10-19: Step 7c: on-screen streak names = spec tiers (STREAK MASTER at 7, PERFECT RUN at 10, "6 IN A ROW!" between); overcook always ends the streak (Streak Saver no longer covers it); EconomySim plays live rules (PERFECT-only strikes, Config.Streaks, lane modifiers, Golden Pin; plan's StreakPerStrike + Lucky Throw removed) -> mid game slower (PL8 56 min, PL9 never in 150). Moving Pins shows as MOVING GOLD (slides the gold). Owner found streaks too hard (77% PERFECT, best 6) -> gold shrinks 5% per strike, never below 75% (Config.Throw.GoldSmallestShare; was 10% to 0.04). Test PENDING.
+- 2026-10-19: Phase 2 done. Step 8 split 8a/8b; 8a built and checked in Studio (hatch, equip, Equip Best, follow, egg stand); owner asked to replace the daily pad with the new thing -> egg stand. Code synced into Studio by the http trick (Rojo not connected). Test PENDING.
+- 2026-10-19: Step 7c: on-screen streak names = spec tiers (STREAK MASTER at 7, PERFECT RUN at 10, "6 IN A ROW!" between); overcook always ends the streak (Streak Saver no longer covers it); EconomySim plays live rules (PERFECT-only strikes, Config.Streaks, lane modifiers, Golden Pin; plan's StreakPerStrike + Lucky Throw removed) -> mid game slower (PL8 56 min, PL9 never in 150). Moving Pins shows as MOVING GOLD (slides the gold). Gold shrinks 5% per strike, never below 75%. PASSED.
 - 2026-10-19: 7a retest treated as passed (owner said start 7b). Step 7b built (gems buy Polish in the book), PASSED.
-- 2026-10-19: Step 7a built (60 levels), first test OK except popups; fixed: black popup (fade race), level gems line blue, level popup before FREE CRATE. Retest PENDING.

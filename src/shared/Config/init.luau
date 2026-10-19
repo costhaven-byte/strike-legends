@@ -199,12 +199,15 @@ Config.StartingData = {
 	SessionLog = {}, -- the last few play sessions (see Config.SessionLog), newest last
 	Onboarding = 0, -- first 3 minutes (Config.Onboarding): 0 = first throw next, 1 = before the gift, 2 = gift given, 3 = done
 	OnboardThrows = 0, -- throws counted toward the first-3-minutes moments
+	Mascots = {}, -- mascots owned, by Id: { Pinny = 2 } (v13)
+	EquippedMascots = {}, -- Ids following the player, one per slot (the same Id can fill two slots if owned twice)
+	EggsHatched = 0, -- eggs hatched ever
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 12, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels). Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 13, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -261,6 +264,8 @@ Config.RateLimits = {
 	StartTrial = 1,
 	BuyPowerLevel = 0.5,
 	BuyPolish = 0.3,
+	HatchEgg = 1,
+	EquipMascot = 0.15,
 }
 
 -- Gems on/off switch. Addendum 1 keeps gems (earned only, a gem sink comes later); set Enabled = false to hide them.
@@ -1606,6 +1611,139 @@ Config.CrateShop = {
 	ScreenBrightness = 1.15, -- glow of the kiosk screens (marquee, odds, prices); higher = more vibrant
 }
 
+-- Mascots (pets, Addendum 2 Phase 3 step 8): small buddies that follow you and add to your coins.
+-- Hatched from eggs (Config.Economy.Eggs: price, unlock, BonusScale). A mascot's bonus =
+-- Config.Economy.Mascots.Bonus[its rarity] x its egg's BonusScale; equipped bonuses add up: coins x (1 + total).
+-- Placeholder looks (Addendum 2 section 9.7): a coloured ball with eyes. Color = body, Accent = tuft and cheeks.
+-- Egg = which egg hatches it. Only the Alley Egg has mascots so far; the others come with zones 2 to 5.
+-- Adding a mascot = adding a row. Each egg needs at least one mascot per rarity in Config.Economy.Mascots.Odds.
+Config.Mascots = {
+	{
+		Id = "Pinny",
+		Name = "Pinny",
+		Egg = "Alley",
+		Rarity = "Common",
+		Color = Color3.fromRGB(245, 245, 250),
+		Accent = Color3.fromRGB(230, 50, 60),
+	},
+	{
+		Id = "Gus",
+		Name = "Gutter Gus",
+		Egg = "Alley",
+		Rarity = "Common",
+		Color = Color3.fromRGB(140, 140, 155),
+		Accent = Color3.fromRGB(90, 200, 255),
+	},
+	{
+		Id = "LanePup",
+		Name = "Lane Pup",
+		Egg = "Alley",
+		Rarity = "Uncommon",
+		Color = Color3.fromRGB(110, 220, 120),
+		Accent = Color3.fromRGB(255, 240, 120),
+	},
+	{
+		Id = "Bumper",
+		Name = "Bumper",
+		Egg = "Alley",
+		Rarity = "Uncommon",
+		Color = Color3.fromRGB(190, 255, 70),
+		Accent = Color3.fromRGB(255, 90, 200),
+	},
+	{
+		Id = "Strikey",
+		Name = "Strikey",
+		Egg = "Alley",
+		Rarity = "Rare",
+		Color = Color3.fromRGB(60, 140, 255),
+		Accent = Color3.fromRGB(255, 255, 255),
+	},
+	{
+		Id = "Splitz",
+		Name = "Splitz",
+		Egg = "Alley",
+		Rarity = "Rare",
+		Color = Color3.fromRGB(60, 230, 230),
+		Accent = Color3.fromRGB(255, 120, 40),
+	},
+	{
+		Id = "Hambone",
+		Name = "Hambone",
+		Egg = "Alley",
+		Rarity = "Epic",
+		Color = Color3.fromRGB(170, 70, 255),
+		Accent = Color3.fromRGB(255, 200, 40),
+	},
+	{
+		Id = "NeonBat",
+		Name = "Neon Bat",
+		Egg = "Alley",
+		Rarity = "Epic",
+		Color = Color3.fromRGB(110, 40, 200),
+		Accent = Color3.fromRGB(60, 255, 220),
+	},
+	{
+		Id = "Kingpin",
+		Name = "Kingpin",
+		Egg = "Alley",
+		Rarity = "Legendary",
+		Color = Color3.fromRGB(255, 195, 40),
+		Accent = Color3.fromRGB(255, 255, 255),
+	},
+	{
+		Id = "Blaze",
+		Name = "Blaze",
+		Egg = "Alley",
+		Rarity = "Legendary",
+		Color = Color3.fromRGB(255, 110, 30),
+		Accent = Color3.fromRGB(255, 230, 60),
+	},
+	{
+		Id = "Cosmo",
+		Name = "Cosmo",
+		Egg = "Alley",
+		Rarity = "Mythic",
+		Color = Color3.fromRGB(255, 60, 150),
+		Accent = Color3.fromRGB(120, 220, 255),
+	},
+	{
+		Id = "Perfecto",
+		Name = "Perfecto",
+		Egg = "Alley",
+		Rarity = "Mythic",
+		Color = Color3.fromRGB(255, 245, 200),
+		Accent = Color3.fromRGB(255, 60, 210),
+	},
+}
+
+-- Egg names and colours (prices, unlocks and odds: Config.Economy.Eggs / Config.Economy.Mascots)
+Config.EggLooks = {
+	Alley = { Name = "Alley Egg", Color = Color3.fromRGB(255, 225, 140), Spots = Color3.fromRGB(255, 90, 200) },
+	Neon = { Name = "Neon Egg", Color = Color3.fromRGB(80, 230, 255), Spots = Color3.fromRGB(255, 60, 210) },
+	Arcade = { Name = "Arcade Egg", Color = Color3.fromRGB(190, 120, 255), Spots = Color3.fromRGB(255, 240, 90) },
+	Skyline = { Name = "Skyline Egg", Color = Color3.fromRGB(150, 200, 255), Spots = Color3.fromRGB(255, 255, 255) },
+	Volcano = { Name = "Volcano Egg", Color = Color3.fromRGB(255, 100, 40), Spots = Color3.fromRGB(60, 20, 20) },
+}
+
+-- How mascots look and move, and the hatching moment
+Config.MascotFx = {
+	Size = 1.6, -- studs across
+	FollowDistance = 4.5, -- studs behind the player (the first row; more mascots fan out to the sides)
+	Spacing = 2.6, -- studs between mascots side by side
+	FollowSpeed = 8, -- how fast they catch up (higher = snappier)
+	Hover = 2.2, -- studs above the ground
+	BobHeight = 0.35, -- studs they bob up and down
+	BobSpeed = 2.4, -- bobs per second (each mascot is a little out of step)
+	ShowDistance = 120, -- mascots of players further away than this aren't drawn (saves phone battery)
+	-- The egg stand in the lobby (Workspace.Hub.EggPad, the old daily-reward pad)
+	PromptDistance = 10,
+	HoldDuration = 0.4, -- seconds to hold "Hatch", so nobody spends coins by accident
+	-- Hatching: the egg shakes harder and harder while its glow flicks through rarity colours, then cracks
+	ShakeTime = 2.4,
+	RevealTime = 2.6, -- seconds the new mascot stays on screen before the panel can be closed
+	TeaseChance = 0.35, -- chance the glow flashes a rarer colour near the end before settling (odds are shown honestly)
+}
+
 -- Daily reward: a 7-day calendar. Claim once per day (days change at midnight UTC).
 -- Missing a whole day starts you back at day 1. After day 7 it loops back to day 1.
 -- Each day can give Coins, Gems and/or a free Crate (a crate Id from Config.Crates).
@@ -1690,7 +1828,7 @@ Config.Analytics = {
 		"Purchase", -- value = minutes played in total; labels = kind (Crate/Ball/Egg), item  (balls and eggs: later)
 		"ZoneUnlocked", -- later (Milestone 12)
 		"LuckyThrow", -- later (Milestone 13)
-		"MascotHatched", -- later (Milestone 14)
+		"MascotHatched", -- value = eggs hatched so far; labels = egg, rarity, mascot
 		"BossDefeated", -- later (Milestone 15)
 		"PityHit", -- labels = crate, rarity
 		"PerfectRate", -- value = PERFECT % of the session's throws (assisted first throw left out); labels = throws, perfects
