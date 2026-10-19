@@ -51,6 +51,18 @@ local METER_HEIGHT = if IS_SIDE then ARC_HEIGHT * 2 else ARC_HEIGHT
 local METER_SIDE = if IS_SIDE then SIDE_SIDE else ARC_SIDE
 local LABEL_ROOM = if IS_SIDE then 32 else 0 -- the standing arc's label sits on top of it, not inside
 
+-- Popups that must be closed before you can throw (ScreenGui, frame), so a tap meant for one never rolls the
+-- ball by accident and costs a streak
+local POPUPS = {
+	{ "RankUpUI", "Overlay" },
+	{ "BallsUI", "Inventory" },
+	{ "BallsUI", "Book" },
+	{ "BallsUI", "Shop" },
+	{ "BallsUI", "Opening" },
+	{ "DailyUI", "Popup" },
+	{ "TrialUI", "Intro" },
+}
+
 local ThrowController = {}
 
 local state = "Hidden" -- Hidden, Ready, Charging, Waiting
@@ -111,6 +123,32 @@ local function arcPoint(value: number, radius: number): (UDim2, number)
 	return UDim2.new(0.5, math.cos(angle) * radius, 1, -math.sin(angle) * radius), 90 - math.deg(angle)
 end
 
+-- Is a popup open (or the throw UI switched off, as during the showcase camera swing)?
+local function popupOpen(throwGui: ScreenGui): boolean
+	if not throwGui.Enabled then
+		return true
+	end
+	local playerGui = throwGui.Parent
+	if not playerGui then
+		return false
+	end
+	for _, path in POPUPS do
+		local screen = playerGui:FindFirstChild(path[1])
+		local frame = screen and screen:FindFirstChild(path[2])
+		if
+			screen
+			and screen:IsA("ScreenGui")
+			and screen.Enabled
+			and frame
+			and frame:IsA("GuiObject")
+			and frame.Visible
+		then
+			return true
+		end
+	end
+	return false
+end
+
 local function humanoid(): Humanoid?
 	return player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 end
@@ -148,7 +186,7 @@ function ThrowController.State(): string
 end
 
 function ThrowController:Start()
-	local gui = player:WaitForChild("PlayerGui"):WaitForChild("ThrowUI")
+	local gui = player:WaitForChild("PlayerGui"):WaitForChild("ThrowUI") :: ScreenGui
 	local panel = gui:WaitForChild("Panel")
 	local hint = panel:WaitForChild("Hint")
 	local bar = panel:WaitForChild("AimBar") :: Frame
@@ -385,6 +423,9 @@ function ThrowController:Start()
 	-- Back to ready; still holding from before = start charging straight away, no wasted time
 	local function getReady()
 		setState("Ready")
+		if held and popupOpen(gui) then
+			held = nil -- a press from before the popup opened doesn't count
+		end
 		if held then
 			setState("Charging")
 		end
@@ -420,7 +461,7 @@ function ThrowController:Start()
 	end
 
 	local function press(input: InputObject)
-		if held then
+		if held or popupOpen(gui) then
 			return
 		end
 		held = input
@@ -573,6 +614,15 @@ function ThrowController:Start()
 
 		if state == "Hidden" then
 			getReady()
+		elseif popupOpen(gui) and (state == "Ready" or state == "Charging") then
+			-- A popup opened: no throw until it's closed (a charge in progress is called off, nothing is sent)
+			held = nil
+			if state == "Charging" then
+				ThrowPose.Stop(player.Character)
+				setState("Ready")
+			end
+			drawBar(0, false, false, dt)
+			hint.Text = "WAIT..."
 		elseif state == "Ready" then
 			if held and laneReady(currentLane) then
 				setState("Charging") -- pressed while the lane was still busy

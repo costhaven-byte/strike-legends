@@ -35,7 +35,8 @@ function BallService.GetEquipped(player: Player)
 end
 
 -- Rebuilds the equipped-ball look on the player's character (made on the server so every player sees it)
-local function refreshCharacterBall(player: Player)
+local refreshCharacterBall
+refreshCharacterBall = function(player: Player)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local hand = character
@@ -122,6 +123,35 @@ local function refreshCharacterBall(player: Player)
 	end
 
 	folder.Parent = character
+
+	-- Avatars finish loading after spawning and swap in a new hand, which drops the ball:
+	-- put it back in the new hand (and if it ever goes missing on its own)
+	local rebuilding = false
+	local function rebuild()
+		if rebuilding or not folder.Parent then
+			return
+		end
+		rebuilding = true
+		task.defer(function()
+			if folder.Parent and player.Character == character then
+				refreshCharacterBall(player)
+			end
+		end)
+	end
+	local handAdded = character.ChildAdded:Connect(function(child)
+		if child.Name == hand.Name and child:IsA("BasePart") then
+			rebuild()
+		end
+	end)
+	local heldGone = held.AncestryChanged:Connect(function()
+		if not held:IsDescendantOf(folder) then
+			rebuild()
+		end
+	end)
+	folder.Destroying:Connect(function()
+		handAdded:Disconnect()
+		heldGone:Disconnect()
+	end)
 end
 
 -- Hides the ball in the player's hand while it rolls down the lane
@@ -360,6 +390,10 @@ function BallService:Start()
 					and (character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm"))
 				)
 			do
+				waited += task.wait(0.1)
+			end
+			-- Let the avatar finish loading first (it swaps body parts), up to a few seconds
+			while waited < 5 and not player:HasAppearanceLoaded() do
 				waited += task.wait(0.1)
 			end
 			refreshCharacterBall(player)

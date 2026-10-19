@@ -197,15 +197,18 @@ function OnboardingController:Start()
 	throwSub.Position = UDim2.fromScale(0.5, 0)
 	throwSub.Size = UDim2.new(0.6, 0, 0, 26)
 
-	-- Level 2 affordable: a bouncing arrow next to the Power Level button
-	local buyCall = bigLabel(gui, "< BUY POWER LV 2!", GOLD)
+	-- Level 2 affordable: a small bouncing arrow next to the Power Level button (kept small so it never
+	-- covers the screen or the power arc)
+	local buyCall = bigLabel(gui, "< BUY LV 2!", GOLD)
 	buyCall.AnchorPoint = Vector2.new(0, 0.5)
-	buyCall.Size = UDim2.fromOffset(230, 38)
+	buyCall.Size = UDim2.fromOffset(120, 24)
 	buyCall.TextXAlignment = Enum.TextXAlignment.Left
 	buyCall.Visible = false
-	local buySub = bigLabel(buyCall, "  IT CHANGES YOUR BALL!", CYAN)
+	buyCall:FindFirstChildOfClass("UIStroke").Thickness = 2
+	local buySub = bigLabel(buyCall, "  NEW BALL LOOK!", CYAN)
 	buySub.Position = UDim2.fromScale(0, 1)
-	buySub.Size = UDim2.new(1, 0, 0, 20)
+	buySub.Size = UDim2.new(1, 0, 0, 14)
+	buySub:FindFirstChildOfClass("UIStroke").Thickness = 2
 	buySub.TextXAlignment = Enum.TextXAlignment.Left
 
 	local levelTwo = PowerLevels.Get(2)
@@ -232,13 +235,13 @@ function OnboardingController:Start()
 		buyCall.Visible = wantBuy
 		if wantBuy and button then
 			if not buyShown then
-				UiFx.Pop(buyCall, 1.6, 0.4)
+				UiFx.Pop(buyCall, 1.3, 0.4)
 				Sfx.Play("StreakUp", 1.3)
 			end
 			local bounce = math.abs(math.sin(t * 5)) * 14
 			buyCall.Position = UDim2.fromOffset(
-				button.AbsolutePosition.X + button.AbsoluteSize.X + 10 + bounce,
-				button.AbsolutePosition.Y + button.AbsoluteSize.Y / 2 - 8
+				button.AbsolutePosition.X + button.AbsoluteSize.X + 6 + bounce * 0.6,
+				button.AbsolutePosition.Y + button.AbsoluteSize.Y / 2 - 6
 			)
 		end
 		buyShown = wantBuy
