@@ -1,7 +1,7 @@
 # Project state (max 40 lines, read at the start of every session, update at the end)
 Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 2 replaces Addendum 1).
 
-**Current milestone:** First 5 Minutes fixes (HANDOFF_FIRST_5_MINUTES.md) PASSED 2026-10-19; follow-up (no kiosk label, equip guide) owner test PENDING.
+**Current milestone:** First 5 Minutes fixes (HANDOFF_FIRST_5_MINUTES.md) PASSED 2026-10-19; follow-up (no kiosk label, equip guide) PASSED.
 Restore point: git tag restore-first5-before. Real game = cloud place 94254609600041.
 Next: Phase 2 step 7 (ranks 1-60, section 9.5), only when Selim says go.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
@@ -37,4 +37,4 @@ Next: Phase 2 step 7 (ranks 1-60, section 9.5), only when Selim says go.
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
 
 ## Last session
-- 2026-10-19: First 5 Minutes handoff built (trial 1 strike/no cooldown, gift at 10 throws, Basic crate goal + beam, PERFECT-rate + timeline log). Owner PASSED; then removed kiosk label + added equip guide (awaiting test).
+- 2026-10-19: First 5 Minutes handoff built (trial 1 strike/no cooldown, gift at 10 throws, Basic crate goal + beam, PERFECT-rate + timeline log). Owner PASSED; then removed kiosk label + added equip guide (PASSED).
