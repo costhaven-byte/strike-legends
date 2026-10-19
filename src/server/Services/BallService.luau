@@ -220,14 +220,15 @@ end
 -- Gives the player one crate's ball (no charge): rolls with this crate's pity, adds the ball, or turns a duplicate
 -- into Polish Points (coins once that ball is fully polished).
 -- Used for bought crates and free ones (like the daily reward). Returns the result the client shows.
--- minRarity: optional, the ball is at least this rare (the gift crate, the first bought crate). Without it, the very
--- first crate a player ever opens is at least Config.Economy.FirstCrateMin
-function BallService.GiveCrate(player: Player, crate, minRarity: string?)
-	if not minRarity and (PlayerDataService.Get(player, "CratesOpened") or 0) == 0 then
+-- minRarity: optional, the ball is at least this rare. exactRarity: optional, the ball is exactly this rarity (the gift
+-- crate, the first bought crate). Without either, the very first crate a player ever opens is at least
+-- Config.Economy.FirstCrateMin
+function BallService.GiveCrate(player: Player, crate, minRarity: string?, exactRarity: string?)
+	if not minRarity and not exactRarity and (PlayerDataService.Get(player, "CratesOpened") or 0) == 0 then
 		minRarity = Config.Economy.FirstCrateMin
 	end
 	local pity = PlayerDataService.Get(player, "CratePity") or {}
-	local ball, newCounts, fromPity = CrateRoller.Roll(crate, pity, minRarity)
+	local ball, newCounts, fromPity = CrateRoller.Roll(crate, pity, minRarity, exactRarity)
 	for key, value in newCounts do
 		pity[key] = value
 		player:SetAttribute("Pity_" .. key, value)
@@ -330,8 +331,8 @@ local function openCrate(player: Player, crateId: any)
 	PlayerDataService.Add(player, "CratesBought", 1)
 	Analytics.Currency(player, "Coins", -price, "Shop", crate.Id)
 	Analytics.Purchase(player, "Crate", crate.Id)
-	-- The first crate bought with coins is at least Config.Onboarding.FirstBoughtMin
-	return BallService.GiveCrate(player, crate, if bought == 0 then Config.Onboarding.FirstBoughtMin else nil)
+	-- The first crate bought with coins is exactly Config.Onboarding.FirstBoughtRarity
+	return BallService.GiveCrate(player, crate, nil, if bought == 0 then Config.Onboarding.FirstBoughtRarity else nil)
 end
 
 local function onOpenCrate(player: Player, crateId: any)

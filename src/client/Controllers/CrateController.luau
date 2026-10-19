@@ -123,7 +123,7 @@ function CrateController:Start()
 	-- Top line: the first crate's promise, then how pity works (each crate counts its own pulls)
 	local function refreshPity()
 		pityLabel.Text = if (player:GetAttribute("CratesBought") or 0) == 0
-			then ("YOUR FIRST CRATE IS %s OR BETTER!"):format(Config.Onboarding.FirstBoughtMin:upper())
+			then ("YOUR FIRST CRATE IS A GUARANTEED %s!"):format(Config.Onboarding.FirstBoughtRarity:upper())
 			else "EVERY CRATE HAS A GUARANTEE  ·  TAP ODDS FOR EVERY BALL'S CHANCE"
 	end
 
@@ -611,7 +611,10 @@ function CrateController:Start()
 			)
 		end
 		if (player:GetAttribute("CratesBought") or 0) == 0 then
-			table.insert(pityParts, ("Your first bought crate: %s or better"):format(Config.Onboarding.FirstBoughtMin))
+			table.insert(
+				pityParts,
+				("Your first bought crate: a guaranteed %s"):format(Config.Onboarding.FirstBoughtRarity)
+			)
 		end
 		oddsPity.Text = table.concat(pityParts, "\n")
 

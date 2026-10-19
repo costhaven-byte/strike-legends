@@ -38,9 +38,10 @@ local function rollRarity(crate, minIndex: number): string
 end
 
 -- pity: the player's pity counts for this crate ({ Basic_Rare = 3 }) BEFORE this pull (Balls.PityRows keys).
--- minRarity: optional, this roll gives at least this rarity (the first crate ever, the gift crate).
+-- minRarity: optional, this roll gives at least this rarity (the first crate ever).
+-- exactRarity: optional, this roll gives exactly this rarity, odds and pity aside (the first bought crate, the gift).
 -- Returns the ball, the new counts for this crate's pity rows, and true if a pity guarantee decided it.
-function CrateRoller.Roll(crate, pity: { [string]: number }, minRarity: string?)
+function CrateRoller.Roll(crate, pity: { [string]: number }, minRarity: string?, exactRarity: string?)
 	local baseIndex = if minRarity then Balls.RarityIndex(minRarity) else 1
 	local minIndex = baseIndex
 	local rows = Balls.PityRows(crate.Id)
@@ -51,7 +52,10 @@ function CrateRoller.Roll(crate, pity: { [string]: number }, minRarity: string?)
 		end
 	end
 
-	local rarity = rollRarity(crate, minIndex)
+	local rarity = exactRarity or rollRarity(crate, minIndex)
+	if exactRarity then
+		minIndex = baseIndex -- not a pity pull
+	end
 	local pool = {}
 	for _, ball in Config.Balls do
 		if ball.Rarity == rarity and ball.InCrates ~= false then

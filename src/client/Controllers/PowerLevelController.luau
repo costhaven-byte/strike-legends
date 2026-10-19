@@ -60,37 +60,34 @@ local function label(parent: Instance, name: string, position: UDim2, size: UDim
 	return text
 end
 
--- The "POWER LEVEL 3!" moment, shown small right beside the Power Level button (not over the lane)
-local function celebrate(level: number, button: GuiObject)
+-- The "POWER LEVEL 3!" moment in the middle of the screen (kept a size that doesn't swallow the screen)
+local function celebrate(level: number)
 	local layer = UiFx.Layer()
 	local banner = Instance.new("TextLabel")
-	banner.AnchorPoint = Vector2.new(0, 0.5)
-	banner.Position = UDim2.fromOffset(
-		button.AbsolutePosition.X + button.AbsoluteSize.X + 10,
-		button.AbsolutePosition.Y + button.AbsoluteSize.Y / 2 - 8
-	)
-	banner.Size = UDim2.fromOffset(190, 30)
+	banner.AnchorPoint = Vector2.new(0.5, 0.5)
+	banner.Position = UDim2.fromScale(0.5, 0.38)
+	banner.Size = UDim2.new(0.4, 0, 0, 46)
 	banner.BackgroundTransparency = 1
 	banner.FontFace = FONT
 	banner.TextScaled = true
-	banner.TextXAlignment = Enum.TextXAlignment.Left
 	banner.TextColor3 = GOLD
-	banner.Text = ("POWER LV %d!"):format(level)
+	banner.Text = ("POWER LEVEL %d!"):format(level)
 	banner.ZIndex = 40
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = INK
-	stroke.Thickness = 2
+	stroke.Thickness = 3
 	stroke.Parent = banner
 	local sub = banner:Clone()
-	sub.Position = banner.Position + UDim2.fromOffset(0, 24)
-	sub.Size = UDim2.fromOffset(190, 16)
+	sub.Position = UDim2.new(0.5, 0, 0.38, 38)
+	sub.Size = UDim2.new(0.35, 0, 0, 20)
 	sub.TextColor3 = CYAN
+	sub:FindFirstChildOfClass("UIStroke").Thickness = 2
 	local new = PowerLevels.NewText(level)
 	sub.Text = if new ~= "" then new .. " - THROW TO SEE IT!" else "THROW TO SEE IT!"
 	banner.Parent = layer
 	sub.Parent = layer
-	UiFx.Pop(banner, 1.4, 0.45)
-	UiFx.Pop(sub, 0.6, 0.45)
+	UiFx.Pop(banner, 1.8, 0.45)
+	UiFx.Pop(sub, 0.4, 0.45)
 	UiFx.Flash(GOLD, 0.45, 0.4)
 	UiFx.Confetti(nil, 50)
 	Sfx.Play("PowerUp")
@@ -212,7 +209,7 @@ function PowerLevelController:Start()
 		local ok, result = pcall(buyRemote.InvokeServer, buyRemote)
 		buying = false
 		if ok and result and result.Ok then
-			celebrate(result.Level, button)
+			celebrate(result.Level)
 		else
 			UiFx.Pop(button, 0.85)
 		end
