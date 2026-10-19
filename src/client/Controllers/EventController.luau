@@ -246,17 +246,18 @@ function EventController:Start()
 
 		if firstCrate and (player:GetAttribute("CratesBought") or 0) == 0 then
 			local coins = player:GetAttribute("Coins") or 0
+			local price = Balls.CratePrice(firstCrate, 0) -- the first bought crate's price
 			table.insert(options, {
-				Progress = math.min(coins / math.max(firstCrate.Price, 1), 1),
-				Text = if coins >= firstCrate.Price
+				Progress = math.min(coins / math.max(price, 1), 1),
+				Text = if coins >= price
 					then "NEW BALL! FOLLOW THE BEAM"
 					else ("NEXT: NEW BALL (%s CRATE)  %s / %s"):format(
 						firstCrate.Id:upper(),
 						short(coins),
-						short(firstCrate.Price)
+						short(price)
 					),
 				Color = GOLD,
-				Guide = coins >= firstCrate.Price,
+				Guide = coins >= price,
 			})
 		end
 

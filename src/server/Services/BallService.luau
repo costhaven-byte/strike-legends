@@ -220,14 +220,11 @@ end
 -- Gives the player one crate's ball (no charge): rolls with this crate's pity, adds the ball, or turns a duplicate
 -- into Polish Points (coins once that ball is fully polished).
 -- Used for bought crates and free ones (like the daily reward). Returns the result the client shows.
--- minRarity: optional, the ball is at least this rare (the first-3-minutes gift crate)
+-- minRarity: optional, the ball is at least this rare (the gift crate, the first bought crate). Without it, the very
+-- first crate a player ever opens is at least Config.Economy.FirstCrateMin
 function BallService.GiveCrate(player: Player, crate, minRarity: string?)
-	-- The very first crate a player ever opens is Rare or better
-	if (PlayerDataService.Get(player, "CratesOpened") or 0) == 0 then
-		local first = Config.Economy.FirstCrateMin
-		if not minRarity or Balls.RarityIndex(first) > Balls.RarityIndex(minRarity) then
-			minRarity = first
-		end
+	if not minRarity and (PlayerDataService.Get(player, "CratesOpened") or 0) == 0 then
+		minRarity = Config.Economy.FirstCrateMin
 	end
 	local pity = PlayerDataService.Get(player, "CratePity") or {}
 	local ball, newCounts, fromPity = CrateRoller.Roll(crate, pity, minRarity)
@@ -316,7 +313,9 @@ local function openCrate(player: Player, crateId: any)
 	end
 	-- A waiting free crate is used before any coins are spent
 	local useFree = crate.Id == Config.FreeCrates.CrateId and (PlayerDataService.Get(player, "FreeCrates") or 0) > 0
-	if not useFree and (PlayerDataService.Get(player, "Coins") or 0) < crate.Price then
+	local bought = PlayerDataService.Get(player, "CratesBought") or 0
+	local price = Balls.CratePrice(crate, bought)
+	if not useFree and (PlayerDataService.Get(player, "Coins") or 0) < price then
 		return { Ok = false, Error = "Not enough coins" }
 	end
 	if not RateLimit.Allow(player, "OpenCrate") then
@@ -325,13 +324,14 @@ local function openCrate(player: Player, crateId: any)
 
 	if useFree then
 		PlayerDataService.Add(player, "FreeCrates", -1)
-	else
-		PlayerDataService.Add(player, "Coins", -crate.Price)
-		PlayerDataService.Add(player, "CratesBought", 1)
-		Analytics.Currency(player, "Coins", -crate.Price, "Shop", crate.Id)
-		Analytics.Purchase(player, "Crate", crate.Id)
+		return BallService.GiveCrate(player, crate)
 	end
-	return BallService.GiveCrate(player, crate)
+	PlayerDataService.Add(player, "Coins", -price)
+	PlayerDataService.Add(player, "CratesBought", 1)
+	Analytics.Currency(player, "Coins", -price, "Shop", crate.Id)
+	Analytics.Purchase(player, "Crate", crate.Id)
+	-- The first crate bought with coins is at least Config.Onboarding.FirstBoughtMin
+	return BallService.GiveCrate(player, crate, if bought == 0 then Config.Onboarding.FirstBoughtMin else nil)
 end
 
 local function onOpenCrate(player: Player, crateId: any)

@@ -224,11 +224,15 @@ local function buildPrice(screen: BasePart, crate)
 			text.Text = ("FREE  x%d"):format(player:GetAttribute("FreeCrates") or 0)
 			text.TextColor3 = FREE_COLOR
 		else
-			text.Text = ('<font color="#%s">●</font> %s'):format(COIN_COLOR:ToHex(), formatNumber(crate.Price))
+			text.Text = ('<font color="#%s">●</font> %s'):format(
+				COIN_COLOR:ToHex(),
+				formatNumber(CrateController.Price(crate))
+			)
 			text.TextColor3 = Color3.new(1, 1, 1)
 		end
 	end
 	player:GetAttributeChangedSignal("FreeCrates"):Connect(refresh)
+	player:GetAttributeChangedSignal("CratesBought"):Connect(refresh)
 	return refresh
 end
 
@@ -287,10 +291,13 @@ function KioskController:Start()
 		})
 		local function refreshPrompt()
 			local free = CrateController.HasFree(crate)
-			buyPrompt.ActionText = if free then "Open FREE" else ("Open  (%s coins)"):format(formatNumber(crate.Price))
+			buyPrompt.ActionText = if free
+				then "Open FREE"
+				else ("Open  (%s coins)"):format(formatNumber(CrateController.Price(crate)))
 			refreshPrice()
 		end
 		player:GetAttributeChangedSignal("FreeCrates"):Connect(refreshPrompt)
+		player:GetAttributeChangedSignal("CratesBought"):Connect(refreshPrompt)
 		refreshPrompt()
 		buyPrompt.Triggered:Connect(function()
 			press(button)

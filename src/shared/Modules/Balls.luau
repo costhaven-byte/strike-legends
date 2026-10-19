@@ -48,6 +48,16 @@ function Balls.GetCrate(id: string?)
 	return id and cratesById[id]
 end
 
+-- What this crate costs a player who has bought cratesBought crates with coins so far: the first
+-- Config.Onboarding.FirstCrateGoal crate is cheaper (Config.Onboarding.FirstCratePrice), every other one is the normal price
+function Balls.CratePrice(crate, cratesBought: number?): number
+	local onboard = Config.Onboarding
+	if (cratesBought or 0) == 0 and crate.Id == onboard.FirstCrateGoal and onboard.FirstCratePrice then
+		return math.min(onboard.FirstCratePrice, crate.Price)
+	end
+	return crate.Price
+end
+
 function Balls.GetTrait(id: string?)
 	return id and traitsById[id]
 end

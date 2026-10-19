@@ -57,7 +57,7 @@ function OnboardingService.OnThrow(player: Player, delay: number)
 		-- The ball is given now (so leaving early never loses it); the client shows the opening once the lane resets
 		PlayerDataService.Set(player, "Onboarding", 2)
 		SessionLog.Moment(player, "Gift crate given (next line is its ball)")
-		local result = BallService.GiveCrate(player, crate, Config.Economy.FirstCrateMin)
+		local result = BallService.GiveCrate(player, crate, SETTINGS.GiftMinRarity)
 		Analytics.Step(player, "Gift Crate")
 		task.delay(delay, function()
 			if player.Parent and remote then

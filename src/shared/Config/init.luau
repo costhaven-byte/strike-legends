@@ -214,17 +214,23 @@ Config.Data = {
 -- The first 3 minutes (Addendum 2 section 6): one scripted path for brand new players.
 -- 1. The first throw is an assisted PERFECT strike (the whole arc turns gold).
 -- 2. A big "BUY" callout points at the Power Level button the moment Level 2 is affordable.
--- 3. After GiftAfterThrows throws: a free gift crate, opened right there, at least Config.Economy.FirstCrateMin, with an EQUIP button.
--- 4. LegendsAfterThrows throws later: the camera swings to a locked ball in the lobby showcase (the chase).
+-- 3. The first crate bought with coins (FirstCrateGoal) costs FirstCratePrice, so it's affordable inside the first
+--    minute, and gives at least FirstBoughtMin. Only that one purchase; crate odds and prices stay the same otherwise.
+-- 4. After GiftAfterThrows throws (about 4 minutes): a free gift crate, opened right there, at least GiftMinRarity,
+--    with an EQUIP button.
+-- 5. LegendsAfterThrows throws later: the camera swings to a locked ball in the lobby showcase (the chase).
 -- The "next goal" bar on the HUD always shows the closest goal (next Power Level, the gift, the next free crate,
 -- and the FirstCrateGoal crate until the player has bought a crate; when that crate is the goal and affordable,
 -- a beam leads to its kiosk station).
 Config.Onboarding = {
 	Enabled = true,
-	GiftAfterThrows = 10, -- about 0:30-0:45 at the measured 3 seconds a throw, plus buying Level 2
-	GiftCrateId = "Basic", -- the gift uses this crate's odds (from FirstCrateMin up)
+	GiftAfterThrows = 65, -- about 4:00 (measured ~3.6 seconds a throw with buying and crates), after the first bought crate
+	GiftCrateId = "Basic", -- the gift uses this crate's odds (from GiftMinRarity up)
+	GiftMinRarity = "Rare", -- the gift crate's ball is at least this rare
 	FirstCrateGoal = "Basic", -- this crate is a "next goal" until the first crate bought with coins (CratesBought)
-	LegendsAfterThrows = 31, -- throws after the gift (throw 41, about 2:00-2:30, same moment as before the gift moved)
+	FirstCratePrice = 1000, -- the first FirstCrateGoal crate a player buys costs this (normal price after), ~0:45
+	FirstBoughtMin = "Uncommon", -- the first crate a player buys with coins gives at least this
+	LegendsAfterThrows = 3, -- throws after the gift: the camera shows a locked showcase ball, then the daily unlocks
 	LegendsPanTime = 3.5, -- seconds the camera looks at the locked ball
 	-- Studio testing: every play test starts as a brand new player and nothing is saved (your real save is untouched).
 	-- Never affects the live game. Set to false to test with your saved progress.
@@ -1769,7 +1775,8 @@ Config.Economy.CratePity = {
 	{ Crates = { Silver = true, Gold = true }, Rarity = "Epic", After = 20 },
 	{ Crates = { Gold = true, Neon = true }, Rarity = "Legendary", After = 80 },
 }
-Config.Economy.FirstCrateMin = "Rare" -- the very first crate a player opens gives at least this
+Config.Economy.FirstCrateMin = "Rare" -- the very first crate a player opens gives at least this (unless it's the
+-- first bought crate or the gift crate, which use Config.Onboarding.FirstBoughtMin / GiftMinRarity)
 -- Duplicates become Polish Points; Polish levels raise one ball's Multiplier. A maxed ball's duplicates pay coins.
 Config.Economy.Polish = {
 	ValuePerLevel = 0.05, -- each level adds +5% of that ball's Multiplier

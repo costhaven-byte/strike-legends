@@ -31,6 +31,11 @@ local LEGENDARY_INDEX = 5 -- Legendary and better get even more
 
 local CrateController = {}
 
+-- What this crate costs you right now (the first crate you buy is cheaper: Balls.CratePrice)
+function CrateController.Price(crate): number
+	return Balls.CratePrice(crate, player:GetAttribute("CratesBought"))
+end
+
 local function formatNumber(n: number): string
 	local text = tostring(math.floor(n))
 	repeat
@@ -117,8 +122,8 @@ function CrateController:Start()
 
 	-- Top line: the first crate's promise, then how pity works (each crate counts its own pulls)
 	local function refreshPity()
-		pityLabel.Text = if (player:GetAttribute("CratesOpened") or 0) == 0
-			then ("YOUR FIRST CRATE IS %s OR BETTER!"):format(Config.Economy.FirstCrateMin:upper())
+		pityLabel.Text = if (player:GetAttribute("CratesBought") or 0) == 0
+			then ("YOUR FIRST CRATE IS %s OR BETTER!"):format(Config.Onboarding.FirstBoughtMin:upper())
 			else "EVERY CRATE HAS A GUARANTEE  ·  TAP ODDS FOR EVERY BALL'S CHANCE"
 	end
 
@@ -485,7 +490,7 @@ function CrateController:Start()
 		if busy then
 			return
 		end
-		if not hasFree(crate) and (player:GetAttribute("Coins") or 0) < crate.Price then
+		if not hasFree(crate) and (player:GetAttribute("Coins") or 0) < CrateController.Price(crate) then
 			task.spawn(showToast, "Not enough coins")
 			return
 		end
@@ -605,8 +610,8 @@ function CrateController:Start()
 				("%s or better guaranteed within %d pulls (%d to go)"):format(row.Rarity, row.After, pullsLeft(row))
 			)
 		end
-		if (player:GetAttribute("CratesOpened") or 0) == 0 then
-			table.insert(pityParts, ("Your first crate ever: %s or better"):format(Config.Economy.FirstCrateMin))
+		if (player:GetAttribute("CratesBought") or 0) == 0 then
+			table.insert(pityParts, ("Your first bought crate: %s or better"):format(Config.Onboarding.FirstBoughtMin))
 		end
 		oddsPity.Text = table.concat(pityParts, "\n")
 
@@ -754,7 +759,7 @@ function CrateController:Start()
 		end)
 
 		local buyButton = card.Buy :: TextButton
-		buyButton.Price.Text = formatNumber(crate.Price)
+		buyButton.Price.Text = formatNumber(CrateController.Price(crate))
 		buyButton.Activated:Connect(function()
 			buy(crate)
 		end)
@@ -762,23 +767,24 @@ function CrateController:Start()
 		local coinIcon = buyButton:FindFirstChild("Coin") or buyButton:FindFirstChild("Icon")
 		local function refreshAfford()
 			local free = hasFree(crate)
-			local canAfford = free or (player:GetAttribute("Coins") or 0) >= crate.Price
+			local canAfford = free or (player:GetAttribute("Coins") or 0) >= CrateController.Price(crate)
 			buyButton.BackgroundColor3 = if canAfford then CAN_AFFORD else CANT_AFFORD
 			buyButton.Price.Text = if free
 				then ("OPEN FREE (%d)"):format(player:GetAttribute("FreeCrates"))
-				else formatNumber(crate.Price)
+				else formatNumber(CrateController.Price(crate))
 			if coinIcon and coinIcon:IsA("GuiObject") then
 				coinIcon.Visible = not free
 			end
 		end
 		player:GetAttributeChangedSignal("Coins"):Connect(refreshAfford)
 		player:GetAttributeChangedSignal("FreeCrates"):Connect(refreshAfford)
+		player:GetAttributeChangedSignal("CratesBought"):Connect(refreshAfford)
 		refreshAfford()
 
 		card.Parent = cards
 	end
 
-	player:GetAttributeChangedSignal("CratesOpened"):Connect(refreshPity)
+	player:GetAttributeChangedSignal("CratesBought"):Connect(refreshPity)
 	refreshPity()
 
 	panel:WaitForChild("Close").Activated:Connect(function()
