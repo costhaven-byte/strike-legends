@@ -33,7 +33,16 @@ end
 
 local function goalText(trial): string
 	local trialType = TRIALS.Types[trial.Type]
-	return if trialType then trialType.Text:format(trial.Goal, trial.Throws) else ""
+	local text = if trialType then trialType.Text:format(trial.Goal, trial.Throws) else ""
+	if trial.Goal == 1 then
+		text = text:gsub("Strikes", "Strike"):gsub("strikes", "strike") -- "Get 1 strike in 6 throws"
+	end
+	return text
+end
+
+-- Seconds to wait after failing this trial (a rank's own Cooldown wins over the shared one)
+local function cooldownOf(trial): number
+	return if trial and trial.Cooldown then trial.Cooldown else TRIALS.Cooldown
 end
 
 function TrialController:Start()
@@ -94,7 +103,10 @@ function TrialController:Start()
 		intro.RankName.Text = nextRank.Name:upper()
 		intro.RankName.TextColor3 = nextRank.Color
 		intro.Goal.Text = goalText(trial)
-		intro.Info.Text = infoText:gsub("60", tostring(TRIALS.Cooldown))
+		local cooldown = cooldownOf(trial)
+		intro.Info.Text = if cooldown > 0
+			then infoText:gsub("60", tostring(cooldown))
+			else infoText:gsub("\n.*", "\nFail and you can try again straight away.")
 		intro.Info.TextColor3 = Color3.fromRGB(170, 160, 200)
 		UiFx.Open(intro)
 		refreshButton()
@@ -212,7 +224,13 @@ function TrialController:Start()
 		else
 			Sfx.Play("StreakLost", 0.8, 1.3)
 			UiFx.Flash(FAIL_COLOR, 0.35, 0.4)
-			showBanner(("TRIAL FAILED  ·  RETRY IN %ds"):format(TRIALS.Cooldown), FAIL_COLOR)
+			local cooldown = cooldownOf(currentTrial())
+			showBanner(
+				if cooldown > 0
+					then ("TRIAL FAILED  ·  RETRY IN %ds"):format(cooldown)
+					else "TRIAL FAILED  ·  TRY AGAIN!",
+				FAIL_COLOR
+			)
 		end
 	end)
 

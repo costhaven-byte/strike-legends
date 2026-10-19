@@ -235,7 +235,7 @@ local function onThrowRequest(player: Player, clientHold: any)
 		Overcharge = result.Overcharge,
 	})
 
-	SessionLog.Throw(player, powerLevel)
+	SessionLog.Throw(player, powerLevel, result.Perfect, assisted)
 	BallService.HideHeldBall(player, result.RollTime + resetDelay)
 	setStatus(lane, "ROLLING...")
 	task.delay(result.RollTime, function()
@@ -252,6 +252,9 @@ local function onThrowRequest(player: Player, clientHold: any)
 			TrialService.OnThrow(player, trialAttempt, result.Tier, saved)
 			if isStrike then
 				BallService.AddCrateStrike(player)
+			end
+			if goldenHit then
+				SessionLog.Moment(player, "Golden Pin hit")
 			end
 			if golden.Crate then
 				BallService.GiveFreeCrate(player)

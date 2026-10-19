@@ -13,6 +13,7 @@ local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionService = require(script.Parent.ProgressionService)
 local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
+local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
 local TRIALS = Config.Trials
 
@@ -53,13 +54,16 @@ local function publish(player: Player)
 end
 
 local function finish(player: Player, passed: boolean)
+	local attempt = attempts[player]
 	attempts[player] = nil
-	if passed then
+	-- A rank's own Cooldown (0 for the first ranks) wins over the shared one
+	local cooldown = if attempt and attempt.Trial.Cooldown then attempt.Trial.Cooldown else TRIALS.Cooldown
+	if passed or cooldown <= 0 then
 		cooldownEnds[player] = nil
 	else
-		cooldownEnds[player] = Workspace:GetServerTimeNow() + TRIALS.Cooldown
+		cooldownEnds[player] = Workspace:GetServerTimeNow() + cooldown
 		-- Flip back to "Ready" once the cooldown is over
-		task.delay(TRIALS.Cooldown + 0.1, function()
+		task.delay(cooldown + 0.1, function()
 			if player.Parent and not attempts[player] then
 				publish(player)
 			end
@@ -67,6 +71,12 @@ local function finish(player: Player, passed: boolean)
 	end
 	resultEvent:FireClient(player, { Passed = passed })
 	Analytics.Event(player, "TrialFinished", 1, { if passed then "Passed" else "Failed" })
+	if attempt then
+		SessionLog.Moment(
+			player,
+			("Rank Trial %s (%s)"):format(if passed then "passed" else "failed", attempt.Trial.Type)
+		)
+	end
 	if passed then
 		ProgressionService.PromoteRank(player) -- the existing rank-up celebration
 	end

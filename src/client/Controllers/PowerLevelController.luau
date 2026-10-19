@@ -234,6 +234,25 @@ function PowerLevelController:Start()
 			testRemote:FireServer()
 		end)
 	end
+	-- Studio only: prints the session report (PERFECT rate + first-5-minutes timeline) in the Output window
+	local reportRemote = remotes:FindFirstChild("TestReport") :: RemoteEvent?
+	if reportRemote then
+		local report = Instance.new("TextButton")
+		report.Name = "TestReport"
+		report.Text = "TEST: REPORT"
+		report.FontFace = FONT
+		report.TextScaled = true
+		report.TextColor3 = Color3.new(1, 1, 1)
+		report.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+		report.Position = UDim2.new(0, 0, 1, 28)
+		report.Size = UDim2.new(1, 0, 0, 20)
+		report.Parent = button
+		local reportCorner = Instance.new("UICorner")
+		reportCorner.Parent = report
+		report.Activated:Connect(function()
+			reportRemote:FireServer()
+		end)
+	end
 
 	-- Compact layout on short screens (phones held sideways), like ScreenLayout does for the Studio-built UI
 	local function layout()

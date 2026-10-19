@@ -12,6 +12,7 @@ local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local BallService = require(script.Parent.BallService)
 local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
+local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
 local DAILY = Config.Daily
 
@@ -66,6 +67,7 @@ local function claim(player: Player)
 		Analytics.Currency(player, "Gems", reward.Gems, "TimedReward", "Daily")
 	end
 	Analytics.Event(player, "DailyClaimed", day)
+	SessionLog.Moment(player, ("Daily reward day %d claimed"):format(day))
 	local crateResult
 	local crate = Balls.GetCrate(reward.Crate)
 	if crate then

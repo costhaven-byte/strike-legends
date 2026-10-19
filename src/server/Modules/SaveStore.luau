@@ -103,6 +103,13 @@ local function migrate(saved: any): { [string]: any }
 				data.CratesOpened = 1
 			end
 		end
+		if version < 11 then
+			-- v11 added CratesBought (the "next goal" bar points at the first crate until one is bought).
+			-- Players who already opened a crate don't need that pointer.
+			if (tonumber(data.CratesOpened) or 0) > 0 then
+				data.CratesBought = 1
+			end
+		end
 	end
 	data.Rank = math.clamp(math.floor(tonumber(data.Rank) or 1), 1, #Config.Ranks)
 	return data

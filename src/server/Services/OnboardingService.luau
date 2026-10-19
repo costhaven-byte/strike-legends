@@ -13,6 +13,7 @@ local Balls = require(Shared.Modules.Balls)
 local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
 local SETTINGS = Config.Onboarding
 local DONE = 3
@@ -55,6 +56,7 @@ function OnboardingService.OnThrow(player: Player, delay: number)
 		end
 		-- The ball is given now (so leaving early never loses it); the client shows the opening once the lane resets
 		PlayerDataService.Set(player, "Onboarding", 2)
+		SessionLog.Moment(player, "Gift crate given (next line is its ball)")
 		local result = BallService.GiveCrate(player, crate, Config.Economy.FirstCrateMin)
 		Analytics.Step(player, "Gift Crate")
 		task.delay(delay, function()

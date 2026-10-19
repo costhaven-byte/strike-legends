@@ -9,6 +9,7 @@ local PowerLevels = require(Shared.Modules.PowerLevels)
 local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
+local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
 local PowerLevelService = {}
 
@@ -34,6 +35,7 @@ local function onBuy(player: Player)
 	Analytics.Currency(player, "Coins", -nextRow.Price, "Shop", "PowerLevel" .. nextRow.Level)
 	Analytics.Purchase(player, "PowerLevel", tostring(nextRow.Level))
 	Analytics.Step(player, "Bought Power Level")
+	SessionLog.Moment(player, ("Power Level %d bought (%d coins)"):format(nextRow.Level, nextRow.Price))
 	return { Ok = true, Level = nextRow.Level }
 end
 
@@ -61,6 +63,14 @@ function PowerLevelService:Start()
 		test.Name = "TestCoins"
 		test.Parent = remotes
 		test.OnServerEvent:Connect(onTestCoins)
+
+		-- Studio only: prints this player's session report (PERFECT rate + first-5-minutes timeline) in Output
+		local report = Instance.new("RemoteEvent")
+		report.Name = "TestReport"
+		report.Parent = remotes
+		report.OnServerEvent:Connect(function(player)
+			print(SessionLog.Report(player))
+		end)
 	end
 
 	PlayerDataService.OnLoaded(function(player)

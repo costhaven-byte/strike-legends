@@ -10,6 +10,7 @@ local Balls = require(Shared.Modules.Balls)
 local Progression = require(Shared.Modules.Progression)
 local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
 local ProgressionService = {}
 
@@ -118,6 +119,7 @@ function ProgressionService.PromoteRank(player: Player)
 	end
 	Analytics.Event(player, "RankUp", index, { rank.Name })
 	Analytics.Step(player, "Ranked Up")
+	SessionLog.Moment(player, ("Rank-up: %s"):format(rank.Name))
 	updateBadge(player)
 	rankUpEvent:FireAllClients({
 		UserId = player.UserId,

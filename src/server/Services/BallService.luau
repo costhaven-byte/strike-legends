@@ -231,6 +231,18 @@ function BallService.GiveCrate(player: Player, crate, minRarity: string?)
 		end
 	end
 	SessionLog.Crate(player)
+	SessionLog.Moment(
+		player,
+		("Crate opened: %s -> %s (%s, %s)"):format(
+			crate.Id,
+			ball.Id,
+			ball.Rarity,
+			if isNew then "new" elseif polishLevel then "duplicate, Polish " .. polishLevel else "duplicate, sold"
+		)
+	)
+	if isNew then
+		SessionLog.Moment(player, ("Ball unlocked: %s (%s)"):format(ball.Id, ball.Rarity))
+	end
 	Analytics.Event(player, "CrateOpened", 1, { crate.Id, ball.Rarity, if isNew then "New" else "Duplicate" })
 	if fromPity then
 		Analytics.Event(player, "PityHit", 1, { crate.Id, ball.Rarity })
@@ -250,6 +262,7 @@ end
 -- Free crates (Config.FreeCrates): saved as a count and opened from the shop whenever the player likes
 function BallService.GiveFreeCrate(player: Player)
 	PlayerDataService.Add(player, "FreeCrates", 1)
+	SessionLog.Moment(player, "Free crate earned")
 end
 
 -- Counts a strike toward the next free crate. Returns true when this strike earned one.
@@ -284,6 +297,7 @@ local function openCrate(player: Player, crateId: any)
 		PlayerDataService.Add(player, "FreeCrates", -1)
 	else
 		PlayerDataService.Add(player, "Coins", -crate.Price)
+		PlayerDataService.Add(player, "CratesBought", 1)
 		Analytics.Currency(player, "Coins", -crate.Price, "Shop", crate.Id)
 		Analytics.Purchase(player, "Crate", crate.Id)
 	end

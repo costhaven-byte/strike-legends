@@ -135,8 +135,98 @@ function EventController:Start()
 		end
 	end)
 
+	-- First crate goal (Config.Onboarding.FirstCrateGoal): when it's the goal and affordable, a beam runs from the
+	-- player to that crate's kiosk station, with a marker over the station
+	local firstCrate = Balls.GetCrate(Config.Onboarding.FirstCrateGoal)
+	local station = Workspace:FindFirstChild("Hub")
+		and Workspace.Hub:FindFirstChild("CrateShop")
+		and Workspace.Hub.CrateShop:FindFirstChild("Stations")
+		and Workspace.Hub.CrateShop.Stations:FindFirstChild(Config.Onboarding.FirstCrateGoal)
+	local stationButton = station and station:FindFirstChild("BuyButton") :: BasePart?
+	local guide: { Beams: { Beam }, From: Attachment, Marker: BillboardGui }? = nil
+	local function setGuide(on: boolean)
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not on or not stationButton or not root then
+			if guide then
+				for _, beam in guide.Beams do
+					beam:Destroy()
+				end
+				guide.From:Destroy()
+				guide.Marker:Destroy()
+				guide = nil
+			end
+			return
+		end
+		if guide and guide.From.Parent == root then
+			return
+		end
+		setGuide(false)
+		local from = Instance.new("Attachment")
+		from.Name = "CrateGuideFrom"
+		from.Position = Vector3.new(0, -1.5, 0)
+		from.Parent = root
+		local to = stationButton:FindFirstChild("CrateGuideTo") :: Attachment?
+		if not to then
+			to = Instance.new("Attachment")
+			to.Name = "CrateGuideTo"
+			to.Parent = stationButton
+		end
+		-- A soft gold band with sparkles running along it toward the crate
+		local beams = {}
+		for i = 1, 2 do
+			local beam = Instance.new("Beam")
+			beam.Name = "CrateGuide"
+			beam.Attachment0 = from
+			beam.Attachment1 = to
+			beam.Color = ColorSequence.new(GOLD)
+			beam.LightEmission = 1
+			beam.FaceCamera = true
+			if i == 1 then
+				beam.Width0 = 1.6
+				beam.Width1 = 1.6
+				beam.Brightness = 2
+				beam.Transparency = NumberSequence.new(0.55)
+			else
+				beam.Width0 = 2.4
+				beam.Width1 = 2.4
+				beam.Brightness = 5
+				beam.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+				beam.TextureMode = Enum.TextureMode.Wrap
+				beam.TextureLength = 3
+				beam.TextureSpeed = 2.5
+			end
+			beam.Parent = root
+			table.insert(beams, beam)
+		end
+		local marker = Instance.new("BillboardGui")
+		marker.Name = "CrateGuideMarker"
+		marker.AlwaysOnTop = true
+		marker.LightInfluence = 0
+		marker.Size = UDim2.fromOffset(240, 80)
+		marker.StudsOffsetWorldSpace = Vector3.new(0, 7, 0)
+		marker.Parent = stationButton -- a local copy only this player sees
+		local text = Instance.new("TextLabel")
+		text.BackgroundTransparency = 1
+		text.Size = UDim2.fromScale(1, 1)
+		text.TextScaled = true
+		text.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
+		text.Text = ("NEW BALL HERE!\n%s CRATE"):format(firstCrate and firstCrate.Id:upper() or "")
+		text.TextColor3 = GOLD
+		local stroke = Instance.new("UIStroke")
+		stroke.Thickness = 3
+		stroke.Parent = text
+		text.Parent = marker
+		guide = { Beams = beams, From = from, Marker = marker }
+	end
+	local wantGuide = false
+	player.CharacterAdded:Connect(function()
+		task.wait(0.5)
+		setGuide(wantGuide)
+	end)
+
 	-- "Next goal": always shows the closest goal (rank progress lives in the HUD rank bar):
-	-- the next Power Level, the first-3-minutes gift crate, or the next free crate (ties go to the first one)
+	-- the next Power Level, the first-3-minutes gift crate, the first crate to buy (until one is bought),
+	-- or the next free crate (ties go to the first one)
 	local pulse = TweenService:Create(
 		barScale,
 		TweenInfo.new(0.45, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
@@ -173,6 +263,22 @@ function EventController:Start()
 			})
 		end
 
+		if firstCrate and (player:GetAttribute("CratesBought") or 0) == 0 then
+			local coins = player:GetAttribute("Coins") or 0
+			table.insert(options, {
+				Progress = math.min(coins / math.max(firstCrate.Price, 1), 1),
+				Text = if coins >= firstCrate.Price
+					then "NEW BALL! FOLLOW THE BEAM"
+					else ("NEXT: NEW BALL (%s CRATE)  %s / %s"):format(
+						firstCrate.Id:upper(),
+						short(coins),
+						short(firstCrate.Price)
+					),
+				Color = GOLD,
+				Guide = coins >= firstCrate.Price,
+			})
+		end
+
 		local per = Config.FreeCrates.StrikesPerCrate
 		local strikes = player:GetAttribute("CrateStrikes") or 0
 		local left = per - strikes
@@ -188,6 +294,8 @@ function EventController:Start()
 				best = option
 			end
 		end
+		wantGuide = best.Guide == true
+		setGuide(wantGuide)
 		bar.Label.Text = best.Text
 		bar.UIStroke.Color = best.Color
 		bar.Fill.BackgroundColor3 = best.Color
@@ -204,7 +312,7 @@ function EventController:Start()
 		end
 		pulsing = close
 	end
-	for _, key in { "CrateStrikes", "Coins", "PowerLevel", "Onboarding", "OnboardThrows" } do
+	for _, key in { "CrateStrikes", "Coins", "PowerLevel", "Onboarding", "OnboardThrows", "CratesBought" } do
 		player:GetAttributeChangedSignal(key):Connect(refreshBar)
 	end
 	refreshBar()

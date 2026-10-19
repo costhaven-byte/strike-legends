@@ -184,6 +184,7 @@ Config.StartingData = {
 	CratePity = {}, -- pity per crate (Config.Economy.CratePity): { ["Basic_Rare"] = pulls in a row without Rare+ }
 	Polish = {}, -- Polish Points per ball from duplicates (Config.Economy.Polish): { Galaxy = 3 }
 	CratesOpened = 0, -- crates opened ever (the first one is Config.Economy.FirstCrateMin or better)
+	CratesBought = 0, -- crates bought with coins (not gift, free or daily crates); v11
 	LifetimePins = 0, -- leaderboard: Most Pins
 	WeeklyCoins = 0, -- leaderboard: coins earned from throws this week...
 	WeeklyCoinsWeek = 0, -- ...and which week that was (see Calendar.Week)
@@ -201,7 +202,7 @@ Config.StartingData = {
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 10, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened). Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 11, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -215,12 +216,15 @@ Config.Data = {
 -- 2. A big "BUY" callout points at the Power Level button the moment Level 2 is affordable.
 -- 3. After GiftAfterThrows throws: a free gift crate, opened right there, at least Config.Economy.FirstCrateMin, with an EQUIP button.
 -- 4. LegendsAfterThrows throws later: the camera swings to a locked ball in the lobby showcase (the chase).
--- The "next goal" bar on the HUD always shows the closest goal (next Power Level, the gift, the next free crate).
+-- The "next goal" bar on the HUD always shows the closest goal (next Power Level, the gift, the next free crate,
+-- and the FirstCrateGoal crate until the player has bought a crate; when that crate is the goal and affordable,
+-- a beam leads to its kiosk station).
 Config.Onboarding = {
 	Enabled = true,
-	GiftAfterThrows = 35, -- about 2:00 at the measured 3 seconds a throw, plus buying Level 2
+	GiftAfterThrows = 10, -- about 0:30-0:45 at the measured 3 seconds a throw, plus buying Level 2
 	GiftCrateId = "Basic", -- the gift uses this crate's odds (from FirstCrateMin up)
-	LegendsAfterThrows = 6, -- throws after the gift (about 2:30)
+	FirstCrateGoal = "Basic", -- this crate is a "next goal" until the first crate bought with coins (CratesBought)
+	LegendsAfterThrows = 31, -- throws after the gift (throw 41, about 2:00-2:30, same moment as before the gift moved)
 	LegendsPanTime = 3.5, -- seconds the camera looks at the locked ball
 	-- Studio testing: every play test starts as a brand new player and nothing is saved (your real save is untouched).
 	-- Never affects the live game. Set to false to test with your saved progress.
@@ -229,9 +233,14 @@ Config.Onboarding = {
 
 -- Session log: one line per play session (join, leave, throws, crates, level), printed in Output
 -- when the player leaves and saved with the player (only the newest Keep sessions).
+-- Also counts PERFECT throws (the assisted first throw is counted apart), and for a brand new player's first
+-- session writes a timeline of every reward moment in the first First5Seconds seconds.
+-- Read it after a playtest: the Output window prints it at 5:00 and when you leave; in Studio the
+-- TEST: REPORT button (under the Power Level button) prints it any time.
 Config.SessionLog = {
 	Keep = 10,
 	Print = true,
+	First5Seconds = 300,
 }
 
 -- Requests a player can't send faster than this (seconds). Extra ones are ignored by the server.
@@ -269,7 +278,9 @@ Config.Streaks = {
 -- Pro Tiers. XP fills the bar; reaching the next rank's XP unlocks its Rank Trial (see Config.Trials),
 -- and passing the trial gives the rank. Coin multiplier is permanent; gems are a one-time rank-up reward.
 -- Tuned for roughly 180-390 XP a minute (more with strike streaks, see Config.Streaks XpMultiplier):
--- first rank-up after ~1-2 minutes, then each rank takes much longer.
+-- the XP bar for Amateur fills after ~1-1.5 minutes; the 1-strike trial (no cooldown, see Config.Trials) then
+-- takes about 20-40 seconds more at a 15% PERFECT rate, so the first rank-up lands around 1:30-2:00.
+-- Each rank after that takes much longer.
 -- (Before 9.5c: 100, 350, 1000, 3000, 9000, 25000, 70000, 200000, 550000.)
 Config.Ranks = {
 	{ Name = "Rookie", XP = 0, Multiplier = 1.0, Gems = 0, Color = Color3.fromRGB(200, 200, 210) },
@@ -290,7 +301,7 @@ Config.Ranks = {
 -- Text: %d = Goal, then Throws.
 -- Ranks: one trial per rank you are trying to reach. A rank with no row here is given straight away.
 Config.Trials = {
-	Cooldown = 60, -- seconds to wait after failing before you can try again
+	Cooldown = 60, -- seconds to wait after failing before you can try again (a rank row's own Cooldown wins)
 	Types = {
 		Strikes = { Counts = "Strike", InARow = false, Text = "Get %d strikes in %d throws" },
 		Streak = { Counts = "Strike", InARow = true, Text = "Get %d strikes in a row within %d throws" },
@@ -298,8 +309,9 @@ Config.Trials = {
 		PerfectRow = { Counts = "Perfect", InARow = true, Text = "Hit %d Perfect Strikes in a row within %d throws" },
 	},
 	Ranks = {
-		Amateur = { Type = "Strikes", Goal = 2, Throws = 6 },
-		Regular = { Type = "Strikes", Goal = 3, Throws = 8 },
+		-- The first two ranks have no cooldown, and Amateur needs only 1 strike, so the first rank-up is reliable
+		Amateur = { Type = "Strikes", Goal = 1, Throws = 6, Cooldown = 0 },
+		Regular = { Type = "Strikes", Goal = 3, Throws = 8, Cooldown = 0 },
 		Club = { Type = "Streak", Goal = 2, Throws = 8 },
 		["Semi-Pro"] = { Type = "Strikes", Goal = 4, Throws = 8 },
 		Pro = { Type = "Streak", Goal = 3, Throws = 10 },
@@ -1673,6 +1685,7 @@ Config.Analytics = {
 		"MascotHatched", -- later (Milestone 14)
 		"BossDefeated", -- later (Milestone 15)
 		"PityHit", -- labels = crate, rarity
+		"PerfectRate", -- value = PERFECT % of the session's throws (assisted first throw left out); labels = throws, perfects
 		"PolishLevel", -- value = new Polish level; labels = ball
 		"Rebirth", -- later (Milestone 17)
 		"QuestCompleted", -- later (Milestone 18)
