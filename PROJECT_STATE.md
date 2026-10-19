@@ -33,7 +33,7 @@ Restore point: git tag restore-step8b-before. Real game = cloud place 9425460960
 ## Off-git (saved only in the Studio place file)
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
 ## Last session
-- 2026-10-19: Step 8b built (shiny merge, strike reactions, mascot shelf, multiplier panel, Auto Bowl flag off). Synced by the http trick; checked in Studio. Test PENDING.
+- 2026-10-19: Step 8b built; owner: all works except celebrations not seen (camera rides down the lane). Fix: on a strike mascots dash to the pins to cheer (Config.MascotFx Cheer*), react twice. Retest PENDING.
 - 2026-10-19: Phase 2 done. Step 8 split 8a/8b; 8a built and checked in Studio (hatch, equip, Equip Best, follow, egg stand); owner asked to replace the daily pad with the new thing -> egg stand. Code synced into Studio by the http trick (Rojo not connected). PASSED.
 - 2026-10-19: Step 7c: on-screen streak names = spec tiers (STREAK MASTER at 7, PERFECT RUN at 10, "6 IN A ROW!" between); overcook always ends the streak (Streak Saver no longer covers it); EconomySim plays live rules (PERFECT-only strikes, Config.Streaks, lane modifiers, Golden Pin; plan's StreakPerStrike + Lucky Throw removed) -> mid game slower (PL8 56 min, PL9 never in 150). Moving Pins shows as MOVING GOLD (slides the gold). Gold shrinks 5% per strike, never below 75%. PASSED.
 - 2026-10-19: 7a retest treated as passed (owner said start 7b). Step 7b built (gems buy Polish in the book), PASSED.

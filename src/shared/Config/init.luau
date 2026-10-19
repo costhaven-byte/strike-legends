@@ -1772,6 +1772,12 @@ Config.MascotFx = {
 	ReactTime = 0.7, -- seconds a reaction lasts
 	ReactHeight = 2.2, -- studs a reaction lifts the mascot at its top
 	ReactStagger = 0.08, -- seconds between each mascot starting, so they go one after another
+	ReactRepeats = 2, -- how many times each mascot does its reaction per strike
+	-- On a strike the thrower's camera rides down the lane, so mascots dash down to cheer where it's looking:
+	CheerBeforePins = 15, -- studs in front of the head pin (more mascots line up further back)
+	CheerSide = 4.5, -- studs either side of the lane's middle (just inside the gutters)
+	CheerHeight = 3, -- studs above the lane
+	CheerLead = 0.5, -- they set off this many seconds before the ball reaches the pins
 	-- The mascot shelf in the lobby Vault (step 8b): every mascot on a glowing stand, yours lit, missing ones dark.
 	-- It sits along Workspace.Showcase.MascotShelf (a part you can move in Studio; the mascots face its front).
 	ShelfSize = 2.2, -- studs across each mascot on the shelf
