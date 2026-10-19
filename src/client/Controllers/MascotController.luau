@@ -1,7 +1,8 @@
 -- Mascots on screen (Addendum 2 Phase 3 step 8): the PETS button, the mascot panel, the hatching moment and the
 -- egg stand in the lobby (Workspace.Hub.EggPad, the old daily-reward pad).
 -- Panel: the egg (price, HATCH, ODDS), your equipped slots with EQUIP BEST, and every mascot the egg can hatch
--- (owned ones lit with EQUIP buttons, missing ones as dark silhouettes).
+-- (owned ones lit with EQUIP buttons, missing ones as dark silhouettes). Step 8b: a MERGE button when you own
+-- Config.Economy.Mascots.ShinyMerge of one mascot, and gold Shiny cards once you own a Shiny.
 -- Built in code (not in Studio), so it lives in git. The server rolls every hatch (MascotService); this only shows it.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -139,6 +140,7 @@ function MascotController:Start()
 	local hatchRemote = remotes:WaitForChild("HatchEgg") :: RemoteFunction
 	local equipRemote = remotes:WaitForChild("EquipMascot") :: RemoteEvent
 	local bestRemote = remotes:WaitForChild("EquipBestMascots") :: RemoteEvent
+	local mergeRemote = remotes:WaitForChild("MergeMascot") :: RemoteFunction
 	local playerGui = player:WaitForChild("PlayerGui")
 	local hud = playerGui:WaitForChild("HUD") :: ScreenGui
 	local ballsUI = playerGui:WaitForChild("BallsUI") :: ScreenGui
@@ -374,17 +376,27 @@ function MascotController:Start()
 		Count: TextLabel,
 		Equip: TextButton,
 		Outline: UIStroke,
+		Merge: TextButton?,
 		Mascot: any,
 	}
 	local tiles: { Tile } = {}
+	local doMerge: (mascot: any) -> ()
+	-- Each mascot's card, then its Shiny card right after it (shown only once owned)
+	local cards = {}
 	for index, mascot in Mascots.InEgg(EGG.Id) do
+		local order = Mascots.RarityIndex(mascot.Rarity) * 100 + index * 2
+		table.insert(cards, { Mascot = mascot, Order = order })
+		table.insert(cards, { Mascot = Mascots.Get(Mascots.ShinyId(mascot.Id)), Order = order + 1 })
+	end
+	for _, card in cards do
+		local mascot = card.Mascot
 		local frame = Instance.new("Frame")
 		frame.Name = mascot.Id
 		frame.BackgroundColor3 = CARD
-		frame.LayoutOrder = Mascots.RarityIndex(mascot.Rarity) * 100 + index
+		frame.LayoutOrder = card.Order
 		frame.Parent = grid
 		corner(frame, 10)
-		local tileOutline = stroke(frame, Mascots.RarityColor(mascot.Rarity), 2, true)
+		local tileOutline = stroke(frame, if mascot.Shiny then GOLD else Mascots.RarityColor(mascot.Rarity), 2, true)
 		local holder = Instance.new("Frame")
 		holder.BackgroundTransparency = 1
 		holder.Position = UDim2.fromOffset(12, 4)
@@ -411,6 +423,25 @@ function MascotController:Start()
 				equipRemote:FireServer(mascot.Id, false)
 			end
 		end)
+		-- MERGE: three of a kind -> one Shiny (top of the card, over the mascot)
+		local merge: TextButton? = nil
+		local cost = Mascots.MergeCost(mascot)
+		if cost then
+			local mergeButton = button(
+				frame,
+				"Merge",
+				("MERGE %d"):format(cost),
+				GOLD,
+				UDim2.fromOffset(6, 4),
+				UDim2.new(1, -12, 0, 20)
+			)
+			mergeButton.ZIndex = 3
+			mergeButton.Visible = false
+			mergeButton.Activated:Connect(function()
+				task.spawn(doMerge, mascot)
+			end)
+			merge = mergeButton
+		end
 		table.insert(tiles, {
 			Frame = frame,
 			View = view,
@@ -418,6 +449,7 @@ function MascotController:Start()
 			Count = count,
 			Equip = equip,
 			Outline = tileOutline,
+			Merge = merge,
 			Mascot = mascot,
 		})
 	end
@@ -472,16 +504,23 @@ function MascotController:Start()
 		local list = equipped()
 		local slots = player:GetAttribute("MascotSlots") or ECONOMY.StartSlots
 		local bonus = player:GetAttribute("MascotBonus") or 0
-		local kinds = 0
-		for _ in mine do
-			kinds += 1
+		-- Found = kinds you have (a Shiny counts for its mascot)
+		local kinds, kindsTotal = 0, 0
+		for _, tile in tiles do
+			local id = tile.Mascot.Id
+			if not tile.Mascot.Shiny then
+				kindsTotal += 1
+				if (mine[id] or 0) > 0 or (mine[Mascots.ShinyId(id)] or 0) > 0 then
+					kinds += 1
+				end
+			end
 		end
 		countLabel.Text = ("%s COINS  -  %d / %d SLOTS  -  %d / %d FOUND"):format(
 			Mascots.BonusText(bonus),
 			#list,
 			slots,
 			kinds,
-			#tiles
+			kindsTotal
 		)
 		slotsTitle.Text = ("EQUIPPED  %s COINS"):format(Mascots.BonusText(bonus))
 
@@ -489,6 +528,12 @@ function MascotController:Start()
 			local mascot = tile.Mascot
 			local have = mine[mascot.Id] or 0
 			local inUse = countIn(list, mascot.Id)
+			if tile.Merge then
+				tile.Merge.Visible = have >= (Mascots.MergeCost(mascot) or math.huge)
+			end
+			if mascot.Shiny then
+				tile.Frame.Visible = have > 0 -- Shiny cards appear once you make one
+			end
 			if have > 0 then
 				tile.View.ImageColor3 = Color3.new(1, 1, 1)
 				tile.Name.Text = string.upper(mascot.Name)
@@ -507,7 +552,10 @@ function MascotController:Start()
 					tile.Equip.Text = "SLOTS FULL"
 					tile.Equip.BackgroundColor3 = GREY
 				end
-				tile.Frame.BackgroundColor3 = if inUse > 0 then Color3.fromRGB(40, 60, 40) else CARD
+				tile.Frame.BackgroundColor3 = if inUse > 0
+					then Color3.fromRGB(40, 60, 40)
+					elseif mascot.Shiny then Color3.fromRGB(60, 45, 20)
+					else CARD
 				tile.Outline.Thickness = if inUse > 0 then 3 else 2
 			else
 				tile.View.ImageColor3 = SILHOUETTE
@@ -614,7 +662,9 @@ function MascotController:Start()
 	end
 	local againButton =
 		button(overlay, "Again", "HATCH AGAIN", LIME, UDim2.new(0.5, -170, 0.79, 0), UDim2.fromOffset(200, 46))
-	local doneButton = button(overlay, "Done", "CLOSE", GREY, UDim2.new(0.5, 40, 0.79, 0), UDim2.fromOffset(130, 46))
+	local DONE_BESIDE_AGAIN = UDim2.new(0.5, 40, 0.79, 0)
+	local DONE_ALONE = UDim2.new(0.5, -65, 0.79, 0) -- (the merge screen has no HATCH AGAIN)
+	local doneButton = button(overlay, "Done", "CLOSE", GREY, DONE_BESIDE_AGAIN, UDim2.fromOffset(130, 46))
 	doneButton.TextColor3 = Color3.new(1, 1, 1)
 	againButton.ZIndex = 36
 	doneButton.ZIndex = 36
@@ -651,6 +701,7 @@ function MascotController:Start()
 		overlay.Visible = true
 		againButton.Visible = false
 		doneButton.Visible = false
+		doneButton.Position = DONE_BESIDE_AGAIN
 		revealNew.Text = ""
 		revealName.Text = ""
 		revealInfo.Text = ""
@@ -749,6 +800,87 @@ function MascotController:Start()
 			showToast(if ok and result and result.Error then result.Error else "Try again")
 		end
 		hatching = false
+	end
+
+	-- Merge: the copies shake together in a gold glow, squeeze into one, flash, and the Shiny pops out
+	local merging = false
+	doMerge = function(mascot)
+		if merging or hatching then
+			return
+		end
+		merging = true
+		local ok, result = pcall(mergeRemote.InvokeServer, mergeRemote, mascot.Id)
+		local shiny = ok and result and result.Ok and Mascots.Get(result.MascotId)
+		if not shiny then
+			showToast(if ok and result and result.Error then result.Error else "Try again")
+			merging = false
+			return
+		end
+		overlay.Visible = true
+		againButton.Visible = false
+		doneButton.Visible = false
+		doneButton.Position = DONE_ALONE
+		revealNew.Text = ""
+		revealName.Text = ""
+		revealInfo.Text = ""
+		clearStage()
+		local trio = Instance.new("Model")
+		local copies = {}
+		for i = 1, Mascots.MergeCost(mascot) or 3 do
+			local copy = MascotView.Mascot(mascot, 2, false)
+			copy.Parent = trio
+			copies[i] = copy
+		end
+		local function placeCopies(spread: number, wobble: number)
+			for i, copy in copies do
+				local x = (i - (#copies + 1) / 2) * 2.3 * spread
+				local tilt = wobble * (if i % 2 == 0 then 1 else -1)
+				copy:PivotTo(CFrame.new(x, 0, 0) * CFrame.Angles(0, 0, math.rad(tilt)))
+			end
+		end
+		placeCopies(1, 0)
+		local view = MascotView.Viewport(stage, trio, 0.85)
+		view.ZIndex = 34
+		UiFx.Pop(stage, 0.4, 0.35)
+		local started = os.clock()
+		local beat = 0
+		while os.clock() - started < FX.MergeTime do
+			local t = (os.clock() - started) / FX.MergeTime
+			beat += 1
+			setGlow(GOLD, 0.3 + 0.6 * t)
+			placeCopies(1 - 0.85 * t, (if beat % 2 == 0 then 1 else -1) * (5 + 15 * t))
+			Sfx.Play("ReelTick", 0.9 + 0.6 * t)
+			task.wait(0.22 - 0.12 * t)
+		end
+		UiFx.Flash(GOLD, 0.85, 0.5)
+		view:Destroy()
+		local model = MascotView.Mascot(shiny, 2)
+		local shinyView = MascotView.Viewport(stage, model, 0.75)
+		shinyView.ZIndex = 34
+		UiFx.Pop(stage, 0.3, 0.5)
+		local angle = 0
+		spinConnection = RunService.RenderStepped:Connect(function(dt)
+			angle += dt * 1.2
+			model:PivotTo(CFrame.Angles(0, math.sin(angle) * 0.6, 0))
+		end)
+		revealNew.Text = "SHINY!"
+		revealNew.TextColor3 = GOLD
+		revealName.Text = string.upper(shiny.Name)
+		revealName.TextColor3 = GOLD
+		revealInfo.Text = ("x%d BONUS  -  %s COINS%s"):format(
+			ECONOMY.ShinyMultiplier,
+			Mascots.BonusText(Mascots.Bonus(shiny)),
+			if result.Equipped then "  -  EQUIPPED!" else ""
+		)
+		for _, label in { revealNew, revealName, revealInfo } do
+			UiFx.Pop(label, 1.5, 0.35)
+		end
+		Sfx.Play("RevealBig")
+		UiFx.Confetti(nil, 60)
+		task.wait(0.6)
+		doneButton.Visible = true
+		UiFx.Pop(doneButton, 0.6, 0.3)
+		merging = false
 	end
 
 	local function closeOverlay()

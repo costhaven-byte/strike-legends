@@ -1,6 +1,8 @@
 -- Draws every player's equipped mascots following them around, bobbing in the air behind them.
 -- Each client draws them itself from the EquippedMascots Player attribute (the server sets it), so movement is
 -- smooth and costs the server nothing. Players further than Config.MascotFx.ShowDistance away aren't drawn.
+-- Step 8b: when a player strikes, their mascots celebrate one after another (Hop, Spin, Flip or Wiggle, from each
+-- mascot's Reaction in Config.Mascots); Shiny ones also burst gold sparkles.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -16,7 +18,7 @@ local PER_ROW = 3
 
 local MascotFollowController = {}
 
-type Pet = { Model: Model, Id: string, Position: Vector3?, Phase: number }
+type Pet = { Model: Model, Id: string, Position: Vector3?, Phase: number, ReactAt: number? }
 local pets: { [Player]: { Pet } } = {}
 local folder: Folder
 
@@ -51,6 +53,39 @@ local function refresh(player: Player)
 		pet.Model:Destroy()
 	end
 	pets[player] = list
+end
+
+-- Starts every mascot of this player celebrating, `delay` seconds from now
+local function react(player: Player, delay: number)
+	local now = os.clock()
+	for index, pet in pets[player] or {} do
+		local startAt = now + delay + (index - 1) * FX.ReactStagger
+		pet.ReactAt = startAt
+		local mascot = Mascots.Get(pet.Id)
+		if mascot and mascot.Shiny then
+			task.delay(startAt - now, function()
+				local shimmer = pet.Model.Parent and pet.Model:FindFirstChild("Shimmer", true) :: ParticleEmitter?
+				if shimmer then
+					shimmer:Emit(20)
+				end
+			end)
+		end
+	end
+end
+
+-- Where a reaction has the mascot `p` of the way through it (0 to 1): lift in studs, and a turn
+local function reactionPose(reaction: string?, p: number): (number, CFrame)
+	local arc = math.sin(math.pi * p)
+	if reaction == "Spin" then
+		local eased = 1 - (1 - p) ^ 3
+		return arc * FX.ReactHeight * 0.5, CFrame.Angles(0, eased * math.pi * 2, 0)
+	elseif reaction == "Flip" then
+		return arc * FX.ReactHeight * 0.8, CFrame.Angles(-p * math.pi * 2, 0, 0)
+	elseif reaction == "Wiggle" then
+		return arc * FX.ReactHeight * 0.3, CFrame.Angles(0, 0, math.sin(p * math.pi * 6) * math.rad(28) * (1 - p))
+	end
+	-- Hop (and anything unknown): straight up with a happy squash at the top
+	return arc * FX.ReactHeight, CFrame.Angles(math.rad(-15) * arc, 0, 0)
 end
 
 local function watch(player: Player)
@@ -98,9 +133,21 @@ local function step(dt: number)
 			local position = if pet.Position then pet.Position:Lerp(target, alpha) else target
 			pet.Position = position
 			local bob = math.sin((now + pet.Phase) * FX.BobSpeed * math.pi * 2) * FX.BobHeight
-			pet.Model:PivotTo(
-				CFrame.lookAt(position + Vector3.new(0, bob, 0), position + Vector3.new(0, bob, 0) + look)
-			)
+			local turn = CFrame.identity
+			local reactAt = pet.ReactAt
+			if reactAt and now >= reactAt then
+				local p = (now - reactAt) / FX.ReactTime
+				if p >= 1 then
+					pet.ReactAt = nil
+				else
+					local mascot = Mascots.Get(pet.Id)
+					local lift
+					lift, turn = reactionPose(mascot and mascot.Reaction, p)
+					bob += lift
+				end
+			end
+			local at = position + Vector3.new(0, bob, 0)
+			pet.Model:PivotTo(CFrame.lookAt(at, at + look) * turn)
 			if not pet.Model.Parent then
 				pet.Model.Parent = folder
 			end
@@ -119,6 +166,18 @@ function MascotFollowController:Start()
 	Players.PlayerAdded:Connect(watch)
 	Players.PlayerRemoving:Connect(clear)
 	RunService.RenderStepped:Connect(step)
+
+	-- Strikes (anyone's): their mascots celebrate as the pins fly
+	local remotes = ReplicatedStorage:WaitForChild("Remotes")
+	remotes:WaitForChild("ThrowResult").OnClientEvent:Connect(function(data)
+		if type(data) ~= "table" or (data.Tier ~= "Strike" and data.Tier ~= "PerfectStrike") then
+			return
+		end
+		local thrower = Players:GetPlayerByUserId(data.UserId)
+		if thrower then
+			react(thrower, (data.RollTime or 0) + FX.ReactDelay)
+		end
+	end)
 end
 
 return MascotFollowController

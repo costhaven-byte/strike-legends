@@ -8,6 +8,7 @@ local Config = require(Shared.Config)
 local Mascots = require(Shared.Modules.Mascots)
 
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
+local SHINY_GOLD = Color3.fromRGB(255, 210, 60)
 
 local MascotView = {}
 
@@ -66,6 +67,52 @@ function MascotView.Mascot(mascot, size: number, effects: boolean?): Model
 		)
 	end
 	part(model, "Tuft", Vector3.one * s * 0.3, mascot.Accent, CFrame.new(0, s * 0.52, 0), body)
+
+	-- Shiny (step 8b): a gold crown, a gold shimmer on the body and gold sparkles
+	if mascot.Shiny then
+		body.Reflectance = 0.2
+		local band = part(
+			model,
+			"Crown",
+			Vector3.new(s * 0.14, s * 0.46, s * 0.46),
+			SHINY_GOLD,
+			CFrame.new(0, s * 0.56, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			body
+		)
+		band.Shape = Enum.PartType.Cylinder
+		band.Material = Enum.Material.Neon
+		for i = 0, 2 do
+			local angle = math.rad(i * 120)
+			local point = part(
+				model,
+				"CrownPoint",
+				Vector3.one * s * 0.13,
+				SHINY_GOLD,
+				CFrame.new(math.sin(angle) * s * 0.2, s * 0.7, math.cos(angle) * s * 0.2),
+				body
+			)
+			point.Material = Enum.Material.Neon
+		end
+		if effects ~= false then
+			local shimmer = Instance.new("ParticleEmitter")
+			shimmer.Name = "Shimmer"
+			shimmer.Texture = SPARKLE
+			shimmer.Color = ColorSequence.new(SHINY_GOLD, Color3.new(1, 1, 1))
+			shimmer.LightEmission = 1
+			shimmer.Size = NumberSequence.new(0.35, 0)
+			shimmer.Lifetime = NumberRange.new(0.5, 0.9)
+			shimmer.Speed = NumberRange.new(0.5, 1.5)
+			shimmer.SpreadAngle = Vector2.new(180, 180)
+			shimmer.Rate = 10
+			shimmer.Parent = body
+			local glow = Instance.new("PointLight")
+			glow.Name = "ShinyLight"
+			glow.Color = SHINY_GOLD
+			glow.Range = 6
+			glow.Brightness = 1
+			glow.Parent = body
+		end
+	end
 
 	local rarity = Mascots.RarityIndex(mascot.Rarity)
 	if effects ~= false and rarity >= Mascots.RarityIndex("Rare") then

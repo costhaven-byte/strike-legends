@@ -1,4 +1,6 @@
 -- Times each player's hold on the charge bar, validates the release, works out the result and tells every client.
+-- Auto Bowl (Config.AutoBowl, OFF until monetization): the server throws for players who switched it on, slower
+-- than by hand and never a PERFECT.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -15,7 +17,7 @@ local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
 local GoldenPinService = require(script.Parent.GoldenPinService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
-local MascotService = require(script.Parent.MascotService)
+local MultiplierService = require(script.Parent.MultiplierService)
 local OnboardingService = require(script.Parent.OnboardingService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionService = require(script.Parent.ProgressionService)
@@ -54,20 +56,6 @@ local function setStatus(lane: Model, text: string)
 	end
 end
 
--- Every coin multiplier for this throw.
--- Future gamepasses and boosts get added here as new entries.
-local function getCoinMultipliers(player: Player, ball, level, streak: number, modifier, goldenHit: boolean)
-	return {
-		PowerLevel = level.Value,
-		Ball = BallService.GetMultiplier(player, ball), -- Polish included
-		Mascots = MascotService.GetMultiplier(player), -- 1 + equipped mascots' bonuses
-		Rank = Progression.GetRank(ProgressionService.GetCurrentRankIndex(player)).Multiplier,
-		Streak = Progression.GetStreakMultiplier(streak),
-		Modifier = modifier and modifier.CoinMultiplier or 1,
-		GoldenPin = if goldenHit then GOLDEN.CoinMultiplier else 1,
-	}
-end
-
 -- Every XP multiplier for this player. Future boosts (like a 2x XP gamepass) get added here.
 local function getXpMultipliers(streak: number): { [string]: number }
 	return {
@@ -98,16 +86,8 @@ local function measuredHold(player: Player, clientHold: number): number?
 	return math.clamp(hold, 0, THROW.MaxHoldTime)
 end
 
-local function onThrowRequest(player: Player, clientHold: any)
-	if not isValidNumber(clientHold) then
-		return
-	end
-	local hold = measuredHold(player, clientHold)
-	if not hold then
-		return
-	end
-	local charge = ThrowRules.ChargeAt(hold, ProgressionService.GetCurrentRankIndex(player))
-
+-- One throw at `charge` (0 to 1 of the bar). auto = an Auto Bowl throw: never a PERFECT, hook or overcharge.
+local function throwBall(player: Player, charge: number, auto: boolean)
 	-- No throws until the player's save has loaded, so rewards always have somewhere to go
 	if not PlayerDataService.IsLoaded(player) then
 		return
@@ -140,16 +120,17 @@ local function onThrowRequest(player: Player, clientHold: any)
 	local goldCenter = lane:GetAttribute("GoldCenter")
 	local shownStreak = player:GetAttribute("Streak") or 0
 	-- A brand new player's first throw is an assisted PERFECT (Config.Onboarding; the client shows the whole arc gold)
-	local assisted = OnboardingService.IsAssisted(player)
+	local assisted = not auto and OnboardingService.IsAssisted(player)
 	if assisted then
 		OnboardingService.UseAssist(player)
 	end
 	local perfect = assisted
-		or ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW, nil, goldCenter, shownStreak)
+		or (not auto and ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW, nil, goldCenter, shownStreak))
 	local hooked = not perfect
+		and not auto
 		and Balls.TraitValue(ball, "Curve") > 0
 		and ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW, true, goldCenter, shownStreak)
-	local overcharged = not assisted and ThrowRules.InOvercharge(charge)
+	local overcharged = not assisted and not auto and ThrowRules.InOvercharge(charge)
 	-- The next throw's gold is somewhere else on the arc
 	lane:SetAttribute("GoldCenter", ThrowRules.NextGoldCenter(goldCenter))
 	local forward = lane.BallStart.CFrame.LookVector
@@ -161,7 +142,7 @@ local function onThrowRequest(player: Player, clientHold: any)
 	local streak, saved = ProgressionService.NextStreak(player, isStrike, saverCooldown)
 	local goldenPin = GoldenPinService.Get(lane)
 	local goldenHit = goldenPin > 0 and table.find(result.Pins, goldenPin) ~= nil
-	local multipliers = getCoinMultipliers(player, ball, level, streak, modifier, goldenHit)
+	local multipliers = MultiplierService.Coins(player, ball, level, streak, modifier, goldenHit)
 	if result.Overcharge == "Blast" then
 		multipliers.Overcharge = THROW.Overcharge.CoinMultiplier
 	end
@@ -285,6 +266,56 @@ local function onThrowRequest(player: Player, clientHold: any)
 	task.delay(result.RollTime + resetDelay, GoldenPinService.Roll, lane)
 end
 
+local function onThrowRequest(player: Player, clientHold: any)
+	if not isValidNumber(clientHold) then
+		return
+	end
+	local hold = measuredHold(player, clientHold)
+	if not hold then
+		return
+	end
+	throwBall(player, ThrowRules.ChargeAt(hold, ProgressionService.GetCurrentRankIndex(player)), false)
+end
+
+-- Auto Bowl: players who switched it on (Player attribute AutoBowl) get a throw every Config.AutoBowl.Interval
+-- seconds while standing on their lane. throwBall still checks the lane, the cooldown and the rate limit.
+local autoNext: { [Player]: number } = {}
+local function startAutoBowl(remotes: Folder)
+	local AUTO = Config.AutoBowl
+	local toggle = Instance.new("RemoteEvent")
+	toggle.Name = "SetAutoBowl"
+	toggle.OnServerEvent:Connect(function(player, on)
+		-- (Phase 5: check the Auto Bowl gamepass here)
+		player:SetAttribute("AutoBowl", on == true)
+	end)
+	toggle.Parent = remotes
+	task.spawn(function()
+		while true do
+			task.wait(0.25)
+			local now = os.clock()
+			for _, player in Players:GetPlayers() do
+				if player:GetAttribute("AutoBowl") and now >= (autoNext[player] or 0) then
+					local lane = LaneUtil.GetOwnedLane(player.UserId)
+					local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+					local ready = lane
+						and root
+						and LaneUtil.IsInThrowZone(lane, root.Position)
+						and Workspace:GetServerTimeNow() >= (lane:GetAttribute("ReadyAt") or 0)
+					if ready then
+						autoNext[player] = now + AUTO.Interval
+						task.spawn(
+							throwBall,
+							player,
+							AUTO.ChargeMin + math.random() * (AUTO.ChargeMax - AUTO.ChargeMin),
+							true
+						)
+					end
+				end
+			end
+		end
+	end)
+end
+
 function ThrowService:Start()
 	local folder = Instance.new("Folder")
 	folder.Name = "Remotes"
@@ -312,8 +343,12 @@ function ThrowService:Start()
 
 	hold.OnServerEvent:Connect(onHoldStart)
 	request.OnServerEvent:Connect(onThrowRequest)
+	if Config.AutoBowl.Enabled then
+		startAutoBowl(folder)
+	end
 	Players.PlayerRemoving:Connect(function(player)
 		holdStarts[player] = nil
+		autoNext[player] = nil
 	end)
 end
 

@@ -1,5 +1,5 @@
 -- Mascot eggs, hatching and equipping (Addendum 2 Phase 3 step 8). The server rolls every hatch.
--- Saved: Mascots ({ Id = count }), EquippedMascots ({ Id, ... } one per slot), EggsHatched.
+-- Saved: Mascots ({ Id = count }, Shiny versions as "Pinny_Shiny"), EquippedMascots ({ Id, ... } one per slot), EggsHatched.
 -- Published to everyone as Player attributes (each client draws every player's mascots from them):
 --   Mascots "Pinny=2,Gus=1", EquippedMascots "Pinny,Gus", MascotSlots, MascotBonus (0.04 = +4% coins).
 local Players = game:GetService("Players")
@@ -206,6 +206,54 @@ local function onEquip(player: Player, mascotId: any, equip: any)
 	publish(player)
 end
 
+-- Step 8b: ShinyMerge copies of one mascot become one Shiny version (bonus x ShinyMultiplier).
+-- Merged copies leave their slots, and the Shiny goes into a free slot if there is one.
+local function onMerge(player: Player, mascotId: any)
+	if not PlayerDataService.IsLoaded(player) or not RateLimit.Allow(player, "EquipMascot") then
+		return { Ok = false, Error = "Try again" }
+	end
+	local mascot = Mascots.Get(mascotId)
+	local cost = mascot and Mascots.MergeCost(mascot)
+	if not mascot or not cost then
+		return { Ok = false, Error = "Can't merge that" }
+	end
+	local owned = getOwned(player)
+	local have = owned[mascot.Id] or 0
+	if have < cost then
+		return { Ok = false, Error = ("Need %d to merge"):format(cost) }
+	end
+	local shinyId = Mascots.ShinyId(mascot.Id)
+	owned[mascot.Id] = have - cost
+	if owned[mascot.Id] == 0 then
+		owned[mascot.Id] = nil
+	end
+	owned[shinyId] = (owned[shinyId] or 0) + 1
+
+	-- Equipped copies beyond what's left: the first becomes the Shiny, the rest leave their slots
+	local equipped = getEquipped(player)
+	local left = owned[mascot.Id] or 0
+	local swapped = false
+	for i = #equipped, 1, -1 do
+		if equipped[i] == mascot.Id then
+			if left > 0 then
+				left -= 1
+			else
+				table.remove(equipped, i)
+			end
+		end
+	end
+	-- Put the Shiny in if there's room (it's better than anything it replaced)
+	if #equipped < slots(player) then
+		table.insert(equipped, shinyId)
+		swapped = true
+	end
+	publish(player)
+
+	Analytics.Event(player, "MascotMerged", 1, { mascot.Id, mascot.Rarity })
+	SessionLog.Moment(player, ("Mascot merged: %d x %s -> Shiny"):format(cost, mascot.Id))
+	return { Ok = true, MascotId = shinyId, Equipped = swapped }
+end
+
 local function onEquipBest(player: Player)
 	if not PlayerDataService.IsLoaded(player) or not RateLimit.Allow(player, "EquipMascot") then
 		return
@@ -231,6 +279,11 @@ function MascotService:Start()
 	equipRemote.Name = "EquipMascot"
 	equipRemote.OnServerEvent:Connect(onEquip)
 	equipRemote.Parent = remotes
+
+	local mergeRemote = Instance.new("RemoteFunction")
+	mergeRemote.Name = "MergeMascot"
+	mergeRemote.OnServerInvoke = onMerge
+	mergeRemote.Parent = remotes
 
 	local bestRemote = Instance.new("RemoteEvent")
 	bestRemote.Name = "EquipBestMascots"

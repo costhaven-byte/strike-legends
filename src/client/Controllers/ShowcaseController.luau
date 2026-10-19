@@ -5,6 +5,8 @@
 -- rings around the ball, glow dots, circling specks and a faint aura, building up from Common to Mythic.
 -- Locked = dark silhouette, padlock and "???". Owned = the real ball, its name and stats.
 -- Built on each player's own screen, so the animation costs the server nothing.
+-- Step 8b: the mascot shelf (Workspace.Showcase.MascotShelf): every mascot on a glowing stand, yours in colour
+-- (your Shiny if you made one), missing ones as dark silhouettes, with a "MASCOTS n / 12" sign.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -14,7 +16,9 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local BallLook = require(Shared.Modules.BallLook)
+local Mascots = require(Shared.Modules.Mascots)
 local BallFx = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("BallFx"))
+local MascotView = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("MascotView"))
 
 local SHOW = Config.Showcase
 local CASE = SHOW.Case
@@ -641,6 +645,114 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 	}
 end
 
+-- The mascot shelf: mascots spread along the shelf part's length (its X side), facing its front, on stands.
+-- Returns a function that animates them (bob and a slow sway).
+local function buildMascotShelf(shelf: BasePart, parent: Instance): (number) -> ()
+	local FX = Config.MascotFx
+	local folder = Instance.new("Folder")
+	folder.Name = "MascotShelf"
+	folder.Parent = parent
+	local list = Config.Mascots
+	local spacing = shelf.Size.X / #list
+	local top = shelf.CFrame * CFrame.new(0, shelf.Size.Y / 2, 0)
+
+	type Spot = { Base: CFrame, Model: Model?, Id: string?, Phase: number, Mascot: any, Plate: Part }
+	local spots: { Spot } = {}
+	for i, mascot in list do
+		local base = top * CFrame.new(-shelf.Size.X / 2 + spacing * (i - 0.5), 0, 0)
+		local plate = part({
+			Name = "Stand",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.25, FX.ShelfSize * 1.1, FX.ShelfSize * 1.1),
+			CFrame = base * CFrame.new(0, 0.125, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			Material = Enum.Material.Neon,
+			Color = Mascots.RarityColor(mascot.Rarity),
+			Transparency = 0.6,
+		}, folder)
+		table.insert(spots, { Base = base, Phase = i * 0.9, Mascot = mascot, Plate = plate })
+	end
+
+	-- The sign above the middle of the shelf
+	local signAnchor = part({
+		Name = "SignAnchor",
+		Size = Vector3.one * 0.2,
+		Transparency = 1,
+		CFrame = top * CFrame.new(0, FX.ShelfSize + FX.ShelfHover + 3.4, 0),
+	}, folder)
+	local sign = Instance.new("BillboardGui")
+	sign.Size = UDim2.fromScale(14, 1.6)
+	sign.LightInfluence = 0
+	sign.MaxDistance = 140
+	sign.Parent = signAnchor
+	local signText = label(sign, {
+		Size = UDim2.fromScale(1, 1),
+		TextColor3 = Color3.fromRGB(255, 60, 210),
+		FontFace = Font.new("rbxasset://fonts/families/LuckiestGuy.json"),
+	})
+	local signStroke = Instance.new("UIStroke")
+	signStroke.Thickness = 2
+	signStroke.Color = Color3.fromHex("06060F")
+	signStroke.Parent = signText
+
+	local function silhouette(model: Model)
+		for _, d in model:GetDescendants() do
+			if d:IsA("BasePart") then
+				d.Color = Color3.fromRGB(14, 10, 26)
+				d.Material = Enum.Material.SmoothPlastic
+				d.Reflectance = 0
+			elseif d:IsA("Light") or d:IsA("ParticleEmitter") then
+				d:Destroy()
+			end
+		end
+	end
+
+	local function refresh()
+		local owned = Mascots.DecodeOwned(player:GetAttribute("Mascots"))
+		local found = 0
+		for _, spot in spots do
+			local mascot = spot.Mascot
+			local shinyId = Mascots.ShinyId(mascot.Id)
+			-- What to show: your Shiny, else yours, else the silhouette
+			local id = if (owned[shinyId] or 0) > 0
+				then shinyId
+				elseif (owned[mascot.Id] or 0) > 0 then mascot.Id
+				else ""
+			if id ~= "" then
+				found += 1
+			end
+			if spot.Id ~= id then
+				if spot.Model then
+					spot.Model:Destroy()
+				end
+				local shown = Mascots.Get(id) or mascot
+				local model = MascotView.Mascot(shown, FX.ShelfSize)
+				if id == "" then
+					silhouette(model)
+				end
+				model.Parent = folder
+				spot.Model = model
+				spot.Id = id
+				spot.Plate.Transparency = if id == "" then 0.85 else 0.4
+			end
+		end
+		signText.Text = ("MASCOTS  %d / %d"):format(found, #spots)
+	end
+	player:GetAttributeChangedSignal("Mascots"):Connect(refresh)
+	refresh()
+
+	return function(t: number)
+		for _, spot in spots do
+			local model = spot.Model
+			if model then
+				local lift = FX.ShelfHover + FX.ShelfSize / 2 + math.sin((t + spot.Phase) * 2) * 0.2
+				local sway = if spot.Id ~= "" then math.sin(t * 0.8 + spot.Phase) * 0.5 else 0
+				-- The model's front is its -Z; the shelf's front is its -Z too
+				model:PivotTo(spot.Base * CFrame.new(0, lift, 0) * CFrame.Angles(0, sway, 0))
+			end
+		end
+	end
+end
+
 -- The slot each shown ball sits on, best balls first ({ Ball, Slot }), for the first-3-minutes camera moment
 ShowcaseController.Shown = {}
 
@@ -701,6 +813,13 @@ function ShowcaseController:Start()
 	player:GetAttributeChangedSignal("OwnedBalls"):Connect(refreshOwned)
 	refreshOwned()
 
+	-- The mascot shelf (step 8b)
+	local shelf = showcase:FindFirstChild("MascotShelf")
+	local animateShelf = if shelf and shelf:IsA("BasePart") then buildMascotShelf(shelf, cases) else nil
+	if not animateShelf then
+		warn("[ShowcaseController] Workspace.Showcase.MascotShelf is missing, so the mascot shelf is off")
+	end
+
 	-- Animate only while you're close enough to see it
 	local middle = Vector3.zero
 	for _, case in built do
@@ -714,6 +833,9 @@ function ShowcaseController:Start()
 		local t = os.clock()
 		for _, case in built do
 			case.Animate(t)
+		end
+		if animateShelf then
+			animateShelf(t)
 		end
 	end)
 end

@@ -1625,6 +1625,7 @@ Config.Mascots = {
 		Rarity = "Common",
 		Color = Color3.fromRGB(245, 245, 250),
 		Accent = Color3.fromRGB(230, 50, 60),
+		Reaction = "Hop",
 	},
 	{
 		Id = "Gus",
@@ -1633,6 +1634,7 @@ Config.Mascots = {
 		Rarity = "Common",
 		Color = Color3.fromRGB(140, 140, 155),
 		Accent = Color3.fromRGB(90, 200, 255),
+		Reaction = "Wiggle",
 	},
 	{
 		Id = "LanePup",
@@ -1641,6 +1643,7 @@ Config.Mascots = {
 		Rarity = "Uncommon",
 		Color = Color3.fromRGB(110, 220, 120),
 		Accent = Color3.fromRGB(255, 240, 120),
+		Reaction = "Hop",
 	},
 	{
 		Id = "Bumper",
@@ -1649,6 +1652,7 @@ Config.Mascots = {
 		Rarity = "Uncommon",
 		Color = Color3.fromRGB(190, 255, 70),
 		Accent = Color3.fromRGB(255, 90, 200),
+		Reaction = "Spin",
 	},
 	{
 		Id = "Strikey",
@@ -1657,6 +1661,7 @@ Config.Mascots = {
 		Rarity = "Rare",
 		Color = Color3.fromRGB(60, 140, 255),
 		Accent = Color3.fromRGB(255, 255, 255),
+		Reaction = "Flip",
 	},
 	{
 		Id = "Splitz",
@@ -1665,6 +1670,7 @@ Config.Mascots = {
 		Rarity = "Rare",
 		Color = Color3.fromRGB(60, 230, 230),
 		Accent = Color3.fromRGB(255, 120, 40),
+		Reaction = "Wiggle",
 	},
 	{
 		Id = "Hambone",
@@ -1673,6 +1679,7 @@ Config.Mascots = {
 		Rarity = "Epic",
 		Color = Color3.fromRGB(170, 70, 255),
 		Accent = Color3.fromRGB(255, 200, 40),
+		Reaction = "Hop",
 	},
 	{
 		Id = "NeonBat",
@@ -1681,6 +1688,7 @@ Config.Mascots = {
 		Rarity = "Epic",
 		Color = Color3.fromRGB(110, 40, 200),
 		Accent = Color3.fromRGB(60, 255, 220),
+		Reaction = "Flip",
 	},
 	{
 		Id = "Kingpin",
@@ -1689,6 +1697,7 @@ Config.Mascots = {
 		Rarity = "Legendary",
 		Color = Color3.fromRGB(255, 195, 40),
 		Accent = Color3.fromRGB(255, 255, 255),
+		Reaction = "Spin",
 	},
 	{
 		Id = "Blaze",
@@ -1697,6 +1706,7 @@ Config.Mascots = {
 		Rarity = "Legendary",
 		Color = Color3.fromRGB(255, 110, 30),
 		Accent = Color3.fromRGB(255, 230, 60),
+		Reaction = "Flip",
 	},
 	{
 		Id = "Cosmo",
@@ -1705,6 +1715,7 @@ Config.Mascots = {
 		Rarity = "Mythic",
 		Color = Color3.fromRGB(255, 60, 150),
 		Accent = Color3.fromRGB(120, 220, 255),
+		Reaction = "Spin",
 	},
 	{
 		Id = "Perfecto",
@@ -1713,7 +1724,19 @@ Config.Mascots = {
 		Rarity = "Mythic",
 		Color = Color3.fromRGB(255, 245, 200),
 		Accent = Color3.fromRGB(255, 60, 210),
+		Reaction = "Flip",
 	},
+}
+
+-- Auto Bowl (master plan step 14.8, the plan's AUTO_BOWL_ENABLED): the game throws for you, slower than manual and
+-- never a PERFECT (so no strikes past your Power Level's pin cap, no x2). Reserved for the monetization phase
+-- (Addendum 2 section 7: an Auto Bowl gamepass). OFF: nothing is shown and the server ignores it. When on, an AUTO
+-- button appears on the HUD for everyone (the gamepass check comes with monetization).
+Config.AutoBowl = {
+	Enabled = false,
+	Interval = 4.5, -- seconds between auto throws (a manual throw takes about 3)
+	ChargeMin = 0.4, -- each auto throw's power is picked between these (0 to 1 of the bar, never the red)
+	ChargeMax = 0.85,
 }
 
 -- Egg names and colours (prices, unlocks and odds: Config.Economy.Eggs / Config.Economy.Mascots)
@@ -1742,6 +1765,17 @@ Config.MascotFx = {
 	ShakeTime = 2.4,
 	RevealTime = 2.6, -- seconds the new mascot stays on screen before the panel can be closed
 	TeaseChance = 0.35, -- chance the glow flashes a rarer colour near the end before settling (odds are shown honestly)
+	MergeTime = 1.6, -- seconds the copies shake together before the Shiny pops out (step 8b)
+	-- Strike reactions (step 8b): when their owner strikes, each mascot does its Reaction (Config.Mascots row):
+	-- Hop (jump), Spin (twirl), Flip (somersault) or Wiggle (shake side to side). Shiny ones also burst gold sparkles.
+	ReactDelay = 0.25, -- seconds after the pins are hit
+	ReactTime = 0.7, -- seconds a reaction lasts
+	ReactHeight = 2.2, -- studs a reaction lifts the mascot at its top
+	ReactStagger = 0.08, -- seconds between each mascot starting, so they go one after another
+	-- The mascot shelf in the lobby Vault (step 8b): every mascot on a glowing stand, yours lit, missing ones dark.
+	-- It sits along Workspace.Showcase.MascotShelf (a part you can move in Studio; the mascots face its front).
+	ShelfSize = 2.2, -- studs across each mascot on the shelf
+	ShelfHover = 1.6, -- studs above the shelf
 }
 
 -- Daily reward: a 7-day calendar. Claim once per day (days change at midnight UTC).

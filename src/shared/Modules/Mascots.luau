@@ -30,8 +30,30 @@ for index, name in Mascots.Rarities do
 	rarityIndex[name] = index
 end
 
+-- Shiny mascots (step 8b): ShinyMerge copies of one mascot merge into its Shiny version, saved under its own Id
+-- ("Pinny_Shiny") in the same Mascots table, so old saves need no change. Bonus x ShinyMultiplier.
+local SHINY_SUFFIX = "_Shiny"
+
+function Mascots.ShinyId(id: string): string
+	return id .. SHINY_SUFFIX
+end
+
+for _, mascot in Config.Mascots do
+	local shiny = table.clone(mascot)
+	shiny.Id = Mascots.ShinyId(mascot.Id)
+	shiny.Name = "Shiny " .. mascot.Name
+	shiny.Shiny = true
+	shiny.Base = mascot
+	byId[shiny.Id] = shiny
+end
+
 function Mascots.Get(id: any)
 	return if type(id) == "string" then byId[id] else nil
+end
+
+-- How many copies merge into a Shiny, or nil when this mascot can't merge (it's already Shiny)
+function Mascots.MergeCost(mascot): number?
+	return if mascot.Shiny then nil else ECONOMY.ShinyMerge
 end
 
 function Mascots.GetEgg(id: any)
@@ -65,7 +87,8 @@ end
 -- This mascot's bonus: its rarity's bonus x its egg's BonusScale (0.02 = +2% coins)
 function Mascots.Bonus(mascot): number
 	local egg = eggById[mascot.Egg]
-	return (ECONOMY.Bonus[mascot.Rarity] or 0) * (egg and egg.BonusScale or 1)
+	local bonus = (ECONOMY.Bonus[mascot.Rarity] or 0) * (egg and egg.BonusScale or 1)
+	return if mascot.Shiny then bonus * ECONOMY.ShinyMultiplier else bonus
 end
 
 -- "+2%", "+150%"
