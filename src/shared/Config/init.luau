@@ -44,9 +44,10 @@ Config.Throw = {
 	GoldSpotLowest = 0.45, -- lowest spot the gold can jump to (centre of the zone)
 	GoldSpotHighest = 0.92, -- highest
 	GoldSpotMinJump = 0.15, -- it always moves at least this far from where it was
-	-- Every strike in a row makes the gold this much narrower (0.1 = 10%), down to GoldSpotSmallest
-	GoldShrinkPerStrike = 0.1,
-	GoldSpotSmallest = 0.04,
+	-- Every strike in a row makes the gold this much narrower (0.05 = 5%), but never below GoldSmallestShare
+	-- of its normal size (0.75 = 75%). Was 10% down to 0.04 of the bar until 2026-10-19 (too hard to streak).
+	GoldShrinkPerStrike = 0.05,
+	GoldSmallestShare = 0.75,
 	-- The throw animation: the arm swings back as the meter fills
 	ReleaseDelay = 0.1, -- seconds from letting go until the ball leaves the hand (the down-swing)
 	DownSwingTime = 0.13,

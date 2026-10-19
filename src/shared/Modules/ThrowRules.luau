@@ -15,7 +15,7 @@ function ThrowRules.SweetSpot(ball, modifier, serverTime: number, center: number
 		+ Balls.TraitValue(ball, "Heavy")
 		+ (modifier and modifier.SweetBonus or 0)
 	local size = math.min(THROW.SweetSpotSize * (1 + bonus), THROW.SweetSpotMax)
-	size = math.max(size * (1 - THROW.GoldShrinkPerStrike) ^ (streak or 0), math.min(size, THROW.GoldSpotSmallest))
+	size = math.max(size * (1 - THROW.GoldShrinkPerStrike) ^ (streak or 0), size * THROW.GoldSmallestShare)
 	center = center or THROW.SweetSpotCenter
 	if modifier and modifier.SweetSway then
 		-- Moving Gold: slides down the bar and back on the server clock, so everyone sees the same zone
