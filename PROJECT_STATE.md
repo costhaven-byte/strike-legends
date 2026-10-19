@@ -1,15 +1,15 @@
 # Project state (max 40 lines, read at the start of every session, update at the end)
 Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 2 replaces Addendum 1).
 
-**Current milestone:** First 5 Minutes fixes (HANDOFF_FIRST_5_MINUTES.md) PASSED 2026-10-19; follow-up (no kiosk label, equip guide) PASSED.
-Restore point: git tag restore-first5-before. Real game = cloud place 94254609600041.
-Next: Phase 2 step 7 (ranks 1-60, section 9.5), only when Selim says go.
+**Current milestone:** Phase 2 step 7 split in 3 (Selim OK'd): 7a 60 rank levels + level rewards BUILT, test PENDING; then 7b gem sink (gems buy Polish), 7c streaks/modifiers/Golden Pin checks.
+Restore point: git tag restore-step7a-before. Real game = cloud place 94254609600041.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
 ## Exists and works
 - 6 lanes, real physics pins (Standard/Golden/Golden Star meshes), lobby hub, kiosk, leaderboard wall, Vault (11 cases).
 - New hold-and-release throw with a gold Perfect zone (jumps each throw, shrinks per strike). Only Perfects strike.
 - Throw animation per ball level; strike juice (hit-stop, slow motion, number pops, payout pop, shake).
 - 20-ball roster with real 3D models (light meshes, 51k triangles total), per-ball VFX and trails, 6 traits with effects.
+- Rank levels 1-60 (save v12 RankLevel; Selim chose the plan's curve Config.Economy.Ranks, L2 = 180 XP, L60 = 382M): 6 levels per Pro Tier (Rookie 1-6 ... Hall of Famer 55-60), tier XP = its first level's XP (Progression.TierXP). Level-up = 2 gems + free Basic crate every 3rd level + popup; new tier = trial + RankUpUI. Old saves keep their tier (XP raised to it). Later levels need zone 2-6 XP. Studio-only remote TestXP (next level).
 - 10 ranks + rank trials, named streak tiers, Golden Pin, 4 lane modifiers, gems (earned only), daily reward, leaderboards.
 - Saving (save v7, old saves migrate), rate limits, analytics, Config with every number, economy simulator (tools/EconomySim.luau).
 - Server times the hold (ThrowHold + ThrowRequest(holdSeconds), Config.Throw.HoldTolerance 0.1s); throw rate limit 2s.
@@ -36,5 +36,5 @@ Next: Phase 2 step 7 (ranks 1-60, section 9.5), only when Selim says go.
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
 
 ## Last session
-- 2026-10-19: First 5 Minutes handoff + follow-up PASSED.
+- 2026-10-19: Step 7a built (60 levels). Selim moved on from the first-crate/gift test (assumed passed).
 - 2026-10-19: 3 bug fixes PASSED. Then (tag restore-first-crate-gift-before), test PENDING: first bought Basic crate 1,000 once + exactly Uncommon (Config.Onboarding.FirstCratePrice/FirstBoughtRarity, Balls.CratePrice); gift at throw 65 (~4:00) exactly Rare (GiftRarity), showcase 3 throws later; Power LV banner centred, smaller. Owner rejected 'or better' + side banner once.

@@ -176,6 +176,7 @@ Config.StartingData = {
 	Gems = 0,
 	XP = 0,
 	Rank = 1, -- index into Config.Ranks (1 = Rookie); raised by passing Rank Trials
+	RankLevel = 1, -- highest rank level (1-60) whose level-up reward was given
 	BestStreak = 0,
 	EquippedBall = "Rookie",
 	OwnedBalls = { Rookie = true }, -- set of ball Ids
@@ -202,7 +203,7 @@ Config.StartingData = {
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 11, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 12, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels). Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -281,24 +282,22 @@ Config.Streaks = {
 	{ Streak = 10, Multiplier = 5.0, XpMultiplier = 5.0, Name = "PERFECT RUN", Color = Color3.fromRGB(255, 240, 90) },
 }
 
--- Pro Tiers. XP fills the bar; reaching the next rank's XP unlocks its Rank Trial (see Config.Trials),
--- and passing the trial gives the rank. Coin multiplier is permanent; gems are a one-time rank-up reward.
--- Tuned for roughly 180-390 XP a minute (more with strike streaks, see Config.Streaks XpMultiplier):
--- the XP bar for Amateur fills after ~1-1.5 minutes; the 1-strike trial (no cooldown, see Config.Trials) then
--- takes about 20-40 seconds more at a 15% PERFECT rate, so the first rank-up lands around 1:30-2:00.
--- Each rank after that takes much longer.
--- (Before 9.5c: 100, 350, 1000, 3000, 9000, 25000, 70000, 200000, 550000.)
+-- Pro Tiers. Each tier holds 6 of the 60 rank levels (Config.Economy.Ranks: levels 1-6 Rookie, 7-12 Amateur ...
+-- 55-60 Hall of Famer). Levels inside a tier come straight from XP; a tier's first level needs its Rank Trial
+-- (see Config.Trials) once the XP is there. Coin multiplier is permanent; gems are a one-time tier reward.
+-- A tier's XP is the XP of its first level (Progression.TierXP), so it follows the level curve.
+-- (Before step 7a the tiers had their own XP: 0, 300, 600, 2000, 6000, 18000, 50000, 140000, 400000, 1000000.)
 Config.Ranks = {
-	{ Name = "Rookie", XP = 0, Multiplier = 1.0, Gems = 0, Color = Color3.fromRGB(200, 200, 210) },
-	{ Name = "Amateur", XP = 300, Multiplier = 1.25, Gems = 5, Color = Color3.fromRGB(120, 230, 120) },
-	{ Name = "Regular", XP = 600, Multiplier = 1.5, Gems = 10, Color = Color3.fromRGB(80, 200, 255) },
-	{ Name = "Club", XP = 2000, Multiplier = 2.0, Gems = 15, Color = Color3.fromRGB(60, 120, 255) },
-	{ Name = "Semi-Pro", XP = 6000, Multiplier = 2.5, Gems = 20, Color = Color3.fromRGB(170, 90, 255) },
-	{ Name = "Pro", XP = 18000, Multiplier = 3.0, Gems = 30, Color = Color3.fromRGB(255, 60, 210) },
-	{ Name = "Elite", XP = 50000, Multiplier = 4.0, Gems = 40, Color = Color3.fromRGB(255, 70, 70) },
-	{ Name = "Master", XP = 140000, Multiplier = 5.0, Gems = 50, Color = Color3.fromRGB(255, 150, 30) },
-	{ Name = "Legend", XP = 400000, Multiplier = 7.0, Gems = 75, Color = Color3.fromRGB(255, 220, 60) },
-	{ Name = "Hall of Famer", XP = 1000000, Multiplier = 10.0, Gems = 100, Color = Color3.fromRGB(255, 255, 255) },
+	{ Name = "Rookie", Multiplier = 1.0, Gems = 0, Color = Color3.fromRGB(200, 200, 210) },
+	{ Name = "Amateur", Multiplier = 1.25, Gems = 5, Color = Color3.fromRGB(120, 230, 120) },
+	{ Name = "Regular", Multiplier = 1.5, Gems = 10, Color = Color3.fromRGB(80, 200, 255) },
+	{ Name = "Club", Multiplier = 2.0, Gems = 15, Color = Color3.fromRGB(60, 120, 255) },
+	{ Name = "Semi-Pro", Multiplier = 2.5, Gems = 20, Color = Color3.fromRGB(170, 90, 255) },
+	{ Name = "Pro", Multiplier = 3.0, Gems = 30, Color = Color3.fromRGB(255, 60, 210) },
+	{ Name = "Elite", Multiplier = 4.0, Gems = 40, Color = Color3.fromRGB(255, 70, 70) },
+	{ Name = "Master", Multiplier = 5.0, Gems = 50, Color = Color3.fromRGB(255, 150, 30) },
+	{ Name = "Legend", Multiplier = 7.0, Gems = 75, Color = Color3.fromRGB(255, 220, 60) },
+	{ Name = "Hall of Famer", Multiplier = 10.0, Gems = 100, Color = Color3.fromRGB(255, 255, 255) },
 }
 
 -- Rank Trials: the test you pass to reach a rank once your XP bar is full.
@@ -1682,6 +1681,7 @@ Config.Analytics = {
 		"FirstCoins",
 		"StreakRecord", -- value = new best strike streak
 		"RankUp", -- value = new rank; labels = rank name
+		"LevelUp", -- value = new rank level (1-60)
 		"CrateOpened", -- labels = crate, rarity, New/Duplicate
 		"DailyClaimed", -- value = day
 		"TrialFinished",
@@ -1825,6 +1825,10 @@ Config.Economy.Ranks = {
 	Growth = 1.42, -- plan: 1.35
 	LateFrom = 30,
 	LateGrowth = 1.06,
+	-- Live since step 7a (rank levels 1-60; XP per throw is still zone 1's, so later levels wait for zones 2-6)
+	LevelsPerTier = 6, -- levels per Pro Tier (Config.Ranks)
+	LevelGems = 2, -- gems for a level-up inside a tier (a new tier gives its own Gems instead)
+	FreeCrateEvery = 3, -- every 3rd level also gives a free crate (Config.FreeCrates)
 }
 
 -- Rebirth ("Go Pro Tour", Milestone 17)

@@ -77,30 +77,30 @@ local function bindRankBar(rankBar: Frame)
 
 	local function refresh()
 		local xp = player:GetAttribute("XP") or 0
-		local index = player:GetAttribute("Rank") or 1 -- saved rank; a full bar waits for the Rank Trial
+		local index = player:GetAttribute("Rank") or 1 -- saved rank; the next tier waits for the Rank Trial
 		local rank = Progression.GetRank(index)
+		local level = Progression.LevelFromXP(xp, index)
 		local nextRank = Config.Ranks[index + 1]
+		local maxLevel = Config.Economy.Ranks.MaxRank
 
 		local progress = 1
-		if nextRank and xp >= nextRank.XP then
+		if nextRank and xp >= Progression.TierXP(index + 1) then
 			local state = player:GetAttribute("TrialState")
-			label.Text = ("%s  ·  XP FULL  ·  %s"):format(
+			label.Text = ("LV %d %s  ·  XP FULL  ·  %s"):format(
+				level,
 				rank.Name:upper(),
 				if state == "Active"
 					then "TRIAL IN PROGRESS"
 					elseif state == "Cooldown" then "TRY THE TRIAL AGAIN SOON"
 					else "RANK TRIAL READY"
 			)
-		elseif nextRank then
-			progress = (xp - rank.XP) / (nextRank.XP - rank.XP)
-			-- One bar for rank progress: where you are and what's next
-			label.Text = ("%s  ·  %s XP TO %s"):format(
-				rank.Name:upper(),
-				formatNumber(nextRank.XP - xp),
-				nextRank.Name:upper()
-			)
+		elseif level < maxLevel then
+			local from, to = Progression.LevelXP(level), Progression.LevelXP(level + 1)
+			progress = (xp - from) / (to - from)
+			-- One bar for level progress: where you are and what's next
+			label.Text = ("LV %d %s  ·  %s XP TO LV %d"):format(level, rank.Name:upper(), formatNumber(to - xp), level + 1)
 		else
-			label.Text = ("%s  ·  %s XP"):format(rank.Name:upper(), formatNumber(xp))
+			label.Text = ("LV %d %s  ·  %s XP"):format(level, rank.Name:upper(), formatNumber(xp))
 		end
 		fill.BackgroundColor3 = rank.Color
 		outline.Color = rank.Color

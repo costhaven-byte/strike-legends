@@ -83,6 +83,9 @@ function RankUpController:Start()
 		rankName.TextColor3 = rank.Color
 		glow.BackgroundColor3 = rank.Color
 		local parts = {}
+		if data.Level then
+			table.insert(parts, ("LEVEL %d"):format(data.Level))
+		end
 		if data.Gems > 0 then
 			table.insert(parts, ('<font color="#3CE6FF">+%d gems</font>'):format(data.Gems))
 		end

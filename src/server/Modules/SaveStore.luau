@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Progression = require(Shared.Modules.Progression)
 
 local DATA = Config.Data
 
@@ -109,6 +110,13 @@ local function migrate(saved: any): { [string]: any }
 			if (tonumber(data.CratesOpened) or 0) > 0 then
 				data.CratesBought = 1
 			end
+		end
+		if version < 12 then
+			-- v12: 60 rank levels; a tier's XP now comes from the level curve. Keep the tier, and raise XP to at
+			-- least that tier's XP so nobody drops back. Levels already reached give no back-dated rewards.
+			local tier = math.clamp(math.floor(tonumber(data.Rank) or 1), 1, #Config.Ranks)
+			data.XP = math.max(tonumber(data.XP) or 0, Progression.TierXP(tier))
+			data.RankLevel = Progression.LevelFromXP(data.XP, tier)
 		end
 	end
 	data.Rank = math.clamp(math.floor(tonumber(data.Rank) or 1), 1, #Config.Ranks)

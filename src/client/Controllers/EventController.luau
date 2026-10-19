@@ -1,5 +1,5 @@
 -- The surprise layer on screen: the lane modifier banner and timer, the "next goal" bar,
--- and the big popups for Golden Pins, "LUCKY!", bonus gems and free crates.
+-- and the big popups for Golden Pins, "LUCKY!", bonus gems, level-ups and free crates.
 -- The UI itself (StarterGui.EventUI) is built in Studio; this script fills it in and animates it.
 -- Everything shown comes from attributes and throw results the server sends.
 local Players = game:GetService("Players")
@@ -14,6 +14,7 @@ local Balls = require(Shared.Modules.Balls)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modifiers = require(Shared.Modules.Modifiers)
 local PowerLevels = require(Shared.Modules.PowerLevels)
+local Progression = require(Shared.Modules.Progression)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local TraitFx = require(Modules.TraitFx)
 local Sfx = require(Modules.Sfx)
@@ -311,6 +312,18 @@ function EventController:Start()
 	end
 	player:GetAttributeChangedSignal("FreeCrates"):Connect(refreshBadge)
 	refreshBadge()
+
+	-- Rank level-up inside a tier (a new tier gets the full RankUpUI screen instead).
+	-- A free crate from the same level shows its own popup right after this one.
+	ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("LevelUp").OnClientEvent:Connect(function(data)
+		local rank = Progression.GetRank(player:GetAttribute("Rank") or 1)
+		showPopup(
+			("LEVEL %d!"):format(data.Level),
+			rank.Color,
+			if data.Gems > 0 then ("+%d GEMS"):format(data.Gems) else rank.Name:upper()
+		)
+		Sfx.Play("RankUp", 1.15, 0.7)
+	end)
 
 	-- Golden Pin on your lane: a heads-up when it appears ("LUCKY!" if your ball's trait made it happen)
 	local function watchLane(lane: Model)

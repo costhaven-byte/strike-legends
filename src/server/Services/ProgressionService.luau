@@ -1,14 +1,17 @@
--- Tracks strike streaks and Pro Tier ranks. Hands out rank-up rewards and shows each player's rank above their head.
--- Rank is saved on its own. A full XP bar only unlocks the next rank's Rank Trial (TrialService);
--- ranks without a trial in Config.Trials are given straight away.
+-- Tracks strike streaks, Pro Tier ranks and rank levels 1-60. Hands out rank-up and level-up rewards and shows
+-- each player's level and rank above their head.
+-- Rank (the tier) is saved on its own. Levels inside a tier come from XP; enough XP for the next tier only unlocks
+-- its Rank Trial (TrialService). Tiers without a trial in Config.Trials are given straight away.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local Progression = require(Shared.Modules.Progression)
 local Analytics = require(script.Parent.Analytics)
+local BallService = require(script.Parent.BallService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
@@ -17,6 +20,8 @@ local ProgressionService = {}
 local streaks: { [Player]: number } = {}
 local lastSaved: { [Player]: number } = {} -- when Streak Saver last kept this player's streak (os.clock)
 local rankUpEvent: RemoteEvent
+local levelUpEvent: RemoteEvent
+local LEVELS = Config.Economy.Ranks
 
 -- Floating title above the player's head, e.g. "PRO"
 local function updateBadge(player: Player)
@@ -26,6 +31,7 @@ local function updateBadge(player: Player)
 		return
 	end
 	local rank = Progression.GetRank(player:GetAttribute("Rank") or 1)
+	local level = player:GetAttribute("RankLevel") or 1
 
 	local badge = head:FindFirstChild("RankBadge") :: BillboardGui?
 	if not badge then
@@ -53,7 +59,7 @@ local function updateBadge(player: Player)
 		badge = gui
 	end
 	local label = (badge :: BillboardGui).Title :: TextLabel
-	label.Text = rank.Name:upper()
+	label.Text = ("LV %d  %s"):format(level, rank.Name:upper())
 	label.TextColor3 = rank.Color
 end
 
@@ -102,7 +108,42 @@ end
 -- True when the XP bar is full and the next rank only needs its trial
 function ProgressionService.IsRankUpReady(player: Player): boolean
 	local nextRank = ProgressionService.GetNextRank(player)
-	return nextRank ~= nil and (PlayerDataService.Get(player, "XP") or 0) >= nextRank.XP
+	return nextRank ~= nil
+		and (PlayerDataService.Get(player, "XP") or 0)
+			>= Progression.TierXP(ProgressionService.GetCurrentRankIndex(player) + 1)
+end
+
+-- Gives every rank level the player's XP has reached (inside their tier) and its reward:
+-- LevelGems for a level inside a tier (a tier's first level gets the tier's Gems in PromoteRank instead),
+-- and a free crate every FreeCrateEvery levels.
+local function refreshLevel(player: Player)
+	local done = PlayerDataService.Get(player, "RankLevel") or 1
+	local level =
+		Progression.LevelFromXP(PlayerDataService.Get(player, "XP") or 0, ProgressionService.GetCurrentRankIndex(player))
+	if level <= done or not PlayerDataService.Set(player, "RankLevel", level) then
+		return
+	end
+	local gems, crates, inTier = 0, 0, false
+	for reached = done + 1, level do
+		if (reached - 1) % LEVELS.LevelsPerTier ~= 0 then
+			inTier = true
+			gems += if Config.Gems.Enabled then LEVELS.LevelGems else 0
+		end
+		if reached % LEVELS.FreeCrateEvery == 0 then
+			crates += 1
+			BallService.GiveFreeCrate(player)
+		end
+		Analytics.Event(player, "LevelUp", reached)
+		SessionLog.Moment(player, ("Level %d"):format(reached))
+	end
+	if gems > 0 then
+		PlayerDataService.Add(player, "Gems", gems)
+		Analytics.Currency(player, "Gems", gems, "Gameplay", "LevelUp")
+	end
+	updateBadge(player)
+	if inTier then
+		levelUpEvent:FireClient(player, { Level = level, Gems = gems, Crates = crates })
+	end
 end
 
 -- Gives the next rank, its gem reward and the celebration. Called by TrialService when a trial is passed.
@@ -120,11 +161,13 @@ function ProgressionService.PromoteRank(player: Player)
 	Analytics.Event(player, "RankUp", index, { rank.Name })
 	Analytics.Step(player, "Ranked Up")
 	SessionLog.Moment(player, ("Rank-up: %s"):format(rank.Name))
+	refreshLevel(player)
 	updateBadge(player)
 	rankUpEvent:FireAllClients({
 		UserId = player.UserId,
 		DisplayName = player.DisplayName,
 		Rank = index,
+		Level = PlayerDataService.Get(player, "RankLevel"),
 		Gems = gems,
 	})
 	ProgressionService.RefreshRankUpReady(player)
@@ -143,6 +186,7 @@ end
 
 function ProgressionService.AddXP(player: Player, amount: number)
 	if PlayerDataService.Add(player, "XP", amount) then
+		refreshLevel(player)
 		ProgressionService.RefreshRankUpReady(player)
 	end
 end
@@ -151,9 +195,27 @@ function ProgressionService:Start()
 	rankUpEvent = Instance.new("RemoteEvent")
 	rankUpEvent.Name = "RankUp"
 	rankUpEvent.Parent = ReplicatedStorage:WaitForChild("Remotes")
+	levelUpEvent = Instance.new("RemoteEvent")
+	levelUpEvent.Name = "LevelUp"
+	levelUpEvent.Parent = ReplicatedStorage:WaitForChild("Remotes")
+
+	-- Studio only (never in the live game): XP to reach the next rank level, so levels can be tested quickly
+	if RunService:IsStudio() then
+		local test = Instance.new("RemoteEvent")
+		test.Name = "TestXP"
+		test.Parent = ReplicatedStorage.Remotes
+		test.OnServerEvent:Connect(function(player)
+			if PlayerDataService.IsLoaded(player) then
+				local level = PlayerDataService.Get(player, "RankLevel") or 1
+				local xp = PlayerDataService.Get(player, "XP") or 0
+				ProgressionService.AddXP(player, math.max(Progression.LevelXP(level + 1) - xp, 1))
+			end
+		end)
+	end
 
 	PlayerDataService.OnLoaded(function(player)
 		player:SetAttribute("Streak", 0)
+		refreshLevel(player)
 		ProgressionService.RefreshRankUpReady(player)
 		player.CharacterAdded:Connect(function(character)
 			character:WaitForChild("Head", 5)
