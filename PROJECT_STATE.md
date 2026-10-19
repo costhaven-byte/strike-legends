@@ -36,5 +36,5 @@ Restore point: git tag restore-step7a-before. Real game = cloud place 9425460960
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
 
 ## Last session
-- 2026-10-19: Step 7a built (60 levels). Selim moved on from the first-crate/gift test (assumed passed).
+- 2026-10-19: Step 7a built (60 levels), first test OK except popups; fixed: black popup (fade race), level gems line blue, level popup before FREE CRATE. Retest PENDING.
 - 2026-10-19: 3 bug fixes PASSED. Then (tag restore-first-crate-gift-before), test PENDING: first bought Basic crate 1,000 once + exactly Uncommon (Config.Onboarding.FirstCratePrice/FirstBoughtRarity, Balls.CratePrice); gift at throw 65 (~4:00) exactly Rare (GiftRarity), showcase 3 throws later; Power LV banner centred, smaller. Owner rejected 'or better' + side banner once.

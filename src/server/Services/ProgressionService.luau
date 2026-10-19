@@ -131,7 +131,6 @@ local function refreshLevel(player: Player)
 		end
 		if reached % LEVELS.FreeCrateEvery == 0 then
 			crates += 1
-			BallService.GiveFreeCrate(player)
 		end
 		Analytics.Event(player, "LevelUp", reached)
 		SessionLog.Moment(player, ("Level %d"):format(reached))
@@ -143,6 +142,10 @@ local function refreshLevel(player: Player)
 	updateBadge(player)
 	if inTier then
 		levelUpEvent:FireClient(player, { Level = level, Gems = gems, Crates = crates })
+	end
+	-- Crates last, so the level popup shows before the FREE CRATE popup
+	for _ = 1, crates do
+		BallService.GiveFreeCrate(player)
 	end
 end
 

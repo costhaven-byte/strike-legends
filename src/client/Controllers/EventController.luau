@@ -23,6 +23,7 @@ local UiFx = require(Modules.UiFx)
 local GOLD = Config.GoldenPin.Color
 local CRATE_COLOR = Color3.fromRGB(60, 230, 255)
 local GEM_COLOR = Color3.fromRGB(255, 90, 200)
+local LEVEL_GEM_COLOR = Color3.fromRGB(60, 230, 255) -- same blue as the "+N GEMS" after a throw (HudController)
 local POWER_COLOR = Color3.fromRGB(255, 43, 214)
 
 -- 1234 -> "1.23K" (the bar is small)
@@ -56,6 +57,8 @@ function EventController:Start()
 	-- Popups: one at a time, queued so two surprises on one throw both get their moment
 	local queue = {}
 	local showing = false
+	local defaultSubColor = popup.Sub.TextColor3 -- the sub line's own colour, used when a popup doesn't pick one
+	local fades: { Tween } = {}
 	local function runQueue()
 		if showing then
 			return
@@ -63,9 +66,15 @@ function EventController:Start()
 		showing = true
 		while #queue > 0 do
 			local item = table.remove(queue, 1)
+			-- Stop the last popup's fade first: if it finished a frame late it would turn this one invisible,
+			-- leaving only the black outline
+			for _, fade in fades do
+				fade:Cancel()
+			end
 			popup.Text = item.Text
 			popup.TextColor3 = item.Color
 			popup.Sub.Text = item.Sub or ""
+			popup.Sub.TextColor3 = item.SubColor or defaultSubColor
 			popup.TextTransparency = 0
 			popup.Sub.TextTransparency = 0
 			popup.Visible = true
@@ -76,15 +85,20 @@ function EventController:Start()
 			TweenService:Create(popup, slam, { Rotation = 0 }):Play()
 			task.wait(item.Big and 2 or 1.3)
 			local fade = TweenInfo.new(0.25)
-			TweenService:Create(popup, fade, { TextTransparency = 1 }):Play()
-			TweenService:Create(popup.Sub, fade, { TextTransparency = 1 }):Play()
-			task.wait(0.25)
+			fades = {
+				TweenService:Create(popup, fade, { TextTransparency = 1 }),
+				TweenService:Create(popup.Sub, fade, { TextTransparency = 1 }),
+			}
+			for _, tween in fades do
+				tween:Play()
+			end
+			fades[1].Completed:Wait()
 		end
 		popup.Visible = false
 		showing = false
 	end
-	local function showPopup(text: string, color: Color3, sub: string?, big: boolean?)
-		table.insert(queue, { Text = text, Color = color, Sub = sub, Big = big })
+	local function showPopup(text: string, color: Color3, sub: string?, big: boolean?, subColor: Color3?)
+		table.insert(queue, { Text = text, Color = color, Sub = sub, Big = big, SubColor = subColor })
 		task.spawn(runQueue)
 	end
 
@@ -320,7 +334,9 @@ function EventController:Start()
 		showPopup(
 			("LEVEL %d!"):format(data.Level),
 			rank.Color,
-			if data.Gems > 0 then ("+%d GEMS"):format(data.Gems) else rank.Name:upper()
+			if data.Gems > 0 then ("+%d GEMS"):format(data.Gems) else rank.Name:upper(),
+			false,
+			if data.Gems > 0 then LEVEL_GEM_COLOR else nil
 		)
 		Sfx.Play("RankUp", 1.15, 0.7)
 	end)
