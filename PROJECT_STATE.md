@@ -1,7 +1,7 @@
 # Project state (max 40 lines, read at the start of every session, update at the end)
 Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 2 replaces Addendum 1).
 
-**Current milestone:** Phase 2 step 7 split in 3: 7a 60 rank levels (passed); 7b gem sink BUILT, test PENDING; then 7c streaks/modifiers/Golden Pin checks.
+**Current milestone:** Phase 2 step 7 split in 3: 7a 60 rank levels (passed); 7b gem sink PASSED; then 7c streaks/modifiers/Golden Pin checks.
 Restore point: git tag restore-step7b-before. Real game = cloud place 94254609600041.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
 ## Exists and works
@@ -35,6 +35,6 @@ Restore point: git tag restore-step7b-before. Real game = cloud place 9425460960
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
 
 ## Last session
-- 2026-10-19: 7a retest treated as passed (owner said start 7b). Step 7b built (gems buy Polish in the book), test PENDING.
+- 2026-10-19: 7a retest treated as passed (owner said start 7b). Step 7b built (gems buy Polish in the book), PASSED.
 - 2026-10-19: Step 7a built (60 levels), first test OK except popups; fixed: black popup (fade race), level gems line blue, level popup before FREE CRATE. Retest PENDING.
 - 2026-10-19: 3 bug fixes PASSED. Then (tag restore-first-crate-gift-before), test PENDING: first bought Basic crate 1,000 once + exactly Uncommon (Config.Onboarding.FirstCratePrice/FirstBoughtRarity, Balls.CratePrice); gift at throw 65 (~4:00) exactly Rare (GiftRarity), showcase 3 throws later; Power LV banner centred, smaller. Owner rejected 'or better' + side banner once.
