@@ -1,8 +1,8 @@
 # Project state (max 40 lines, read at the start of every session, update at the end)
 Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 2 replaces Addendum 1).
 
-**Current milestone:** Phase 2 step 7 split in 3: 7a 60 rank levels (passed); 7b gem sink PASSED; then 7c streaks/modifiers/Golden Pin checks.
-Restore point: git tag restore-step7b-before. Real game = cloud place 94254609600041.
+**Current milestone:** Phase 2 step 7c (streaks/modifiers/Golden Pin checks) built, owner test PENDING. 7a, 7b passed.
+Restore point: git tag restore-step7c-before. Real game = cloud place 94254609600041.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
 ## Exists and works
 - 6 lanes, real physics pins (Standard/Golden/Golden Star meshes), lobby hub, kiosk, leaderboard wall, Vault (11 cases).
@@ -35,6 +35,7 @@ Restore point: git tag restore-step7b-before. Real game = cloud place 9425460960
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
 
 ## Last session
+- 2026-10-19: Step 7c: on-screen streak names = spec tiers (STREAK MASTER at 7, PERFECT RUN at 10, "6 IN A ROW!" between); overcook always ends the streak (Streak Saver no longer covers it); EconomySim plays live rules (PERFECT-only strikes, Config.Streaks, lane modifiers, Golden Pin; plan's StreakPerStrike + Lucky Throw removed) -> mid game slower (PL8 56 min, PL9 never in 150). Moving Pins shows as MOVING GOLD (slides the gold). Test PENDING.
 - 2026-10-19: 7a retest treated as passed (owner said start 7b). Step 7b built (gems buy Polish in the book), PASSED.
 - 2026-10-19: Step 7a built (60 levels), first test OK except popups; fixed: black popup (fade race), level gems line blue, level popup before FREE CRATE. Retest PENDING.
 - 2026-10-19: 3 bug fixes PASSED. Then (tag restore-first-crate-gift-before), test PENDING: first bought Basic crate 1,000 once + exactly Uncommon (Config.Onboarding.FirstCratePrice/FirstBoughtRarity, Balls.CratePrice); gift at throw 65 (~4:00) exactly Rare (GiftRarity), showcase 3 throws later; Power LV banner centred, smaller. Owner rejected 'or better' + side banner once.

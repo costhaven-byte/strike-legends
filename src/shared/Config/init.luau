@@ -147,9 +147,9 @@ Config.Throw = {
 	PayoutPopGrowth = 10, -- ...plus this much for every x10 more coins
 	PayoutPopTime = 1.1,
 
-	-- Strike streak names on screen; after the last one it says "8 IN A ROW!" and so on
-	StreakNames = { "STRIKE!", "DOUBLE!", "TURKEY!", "HAMBONE!", "WILD TURKEY!", "SIX PACK!", "SEVEN UP!" },
-	SpecialStreaks = { 3, 5 }, -- extra-special celebration
+	-- Strike streak text on screen: "STRIKE!", then each Config.Streaks tier name the moment you reach it
+	-- (DOUBLE! TURKEY! HAMBONE! WILD TURKEY! STREAK MASTER! PERFECT RUN!), "6 IN A ROW!" and so on in between
+	SpecialStreaks = { 3, 5, 7, 10 }, -- extra-special celebration
 	StreakGrowth = 0.15, -- each strike in a row celebrates 15% bigger...
 	StreakGrowthStopsAt = 8, -- ...up to this many
 	CelebrationTime = 0.8,
@@ -437,7 +437,7 @@ Config.Traits = {
 		MinStreak = 2, -- only saves streaks of at least this many strikes
 	},
 	{
-		Id = "Lucky", -- Value: extra Golden Pin chance (1 = twice as likely). Golden Pins arrive in 9.5d.
+		Id = "Lucky", -- Value: extra Golden Pin chance (1 = twice as likely)
 		Name = "Lucky",
 		Text = "+%s%% Golden Pin chance",
 		Short = "LUCKY +%s%%",
@@ -1712,7 +1712,7 @@ Config.Economy = {}
 --   pinsHit = min(zone pins, ball power * throw quality)
 --   coins   = pinsHit * zone pin value * Power Level value * ball Multiplier (with Polish)
 --             * (1 + mascot bonuses) * (1 + RankBonus * rank)
---             * (1 + RebirthBonus * rebirths) * streak * boosts * crit (Perfect) * lucky
+--             * (1 + RebirthBonus * rebirths) * streak tier * crit (Perfect) * lane modifier * Golden Pin
 --   xp      = pinsHit * zone XP per pin
 Config.Economy.Formula = {
 	QualityMin = 0.6, -- the worst timing still knocks down this share of the ball's power
@@ -1720,10 +1720,8 @@ Config.Economy.Formula = {
 	PerfectCrit = 2.0, -- a Perfect throw (quality 1.0, sweet spot) pays this much more
 	RankBonus = 0.03, -- +3% coins per rank
 	RebirthBonus = 0.5, -- +50% coins per rebirth
-	StreakPerStrike = 0.1, -- streak multiplier = 1 + this * strikes in a row...
-	StreakMax = 3.0, -- ...capped here. Any non-strike sets it back to 1
-	LuckyChance = 0.03, -- Lucky Throw: chance on any throw (Milestone 13)...
-	LuckyMultiplier = 5, -- ...and its payout multiplier
+	-- Streak, lane modifier and Golden Pin multipliers come from the live tables (Config.Streaks,
+	-- Config.LaneModifiers, Config.GoldenPin); the plan's StreakPerStrike/StreakMax and Lucky Throw were replaced (step 7c).
 }
 
 -- Zones: you need Power >= Pins to strike a zone's lane. Rank = rank needed to enter.

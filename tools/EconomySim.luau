@@ -3,7 +3,8 @@
 -- rebirth, checked against Config.Economy.Timeline.
 -- Never runs in the game. To use it, paste this in Studio's command bar (edit mode, not play mode):
 --   require(game.ServerStorage.Tools.EconomySim).Run()
--- Not simulated yet: boss pins (Milestone 15), streak drops (13), daily rewards and quests (18), gems.
+-- Simulated like the live game: PERFECT-only strikes, streak tiers, lane modifiers, Golden Pins (coins only).
+-- Not simulated yet: boss pins, daily rewards and quests, gems, Golden Pin free crates, Streak Saver.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local EconomySim = {}
@@ -169,6 +170,36 @@ local function openCrate(config, s: State, rng: Random, crate, byRarity)
 	end
 end
 
+-- Coin multiplier of the streak tier reached (Config.Streaks), like Progression.GetStreakMultiplier
+local function streakMultiplier(config, streak: number): number
+	local multiplier = 1
+	for _, tier in config.Streaks do
+		if streak >= tier.Streak then
+			multiplier = tier.Multiplier
+		end
+	end
+	return multiplier
+end
+
+-- A lane modifier by Weight, like Modifiers.PickNext (Bonus Gems sits out while gems are off)
+local function pickModifier(config, rng: Random)
+	local pool, total = {}, 0
+	for _, modifier in config.LaneModifiers.List do
+		if config.Gems.Enabled or not modifier.NeedsGems then
+			table.insert(pool, modifier)
+			total += modifier.Weight or 1
+		end
+	end
+	local roll = rng:NextNumber() * total
+	for _, modifier in pool do
+		roll -= modifier.Weight or 1
+		if roll <= 0 then
+			return modifier
+		end
+	end
+	return pool[#pool]
+end
+
 -- Plays one pretend player. Returns { [goal] = seconds } for every goal reached.
 function EconomySim.RunOne(config, seed: number): { [string]: number }
 	local E = config.Economy
@@ -198,6 +229,7 @@ function EconomySim.RunOne(config, seed: number): { [string]: number }
 		end
 	end
 	local time = 0
+	local modifier, modifierEnds = {}, 0
 
 	-- Goals after a rebirth get "@R1", "@R2"... so each run is timed on its own (from the rebirth)
 	local function mark(goal: string)
@@ -271,16 +303,24 @@ function EconomySim.RunOne(config, seed: number): { [string]: number }
 		quality = math.clamp(quality, F.QualityMin, F.QualityMax)
 
 		local pinsHit = math.min(zone.Pins, math.floor(level.Power * quality))
-		local strike = pinsHit >= zone.Pins
+		-- Live rules: only a PERFECT strikes, the streak tier sets the multiplier (Config.Streaks), the lane modifier
+		-- changes every Config.LaneModifiers.Interval seconds, and a Golden Pin pays when one of the pins hit is golden
+		local strike = perfect and pinsHit >= zone.Pins
 		s.Streak = if strike then s.Streak + 1 else 0
+		if time >= modifierEnds then
+			modifier = pickModifier(config, rng)
+			modifierEnds = time + config.LaneModifiers.Interval
+		end
+		local golden = rng:NextNumber() < config.GoldenPin.Chance and rng:NextInteger(1, 10) <= pinsHit
 		local multiplier = level.Value
 			* ball
 			* mascotMultiplier(E, s)
 			* (1 + F.RankBonus * s.Rank)
 			* (1 + F.RebirthBonus * s.Rebirths)
-			* math.min(1 + F.StreakPerStrike * s.Streak, F.StreakMax)
+			* streakMultiplier(config, s.Streak)
 			* (if perfect then F.PerfectCrit else 1)
-			* (if rng:NextNumber() < F.LuckyChance then F.LuckyMultiplier else 1)
+			* (modifier.CoinMultiplier or 1)
+			* (if golden then config.GoldenPin.CoinMultiplier else 1)
 		s.Coins += math.floor(pinsHit * zone.PinValue * multiplier)
 		s.XP += math.floor(pinsHit * zone.XpPerPin * (1 + (E.Rebirth.XpBonus or 0) * s.Rebirths))
 		if S.Trace then -- tuning scripts can watch every throw

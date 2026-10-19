@@ -154,7 +154,9 @@ local function onThrowRequest(player: Player, clientHold: any)
 	local distance = (lane.PinSpot.Position - lane.BallStart.Position):Dot(forward)
 	local result = ThrowResolver.Resolve(charge, perfect, hooked, overcharged, ball, distance, level.Power)
 	local isStrike = result.Tier == "Strike" or result.Tier == "PerfectStrike"
-	local streak, saved = ProgressionService.NextStreak(player, isStrike, Balls.TraitValue(ball, "StreakSaver"))
+	-- An overcooked throw always ends the streak: Streak Saver never covers the greedy red
+	local saverCooldown = if result.Overcharge == "Wasted" then 0 else Balls.TraitValue(ball, "StreakSaver")
+	local streak, saved = ProgressionService.NextStreak(player, isStrike, saverCooldown)
 	local goldenPin = GoldenPinService.Get(lane)
 	local goldenHit = goldenPin > 0 and table.find(result.Pins, goldenPin) ~= nil
 	local multipliers = getCoinMultipliers(player, ball, level, streak, modifier, goldenHit)

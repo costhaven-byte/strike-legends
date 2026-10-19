@@ -554,6 +554,19 @@ function ThrowController:Start()
 		end)
 	end
 
+	-- "STRIKE!", a Config.Streaks tier name when you reach that tier, otherwise "6 IN A ROW!"
+	local function streakName(streak: number): string
+		if streak <= 1 then
+			return "STRIKE!"
+		end
+		for _, tier in Config.Streaks do
+			if tier.Streak == streak and tier.Name ~= "" then
+				return tier.Name .. "!"
+			end
+		end
+		return streak .. " IN A ROW!"
+	end
+
 	local function showResult(data)
 		local previous = lastStreak
 		local streak = data.Streak or 0
@@ -572,7 +585,7 @@ function ThrowController:Start()
 			if special then
 				grow *= 1.3
 			end
-			local name = THROW.StreakNames[math.max(streak, 1)] or (streak .. " IN A ROW!")
+			local name = streakName(streak)
 			local color = if special then GOLD elseif streak <= 1 then PINK else CYAN
 			showText(name, color, true, math.min(grow, 1.7)) -- capped so it always fits on screen
 		elseif streak > 0 then
