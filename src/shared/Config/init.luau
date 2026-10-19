@@ -1912,7 +1912,7 @@ Config.Zones = {
 				Haze = 1.2,
 				Bloom = 0.25,
 			},
-			Flicker = { Path = { "NeonSign", "Letter_N_Broken" }, Color = Color3.fromHex("ff4fb0"), Dim = Color3.fromHex("7a3a5e") },
+			Flicker = { Path = { "NeonSign", "Letter_N_broken" }, Color = Color3.fromHex("ff4fb0"), Dim = Color3.fromHex("7a3a5e") },
 		},
 	},
 }

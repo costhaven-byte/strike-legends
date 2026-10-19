@@ -79,7 +79,8 @@ local function flicker(world)
 	end
 	local tubes = {}
 	for _, part in node:GetDescendants() do
-		if part:IsA("BasePart") then
+		-- only the dead tubes (the loose wire keeps its own colour)
+		if part:IsA("BasePart") and part.Color:ToHex() == spec.Dim:ToHex() then
 			table.insert(tubes, part)
 		end
 	end
