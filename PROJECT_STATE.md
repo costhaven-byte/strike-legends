@@ -26,15 +26,15 @@ Next: Phase 2 step 7 (ranks 1-60, section 9.5), only when Selim says go.
 - 5 crates (Basic 1.6K, Bronze 9.2K, Silver 1M, Gold 87M, Neon 5.9B; Config.Economy.Crates), pity per crate (save v10 CratePity, attributes Pity_<Crate>_<Rarity>), first crate ever Rare+ (CratesOpened), ODDS button per shop card = every ball's chance. Duplicates = Polish (save Polish, +5% mult per level, max 10, then coins); book shows POLISH n/10.
 ## Placeholder
 - All sounds (Creator Store picks); 3 overcharge stand-ins; PowerUp = RankUp stand-in. Bronze/Silver/Gold crate models = recoloured Basic; kiosk has Basic + Neon stations only. Gold/Neon and Levels 5-12 need zones 2+ (TEST button).
-
 ## Not built yet (from Addendum 2)
 - 60 rank levels, gem sink (owner chose: gems buy Polish levels).
 - Mascots, zones 2-6, bosses, rebirth, return loops, monetization (off switch).
 
-## Parked: Tournaments, ghost replays, spectator lanes, challenge lane. Master plan M11-M20 replaced by Addendum 2 phases.
+## Parked: Tournaments, ghost replays, spectator lanes, challenge lane (M11-M20 replaced by Addendum 2).
 
 ## Off-git (saved only in the Studio place file)
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
 
 ## Last session
-- 2026-10-19: First 5 Minutes handoff built (trial 1 strike/no cooldown, gift at 10 throws, Basic crate goal + beam, PERFECT-rate + timeline log). Owner PASSED; then removed kiosk label + added equip guide (PASSED).
+- 2026-10-19: First 5 Minutes handoff + follow-up PASSED.
+- 2026-10-19: 3 owner bugs fixed (tag restore-bugfix-ballhand-before), test PENDING: held ball rebuilt after the avatar loads/swaps its hand; no throwing while a popup is open (ThrowController POPUPS list); smaller BUY LV 2 callout.
