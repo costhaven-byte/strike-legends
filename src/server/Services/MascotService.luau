@@ -5,6 +5,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -17,6 +18,7 @@ local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
 local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
 local ODDS = Config.Economy.Mascots.Odds
+local HATCH_RANGE = Config.MascotFx.HatchRange
 
 local MascotService = {}
 
@@ -105,6 +107,18 @@ local function roll(eggId: string)
 	return inEgg[1]
 end
 
+-- Eggs hatch only at the egg stand in the lobby (Workspace.Hub.EggPad): the player must be standing by it
+local function atEggStand(player: Player): boolean
+	local hub = Workspace:FindFirstChild("Hub")
+	local pad = hub and hub:FindFirstChild("EggPad")
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not pad or not root then
+		return false
+	end
+	local offset = (root.Position - pad:GetPivot().Position) * Vector3.new(1, 0, 1)
+	return offset.Magnitude <= HATCH_RANGE
+end
+
 local function hatch(player: Player, eggId: any)
 	local egg = Mascots.GetEgg(eggId)
 	if not egg or not Mascots.EggReady(egg.Id) then
@@ -112,6 +126,9 @@ local function hatch(player: Player, eggId: any)
 	end
 	if not PlayerDataService.IsLoaded(player) then
 		return { Ok = false, Error = "Still loading" }
+	end
+	if not atEggStand(player) then
+		return { Ok = false, Error = "Hatch it at the egg stand" }
 	end
 	local unlocked, why = Mascots.EggUnlocked(egg, PlayerDataService.Get(player, "RankLevel") or 1, zone(player))
 	if not unlocked then

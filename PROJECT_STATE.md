@@ -1,6 +1,6 @@
 # Project state (max 40 lines, read at the start of every session, update at the end)
 Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 2 replaces Addendum 1).
-**Current milestone:** Phase 3 step 8b built 2026-10-19, owner test PENDING. Next: step 9 (zones 2-6) when the owner says.
+**Current milestone:** Phase 3 step 8b PASSED 2026-10-19 (+ hatching only at the egg stand). Next: step 9 (zones 2-6) when the owner says.
 Restore point: git tag restore-step8b-before. Real game = cloud place 94254609600041.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
 ## Exists and works
@@ -33,7 +33,7 @@ Restore point: git tag restore-step8b-before. Real game = cloud place 9425460960
 ## Off-git (saved only in the Studio place file)
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
 ## Last session
-- 2026-10-19: Step 8b built; owner: all works except celebrations not seen (camera rides down the lane). Fix: on a strike mascots dash to the pins to cheer (Config.MascotFx Cheer*), react twice. Retest PENDING.
+- 2026-10-19: Step 8b PASSED after the cheer fix (on a strike mascots dash to the pins, Config.MascotFx Cheer*). Owner then asked: hatch only at the physical egg -> PETS panel HATCH and HATCH AGAIN removed, server refuses hatches further than MascotFx.HatchRange from Hub.EggPad.
 - 2026-10-19: Phase 2 done. Step 8 split 8a/8b; 8a built and checked in Studio (hatch, equip, Equip Best, follow, egg stand); owner asked to replace the daily pad with the new thing -> egg stand. Code synced into Studio by the http trick (Rojo not connected). PASSED.
 - 2026-10-19: Step 7c: on-screen streak names = spec tiers (STREAK MASTER at 7, PERFECT RUN at 10, "6 IN A ROW!" between); overcook always ends the streak (Streak Saver no longer covers it); EconomySim plays live rules (PERFECT-only strikes, Config.Streaks, lane modifiers, Golden Pin; plan's StreakPerStrike + Lucky Throw removed) -> mid game slower (PL8 56 min, PL9 never in 150). Moving Pins shows as MOVING GOLD (slides the gold). Gold shrinks 5% per strike, never below 75%. PASSED.
 - 2026-10-19: 7a retest treated as passed (owner said start 7b). Step 7b built (gems buy Polish in the book), PASSED.

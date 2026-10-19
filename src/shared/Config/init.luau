@@ -1761,6 +1761,7 @@ Config.MascotFx = {
 	-- The egg stand in the lobby (Workspace.Hub.EggPad, the old daily-reward pad)
 	PromptDistance = 10,
 	HoldDuration = 0.4, -- seconds to hold "Hatch", so nobody spends coins by accident
+	HatchRange = 18, -- eggs only hatch at the stand: the server refuses players further than this (studs, flat)
 	-- Hatching: the egg shakes harder and harder while its glow flicks through rarity colours, then cracks
 	ShakeTime = 2.4,
 	RevealTime = 2.6, -- seconds the new mascot stays on screen before the panel can be closed

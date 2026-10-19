@@ -1,6 +1,7 @@
 -- Mascots on screen (Addendum 2 Phase 3 step 8): the PETS button, the mascot panel, the hatching moment and the
 -- egg stand in the lobby (Workspace.Hub.EggPad, the old daily-reward pad).
--- Panel: the egg (price, HATCH, ODDS), your equipped slots with EQUIP BEST, and every mascot the egg can hatch
+-- Hatching happens only at the egg stand (owner's call, 2026-10-19): the panel shows the egg's price, where to
+-- hatch it and its ODDS, your equipped slots with EQUIP BEST, and every mascot the egg can hatch
 -- (owned ones lit with EQUIP buttons, missing ones as dark silhouettes). Step 8b: a MERGE button when you own
 -- Config.Economy.Mascots.ShinyMerge of one mascot, and gold Shiny cards once you own a Shiny.
 -- Built in code (not in Studio), so it lives in git. The server rolls every hatch (MascotService); this only shows it.
@@ -255,8 +256,15 @@ function MascotController:Start()
 		text(eggCard, "EggName", FONT, EGG_LOOK.Color, UDim2.fromScale(0.05, 0.47), UDim2.fromScale(0.9, 0.09))
 	eggName.Text = string.upper(EGG_LOOK.Name)
 	local eggPrice = text(eggCard, "Price", FONT, GOLD, UDim2.fromScale(0.05, 0.56), UDim2.fromScale(0.9, 0.08))
-	local hatchButton =
-		button(eggCard, "Hatch", "HATCH", LIME, UDim2.fromScale(0.08, 0.67), UDim2.fromScale(0.84, 0.14))
+	-- Where to hatch (not a button: eggs hatch only at the egg stand in the lobby)
+	local hatchHint = text(
+		eggCard,
+		"HatchHint",
+		BODY_FONT,
+		Color3.new(1, 1, 1),
+		UDim2.fromScale(0.06, 0.67),
+		UDim2.fromScale(0.88, 0.14)
+	)
 	local oddsButton =
 		button(eggCard, "OddsButton", "ODDS", GREY, UDim2.fromScale(0.25, 0.84), UDim2.fromScale(0.5, 0.11))
 	oddsButton.TextColor3 = Color3.new(1, 1, 1)
@@ -570,11 +578,11 @@ function MascotController:Start()
 		local unlocked, why, affordable = eggState()
 		eggPrice.Text = formatNumber(EGG.Price) .. " COINS"
 		if not unlocked then
-			hatchButton.Text = "REACH " .. tostring(why)
-			hatchButton.BackgroundColor3 = GREY
+			hatchHint.Text = "REACH " .. tostring(why)
+			hatchHint.TextColor3 = GREY
 		else
-			hatchButton.Text = "HATCH"
-			hatchButton.BackgroundColor3 = if affordable then LIME else GREY
+			hatchHint.Text = "HATCH IT AT THE\nEGG STAND IN THE LOBBY"
+			hatchHint.TextColor3 = if affordable then LIME else Color3.new(1, 1, 1)
 		end
 		dot.Visible = unlocked and affordable
 		refreshSlots()
@@ -660,13 +668,8 @@ function MascotController:Start()
 			s.Thickness = 3
 		end
 	end
-	local againButton =
-		button(overlay, "Again", "HATCH AGAIN", LIME, UDim2.new(0.5, -170, 0.79, 0), UDim2.fromOffset(200, 46))
-	local DONE_BESIDE_AGAIN = UDim2.new(0.5, 40, 0.79, 0)
-	local DONE_ALONE = UDim2.new(0.5, -65, 0.79, 0) -- (the merge screen has no HATCH AGAIN)
-	local doneButton = button(overlay, "Done", "CLOSE", GREY, DONE_BESIDE_AGAIN, UDim2.fromOffset(130, 46))
+	local doneButton = button(overlay, "Done", "CLOSE", GREY, UDim2.new(0.5, -65, 0.79, 0), UDim2.fromOffset(130, 46))
 	doneButton.TextColor3 = Color3.new(1, 1, 1)
-	againButton.ZIndex = 36
 	doneButton.ZIndex = 36
 
 	local function setGlow(color: Color3, strength: number)
@@ -699,9 +702,7 @@ function MascotController:Start()
 		end
 		local rarity = Mascots.RarityIndex(mascot.Rarity)
 		overlay.Visible = true
-		againButton.Visible = false
 		doneButton.Visible = false
-		doneButton.Position = DONE_BESIDE_AGAIN
 		revealNew.Text = ""
 		revealName.Text = ""
 		revealInfo.Text = ""
@@ -769,14 +770,8 @@ function MascotController:Start()
 		end
 
 		task.wait(0.6)
-		local _, _, affordable = eggState()
-		againButton.Visible = affordable
-		againButton.Text = ("HATCH AGAIN (%s)"):format(formatNumber(EGG.Price))
 		doneButton.Visible = true
 		UiFx.Pop(doneButton, 0.6, 0.3)
-		if affordable then
-			UiFx.Pop(againButton, 0.6, 0.3)
-		end
 	end
 
 	doHatch = function()
@@ -817,9 +812,7 @@ function MascotController:Start()
 			return
 		end
 		overlay.Visible = true
-		againButton.Visible = false
 		doneButton.Visible = false
-		doneButton.Position = DONE_ALONE
 		revealNew.Text = ""
 		revealName.Text = ""
 		revealInfo.Text = ""
@@ -888,13 +881,6 @@ function MascotController:Start()
 		clearStage()
 	end
 	doneButton.Activated:Connect(closeOverlay)
-	againButton.Activated:Connect(function()
-		closeOverlay()
-		task.spawn(doHatch)
-	end)
-	hatchButton.Activated:Connect(function()
-		task.spawn(doHatch)
-	end)
 	bestButton.Activated:Connect(function()
 		bestRemote:FireServer()
 	end)
