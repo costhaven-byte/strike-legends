@@ -13,6 +13,7 @@ local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local UiFx = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("UiFx"))
 local BallView = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("BallView"))
+local Sfx = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
 
@@ -22,6 +23,7 @@ local INK = Color3.fromHex("06060F")
 local CARD = Color3.fromRGB(30, 20, 60)
 local TAB = Color3.fromRGB(22, 14, 44)
 local SILHOUETTE = Color3.fromRGB(28, 22, 48)
+local GEM_BLUE = Color3.fromRGB(60, 230, 255) -- same blue as "+N GEMS" after a throw (HudController)
 local SPIN_SPEED = 0.6 -- turns of the owned balls, radians per second
 
 local CollectionBookController = {}
@@ -89,6 +91,7 @@ function CollectionBookController:Start()
 	local close = book:WaitForChild("Close") :: TextButton
 	local ballsButton = gui:WaitForChild("Menu"):WaitForChild("BallsButton") :: TextButton
 	local equipRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("EquipBall") :: RemoteEvent
+	local polishRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("BuyPolish") :: RemoteFunction
 
 	-- One tab per rarity page
 	local tabs = Instance.new("Frame")
@@ -175,6 +178,17 @@ function CollectionBookController:Start()
 
 	local page = 1
 	local spinning: { Instance } = {}
+	-- POLISH buttons on this page and their gem price, so they light up or dim as gems come and go
+	local polishButtons: { [TextButton]: number } = {}
+	local function paintPolish(button: TextButton, price: number)
+		local canPay = (player:GetAttribute("Gems") or 0) >= price
+		button.BackgroundTransparency = if canPay then 0 else 0.45
+		button.TextTransparency = if canPay then 0 else 0.35
+		local outline = button:FindFirstChildOfClass("UIStroke")
+		if outline then
+			outline.Transparency = if canPay then 0 else 0.5
+		end
+	end
 	local tabButtons: { TextButton } = {}
 
 	local function ballsOf(rarityName: string)
@@ -211,7 +225,7 @@ function CollectionBookController:Start()
 		view.Name = "Ball"
 		view.AnchorPoint = Vector2.new(0.5, 0)
 		view.Position = UDim2.new(0.5, 0, 0, 8)
-		view.Size = UDim2.new(1, -16, 0.46, 0)
+		view.Size = UDim2.new(1, -16, 0.4, 0)
 		view.BackgroundTransparency = 1
 		view.Ambient = Color3.fromRGB(190, 190, 210)
 		view.LightColor = Color3.new(1, 1, 1)
@@ -240,17 +254,18 @@ function CollectionBookController:Start()
 			stroke(mark, INK, 2).ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 		end
 		local name = text(card, "BallName", FONT, if owned then Color3.new(1, 1, 1) else rarity.Color)
-		name.Position = UDim2.new(0, 6, 0.5, 6)
+		name.Position = UDim2.new(0, 6, 0.44, 6)
 		name.Size = UDim2.new(1, -12, 0.1, 0)
 		name.Text = if owned then ball.Name:upper() else "???"
 		stroke(name, INK, 1.5).ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 
 		local stats = text(card, "Stats", BODY_FONT, Color3.fromRGB(200, 190, 230))
-		stats.Position = UDim2.new(0, 6, 0.61, 4)
+		stats.Position = UDim2.new(0, 6, 0.55, 4)
 		stats.Size = UDim2.new(1, -12, 0.07, 0)
-		-- Owned balls: the multiplier with Polish on top, and the Polish level from duplicates (POLISH 3/10)
+		-- Owned balls: the multiplier with Polish on top, and the Polish level (POLISH 3/10)
+		local level = Balls.PolishLevel(Balls.DecodePolish(player:GetAttribute("Polish"))[ball.Id])
+		local polishPrice = if owned then Balls.PolishGemPrice(ball, level) else nil
 		if owned then
-			local level = Balls.PolishLevel(Balls.DecodePolish(player:GetAttribute("Polish"))[ball.Id])
 			local mult = math.floor(Balls.Multiplier(ball, level) * 100 + 0.5) / 100
 			stats.RichText = true
 			stats.Text = if level > 0
@@ -266,8 +281,11 @@ function CollectionBookController:Start()
 
 		-- Traits show on missing balls too, so you know what you're chasing (short tags, one per line)
 		local traits = text(card, "Traits", FONT, Color3.new(1, 1, 1))
-		traits.Position = UDim2.new(0, 8, 0.7, 4)
-		traits.Size = UDim2.new(1, -16, if owned then 0.17 else 0.3, if owned then -4 else -12)
+		traits.Position = UDim2.new(0, 8, 0.64, 4)
+		traits.Size = if not owned
+			then UDim2.new(1, -16, 0.36, -12)
+			elseif polishPrice then UDim2.new(1, -16, 0.15, -18) -- room for the POLISH button
+			else UDim2.new(1, -16, 0.23, -4)
 		traits.RichText = true
 		traits.TextWrapped = false -- one tag per line; long tags shrink instead of breaking
 		local short = Balls.DescribeTraits(ball, true, true):gsub(" · ", "\n")
@@ -316,6 +334,61 @@ function CollectionBookController:Start()
 			end)
 		end
 
+		-- Owned balls that aren't fully polished: POLISH buys the next level with gems (step 7b gem sink)
+		if owned and polishPrice then
+			local price = polishPrice :: number
+			local polish = Instance.new("TextButton")
+			polish.Name = "Polish"
+			polish.AnchorPoint = Vector2.new(0.5, 1)
+			polish.Position = UDim2.new(0.5, 0, 0.89, -12)
+			polish.Size = UDim2.new(1, -16, 0.1, 0)
+			polish.FontFace = FONT
+			polish.TextScaled = true
+			polish.RichText = true
+			polish.Text = ('POLISH  <font color="#FFFFFF">%d GEMS</font>'):format(price)
+			-- Dark with a gem-blue outline, so it never looks like the solid blue EQUIPPED bar under it
+			polish.TextColor3 = GEM_BLUE
+			polish.BackgroundColor3 = Color3.fromRGB(12, 36, 58)
+			polish.AutoButtonColor = true
+			corner(polish, 8)
+			stroke(polish, GEM_BLUE, 2)
+			local pad = Instance.new("UIPadding")
+			pad.PaddingTop = UDim.new(0.18, 0)
+			pad.PaddingBottom = UDim.new(0.1, 0)
+			pad.PaddingLeft = UDim.new(0, 4)
+			pad.PaddingRight = UDim.new(0, 4)
+			pad.Parent = polish
+			polish.Parent = card
+			polishButtons[polish] = price
+			paintPolish(polish, price)
+			local asking = false
+			polish.Activated:Connect(function()
+				if asking then
+					return
+				end
+				local gems = player:GetAttribute("Gems") or 0
+				if gems < price then
+					Sfx.Play("Error")
+					detail.Text = ('<font color="#3CE6FF">POLISH %s</font>   You need %d more gems. Gems come from PERFECT strikes, rank levels and the daily reward.'):format(
+						ball.Name:upper(),
+						price - gems
+					)
+					UiFx.Pop(polish, 0.85, 0.25)
+					return
+				end
+				asking = true
+				local ok, result = pcall(polishRemote.InvokeServer, polishRemote, ball.Id)
+				asking = false
+				if ok and result and result.Ok then
+					-- The Polish attribute changes and the page redraws; this just adds the sound
+					Sfx.Play("PowerUp")
+				else
+					Sfx.Play("Error")
+					detail.Text = if ok and result and result.Error then result.Error else "Try again"
+				end
+			end)
+		end
+
 		card.Parent = cards
 	end
 
@@ -352,6 +425,7 @@ function CollectionBookController:Start()
 			end
 		end
 		table.clear(spinning)
+		table.clear(polishButtons)
 		local rarity = rarities[page]
 		local list = ballsOf(rarity.Name)
 		local got = 0
@@ -431,9 +505,24 @@ function CollectionBookController:Start()
 	close.Activated:Connect(function()
 		setOpen(false)
 	end)
+	local polishShown = Balls.DecodePolish(player:GetAttribute("Polish"))
 	player:GetAttributeChangedSignal("Polish"):Connect(function()
+		local now = Balls.DecodePolish(player:GetAttribute("Polish"))
 		if book.Visible then
 			render()
+			-- The ball that just went up a Polish level gets a little bounce
+			for id, points in now do
+				local card = if points ~= polishShown[id] then cards:FindFirstChild(id) else nil
+				if card then
+					UiFx.Pop(card :: GuiObject, 1.08, 0.35)
+				end
+			end
+		end
+		polishShown = now
+	end)
+	player:GetAttributeChangedSignal("Gems"):Connect(function()
+		for button, price in polishButtons do
+			paintPolish(button, price)
 		end
 	end)
 	player:GetAttributeChangedSignal("OwnedBalls"):Connect(function()

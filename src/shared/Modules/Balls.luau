@@ -127,6 +127,15 @@ function Balls.Multiplier(ball, polishLevel: number?): number
 	return ball.Multiplier * (1 + POLISH.ValuePerLevel * (polishLevel or 0))
 end
 
+-- Gems for this ball's next Polish level (nil once it's fully polished). See Config.Economy.Polish.GemPrice
+function Balls.PolishGemPrice(ball, polishLevel: number?): number?
+	local level = (polishLevel or 0) + 1
+	if level > POLISH.MaxLevel then
+		return nil
+	end
+	return (POLISH.GemPrice[ball.Rarity] or POLISH.GemPrice.Common) * level
+end
+
 -- The server sends Polish Points as "Galaxy:3,Rookie:1" in a Player attribute
 function Balls.EncodePolish(polish: { [string]: number }): string
 	local parts = {}

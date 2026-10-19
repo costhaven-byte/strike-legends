@@ -259,6 +259,7 @@ Config.RateLimits = {
 	ClaimDaily = 1,
 	StartTrial = 1,
 	BuyPowerLevel = 0.5,
+	BuyPolish = 0.3,
 }
 
 -- Gems on/off switch. Addendum 1 keeps gems (earned only, a gem sink comes later); set Enabled = false to hide them.
@@ -1783,6 +1784,11 @@ Config.Economy.Polish = {
 	MaxLevel = 10,
 	PointsPerDuplicate = 1, -- starting guess (Milestone 16)...
 	PointsPerLevel = 1, -- ...so one duplicate = one level for now
+	-- Gem sink (step 7b, owner's choice): gems buy the next Polish level of a ball you own, one level at a time.
+	-- Price = GemPrice[rarity] x the level you're buying (Common: 4 for level 1, 8 for level 2 ... 40 for level 10).
+	-- Starting guess from gem income (~1 gem/min early: PERFECT drops, 2 per rank level, daily): first Common level
+	-- in about 4 minutes of gems, a full Common ball about 220 gems.
+	GemPrice = { Common = 4, Uncommon = 6, Rare = 10, Epic = 16, Legendary = 25, Mythic = 40 },
 }
 
 -- LIVE since Addendum 2 Phase 2 step 6: the shop crates (Config.Crates) take their price and odds from Economy.Crates

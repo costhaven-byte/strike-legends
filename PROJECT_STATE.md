@@ -1,8 +1,8 @@
 # Project state (max 40 lines, read at the start of every session, update at the end)
 Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 2 replaces Addendum 1).
 
-**Current milestone:** Phase 2 step 7 split in 3 (Selim OK'd): 7a 60 rank levels + level rewards BUILT, test PENDING; then 7b gem sink (gems buy Polish), 7c streaks/modifiers/Golden Pin checks.
-Restore point: git tag restore-step7a-before. Real game = cloud place 94254609600041.
+**Current milestone:** Phase 2 step 7 split in 3: 7a 60 rank levels (passed); 7b gem sink BUILT, test PENDING; then 7c streaks/modifiers/Golden Pin checks.
+Restore point: git tag restore-step7b-before. Real game = cloud place 94254609600041.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
 ## Exists and works
 - 6 lanes, real physics pins (Standard/Golden/Golden Star meshes), lobby hub, kiosk, leaderboard wall, Vault (11 cases).
@@ -23,11 +23,10 @@ Restore point: git tag restore-step7a-before. Real game = cloud place 9425460960
 - Curve (Addendum 2 spec): Curve X% = PERFECT window X% wider (ThrowRules.HookWidth(ball, size)); magenta edges on the gold. Heavy and Forgiveness also widen the gold (reported to Selim).
 - Collection book (CollectionBookController, built in code): the BALLS button opens it (old Inventory grid retired, kept hidden as a template), one page per rarity, owned balls spin in 3D with EQUIP buttons, missing = silhouette + traits.
 - DAILY button: grey + lock + throws-left countdown during onboarding; server refuses claims until Onboarding stage 3.
-- 5 crates (Basic 1.6K, Bronze 9.2K, Silver 1M, Gold 87M, Neon 5.9B; Config.Economy.Crates), pity per crate (save v10 CratePity, attributes Pity_<Crate>_<Rarity>), first crate ever Rare+ (CratesOpened), ODDS button per shop card = every ball's chance. Duplicates = Polish (save Polish, +5% mult per level, max 10, then coins); book shows POLISH n/10.
+- 5 crates (Basic 1.6K, Bronze 9.2K, Silver 1M, Gold 87M, Neon 5.9B; Config.Economy.Crates), pity per crate (save v10 CratePity, attributes Pity_<Crate>_<Rarity>), first crate ever Rare+ (CratesOpened), ODDS button per shop card = every ball's chance. Duplicates = Polish (save Polish, +5% mult per level, max 10, then coins); book shows POLISH n/10. Gem sink (7b): book POLISH button buys the next level with gems (Config.Economy.Polish.GemPrice x level; Common 4..40), remote BuyPolish.
 ## Placeholder
 - All sounds (Creator Store picks); 3 overcharge stand-ins; PowerUp = RankUp stand-in. Bronze/Silver/Gold crate models = recoloured Basic; kiosk has Basic + Neon stations only. Gold/Neon and Levels 5-12 need zones 2+ (TEST button).
 ## Not built yet (from Addendum 2)
-- 60 rank levels, gem sink (owner chose: gems buy Polish levels).
 - Mascots, zones 2-6, bosses, rebirth, return loops, monetization (off switch).
 
 ## Parked: Tournaments, ghost replays, spectator lanes, challenge lane (M11-M20 replaced by Addendum 2).
@@ -36,5 +35,6 @@ Restore point: git tag restore-step7a-before. Real game = cloud place 9425460960
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
 
 ## Last session
+- 2026-10-19: 7a retest treated as passed (owner said start 7b). Step 7b built (gems buy Polish in the book), test PENDING.
 - 2026-10-19: Step 7a built (60 levels), first test OK except popups; fixed: black popup (fade race), level gems line blue, level popup before FREE CRATE. Retest PENDING.
 - 2026-10-19: 3 bug fixes PASSED. Then (tag restore-first-crate-gift-before), test PENDING: first bought Basic crate 1,000 once + exactly Uncommon (Config.Onboarding.FirstCratePrice/FirstBoughtRarity, Balls.CratePrice); gift at throw 65 (~4:00) exactly Rare (GiftRarity), showcase 3 throws later; Power LV banner centred, smaller. Owner rejected 'or better' + side banner once.

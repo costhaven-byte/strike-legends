@@ -217,6 +217,38 @@ function BallService.GetMultiplier(player: Player, ball): number
 	return Balls.Multiplier(ball, Balls.PolishLevel(polish[ball.Id]))
 end
 
+-- Gem sink (step 7b): buys the next Polish level of a ball the player owns with gems
+-- (price: Balls.PolishGemPrice, from Config.Economy.Polish.GemPrice). Returns what the client shows.
+local function onBuyPolish(player: Player, ballId: any)
+	if not PlayerDataService.IsLoaded(player) or not RateLimit.Allow(player, "BuyPolish") then
+		return { Ok = false, Error = "Try again" }
+	end
+	local ball = type(ballId) == "string" and Balls.Get(ballId)
+	if not ball or not getOwned(player)[ball.Id] then
+		return { Ok = false, Error = "You don't own that ball" }
+	end
+	local polish = PlayerDataService.Get(player, "Polish")
+	if not polish then
+		return { Ok = false, Error = "Try again" }
+	end
+	local level = Balls.PolishLevel(polish[ball.Id])
+	local price = Balls.PolishGemPrice(ball, level)
+	if not price then
+		return { Ok = false, Error = "FULLY POLISHED" }
+	end
+	if (PlayerDataService.Get(player, "Gems") or 0) < price then
+		return { Ok = false, Error = "Not enough gems" }
+	end
+	PlayerDataService.Add(player, "Gems", -price)
+	polish[ball.Id] = (level + 1) * POLISH.PointsPerLevel
+	publishPolish(player)
+	Analytics.Currency(player, "Gems", -price, "Shop", "Polish" .. ball.Id)
+	Analytics.Purchase(player, "Polish", ball.Id)
+	Analytics.Event(player, "PolishLevel", level + 1, { ball.Id })
+	SessionLog.Moment(player, ("Polish bought: %s level %d (%d gems)"):format(ball.Id, level + 1, price))
+	return { Ok = true, Level = level + 1 }
+end
+
 -- Gives the player one crate's ball (no charge): rolls with this crate's pity, adds the ball, or turns a duplicate
 -- into Polish Points (coins once that ball is fully polished).
 -- Used for bought crates and free ones (like the daily reward). Returns the result the client shows.
@@ -360,8 +392,13 @@ function BallService:Start()
 	open.Name = "OpenCrate"
 	open.Parent = remotes
 
+	local buyPolish = Instance.new("RemoteFunction")
+	buyPolish.Name = "BuyPolish"
+	buyPolish.Parent = remotes
+
 	equip.OnServerEvent:Connect(onEquip)
 	open.OnServerInvoke = onOpenCrate
+	buyPolish.OnServerInvoke = onBuyPolish
 
 	PlayerDataService.OnLoaded(function(player)
 		-- Repair saves that point at a ball that no longer exists or isn't owned
