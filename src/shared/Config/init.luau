@@ -1886,6 +1886,37 @@ Config.Analytics = {
 -- rebirth in 17. When a table goes live, the old table it replaces (Config.Ranks, Config.Crates, ...) goes.
 -- Tuning: change a number here, re-run the simulator, compare with Economy.Timeline (MASTER_PLAN.md section 8).
 -- ================================================================================================
+-- Zone worlds (step 9a). Each zone is its own 6-lane area in Workspace (Folder = its Model).
+-- Zone 1 Back Alley (Workspace.BackAlley, outside behind the lobby) is where everyone bowls for now;
+-- Neon Lanes (the old alley inside the building) opens in the next part of step 9a.
+-- Look = the lighting your screen uses while your character is inside the zone's Area box
+-- (centre + size in studs); anywhere else (the lobby, Neon Lanes) keeps the normal Lighting.
+Config.Zones = {
+	LaneFolders = { "BackAlley", "NeonAlley" }, -- every Workspace model that holds lanes, in zone order
+	AssignFolder = "BackAlley", -- new lanes are handed out here
+	LookBlend = 0.6, -- seconds to fade between looks
+	Worlds = {
+		{
+			Id = "StarterAlley",
+			Folder = "BackAlley",
+			Area = { Center = Vector3.new(0, 20, 152), Size = Vector3.new(132, 60, 190) },
+			Look = {
+				Ambient = Color3.fromRGB(26, 26, 36),
+				OutdoorAmbient = Color3.fromRGB(34, 34, 46),
+				Saturation = -0.22,
+				Contrast = 0.06,
+				Tint = Color3.fromRGB(214, 218, 240),
+				HazeColor = Color3.fromHex("4b4a5c"),
+				HazeDecay = Color3.fromHex("3a3936"),
+				HazeDensity = 0.32,
+				Haze = 1.2,
+				Bloom = 0.25,
+			},
+			Flicker = { Path = { "NeonSign", "Letter_N_Broken" }, Color = Color3.fromHex("ff4fb0"), Dim = Color3.fromHex("7a3a5e") },
+		},
+	},
+}
+
 Config.Economy = {}
 
 -- One throw:
@@ -1906,7 +1937,7 @@ Config.Economy.Formula = {
 
 -- Zones: you need Power >= Pins to strike a zone's lane. Rank = rank needed to enter.
 Config.Economy.Zones = {
-	{ Id = "StarterAlley", Name = "Starter Alley", Pins = 10, PinValue = 10, XpPerPin = 1, Rank = 1 },
+	{ Id = "StarterAlley", Name = "Back Alley", Pins = 10, PinValue = 10, XpPerPin = 1, Rank = 1 },
 	{ Id = "NeonLanes", Name = "Neon Lanes", Pins = 30, PinValue = 50, XpPerPin = 2, Rank = 5 },
 	{ Id = "ArcadeArena", Name = "Arcade Arena", Pins = 100, PinValue = 250, XpPerPin = 4, Rank = 12 },
 	{ Id = "SkylineLanes", Name = "Skyline Lanes", Pins = 300, PinValue = 1250, XpPerPin = 8, Rank = 22 },

@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local LaneUtil = require(Shared.Modules.LaneUtil)
+local Config = require(Shared.Config)
 
 local LaneService = {}
 
@@ -29,7 +30,7 @@ end
 
 local function assignLane(player: Player): Model?
 	for _, lane in LaneUtil.GetLanes() do
-		if lane:GetAttribute("OwnerId") == nil then
+		if lane.Parent.Name == Config.Zones.AssignFolder and lane:GetAttribute("OwnerId") == nil then
 			lane:SetAttribute("OwnerId", player.UserId)
 			setSign(lane, player.DisplayName)
 			return lane

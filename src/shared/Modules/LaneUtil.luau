@@ -6,17 +6,21 @@ local Config = require(script.Parent.Parent.Config)
 local LaneUtil = {}
 
 function LaneUtil.GetLanes(): { Model }
-	local alley = Workspace:WaitForChild("NeonAlley")
 	local lanes = {}
-	for _, lane in alley:GetChildren() do
-		if lane:IsA("Model") and lane:FindFirstChild("PinSpot") and lane:FindFirstChild("BallStart") then
-			table.insert(lanes, lane)
+	for _, folderName in Config.Zones.LaneFolders do
+		local alley = Workspace:WaitForChild(folderName)
+		local found = {}
+		for _, lane in alley:GetChildren() do
+			if lane:IsA("Model") and lane:FindFirstChild("PinSpot") and lane:FindFirstChild("BallStart") then
+				table.insert(found, lane)
+			end
 		end
+		-- Lane1, Lane2, ... in number order, zone by zone
+		table.sort(found, function(a, b)
+			return (tonumber(a.Name:match("%d+")) or 0) < (tonumber(b.Name:match("%d+")) or 0)
+		end)
+		table.move(found, 1, #found, #lanes + 1, lanes)
 	end
-	-- Lane1, Lane2, ... in number order
-	table.sort(lanes, function(a, b)
-		return (tonumber(a.Name:match("%d+")) or 0) < (tonumber(b.Name:match("%d+")) or 0)
-	end)
 	return lanes
 end
 
