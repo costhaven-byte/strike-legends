@@ -136,14 +136,14 @@ function EventController:Start()
 	end)
 
 	-- First crate goal (Config.Onboarding.FirstCrateGoal): when it's the goal and affordable, a beam runs from the
-	-- player to that crate's kiosk station, with a marker over the station
+	-- player to that crate's kiosk station
 	local firstCrate = Balls.GetCrate(Config.Onboarding.FirstCrateGoal)
 	local station = Workspace:FindFirstChild("Hub")
 		and Workspace.Hub:FindFirstChild("CrateShop")
 		and Workspace.Hub.CrateShop:FindFirstChild("Stations")
 		and Workspace.Hub.CrateShop.Stations:FindFirstChild(Config.Onboarding.FirstCrateGoal)
 	local stationButton = station and station:FindFirstChild("BuyButton") :: BasePart?
-	local guide: { Beams: { Beam }, From: Attachment, Marker: BillboardGui }? = nil
+	local guide: { Beams: { Beam }, From: Attachment }? = nil
 	local function setGuide(on: boolean)
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if not on or not stationButton or not root then
@@ -152,7 +152,6 @@ function EventController:Start()
 					beam:Destroy()
 				end
 				guide.From:Destroy()
-				guide.Marker:Destroy()
 				guide = nil
 			end
 			return
@@ -198,25 +197,7 @@ function EventController:Start()
 			beam.Parent = root
 			table.insert(beams, beam)
 		end
-		local marker = Instance.new("BillboardGui")
-		marker.Name = "CrateGuideMarker"
-		marker.AlwaysOnTop = true
-		marker.LightInfluence = 0
-		marker.Size = UDim2.fromOffset(240, 80)
-		marker.StudsOffsetWorldSpace = Vector3.new(0, 7, 0)
-		marker.Parent = stationButton -- a local copy only this player sees
-		local text = Instance.new("TextLabel")
-		text.BackgroundTransparency = 1
-		text.Size = UDim2.fromScale(1, 1)
-		text.TextScaled = true
-		text.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
-		text.Text = ("NEW BALL HERE!\n%s CRATE"):format(firstCrate and firstCrate.Id:upper() or "")
-		text.TextColor3 = GOLD
-		local stroke = Instance.new("UIStroke")
-		stroke.Thickness = 3
-		stroke.Parent = text
-		text.Parent = marker
-		guide = { Beams = beams, From = from, Marker = marker }
+		guide = { Beams = beams, From = from }
 	end
 	local wantGuide = false
 	player.CharacterAdded:Connect(function()

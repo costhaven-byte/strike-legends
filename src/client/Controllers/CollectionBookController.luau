@@ -26,6 +26,16 @@ local SPIN_SPEED = 0.6 -- turns of the owned balls, radians per second
 
 local CollectionBookController = {}
 
+-- Equip guide: after the first crate bought with coins, arrows show how to equip its new ball
+-- (BALLS button first, then that ball's EQUIP button in the book). Ends on any equip or when the book closes.
+local guideBall: string? = nil
+
+function CollectionBookController.GuideEquip(ballId: string)
+	if Balls.Get(ballId) and player:GetAttribute("EquippedBall") ~= ballId then
+		guideBall = ballId
+	end
+end
+
 local function corner(parent: Instance, radius: number)
 	local c = Instance.new("UICorner")
 	c.CornerRadius = UDim.new(0, radius)
@@ -386,9 +396,9 @@ function CollectionBookController:Start()
 		end)
 	end
 
-	-- Opens on the page of the ball you're throwing
+	-- Opens on the page of the ball you're throwing (or the ball the equip guide points at)
 	local function equippedPage(): number
-		local current = Balls.Get(player:GetAttribute("EquippedBall")) or Config.Balls[1]
+		local current = Balls.Get(guideBall or player:GetAttribute("EquippedBall")) or Config.Balls[1]
 		for index, rarity in rarities do
 			if rarity.Name == current.Rarity then
 				return index
@@ -408,6 +418,9 @@ function CollectionBookController:Start()
 			UiFx.Close(inventory)
 			UiFx.Open(book)
 		else
+			if guideBall and book.Visible then
+				guideBall = nil -- the guide was shown in the book; don't keep nagging
+			end
 			UiFx.Close(book)
 		end
 	end
@@ -429,6 +442,7 @@ function CollectionBookController:Start()
 		end
 	end)
 	player:GetAttributeChangedSignal("EquippedBall"):Connect(function()
+		guideBall = nil
 		updateButton()
 		if book.Visible then
 			render()
@@ -450,7 +464,62 @@ function CollectionBookController:Start()
 		end
 	end)
 
+	-- Equip guide (see GuideEquip): the BALLS button glows gold, then an arrow points at the ball's EQUIP button
+	local guideGui = Instance.new("ScreenGui")
+	guideGui.Name = "EquipGuide"
+	guideGui.ResetOnSpawn = false
+	guideGui.DisplayOrder = 30
+	guideGui.IgnoreGuiInset = gui.IgnoreGuiInset
+	guideGui.Parent = player:WaitForChild("PlayerGui")
+	local arrow = text(guideGui, "Arrow", FONT, Color3.fromRGB(255, 200, 40))
+	arrow.Text = "<"
+	arrow.Rotation = -90 -- points down
+	arrow.AnchorPoint = Vector2.new(0.5, 0.5)
+	arrow.Size = UDim2.fromOffset(46, 46)
+	arrow.ZIndex = 50
+	arrow.Visible = false
+	stroke(arrow, INK, 3).ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+	local arrowWasOn: GuiObject? = nil
+	-- The BALLS button's own outline turns gold while it pulses
+	local ballsGlow = ballsButton:FindFirstChildOfClass("UIStroke") or stroke(ballsButton, INK, 2)
+	local glowColor, glowThickness = ballsGlow.Color, ballsGlow.Thickness
+	local ballsScale = ballsButton:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+	ballsScale.Parent = ballsButton
+	local ballsPulsing = false
+
 	RunService.RenderStepped:Connect(function(dt)
+		-- Equip guide: the BALLS button glows and pulses; in the book an arrow points down at the ball's EQUIP
+		local target: GuiObject? = nil
+		local pulseBalls = false
+		if guideBall then
+			if book.Visible then
+				local card = cards:FindFirstChild(guideBall)
+				target = card and card:FindFirstChild("Equip") :: GuiObject?
+			elseif ballsButton.Visible and gui.Enabled then
+				pulseBalls = true
+			end
+		end
+		local wave = math.abs(math.sin(os.clock() * 6))
+		if pulseBalls then
+			ballsGlow.Color = Color3.fromRGB(255, 200, 40)
+			ballsGlow.Thickness = glowThickness + 2 + 2 * wave
+			ballsScale.Scale = 1 + 0.12 * wave
+		elseif ballsPulsing then
+			ballsGlow.Color = glowColor
+			ballsGlow.Thickness = glowThickness
+			ballsScale.Scale = 1
+		end
+		ballsPulsing = pulseBalls
+		arrow.Visible = target ~= nil
+		if target then
+			local pos, size = target.AbsolutePosition, target.AbsoluteSize
+			arrow.Position = UDim2.fromOffset(pos.X + size.X / 2, pos.Y - 26 - wave * 12)
+			if arrowWasOn ~= target then
+				UiFx.Pop(arrow, 1.6, 0.4)
+			end
+		end
+		arrowWasOn = target
+
 		local turn = CFrame.Angles(0, dt * SPIN_SPEED, 0)
 		if buttonModel and buttonView.Visible then
 			spin(buttonModel, turn)

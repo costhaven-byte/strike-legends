@@ -11,6 +11,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local BallInventoryController = require(script.Parent.BallInventoryController)
+local CollectionBookController = require(script.Parent.CollectionBookController)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
@@ -489,6 +490,7 @@ function CrateController:Start()
 			return
 		end
 		busy = true
+		local firstBought = not hasFree(crate) and (player:GetAttribute("CratesBought") or 0) == 0
 		local ok, result = pcall(openCrate.InvokeServer, openCrate, crate.Id)
 		if not ok or not result or not result.Ok then
 			busy = false
@@ -498,6 +500,11 @@ function CrateController:Start()
 		setOpen(false)
 		playOpening(crate, result)
 		busy = false
+		if firstBought and result.IsNew then
+			-- The first crate bought with coins: arrows show how to equip its new ball (BALLS button, then EQUIP)
+			CollectionBookController.GuideEquip(result.BallId)
+			return
+		end
 		if backToShop ~= false then
 			setOpen(true) -- straight back to the shop for the next one
 		end

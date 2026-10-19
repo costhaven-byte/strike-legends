@@ -1,7 +1,7 @@
 # Project state (max 40 lines, read at the start of every session, update at the end)
 Rules: STRIKE_LEGENDS_ADDENDUM_2.md > MASTER_PLAN.md > GAME_DESIGN.md (Addendum 2 replaces Addendum 1).
 
-**Current milestone:** First 5 Minutes fixes (HANDOFF_FIRST_5_MINUTES.md) built 2026-10-19, owner test PENDING.
+**Current milestone:** First 5 Minutes fixes (HANDOFF_FIRST_5_MINUTES.md) PASSED 2026-10-19; follow-up (no kiosk label, equip guide) owner test PENDING.
 Restore point: git tag restore-first5-before. Real game = cloud place 94254609600041.
 Next: Phase 2 step 7 (ranks 1-60, section 9.5), only when Selim says go.
 **Weekly hour budget (optional):** not set yet. **Hours used this week:** 0.
@@ -19,7 +19,7 @@ Next: Phase 2 step 7 (ranks 1-60, section 9.5), only when Selim says go.
 - Overcharge (Config.Throw.Overcharge, Enabled = true): red cap at the top of the arc (from 0.94); release there = 50% OVERCHARGE strike (x2 a Perfect, harder hit) or OVERCOOKED gutter (0 pins, streak over). Gold never enters the red.
 - AssetSlots (Shared.AssetSlots): every sound slot; nil Id = borrows a stand-in sound. Strike slow motion 0.2s, hit-stop 0.05s (Addendum spec).
 - Power Levels (save v8 PowerLevel; PowerLevelService + PowerUI button built in code): Config.Economy.PowerLevels live (sim units x10 = real coins). Power caps pins on non-PERFECT throws (LV1 = 6); PERFECT still strikes. Value multiplies coins. Looks per level: Config.Throw.Levels (size, power trail, sparks, fire, mega crash, aura, rainbow, deeper sounds, cleaner pose). Perfect now pays x2. Studio-only TEST +COINS button.
-- First 3 minutes (OnboardingService/Controller, Config.Onboarding, save v9 Onboarding + OnboardThrows; old saves skip it): assisted first PERFECT (whole arc gold), BUY LV 2 callout, gift crate (Rare+, EQUIP button) after 10 throws, camera swing to a locked showcase ball at throw 41, daily popup held until then. "Next goal" bar = closest of Power Level / gift / Basic crate (until CratesBought > 0, save v11; gold beam + kiosk label when affordable) / free crate. Studio: Config.Onboarding.StudioNewPlayer = true (fresh, unsaved player each test).
+- First 3 minutes (OnboardingService/Controller, Config.Onboarding, save v9 Onboarding + OnboardThrows; old saves skip it): assisted first PERFECT (whole arc gold), BUY LV 2 callout, gift crate (Rare+, EQUIP button) after 10 throws, camera swing to a locked showcase ball at throw 41, daily popup held until then. "Next goal" bar = closest of Power Level / gift / Basic crate (until CratesBought > 0, save v11; gold beam to the kiosk when affordable; after that first paid crate, BALLS button glows + arrow at the new ball's EQUIP) / free crate. Studio: Config.Onboarding.StudioNewPlayer = true (fresh, unsaved player each test).
 - Curve (Addendum 2 spec): Curve X% = PERFECT window X% wider (ThrowRules.HookWidth(ball, size)); magenta edges on the gold. Heavy and Forgiveness also widen the gold (reported to Selim).
 - Collection book (CollectionBookController, built in code): the BALLS button opens it (old Inventory grid retired, kept hidden as a template), one page per rarity, owned balls spin in 3D with EQUIP buttons, missing = silhouette + traits.
 - DAILY button: grey + lock + throws-left countdown during onboarding; server refuses claims until Onboarding stage 3.
@@ -37,4 +37,4 @@ Next: Phase 2 step 7 (ranks 1-60, section 9.5), only when Selim says go.
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
 
 ## Last session
-- 2026-10-19: First 5 Minutes handoff built (trial 1 strike/no cooldown, gift at 10 throws, Basic crate goal + beam, PERFECT-rate + timeline log). Tested in Studio; awaiting owner test.
+- 2026-10-19: First 5 Minutes handoff built (trial 1 strike/no cooldown, gift at 10 throws, Basic crate goal + beam, PERFECT-rate + timeline log). Owner PASSED; then removed kiosk label + added equip guide (awaiting test).
