@@ -4,6 +4,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared").Config)
+local Zones = require(script.Parent.Zones)
 
 local ECONOMY = Config.Economy.Mascots
 
@@ -132,7 +133,7 @@ function Mascots.EggUnlocked(egg, rankLevel: number, zone: number): (boolean, st
 		return false, ("LEVEL %d"):format(egg.Rank)
 	end
 	if egg.Zone and zone < egg.Zone then
-		return false, ("ZONE %d"):format(egg.Zone)
+		return false, ("LEVEL %d"):format(Zones.UnlockLevel(egg.Zone))
 	end
 	return true, nil
 end

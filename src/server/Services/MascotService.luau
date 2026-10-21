@@ -10,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Mascots = require(Shared.Modules.Mascots)
+local Zones = require(Shared.Modules.Zones)
 local Progression = require(Shared.Modules.Progression)
 local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
@@ -36,9 +37,9 @@ local function slots(player: Player): number
 	return Mascots.Slots(PlayerDataService.Get(player, "RankLevel") or 1, 0) -- rebirths come in step 10
 end
 
--- Zones 2 to 6 come in step 9: everyone is in zone 1 for now
-local function zone(_player: Player): number
-	return 1
+-- The highest zone the player's rank level has opened (eggs with a Zone unlock there)
+local function zone(player: Player): number
+	return Zones.Highest(PlayerDataService.Get(player, "RankLevel"))
 end
 
 -- Keeps the equipped list valid: real mascots, never more copies than owned, never more than the slots
@@ -316,9 +317,10 @@ function MascotService:Start()
 				return
 			end
 			local egg = Config.Economy.Eggs[1]
-			if egg.Rank and (PlayerDataService.Get(player, "RankLevel") or 1) < egg.Rank then
+			local level = math.max(egg.Rank or 1, if egg.Zone then Zones.UnlockLevel(egg.Zone) else 1)
+			if (PlayerDataService.Get(player, "RankLevel") or 1) < level then
 				local xp = PlayerDataService.Get(player, "XP") or 0
-				ProgressionService.AddXP(player, math.max(Progression.LevelXP(egg.Rank) - xp, 1))
+				ProgressionService.AddXP(player, math.max(Progression.LevelXP(level) - xp, 1))
 			end
 			PlayerDataService.Add(player, "Coins", egg.Price)
 		end)

@@ -1,5 +1,6 @@
 -- Later zones on your screen (Config.Zones.Gated, Config.ZoneUnlock):
---   while a zone is locked, a glowing wall (only on your screen) keeps you out, with "REACH LEVEL N" on it;
+--   while a zone is locked, a glowing wall (only on your screen) keeps you out, with "REACH LEVEL N" on it
+--   (zone 2: it plugs the Back Alley door into the building);
 --   the moment your rank level opens it, a "ZONE UNLOCKED" window shows what's waiting there in 3D
 --   (its pets, crates and balls), once per zone (save ZoneSeen). "TAKE ME THERE" teleports you inside the zone.
 -- Claiming a lane there happens on the server (LaneService): step onto any OPEN lane.
@@ -74,7 +75,7 @@ local function buildWall(gate): Folder
 		wall.CFrame = CFrame.new(box.Center)
 		wall.Parent = folder
 	end
-	-- The sign faces the lobby (the first wall's +Z side)
+	-- The sign faces the Back Alley (the first wall's +Z side) and fills the wall's face, so it fits a narrow door too
 	local front = folder:FindFirstChild("Wall1") :: BasePart?
 	if front then
 		local sign = Instance.new("SurfaceGui")
@@ -88,20 +89,26 @@ local function buildWall(gate): Folder
 		holder.BackgroundTransparency = 1
 		holder.AnchorPoint = Vector2.new(0.5, 0.5)
 		holder.Position = UDim2.fromScale(0.5, 0.42)
-		holder.Size = UDim2.fromOffset(34 * 20, 6 * 20)
+		holder.Size = UDim2.fromScale(0.92, 0.6)
 		holder.Parent = sign
-		local title = text(holder, {
-			Size = UDim2.fromScale(1, 0.6),
-			Text = ("🔒 %s  ·  ZONE %d"):format(Zones.Name(gate.Zone):upper(), gate.Zone),
-			TextColor3 = gate.WallColor,
-		})
-		stroke(title, INK, 4)
-		local sub = text(holder, {
-			Position = UDim2.fromScale(0, 0.62),
-			Size = UDim2.fromScale(1, 0.38),
-			Text = ("REACH LEVEL %d TO ENTER"):format(Zones.UnlockLevel(gate.Zone)),
-		})
-		stroke(sub, INK, 4)
+		local lines = {
+			{ Text = "🔒", Height = 0.3, Color = Color3.new(1, 1, 1) },
+			{ Text = Zones.Name(gate.Zone):upper(), Height = 0.22, Color = gate.WallColor },
+			{ Text = ("ZONE %d"):format(gate.Zone), Height = 0.14, Color = gate.WallColor },
+			{ Text = ("REACH LEVEL %d"):format(Zones.UnlockLevel(gate.Zone)), Height = 0.17, Color = Color3.new(1, 1, 1) },
+			{ Text = "TO ENTER", Height = 0.13, Color = Color3.new(1, 1, 1) },
+		}
+		local y = 0
+		for _, line in lines do
+			local label = text(holder, {
+				Position = UDim2.fromScale(0, y),
+				Size = UDim2.fromScale(1, line.Height * 0.92),
+				Text = line.Text,
+				TextColor3 = line.Color,
+			})
+			stroke(label, INK, 3)
+			y += line.Height
+		end
 		sign.Parent = front
 	end
 	return folder

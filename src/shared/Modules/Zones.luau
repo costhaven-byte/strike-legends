@@ -48,7 +48,7 @@ function Zones.BallInCrate(ball, crate): boolean
 end
 
 -- The crate a reward really gives: a crate from a zone you haven't unlocked yet becomes your zone's crate
--- (the day 7 Neon Crate is an Alley Crate until Neon Lanes opens)
+-- (the day 7 Gold Crate is an Alley Crate until Neon Lanes opens)
 function Zones.RewardCrateId(crateId: string?, rankLevel: number?): string?
 	if not crateId then
 		return nil

@@ -1,4 +1,5 @@
--- The crate shop kiosk in the lobby (Workspace.Hub.CrateShop, built in Studio from the owner's design).
+-- The crate shop kiosk in the lobby (Workspace.Hub.CrateShop, built in Studio from the owner's design): Bronze + Silver
+-- stations (owner 2026-10-21; the Gold Crate is in the shop screen only).
 -- Fills its screens from Config (marquee, prices, odds board), makes the display crates hover and turn,
 -- and runs its buttons: a lime buy button per crate opens that crate, the joystick opens the shop screen.
 -- Buying still goes through CrateController and the server; the kiosk is just another way in.

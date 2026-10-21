@@ -36,7 +36,7 @@ local function formatNumber(n: number): string
 	return text
 end
 
--- "1,000 coins" / "5 gems" / "Neon Crate + 15 gems"
+-- "1,000 coins" / "5 gems" / "Gold Crate + 15 gems"
 local function rewardText(reward): string
 	local parts = {}
 	-- A crate from a zone you haven't unlocked yet comes as your zone's crate (same rule as the server)

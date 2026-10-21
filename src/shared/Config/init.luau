@@ -1706,7 +1706,8 @@ Config.Crates = {
 	{ Id = "Bronze", Name = "Bronze Crate", Color = Color3.fromRGB(215, 135, 70), Zone = 2 },
 	{ Id = "Silver", Name = "Silver Crate", Color = Color3.fromRGB(200, 215, 235), Zone = 2 },
 	{ Id = "Gold", Name = "Gold Crate", Color = Color3.fromRGB(255, 200, 40), Zone = 2 },
-	{ Id = "Neon", Name = "Neon Crate", Color = Color3.fromRGB(255, 60, 210), Zone = 2 },
+	-- The Neon Crate (5.9B) is out of the game for now (owner 2026-10-21): it gets a new name and a later zone once
+	-- the new economy is in. Its Config.Economy.Crates row stays for the simulator; old saves keep its pity.
 }
 
 -- Rizzo, the Back Alley crate dealer (owner's "Rizzo's Crate Cart" design), at Workspace.BackAlley.RizzoStand.
@@ -1947,7 +1948,7 @@ Config.Daily = {
 		{ Coins = 1000 },
 		{ Coins = 1500 },
 		{ Gems = 10 },
-		{ Crate = "Neon", Gems = 15 },
+		{ Crate = "Gold", Gems = 15 }, -- an Alley Crate until Neon Lanes opens (Zones.RewardCrateId)
 	},
 	CheckInterval = 30, -- seconds between checks for a new day while playing
 }
@@ -2050,18 +2051,18 @@ Config.Zones = {
 	-- wall (Wall boxes, only on your screen) keeps you out, and the server walks you back out to KickTo.
 	-- Unlocked: step onto any OPEN lane in the Area to claim it; it's yours until you leave the Area for LeaveGrace
 	-- seconds (or leave the game). Your Back Alley lane stays yours the whole time.
+	-- Owner 2026-10-21: zone 2 = the whole building (lobby too, with the kiosk, egg stand, leaderboards and vault):
+	-- below level 5 you can't even walk in, the wall plugs the Back Alley door.
 	Gated = {
 		{
 			Zone = 2,
 			Folder = "NeonAlley",
-			Area = { Center = Vector3.new(0, 12, -32), Size = Vector3.new(86, 30, 98) },
-			Walls = { -- centre + size in studs: front (lobby side) and both sides of the 6 lanes
-				{ Center = Vector3.new(0, 7, 17.5), Size = Vector3.new(86, 14, 1) },
-				{ Center = Vector3.new(-43, 7, -32), Size = Vector3.new(1, 14, 100) },
-				{ Center = Vector3.new(43, 7, -32), Size = Vector3.new(1, 14, 100) },
+			Area = { Center = Vector3.new(0, 12, -11.5), Size = Vector3.new(120, 30, 135) }, -- inside the building walls
+			Walls = { -- centre + size in studs: the door from the Back Alley into the lobby
+				{ Center = Vector3.new(54, 7, 56), Size = Vector3.new(8, 12, 2) },
 			},
 			WallColor = Color3.fromRGB(255, 60, 210),
-			KickTo = Vector3.new(0, 4, 24), -- lobby floor just in front of the lanes
+			KickTo = Vector3.new(54, 4, 63), -- Back Alley, just outside the door
 			Arrival = Vector3.new(0, 4, 14), -- "TAKE ME THERE" puts you here: inside, behind the approaches, facing the pins
 			LeaveGrace = 2,
 		},
@@ -2101,12 +2102,12 @@ Config.ZoneUnlock = {
 	[2] = {
 		Title = "ZONE 2 UNLOCKED!",
 		Name = "NEON LANES",
-		Tagline = "The bouncer just waved you in. Glowing lanes, brand-new pets in the Neon Egg, four new crates and the rarest balls in town are waiting inside.",
-		Eggs = { "Neon" }, -- Config.EggLooks Ids: shown in 3D on the pets row
-		PetsLine = "NEW PETS TO HATCH",
+		Tagline = "The bouncer just waved you in. Glowing lanes, pets to hatch, three new crates and the rarest balls in town are waiting inside.",
+		Eggs = { "Alley" }, -- Config.EggLooks Ids: shown in 3D on the pets row (pets open with this zone)
+		PetsLine = "PETS UNLOCKED: HATCH THEM IN THE LOBBY",
 		MysteryPets = 3, -- "?" cards beside the egg (its pets stay a surprise)
-		Crates = { "Bronze", "Silver", "Gold", "Neon" },
-		CratesLine = "4 NEW CRATES",
+		Crates = { "Bronze", "Silver", "Gold" },
+		CratesLine = "3 NEW CRATES",
 		Balls = { "Supernova", "Void", "Dragon", "Golden", "Galaxy", "Electric" },
 		BallsLine = "%d NEW BALLS TO WIN", -- %d = how many balls those crates can give that you don't own
 		Button = "TAKE ME THERE!",
@@ -2176,7 +2177,7 @@ Config.Economy.Crates = {
 	{ Id = "Bronze", Price = 9200, Odds = { Common = 45, Uncommon = 35, Rare = 17, Epic = 3 } },
 	{ Id = "Silver", Price = 1000000, Odds = { Common = 20, Uncommon = 35, Rare = 32, Epic = 11, Legendary = 2 } },
 	{ Id = "Gold", Price = 87000000, Odds = { Uncommon = 20, Rare = 45, Epic = 28, Legendary = 6.5, Mythic = 0.5 } },
-	{ Id = "Neon", Price = 5900000000, Odds = { Rare = 40, Epic = 38, Legendary = 18, Mythic = 4 } },
+	{ Id = "Neon", Price = 5900000000, Odds = { Rare = 40, Epic = 38, Legendary = 18, Mythic = 4 } }, -- simulator only (not in Config.Crates)
 }
 -- Pity: a pull of one of these Crates is at least Rarity once that many pulls in a row (of that crate) missed it
 Config.Economy.CratePity = {
@@ -2214,7 +2215,7 @@ end
 -- BonusScale: this egg's mascots get Mascots.Bonus times this (not in the plan, where every egg gave the same
 -- bonuses: cheap eggs made coins explode and expensive eggs were pointless). Plan prices: 400, 6K, 90K, 1.5M, 30M.
 Config.Economy.Eggs = {
-	{ Id = "Alley", Price = 3700, Rank = 3, BonusScale = 0.1 },
+	{ Id = "Alley", Price = 3700, Zone = 2, BonusScale = 0.1 }, -- owner 2026-10-21: pets open with Neon Lanes
 	{ Id = "Neon", Price = 420000, Zone = 2, BonusScale = 0.2 },
 	{ Id = "Arcade", Price = 6300000, Zone = 3, BonusScale = 0.4 },
 	{ Id = "Skyline", Price = 1500000000, Zone = 4, BonusScale = 0.7 },

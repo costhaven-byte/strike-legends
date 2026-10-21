@@ -13,6 +13,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Mascots = require(Shared.Modules.Mascots)
+local Zones = require(Shared.Modules.Zones)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local MascotView = require(Modules:WaitForChild("MascotView"))
 local Sfx = require(Modules:WaitForChild("Sfx"))
@@ -112,7 +113,8 @@ local function button(
 end
 
 local function eggState(): (boolean, string?, boolean)
-	local unlocked, why = Mascots.EggUnlocked(EGG, player:GetAttribute("RankLevel") or 1, 1)
+	local level = player:GetAttribute("RankLevel") or 1
+	local unlocked, why = Mascots.EggUnlocked(EGG, level, Zones.Highest(level))
 	local affordable = (player:GetAttribute("Coins") or 0) >= EGG.Price
 	return unlocked, why, affordable
 end
@@ -214,6 +216,30 @@ function MascotController:Start()
 	corner(dot)
 	stroke(dot, Color3.new(1, 1, 1), 2)
 	UiFx.Press(petsButton)
+
+	-- Locked until the pets' zone opens (owner 2026-10-21: pets come with Neon Lanes): grey, a padlock and the level
+	local lockShade = Instance.new("Frame")
+	lockShade.Name = "Lock"
+	lockShade.Size = UDim2.fromScale(1, 1)
+	lockShade.BackgroundColor3 = Color3.new(0, 0, 0)
+	lockShade.BackgroundTransparency = 0.45
+	lockShade.ZIndex = 5
+	lockShade.Visible = false
+	corner(lockShade, 12)
+	local lockIcon = text(
+		lockShade,
+		"Icon",
+		FONT,
+		Color3.new(1, 1, 1),
+		UDim2.fromScale(0.25, 0.15),
+		UDim2.fromScale(0.5, 0.5)
+	)
+	lockIcon.Text = "🔒"
+	lockIcon.ZIndex = 6
+	lockShade.Parent = petsButton
+	local litColors = { [petsButton] = petsButton.BackgroundColor3, [face] = face.BackgroundColor3 }
+	local petsOutline = petsButton:FindFirstChildOfClass("UIStroke")
+	local litOutline = petsOutline and petsOutline.Color
 
 	-- The panel borrows the ball inventory's look (like the collection book does)
 	local panel = inventory:Clone()
@@ -588,14 +614,33 @@ function MascotController:Start()
 		refreshSlots()
 	end
 
-	-- The button appears once the first egg unlocks (or the player already has mascots)
+	-- The button is always there, locked (grey + padlock + "LEVEL 5") until the egg's zone opens; it pops when it unlocks
+	local petsLocked: boolean? = nil
 	local function refreshButton()
-		local unlocked = eggState()
-		-- (Studio tests: always, so the TEST: EGG button in the panel can be reached)
-		local show = unlocked or (player:GetAttribute("Mascots") or "") ~= "" or RunService:IsStudio()
-		if show and not petsButton.Visible then
-			petsButton.Visible = true
+		local unlocked, why = eggState()
+		local locked = not unlocked
+		petsButton.Visible = true
+		if locked == petsLocked then
+			return
+		end
+		local wasLocked = petsLocked
+		petsLocked = locked
+		lockShade.Visible = locked
+		caption.ZIndex = 7 -- the level sits above the shade
+		caption.Text = if locked then tostring(why) else "PETS"
+		for part, color in litColors do
+			local h, sat, v = color:ToHSV()
+			part.BackgroundColor3 = if locked then Color3.fromHSV(h, sat * 0.1, v * 0.6) else color
+		end
+		if petsOutline and litOutline then
+			petsOutline.Color = if locked then Color3.fromRGB(90, 85, 100) else litOutline
+		end
+		caption.TextColor3 = if locked then Color3.new(1, 1, 1) else PINK
+		if wasLocked and not locked then
 			UiFx.Pop(petsButton, 1.6, 0.4)
+		end
+		if locked and panel.Visible then
+			UiFx.Close(panel)
 		end
 	end
 
@@ -885,7 +930,25 @@ function MascotController:Start()
 		bestRemote:FireServer()
 	end)
 
+	local shaking = false
 	petsButton.Activated:Connect(function()
+		if petsLocked then
+			-- A little "no" shake and where pets come from
+			local _, why = eggState()
+			showToast(("PETS UNLOCK IN %s (%s)"):format(Zones.Name(EGG.Zone or 1):upper(), tostring(why)))
+			if shaking then
+				return
+			end
+			shaking = true
+			local start = petsButton.Position
+			for _, dx in { -6, 6, -4, 4, 0 } do
+				petsButton.Position = start + UDim2.fromOffset(dx, 0)
+				task.wait(0.04)
+			end
+			petsButton.Position = start
+			shaking = false
+			return
+		end
 		if panel.Visible then
 			UiFx.Close(panel)
 		else
