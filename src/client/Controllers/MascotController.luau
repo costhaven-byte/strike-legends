@@ -7,6 +7,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -14,6 +15,7 @@ local Config = require(Shared.Config)
 local Mascots = require(Shared.Modules.Mascots)
 local Zones = require(Shared.Modules.Zones)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
+local HatchScene = require(Modules:WaitForChild("HatchScene"))
 local MascotView = require(Modules:WaitForChild("MascotView"))
 local PetIdle = require(Modules:WaitForChild("PetIdle"))
 local Sfx = require(Modules:WaitForChild("Sfx"))
@@ -608,6 +610,14 @@ function MascotController:Start()
 	doneButton.TextColor3 = Color3.new(1, 1, 1)
 	doneButton.ZIndex = 36
 
+	-- The name card sits lower on the stand hatch, so the pet above the stand stays clear
+	local function cardLayout(onStand: boolean)
+		revealNew.Position = UDim2.fromScale(0.3, if onStand then 0.08 else 0.13)
+		revealName.Position = UDim2.fromScale(0.25, if onStand then 0.68 else 0.64)
+		revealInfo.Position = UDim2.fromScale(0.25, if onStand then 0.755 else 0.72)
+		doneButton.Position = UDim2.new(0.5, -65, if onStand then 0.81 else 0.79, 0) -- stays on short screens too
+	end
+
 	local function setGlow(color: Color3, strength: number)
 		for i, ring in glowRings do
 			ring.BackgroundColor3 = color
@@ -615,8 +625,37 @@ function MascotController:Start()
 		end
 	end
 
+	-- Mythic hatches pulse the screen edges in the pet's colour
+	local edge = Instance.new("Frame")
+	edge.Name = "EdgePulse"
+	edge.BackgroundTransparency = 1
+	edge.Size = UDim2.fromScale(1, 1)
+	edge.ZIndex = 31
+	edge.Visible = false
+	edge.Parent = overlay
+	local edgeStroke = stroke(edge, PINK, 28, true)
+	local function edgePulse(color: Color3)
+		edgeStroke.Color = color
+		edge.Visible = true
+		task.spawn(function()
+			for _ = 1, 2 do
+				edgeStroke.Transparency = 0.1
+				TweenService:Create(edgeStroke, TweenInfo.new(0.3), { Transparency = 1 }):Play()
+				task.wait(0.3)
+			end
+			edge.Visible = false
+		end)
+	end
+
 	local hatching = false
 	local spinConnection: RBXScriptConnection? = nil
+	-- The lobby's egg stand, once it's built (the hatch plays on it); hatches this session (for auto-skip)
+	local stand: { Stand: Model, Spot: BasePart, Egg: Model, Prompt: ProximityPrompt }? = nil
+	local standBusy = false
+	local hatchesThisSession = 0
+	local sceneContext: any = nil
+	local endScene: (() -> ())? = nil
+	local hiddenGuis: { ScreenGui } = {}
 	local function clearStage()
 		if spinConnection then
 			spinConnection:Disconnect()
@@ -631,12 +670,85 @@ function MascotController:Start()
 
 	local doHatch: () -> ()
 
+	local function showCard(result, mascot)
+		local rarity = Mascots.RarityIndex(mascot.Rarity)
+		revealNew.Text = if result.IsNew then "NEW PET!" else "ANOTHER ONE!"
+		revealNew.TextColor3 = if result.IsNew then LIME else Color3.fromRGB(200, 190, 230)
+		revealName.Text = string.upper(mascot.Name)
+		revealName.TextColor3 = Mascots.RarityColor(mascot.Rarity)
+		revealInfo.Text = ("%s  -  %s COINS%s"):format(
+			string.upper(mascot.Rarity),
+			Mascots.BonusText(Mascots.Bonus(mascot)),
+			if result.Equipped then "  -  EQUIPPED!" else ""
+		)
+		for _, label in { revealNew, revealName, revealInfo } do
+			UiFx.Pop(label, 1.5, 0.35)
+		end
+		if rarity >= Mascots.RarityIndex("Epic") then
+			UiFx.Confetti(nil, 70)
+		elseif rarity >= Mascots.RarityIndex("Rare") then
+			UiFx.Confetti(nil, 35)
+		end
+		doneButton.Visible = true
+		UiFx.Pop(doneButton, 0.6, 0.3)
+	end
+
+	-- The hatch on the real stand (owner's storyboard): the camera swings in, the egg activates, shakes, cracks,
+	-- bursts and the pet rises above the stand. Tap to skip from 0.7s; tap again (or CLOSE) once the card is up.
+	local function playOnStand(result, mascot, site)
+		hatchesThisSession += 1
+		standBusy = true
+		site.Prompt.Enabled = false
+		table.clear(hiddenGuis)
+		for _, other in playerGui:GetChildren() do
+			if other:IsA("ScreenGui") and other ~= gui and other.Name ~= "FxUI" and other.Enabled then
+				other.Enabled = false
+				table.insert(hiddenGuis, other)
+			end
+		end
+		petsButton.Visible = false
+		panel.Visible = false
+		cardLayout(true)
+		overlay.BackgroundTransparency = 1
+		setGlow(GOLD, 0)
+		overlay.Visible = true
+		doneButton.Visible = false
+		revealNew.Text = ""
+		revealName.Text = ""
+		revealInfo.Text = ""
+		clearStage()
+		sceneContext = {
+			Stand = site.Stand,
+			Spot = site.Spot,
+			Egg = site.Egg,
+			Mascot = mascot,
+			AutoSkip = hatchesThisSession > FX.Hatch.AutoSkipAfter,
+			EdgePulse = edgePulse,
+			OnCard = function()
+				showCard(result, mascot)
+			end,
+		}
+		local ok, finish = pcall(HatchScene.Play, sceneContext)
+		if ok then
+			endScene = finish
+		else
+			warn("[MascotController] hatch scene failed: " .. tostring(finish))
+			showCard(result, mascot)
+		end
+	end
+
 	local function play(result)
 		local mascot = Mascots.Get(result.MascotId)
 		if not mascot then
 			return
 		end
+		if stand and stand.Egg.Parent then
+			playOnStand(result, mascot, stand)
+			return
+		end
 		local rarity = Mascots.RarityIndex(mascot.Rarity)
+		cardLayout(false)
+		overlay.BackgroundTransparency = 0.25
 		overlay.Visible = true
 		doneButton.Visible = false
 		revealNew.Text = ""
@@ -711,7 +823,7 @@ function MascotController:Start()
 	end
 
 	doHatch = function()
-		if hatching then
+		if hatching or overlay.Visible then
 			return
 		end
 		local unlocked, why, affordable = eggState()
@@ -736,7 +848,7 @@ function MascotController:Start()
 	-- Merge: the copies shake together in a gold glow, squeeze into one, flash, and the Shiny pops out
 	local merging = false
 	doMerge = function(mascot)
-		if merging or hatching then
+		if merging or hatching or overlay.Visible then
 			return
 		end
 		merging = true
@@ -747,6 +859,8 @@ function MascotController:Start()
 			merging = false
 			return
 		end
+		cardLayout(false)
+		overlay.BackgroundTransparency = 0.25
 		overlay.Visible = true
 		doneButton.Visible = false
 		revealNew.Text = ""
@@ -815,8 +929,34 @@ function MascotController:Start()
 	local function closeOverlay()
 		overlay.Visible = false
 		clearStage()
+		sceneContext = nil
+		if endScene then
+			local finish = endScene
+			endScene = nil
+			finish()
+			for _, other in hiddenGuis do
+				other.Enabled = true
+			end
+			table.clear(hiddenGuis)
+			standBusy = false
+			refreshButton()
+			if stand then
+				stand.Prompt.Enabled = true
+			end
+		end
 	end
 	doneButton.Activated:Connect(closeOverlay)
+	-- During a stand hatch: a tap skips to the reveal (from 0.7s), and once the card is up a tap closes it
+	overlay.Activated:Connect(function()
+		if not sceneContext then
+			return
+		end
+		if doneButton.Visible then
+			closeOverlay()
+		else
+			sceneContext.SkipAt = os.clock()
+		end
+	end)
 	bestButton.Activated:Connect(function()
 		bestRemote:FireServer()
 	end)
@@ -899,8 +1039,8 @@ function MascotController:Start()
 		-- The Neon stand (the owner's design, a Studio model): the egg sits in its cradle, at NeonStand.EggSpot
 		local hub = Workspace:WaitForChild("Hub", 30)
 		local pad = hub and hub:WaitForChild("EggPad", 30)
-		local stand = pad and pad:WaitForChild("NeonStand", 10)
-		local spot = stand and stand:WaitForChild("EggSpot", 10) :: BasePart?
+		local standModel = pad and pad:WaitForChild("NeonStand", 10) :: Model?
+		local spot = standModel and standModel:WaitForChild("EggSpot", 10) :: BasePart?
 		if not spot then
 			warn("[MascotController] Workspace.Hub.EggPad.NeonStand.EggSpot not found: no egg stand in the lobby")
 			return
@@ -938,6 +1078,8 @@ function MascotController:Start()
 		board.Parent = shell
 		local boardPrice = text(board, "Price", FONT, GOLD, UDim2.new(), UDim2.fromScale(1, 1))
 
+		stand = { Stand = standModel :: Model, Spot = spot, Egg = standEgg, Prompt = prompt }
+
 		local function refreshStand()
 			local unlocked, why = eggState()
 			boardPrice.Text = if unlocked then formatNumber(EGG.Price) .. " COINS" else "REACH " .. tostring(why)
@@ -953,7 +1095,7 @@ function MascotController:Start()
 			RunService.RenderStepped:Connect(function()
 				local camera = Workspace.CurrentCamera
 				local near = camera ~= nil and (camera.CFrame.Position - base).Magnitude <= Config.PetIdle.ShowDistance
-				rig:Step(os.clock(), near)
+				rig:Step(os.clock(), near and not standBusy) -- the hatch drives the egg itself
 			end)
 		end
 	end)

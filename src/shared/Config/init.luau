@@ -1414,7 +1414,9 @@ Config.Rarities = {
 --   StreakSaver (seconds between saves, lower = better)  Rare 60  Legendary 45  Mythic 30
 -- Epic and up get two traits.
 -- InCrates = false keeps a ball out of crates (the starter ball).
--- Zone = the zone's own crate (Config.Crates ZoneBallsOnly) gives only that zone's balls; other crates give any ball.
+-- Zone = the zone's own crate (Config.Crates ZoneBallsOnly) gives only that zone's balls (owner 2026-10-21: every
+-- crate is zone-only now). Zone 1 (Back Alley) balls have weaker traits than zone 2 (Neon Lanes) balls of the same
+-- rarity, about half (owner 2026-10-21): Common Lucky 5% / Heavy 3%, Uncommon Curve 6%, Rare Blast 20%.
 Config.Balls = {
 	-- Common
 	{
@@ -1430,6 +1432,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Bubblegum",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "Bubblegum",
 		Rarity = "Common",
 		Multiplier = 1.05,
@@ -1441,6 +1444,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Lime",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "Lime Twist",
 		Rarity = "Common",
 		Multiplier = 1.1,
@@ -1452,6 +1456,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Tangerine",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "Tangerine",
 		Rarity = "Common",
 		Multiplier = 1.15,
@@ -1463,6 +1468,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Ocean",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "Deep Ocean",
 		Rarity = "Common",
 		Multiplier = 1.2,
@@ -1482,7 +1488,7 @@ Config.Balls = {
 		Color = Color3.fromHex("C0C4C9"),
 		Material = Enum.Material.SmoothPlastic,
 		Trail = Color3.fromHex("C7CCD2"),
-		Traits = { Lucky = 0.1 },
+		Traits = { Lucky = 0.05 },
 	},
 	{
 		Id = "RustBucket",
@@ -1494,12 +1500,13 @@ Config.Balls = {
 		Color = Color3.fromHex("D2692A"),
 		Material = Enum.Material.Metal,
 		Trail = Color3.fromHex("D2692A"),
-		Traits = { Heavy = 0.05 },
+		Traits = { Heavy = 0.03 },
 	},
 
 	-- Uncommon
 	{
 		Id = "Electric",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "Electric Blue",
 		Rarity = "Uncommon",
 		Multiplier = 1.3,
@@ -1511,6 +1518,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Toxic",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "Toxic Slime",
 		Rarity = "Uncommon",
 		Multiplier = 1.4,
@@ -1522,6 +1530,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Sunset",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "Sunset Strip",
 		Rarity = "Uncommon",
 		Multiplier = 1.5,
@@ -1533,6 +1542,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Frostbite",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "Frostbite",
 		Rarity = "Uncommon",
 		Multiplier = 1.6,
@@ -1552,12 +1562,13 @@ Config.Balls = {
 		Color = Color3.fromHex("E9EEF3"),
 		Material = Enum.Material.Metal,
 		Trail = Color3.fromHex("7DF0A6"),
-		Traits = { Curve = 0.12 },
+		Traits = { Curve = 0.06 },
 	},
 
 	-- Rare
 	{
 		Id = "Magma",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "Magma Core",
 		Rarity = "Rare",
 		Multiplier = 1.8,
@@ -1569,6 +1580,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Galaxy",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "Galaxy",
 		Rarity = "Rare",
 		Multiplier = 2.0,
@@ -1580,6 +1592,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Thunder",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "Thunderstrike",
 		Rarity = "Rare",
 		Multiplier = 2.2,
@@ -1591,6 +1604,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Phantom",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "Phantom",
 		Rarity = "Rare",
 		Multiplier = 2.5,
@@ -1610,12 +1624,13 @@ Config.Balls = {
 		Color = Color3.fromHex("3CC8FF"),
 		Material = Enum.Material.SmoothPlastic,
 		Trail = Color3.fromHex("38C6FF"),
-		Traits = { Blast = 0.35 },
+		Traits = { Blast = 0.2 },
 	},
 
 	-- Epic
 	{
 		Id = "Plasma",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "Plasma Orb",
 		Rarity = "Epic",
 		Multiplier = 3.0,
@@ -1627,6 +1642,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Nebula",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "Nebula",
 		Rarity = "Epic",
 		Multiplier = 4.0,
@@ -1638,6 +1654,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Inferno",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "Inferno",
 		Rarity = "Epic",
 		Multiplier = 5.0,
@@ -1650,6 +1667,7 @@ Config.Balls = {
 	-- Legendary
 	{
 		Id = "Golden",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "Golden Strike",
 		Rarity = "Legendary",
 		Multiplier = 7.0,
@@ -1661,6 +1679,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Dragon",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "Dragon's Eye",
 		Rarity = "Legendary",
 		Multiplier = 10.0,
@@ -1673,6 +1692,7 @@ Config.Balls = {
 	-- Mythic
 	{
 		Id = "Void",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "The Void",
 		Rarity = "Mythic",
 		Multiplier = 20.0,
@@ -1684,6 +1704,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Supernova",
+		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
 		Name = "Supernova",
 		Rarity = "Mythic",
 		Multiplier = 25.0,
@@ -1700,12 +1721,12 @@ Config.Balls = {
 -- Looks: ReplicatedStorage.CrateModels has one model per Id (Bronze, Silver and Gold are recoloured copies for now).
 -- Zone = the zone that must be unlocked to open it (locked crates show blacked out: "UNLOCKS IN <zone>").
 -- ZoneBallsOnly = gives only balls with that Zone (Config.Balls). Owner 2026-10-21: zone 1 = the Alley Crate with
--- the Back Alley balls only; the zone 2 crate changes come when zone 3 is built.
+-- the Back Alley balls only; the zone 2 crates (Bronze, Silver, Gold) give only the Neon Lanes balls.
 Config.Crates = {
 	{ Id = "Basic", Name = "Alley Crate", Color = Color3.fromRGB(60, 200, 255), Zone = 1, ZoneBallsOnly = true },
-	{ Id = "Bronze", Name = "Bronze Crate", Color = Color3.fromRGB(215, 135, 70), Zone = 2 },
-	{ Id = "Silver", Name = "Silver Crate", Color = Color3.fromRGB(200, 215, 235), Zone = 2 },
-	{ Id = "Gold", Name = "Gold Crate", Color = Color3.fromRGB(255, 200, 40), Zone = 2 },
+	{ Id = "Bronze", Name = "Bronze Crate", Color = Color3.fromRGB(215, 135, 70), Zone = 2, ZoneBallsOnly = true },
+	{ Id = "Silver", Name = "Silver Crate", Color = Color3.fromRGB(200, 215, 235), Zone = 2, ZoneBallsOnly = true },
+	{ Id = "Gold", Name = "Gold Crate", Color = Color3.fromRGB(255, 200, 40), Zone = 2, ZoneBallsOnly = true },
 	-- The Neon Crate (5.9B) is out of the game for now (owner 2026-10-21): it gets a new name and a later zone once
 	-- the new economy is in. Its Config.Economy.Crates row stays for the simulator; old saves keep its pity.
 }
@@ -1914,11 +1935,57 @@ Config.MascotFx = {
 	PromptDistance = 10,
 	HoldDuration = 0.4, -- seconds to hold "Hatch", so nobody spends coins by accident
 	HatchRange = 18, -- eggs only hatch at the stand: the server refuses players further than this (studs, flat)
-	-- Hatching: the egg shakes harder and harder while its glow flicks through rarity colours, then cracks
+	-- Hatching away from the stand (fallback when the stand model is missing): the egg shakes harder and harder
+	-- while its glow flicks through rarity colours, then cracks
 	ShakeTime = 2.4,
 	RevealTime = 2.6, -- seconds the new mascot stays on screen before the panel can be closed
 	TeaseChance = 0.35, -- chance the glow flashes a rarer colour near the end before settling (odds are shown honestly)
 	MergeTime = 1.6, -- seconds the copies shake together before the Shiny pops out (step 8b)
+	-- The hatch on the real Neon stand (owner's Hatch Storyboard, about 3s; Client Modules/HatchScene).
+	-- Frames: Idle 0.30 · Activation 0.40 · Shake 0.75 · Crack 0.40 (incl. the hold) · Burst 0.35 · Reveal 0.80
+	Hatch = {
+		CameraFov = 50,
+		CameraFill = 0.62, -- egg + stand fill this much of the screen's height (sign kept on screen)
+		CameraHeight = 1.2, -- studs the camera sits above the stand's middle
+		CameraIn = 0.35, -- seconds the camera takes to swing in
+		Idle = 0.3,
+		Activation = 0.4,
+		Wobbles = { -- each hit: tilt (degrees), seconds, core brightness
+			{ Angle = 10, Time = 0.28, Core = 1.2 },
+			{ Angle = 12, Time = 0.25, Core = 1.5 },
+			{ Angle = 15, Time = 0.22, Core = 2 },
+		},
+		CrackTime = 0.4, -- cracks + overload + arch flash, the last Hold seconds stand still
+		Hold = 0.1,
+		BeamLength = 3.5, -- studs the light beams out of each crack
+		PillarHeight = 40,
+		BurstTime = 0.35,
+		ShardDistance = 6, -- studs the shell shards fly
+		RingTime = 0.45,
+		RingWidth = 1.6, -- the energy ring spreads to 1.6x the platform's width
+		RevealTime = 0.8,
+		PetSize = 0.85, -- the pet's size compared to the egg
+		PetLift = 0.6, -- studs above the egg's middle where the pet settles
+		PetRise = 0.4, -- studs it rises out of the light
+		PetSettle = 0.45, -- seconds to settle (with a little overshoot)
+		CardAt = 0.3, -- seconds into the reveal the name card pops in
+		SkipFrom = 0.7, -- tap to skip from this many seconds in
+		AutoSkipAfter = 5, -- after this many hatches in one session, it skips straight to the reveal
+		-- Burst grows with rarity, colours stay cyan/magenta. Extra = added seconds (pillar beat), Hold = stand-still
+		TierOf = { Epic = "Epic", Legendary = "Legendary", Mythic = "Mythic" }, -- everything else = Base
+		Tiers = {
+			Base = { Shards = 10, Sparks = 24, Rings = 1, Flash = 1, Sparkles = 16, SparksPerHit = 4 },
+			Epic = { Shards = 14, Sparks = 36, Rings = 2, Flash = 1.25, Sparkles = 24, SparksPerHit = 6, DoubleFlash = true },
+			Legendary = {
+				Shards = 18, Sparks = 50, Rings = 2, Flash = 1.5, Sparkles = 36, SparksPerHit = 9,
+				CrackSteps = 3, Pillar = true, CamShake = 0.1, Extra = 0.15,
+			},
+			Mythic = {
+				Shards = 24, Sparks = 72, Rings = 3, Flash = 1.8, Sparkles = 48, SparksPerHit = 12,
+				CrackSteps = 3, Pillar = true, CamShake = 0.1, EdgePulse = true, Extra = 0.3, Hold = 0.25,
+			},
+		},
+	},
 	-- Strike reactions (step 8b): when their owner strikes, each mascot does its Reaction (Config.Mascots row):
 	-- Hop (jump), Spin (twirl), Flip (somersault) or Wiggle (shake side to side). Shiny ones also burst gold sparkles.
 	ReactDelay = 0.25, -- seconds after the pins are hit

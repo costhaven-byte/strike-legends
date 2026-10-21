@@ -204,14 +204,16 @@ function CollectionBookController:Start()
 		return list
 	end
 
-	local function makeCard(ball, owned: boolean, order: number, equipped: boolean)
+	local function makeCard(ball, owned: boolean, order: number, equipped: boolean, count: number)
 		local rarity = Balls.GetRarity(ball.Rarity)
 		local card = Instance.new("TextButton")
 		card.Name = ball.Id
 		card.Text = ""
 		card.AutoButtonColor = false
 		card.LayoutOrder = order
-		card.Size = UDim2.new(0.186, 0, 1, 0)
+		-- Five cards fill the page; more than five (Common has 7) narrow down so they all still fit
+		local gap = cardLayout.Padding.Scale
+		card.Size = UDim2.new(math.min(0.186, (1 - gap * (count - 1)) / count), 0, 1, 0)
 		card.BackgroundColor3 = CARD
 		card.BackgroundTransparency = if owned then 0 else 0.35
 		corner(card, 12)
@@ -434,7 +436,7 @@ function CollectionBookController:Start()
 			if isOwned then
 				got += 1
 			end
-			makeCard(ball, isOwned, order, ball.Id == equipped)
+			makeCard(ball, isOwned, order, ball.Id == equipped, #list)
 		end
 		pageTitle.Text = if got == #list
 			then ("%s  ·  PAGE COMPLETE!"):format(rarity.Name:upper())

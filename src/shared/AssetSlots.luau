@@ -29,6 +29,10 @@ AssetSlots.Sounds = {
 	Overcooked = { Id = nil, Volume = 0.6, StandIn = "StreakLost", StandInPitch = 0.7 }, -- the gamble failed: gutter
 	-- Power Levels (Config.Economy.PowerLevels). Not picked yet.
 	PowerUp = { Id = nil, Volume = 0.8, StandIn = "RankUp", StandInPitch = 1.25 }, -- bought a Power Level
+	-- Egg hatch (Client Modules/HatchScene). Not picked yet.
+	HatchCharge = { Id = nil, Volume = 0.6, StandIn = "Charge", StandInPitch = 1.3 }, -- stand flares, charge climbs
+	HatchCrack = { Id = nil, Volume = 0.8, StandIn = "PinHit", StandInPitch = 1.6 }, -- each crack snaps open
+	HatchBurst = { Id = nil, Volume = 0.9, StandIn = "StrikeCrash", StandInPitch = 1.3 }, -- the shell bursts
 }
 
 return AssetSlots
