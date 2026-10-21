@@ -2652,10 +2652,10 @@ Config.Economy.PowerLevels = {
 -- Crate tiers (Addendum 1). Crates drop only the balls in Config.Balls: roll a rarity with these odds, then every
 -- ball of that rarity is equally likely. Every row adds up to 100.
 -- Prices move with the Power Level they sit next to (plan: 100, 1K, 15K, 250K, 5M).
--- Owner 2026-10-22: Alley Crate 1.6K -> 15K and Bronze 9.2K -> 100K (too easy to get). The very first Alley Crate
+-- Owner 2026-10-22: Alley Crate 1.6K -> 10K and Bronze 9.2K -> 100K (too easy to get). The very first Alley Crate
 -- still costs Config.Onboarding.FirstCratePrice.
 Config.Economy.Crates = {
-	{ Id = "Basic", Price = 15000, Odds = { Common = 70, Uncommon = 25, Rare = 5 } },
+	{ Id = "Basic", Price = 10000, Odds = { Common = 70, Uncommon = 25, Rare = 5 } },
 	{ Id = "Bronze", Price = 100000, Odds = { Common = 45, Uncommon = 35, Rare = 17, Epic = 3 } },
 	{ Id = "Silver", Price = 1000000, Odds = { Common = 20, Uncommon = 35, Rare = 32, Epic = 11, Legendary = 2 } },
 	{ Id = "Gold", Price = 87000000, Odds = { Uncommon = 20, Rare = 45, Epic = 28, Legendary = 6.5, Mythic = 0.5 } },
