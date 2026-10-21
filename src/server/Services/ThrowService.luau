@@ -17,9 +17,11 @@ local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
 local GoldenPinService = require(script.Parent.GoldenPinService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
+local MascotService = require(script.Parent.MascotService)
 local MultiplierService = require(script.Parent.MultiplierService)
 local OnboardingService = require(script.Parent.OnboardingService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local PotionService = require(script.Parent.PotionService)
 local ProgressionService = require(script.Parent.ProgressionService)
 local TrialService = require(script.Parent.TrialService)
 local ThrowResolver = require(script.Parent.Parent.Modules.ThrowResolver)
@@ -57,9 +59,12 @@ local function setStatus(lane: Model, text: string)
 end
 
 -- Every XP multiplier for this player. Future boosts (like a 2x XP gamepass) get added here.
-local function getXpMultipliers(streak: number): { [string]: number }
+-- Pets boost XP by the same amount they boost coins (owner 2026-10-22).
+local function getXpMultipliers(player: Player, streak: number): { [string]: number }
 	return {
 		Streak = Progression.GetStreakXpMultiplier(streak),
+		Pets = MascotService.GetMultiplier(player),
+		Potion = PotionService.Multiplier(player, "XP"), -- XP Potion x2 / Mega XP Potion x4 (Config.Potions)
 	}
 end
 
@@ -150,7 +155,7 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 		result.Count,
 		result.Tier,
 		multipliers,
-		getXpMultipliers(streak),
+		getXpMultipliers(player, streak),
 		Balls.TraitValue(ball, "GemHunter")
 	)
 

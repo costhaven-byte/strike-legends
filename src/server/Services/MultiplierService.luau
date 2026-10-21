@@ -15,12 +15,13 @@ local ThrowRules = require(Shared.Modules.ThrowRules)
 local BallService = require(script.Parent.BallService)
 local MascotService = require(script.Parent.MascotService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local PotionService = require(script.Parent.PotionService)
 local ProgressionService = require(script.Parent.ProgressionService)
 
 local REFRESH = 0.5 -- seconds between checks for a changed multiplier
 
 -- The order the panel lists them in
-local ORDER = { "PowerLevel", "Ball", "Mascots", "Rank", "Streak", "Modifier" }
+local ORDER = { "PowerLevel", "Ball", "Mascots", "Potion", "Rank", "Streak", "Modifier" }
 
 local MultiplierService = {}
 
@@ -31,6 +32,7 @@ function MultiplierService.Coins(player: Player, ball, level, streak: number, mo
 		PowerLevel = level.Value,
 		Ball = BallService.GetMultiplier(player, ball), -- Polish included
 		Mascots = MascotService.GetMultiplier(player), -- 1 + equipped mascots' bonuses (Shiny x2)
+		Potion = PotionService.Multiplier(player, "Coins"), -- Coin Potion x2 / Mega Coin Potion x4 (Config.Potions)
 		Rank = Progression.GetRank(ProgressionService.GetCurrentRankIndex(player)).Multiplier,
 		Streak = Progression.GetStreakMultiplier(streak),
 		Modifier = modifier and modifier.CoinMultiplier or 1,

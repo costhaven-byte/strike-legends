@@ -29,6 +29,7 @@ local SOURCES = {
 	{ Key = "PowerLevel", Name = "POWER LEVEL" },
 	{ Key = "Ball", Name = "BALL + POLISH" },
 	{ Key = "Mascots", Name = "PETS" },
+	{ Key = "Potion", Name = "COIN POTION" },
 	{ Key = "Rank", Name = "RANK" },
 	{ Key = "Streak", Name = "STREAK" },
 	{ Key = "Modifier", Name = "LANE EVENT" },

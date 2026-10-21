@@ -208,12 +208,14 @@ Config.StartingData = {
 	EquippedMascots = {}, -- Ids following the player, one per slot (the same Id can fill two slots if owned twice)
 	EggsHatched = 0, -- eggs hatched ever
 	ZoneSeen = 1, -- highest zone whose "ZONE UNLOCKED" window was shown (v14)
+	Potions = {}, -- potions waiting to be drunk, by Id: { CoinSmall = 2 } (Config.Potions; v15)
+	Boosts = {}, -- seconds left on each drunk potion, by Id: { CoinSmall = 840 } (only ticks while playing; v15)
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 14, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 15, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -272,6 +274,7 @@ Config.RateLimits = {
 	BuyPolish = 0.3,
 	HatchEgg = 1,
 	EquipMascot = 0.15,
+	UsePotion = 0.3,
 }
 
 -- Gems on/off switch. Addendum 1 keeps gems (earned only, a gem sink comes later); set Enabled = false to hide them.
@@ -2355,6 +2358,54 @@ Config.Daily = {
 	CheckInterval = 30, -- seconds between checks for a new day while playing
 }
 
+-- Potions (owner 2026-10-22): drink one for a 15 minute boost. Coin potions multiply coins, XP potions multiply XP.
+-- Small = x2 and common, Big (MEGA) = x4 and rarer (playtime rewards hand them out; Studio: TEST: POTIONS button).
+-- Timers only run while you play (they pause when you leave). Drinking another of the same potion adds its time.
+-- Coin and XP boosts multiply together. Within one kind only the strongest running potion counts (x4 beats x2,
+-- they never make x8); the weaker one's timer waits until the stronger one runs out, so no minutes are wasted.
+Config.Potions = {
+	List = {
+		{
+			Id = "CoinSmall",
+			Name = "COIN POTION",
+			Boost = "Coins",
+			Multiplier = 2,
+			Minutes = 15,
+			Big = false,
+			Color = Color3.fromRGB(255, 200, 40),
+		},
+		{
+			Id = "CoinBig",
+			Name = "MEGA COIN POTION",
+			Boost = "Coins",
+			Multiplier = 4,
+			Minutes = 15,
+			Big = true,
+			Color = Color3.fromRGB(255, 140, 20),
+		},
+		{
+			Id = "XpSmall",
+			Name = "XP POTION",
+			Boost = "XP",
+			Multiplier = 2,
+			Minutes = 15,
+			Big = false,
+			Color = Color3.fromRGB(70, 230, 255),
+		},
+		{
+			Id = "XpBig",
+			Name = "MEGA XP POTION",
+			Boost = "XP",
+			Multiplier = 4,
+			Minutes = 15,
+			Big = true,
+			Color = Color3.fromRGB(190, 90, 255),
+		},
+	},
+	MaxMinutes = 600, -- one potion's timer never stacks past this many minutes
+	Tick = 1, -- seconds between timer updates
+}
+
 -- Leaderboards (OrderedDataStores). Boards are read every RefreshInterval and
 -- each player's scores are written every WriteInterval and when they leave, never per throw.
 -- Stat = the saved player value the board ranks. Weekly boards start fresh every Monday 00:00 UTC.
@@ -2428,6 +2479,7 @@ Config.Analytics = {
 		"PityHit", -- labels = crate, rarity
 		"PerfectRate", -- value = PERFECT % of the session's throws (assisted first throw left out); labels = throws, perfects
 		"PolishLevel", -- value = new Polish level; labels = ball
+		"PotionUsed", -- value = minutes left on that potion after drinking; labels = potion
 		"Rebirth", -- later (Milestone 17)
 		"QuestCompleted", -- later (Milestone 18)
 	},

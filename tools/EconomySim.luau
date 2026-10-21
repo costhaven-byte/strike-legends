@@ -322,7 +322,9 @@ function EconomySim.RunOne(config, seed: number): { [string]: number }
 			* (modifier.CoinMultiplier or 1)
 			* (if golden then config.GoldenPin.CoinMultiplier else 1)
 		s.Coins += math.floor(pinsHit * zone.PinValue * multiplier)
-		s.XP += math.floor(pinsHit * zone.XpPerPin * (1 + (E.Rebirth.XpBonus or 0) * s.Rebirths))
+		-- Pets boost XP by the same amount they boost coins (owner 2026-10-22)
+		s.XP +=
+			math.floor(pinsHit * zone.XpPerPin * mascotMultiplier(E, s) * (1 + (E.Rebirth.XpBonus or 0) * s.Rebirths))
 		if S.Trace then -- tuning scripts can watch every throw
 			S.Trace(time, s, { Ball = ball, Mascots = mascotMultiplier(E, s), Pins = pinsHit, Multiplier = multiplier })
 		end

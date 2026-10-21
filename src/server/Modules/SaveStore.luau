@@ -119,6 +119,7 @@ local function migrate(saved: any): { [string]: any }
 			data.RankLevel = Progression.LevelFromXP(data.XP, tier)
 		end
 		-- v13 added Mascots, EquippedMascots and EggsHatched: new keys start empty / at 0, nothing to upgrade
+		-- v14 added ZoneSeen, v15 Potions and Boosts: same, they start at their starting value
 	end
 	data.Rank = math.clamp(math.floor(tonumber(data.Rank) or 1), 1, #Config.Ranks)
 	return data
