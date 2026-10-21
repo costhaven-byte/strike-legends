@@ -271,13 +271,17 @@ function EventController:Start()
 
 		if firstCrate and (player:GetAttribute("CratesBought") or 0) == 0 then
 			local coins = player:GetAttribute("Coins") or 0
-			local price = Balls.CratePrice(firstCrate, 0) -- the first bought crate's price
+			local price = Balls.CratePrice(firstCrate, 0) -- the first bought crate's price (on discount)
+			local off = if price < firstCrate.Price
+				then (" %d%% OFF"):format(math.floor((1 - price / firstCrate.Price) * 100 + 0.5))
+				else ""
 			table.insert(options, {
 				Progress = math.min(coins / math.max(price, 1), 1),
 				Text = if coins >= price
-					then "GO SEE RIZZO: NEW BALL!"
-					else ("NEXT: NEW BALL (%s)  %s / %s"):format(
+					then if off ~= "" then ("GO SEE RIZZO: FIRST CRATE%s!"):format(off) else "GO SEE RIZZO: NEW BALL!"
+					else ("NEXT: NEW BALL (%s%s)  %s / %s"):format(
 						firstCrate.Name:upper(),
+						off,
 						short(coins),
 						short(price)
 					),

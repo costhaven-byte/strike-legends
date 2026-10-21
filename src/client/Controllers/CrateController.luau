@@ -39,6 +39,15 @@ function CrateController.Price(crate): number
 	return Balls.CratePrice(crate, player:GetAttribute("CratesBought"))
 end
 
+-- How much off this crate is for you right now (93 = 93% off: your first crate), or nil at the normal price
+function CrateController.Discount(crate): number?
+	local price = CrateController.Price(crate)
+	if price >= crate.Price or crate.Price <= 0 then
+		return nil
+	end
+	return math.floor((1 - price / crate.Price) * 100 + 0.5)
+end
+
 local function formatNumber(n: number): string
 	local text = tostring(math.floor(n))
 	repeat
@@ -1044,12 +1053,41 @@ function CrateController:Start()
 		end)
 
 		local coinIcon = buyButton:FindFirstChild("Coin") or buyButton:FindFirstChild("Icon")
+		-- The first crate you buy is on discount: a pink tag over the button and the old price crossed out
+		local dealTag = Instance.new("TextLabel")
+		dealTag.Name = "DealTag"
+		dealTag.AnchorPoint = Vector2.new(0.5, 1)
+		dealTag.Position = UDim2.new(0.5, 0, 0, -4)
+		dealTag.Size = UDim2.new(1, 0, 0, 20)
+		dealTag.BackgroundColor3 = Color3.fromRGB(255, 70, 170)
+		dealTag.FontFace = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
+		dealTag.TextScaled = true
+		dealTag.TextColor3 = Color3.new(1, 1, 1)
+		dealTag.ZIndex = buyButton.ZIndex + 2
+		dealTag.Visible = false
+		local dealCorner = Instance.new("UICorner")
+		dealCorner.CornerRadius = UDim.new(1, 0)
+		dealCorner.Parent = dealTag
+		local dealStroke = Instance.new("UIStroke")
+		dealStroke.Color = Color3.fromHex("06060F")
+		dealStroke.Thickness = 1.5
+		dealStroke.Parent = dealTag
+		dealTag.Parent = buyButton
+		buyButton.Price.RichText = true
 		local function refreshAfford()
 			local free = hasFree(crate)
 			local canAfford = free or (player:GetAttribute("Coins") or 0) >= CrateController.Price(crate)
+			local discount = not free and CrateController.Discount(crate)
 			buyButton.BackgroundColor3 = if canAfford then CAN_AFFORD else CANT_AFFORD
+			dealTag.Visible = discount ~= nil
+			pityLine.Visible = discount == nil -- the deal tag takes its spot until the first crate is bought
+			dealTag.Text = if discount then ("FIRST CRATE %d%% OFF!"):format(discount) else ""
 			buyButton.Price.Text = if free
 				then ("OPEN FREE (%d)"):format(player:GetAttribute("FreeCrates"))
+				elseif discount then ('<s><font transparency="0.45">%s</font></s> %s'):format(
+					formatNumber(crate.Price),
+					formatNumber(CrateController.Price(crate))
+				)
 				else formatNumber(CrateController.Price(crate))
 			if coinIcon and coinIcon:IsA("GuiObject") then
 				coinIcon.Visible = not free

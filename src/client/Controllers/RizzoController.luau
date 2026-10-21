@@ -139,10 +139,68 @@ function RizzoController:Start()
 	shopPrompt.RequiresLineOfSight = false
 	shopPrompt.Parent = point
 
+	-- The first crate you buy is on discount: a sign over the buy pad with the old price crossed out
+	local deal = Instance.new("BillboardGui")
+	deal.Name = "FirstCrateDeal"
+	deal.Adornee = point
+	deal.Size = UDim2.fromOffset(230, 78)
+	deal.StudsOffsetWorldSpace = Vector3.new(0, 4.2, 0)
+	deal.MaxDistance = 60
+	deal.LightInfluence = 0
+	deal.Enabled = false
+	local dealFrame = Instance.new("Frame")
+	dealFrame.Name = "Tag"
+	dealFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+	dealFrame.Position = UDim2.fromScale(0.5, 0.5)
+	dealFrame.Size = UDim2.fromScale(1, 1)
+	dealFrame.BackgroundColor3 = Color3.fromHex("ff4fb0")
+	dealFrame.Parent = deal
+	local dealCorner = Instance.new("UICorner")
+	dealCorner.CornerRadius = UDim.new(0, 14)
+	dealCorner.Parent = dealFrame
+	local dealStroke = Instance.new("UIStroke")
+	dealStroke.Color = Color3.fromHex("06060F")
+	dealStroke.Thickness = 3
+	dealStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	dealStroke.Parent = dealFrame
+	local function dealText(name: string, y: number, height: number, color: Color3): TextLabel
+		local label = Instance.new("TextLabel")
+		label.Name = name
+		label.BackgroundTransparency = 1
+		label.Position = UDim2.new(0.04, 0, y, 0)
+		label.Size = UDim2.new(0.92, 0, height, 0)
+		label.FontFace = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
+		label.TextScaled = true
+		label.RichText = true
+		label.TextColor3 = color
+		local outline = Instance.new("UIStroke")
+		outline.Color = Color3.fromHex("06060F")
+		outline.Thickness = 2
+		outline.Parent = label
+		label.Parent = dealFrame
+		return label
+	end
+	local dealTitle = dealText("Title", 0.06, 0.48, Color3.new(1, 1, 1))
+	local dealPrice = dealText("Price", 0.54, 0.4, GOLD)
+	deal.Parent = stand
+
 	local function refreshPrompt()
+		local discount = not CrateController.HasFree(crate) and CrateController.Discount(crate)
 		buyPrompt.ActionText = if CrateController.HasFree(crate)
 			then "Open FREE"
+			elseif discount then ("Open  (%s coins, %d%% OFF!)"):format(
+				formatNumber(CrateController.Price(crate)),
+				discount
+			)
 			else ("Open  (%s coins)"):format(formatNumber(CrateController.Price(crate)))
+		deal.Enabled = discount ~= nil
+		if discount then
+			dealTitle.Text = ("FIRST CRATE %d%% OFF!"):format(discount)
+			dealPrice.Text = ('<s><font color="#FFFFFF" transparency="0.3">%s</font></s>  %s COINS'):format(
+				formatNumber(crate.Price),
+				formatNumber(CrateController.Price(crate))
+			)
+		end
 	end
 	player:GetAttributeChangedSignal("FreeCrates"):Connect(refreshPrompt)
 	player:GetAttributeChangedSignal("CratesBought"):Connect(refreshPrompt)
@@ -299,6 +357,12 @@ function RizzoController:Start()
 			local t = os.clock()
 			bang.Position = UDim2.fromOffset(0, -math.abs(math.sin(t * 4)) * 14)
 			bang.Rotation = math.sin(t * 6) * 8
+		end
+		if deal.Enabled then -- the deal sign breathes and tilts a little
+			local t = os.clock()
+			local scale = 1 + math.sin(t * 3) * 0.05
+			dealFrame.Size = UDim2.fromScale(scale, scale)
+			dealFrame.Rotation = math.sin(t * 1.5) * 3
 		end
 	end)
 
