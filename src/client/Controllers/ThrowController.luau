@@ -4,7 +4,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
@@ -18,30 +17,37 @@ local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
 local ThrowPose = require(Modules.ThrowPose)
+local SlUi = require(Modules.SlUi)
+local ResultText = require(Modules.ResultText)
 
 local THROW = Config.Throw
 local player = Players.LocalPlayer
 
-local PINK = Color3.fromRGB(255, 43, 214)
 local GOLD = Color3.fromRGB(255, 200, 40)
-local CYAN = Color3.fromRGB(70, 230, 255)
-local DARK = Color3.fromRGB(28, 16, 52)
-local INK = Color3.fromRGB(40, 10, 60)
 local WHITE = Color3.new(1, 1, 1)
 local RED = Color3.fromRGB(255, 59, 92) -- the overcharge cap
+local C = SlUi.Colors
+local OUTLINE_IDLE = SlUi.Hex("1C5872")
+local FLOW_MID = SlUi.Hex("1FE6FF")
 local OVER = THROW.Overcharge
 local READY_HINT = if OVER.Enabled
 	then "HOLD - LET GO IN THE GOLD, OR GAMBLE ON RED"
 	else "HOLD TO CHARGE - LET GO IN THE GOLD"
 
 -- The arc: a half circle like the top of a bowling ball. Empty on the left, full on the right.
+-- Looks like the owner's "Power Meter" (HUD 1.1) + "Charge Meter Zones" (1.2) designs: a cyan outline, a navy
+-- track with the gold PERFECT and red OVERCHARGE zones on it, a narrower fill on top and a white head.
 local ARC_SEGMENTS = 100
 local ARC_RADIUS = 112 -- pixels to the middle of the ring
-local ARC_THICKNESS = 22
-local ARC_RIDER = 30 -- the little ball that rides the arc
-local ARC_HEIGHT = ARC_RADIUS + ARC_THICKNESS
+local ARC_TRACK = 22 -- the zone band
+local ARC_FILL = 12 -- the fill riding on the band
+local ARC_NAVY = 34 -- dark ring around the band
+local ARC_OUTLINE = 42 -- coloured outline around that
+local ARC_HEAD = 20 -- the white dot at the tip of the fill
+local ARC_HEIGHT = ARC_RADIUS + ARC_OUTLINE / 2
 local ARC_SIDE = 250 -- pixels right of the screen centre, so the arc sits beside your bowler, not over them
-local ARC_LIFT = 20 -- pixels above the panel, clear of the hint text
+local PLATE_ROOM = 70 -- the readout plate under the arc
+local ARC_LIFT = 20 + PLATE_ROOM -- pixels above the panel, clear of the hint text
 -- Or the same half circle standing up, curving around your bowler's right side like ")":
 -- empty at the bottom, full at the top (Config.Throw.MeterStyle picks)
 local IS_SIDE = THROW.MeterStyle == "Side"
@@ -49,7 +55,6 @@ local SIDE_SIDE = 250 -- pixels right of the screen centre to the middle of the 
 local METER_WIDTH = if IS_SIDE then ARC_HEIGHT else ARC_HEIGHT * 2
 local METER_HEIGHT = if IS_SIDE then ARC_HEIGHT * 2 else ARC_HEIGHT
 local METER_SIDE = if IS_SIDE then SIDE_SIDE else ARC_SIDE
-local LABEL_ROOM = if IS_SIDE then 32 else 0 -- the standing arc's label sits on top of it, not inside
 
 -- Popups that must be closed before you can throw (ScreenGui, frame), so a tap meant for one never rolls the
 -- ball by accident and costs a streak
@@ -74,7 +79,8 @@ local sentAt = 0
 local held: InputObject? = nil
 local lastStreak = 0 -- your streak before the latest throw, to say when it ends
 local savedWalkSpeed: number? = nil -- you stand still while you charge and throw
-local releasedPerfect = false -- the arc stays lit gold after a PERFECT release
+local releasedAt = 0 -- os.clock() of the last release (the fill flashes white, then drains)
+local releasedValue = 0
 local wasInRed = false -- the bar was in the overcharge cap last frame (to play the warning once per visit)
 
 -- Where the bar is now (the server works out the same thing from its own timing of the hold)
@@ -194,22 +200,24 @@ function ThrowController:Start()
 	local button = panel:WaitForChild("ThrowButton") :: TextButton
 	local powerBar = gui:WaitForChild("PowerBar")
 	local resultText = gui:WaitForChild("ResultText")
-	local resultScale = resultText:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
-	resultScale.Parent = resultText
 	local resultStroke = resultText:FindFirstChildOfClass("UIStroke")
-	local resultToken = 0
 
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
 	local throwRequest = remotes:WaitForChild("ThrowRequest")
 	local throwHold = remotes:WaitForChild("ThrowHold")
 	local throwResult = remotes:WaitForChild("ThrowResult")
 
-	-- The old straight bars are replaced by the half-circle arc
+	-- The old straight bars are replaced by the half-circle arc; the old result label only holds the new pieces
 	powerBar.Visible = false
 	bar.Visible = false
-	local hookColor = (Balls.GetTrait("Curve") or {}).Color or PINK
+	resultText.Text = ""
+	resultText.Visible = true
+	if resultStroke then
+		resultStroke.Transparency = 1
+	end
+	local hookColor = (Balls.GetTrait("Curve") or {}).Color or C.Hook
 
-	-- Holder (scaled to the screen) > arc (pops on release) > ring segments and the rider ball
+	-- Holder (scaled to the screen) > arc (pops on release) > the ring layers, head, labels and readout plate
 	local holder = Instance.new("Frame")
 	holder.Name = "PowerArc"
 	holder.AnchorPoint = Vector2.new(0.5, 1)
@@ -228,9 +236,7 @@ function ThrowController:Start()
 	arc.Parent = holder
 
 	local function round(object: GuiObject)
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0.5, 0)
-		corner.Parent = object
+		SlUi.Corner(object)
 	end
 
 	local segmentLength = math.pi * ARC_RADIUS / ARC_SEGMENTS + 1.5
@@ -245,116 +251,242 @@ function ThrowController:Start()
 		segment.Parent = arc
 		return segment
 	end
-	local segments = {}
-	for i = 1, ARC_SEGMENTS do
-		local value = (i - 0.5) / ARC_SEGMENTS
-		makeSegment(value, ARC_THICKNESS + 8, INK, 1) -- dark outline behind the ring
-		segments[i] = { Frame = makeSegment(value, ARC_THICKNESS, DARK, 2), Value = value, Key = "" }
-	end
-	-- Rounded ends
-	for _, value in { 0, 1 } do
+	local function dot(value: number, diameter: number, color: Color3, z: number): Frame
 		local cap = Instance.new("Frame")
 		cap.AnchorPoint = Vector2.new(0.5, 0.5)
 		cap.Position = arcPoint(value, ARC_RADIUS)
-		cap.Size = UDim2.fromOffset(ARC_THICKNESS + 8, ARC_THICKNESS + 8)
-		cap.BackgroundColor3 = INK
-		cap.ZIndex = 1
+		cap.Size = UDim2.fromOffset(diameter, diameter)
+		cap.BackgroundColor3 = color
+		cap.BorderSizePixel = 0
+		cap.ZIndex = z
 		round(cap)
 		cap.Parent = arc
+		return cap
 	end
 
-	-- The rider: a little bowling ball in your ball's colour, with three finger holes
-	local rider = Instance.new("Frame")
-	rider.Name = "Rider"
-	rider.AnchorPoint = Vector2.new(0.5, 0.5)
-	rider.Size = UDim2.fromOffset(ARC_RIDER, ARC_RIDER)
-	rider.ZIndex = 6
-	round(rider)
-	rider.Parent = arc
-	local riderStroke = Instance.new("UIStroke")
-	riderStroke.Thickness = 3
-	riderStroke.Color = WHITE
-	riderStroke.Parent = rider
-	for _, hole in { Vector2.new(0.36, 0.3), Vector2.new(0.62, 0.3), Vector2.new(0.5, 0.62) } do
-		local dot = Instance.new("Frame")
-		dot.AnchorPoint = Vector2.new(0.5, 0.5)
-		dot.Position = UDim2.fromScale(hole.X, hole.Y)
-		dot.Size = UDim2.fromScale(0.2, 0.2)
-		dot.BackgroundColor3 = INK
-		dot.ZIndex = 7
-		round(dot)
-		dot.Parent = rider
+	-- Layers, back to front: glow (zones only), outline, navy ring, zone band, fill
+	local segments = {}
+	for i = 1, ARC_SEGMENTS do
+		local value = (i - 0.5) / ARC_SEGMENTS
+		local glow = makeSegment(value, ARC_OUTLINE + 18, C.Gold, 1)
+		glow.BackgroundTransparency = 1
+		local fill = makeSegment(value, ARC_FILL, C.Cyan, 6)
+		fill.Visible = false
+		segments[i] = {
+			Value = value,
+			Glow = glow,
+			Outline = makeSegment(value, ARC_OUTLINE, OUTLINE_IDLE, 2),
+			Zone = (function()
+				makeSegment(value, ARC_NAVY, C.Navy, 3)
+				return makeSegment(value, ARC_TRACK, C.Track, 4)
+			end)(),
+			Fill = fill,
+			-- the charging fill runs deep blue at the bottom to pale cyan at the top
+			Flow = if value < 0.55
+				then C.CyanDeep:Lerp(FLOW_MID, value / 0.55)
+				else FLOW_MID:Lerp(C.CyanPale, (value - 0.55) / 0.45),
+			Key = "",
+		}
+	end
+	-- Rounded ends
+	local outlineCaps = {}
+	for _, value in { 0, 1 } do
+		table.insert(outlineCaps, dot(value, ARC_OUTLINE, OUTLINE_IDLE, 2))
+		dot(value, ARC_NAVY, C.Navy, 3)
+	end
+	local bottomCap = dot(0, ARC_TRACK, C.Track, 4)
+	local topCap = dot(1, ARC_TRACK, if OVER.Enabled then C.Red else C.Track, 4)
+	local fillCap = dot(0, ARC_FILL, C.Cyan, 6)
+	fillCap.Visible = false
+	-- Notches at 25 / 50 / 75 so the fill level reads at a glance, and one where the red cap starts
+	local function notch(value: number, length: number, width: number)
+		local line = Instance.new("Frame")
+		line.AnchorPoint = Vector2.new(0.5, 0.5)
+		line.BorderSizePixel = 0
+		line.BackgroundColor3 = C.Navy
+		line.Size = UDim2.fromOffset(width, length)
+		local position, rotation = arcPoint(value, ARC_RADIUS)
+		line.Position, line.Rotation = position, rotation
+		line.ZIndex = 7
+		line.Parent = arc
+	end
+	for _, value in { 0.25, 0.5, 0.75 } do
+		notch(value, ARC_TRACK + 14, 4)
+	end
+	local redStart = 1
+	for _, segment in segments do
+		if ThrowRules.InOvercharge(segment.Value) then
+			redStart = math.min(redStart, segment.Value - 0.5 / ARC_SEGMENTS)
+		end
+	end
+	if OVER.Enabled and redStart < 1 then
+		notch(redStart, ARC_TRACK + 2, 3)
 	end
 
-	-- "POWER" inside the arc (on top of the bar); during a strike streak it warns that the gold is shrinking
-	local arcLabel = Instance.new("TextLabel")
-	arcLabel.AnchorPoint = Vector2.new(0.5, 1)
-	arcLabel.Position = if IS_SIDE then UDim2.new(0, 0, 0, -4) else UDim2.new(0.5, 0, 1, -4)
-	arcLabel.Size = UDim2.fromOffset(160, 26)
-	arcLabel.BackgroundTransparency = 1
-	arcLabel.Font = Enum.Font.FredokaOne
-	arcLabel.TextScaled = true
-	arcLabel.TextColor3 = WHITE
-	arcLabel.ZIndex = 5
-	arcLabel.Parent = arc
-	local arcLabelStroke = Instance.new("UIStroke")
-	arcLabelStroke.Thickness = 2
-	arcLabelStroke.Color = INK
-	arcLabelStroke.Parent = arcLabel
+	-- The head: a white dot with a coloured ring and a soft glow; a gold ring bursts out of it in the PERFECT zone
+	local headGlow = Instance.new("Frame")
+	headGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+	headGlow.Size = UDim2.fromOffset(ARC_HEAD * 2, ARC_HEAD * 2)
+	headGlow.BackgroundTransparency = 0.5
+	headGlow.ZIndex = 8
+	round(headGlow)
+	headGlow.Parent = arc
+	local burst = Instance.new("Frame")
+	burst.AnchorPoint = Vector2.new(0.5, 0.5)
+	burst.BackgroundTransparency = 1
+	burst.ZIndex = 8
+	round(burst)
+	burst.Parent = arc
+	local burstStroke = SlUi.Stroke(burst, Color3.fromRGB(255, 226, 122), 4, 0, true)
+	local head = Instance.new("Frame")
+	head.Name = "Head"
+	head.AnchorPoint = Vector2.new(0.5, 0.5)
+	head.Size = UDim2.fromOffset(ARC_HEAD, ARC_HEAD)
+	head.BackgroundColor3 = WHITE
+	head.ZIndex = 9
+	round(head)
+	head.Parent = arc
+	local headStroke = SlUi.Stroke(head, C.Cyan, 4, 0, true)
 
-	-- PERFECT! pops above the arc the moment you let go in the gold
-	local perfectLabel = Instance.new("TextLabel")
-	perfectLabel.Name = "Perfect"
-	perfectLabel.AnchorPoint = Vector2.new(0.5, 1)
-	perfectLabel.Position = UDim2.new(0.5, 0, 0, -METER_HEIGHT - LABEL_ROOM - 8)
-	perfectLabel.Size = UDim2.new(1, 0, 0, 52)
-	perfectLabel.BackgroundTransparency = 1
-	perfectLabel.Font = Enum.Font.FredokaOne
-	perfectLabel.TextScaled = true
-	perfectLabel.Text = "PERFECT!"
-	perfectLabel.TextColor3 = GOLD
-	perfectLabel.Visible = false
-	perfectLabel.ZIndex = 5
-	perfectLabel.Parent = panel
-	local perfectStroke = Instance.new("UIStroke")
-	perfectStroke.Thickness = 4
-	perfectStroke.Color = INK
-	perfectStroke.Parent = perfectLabel
-	local perfectScale = Instance.new("UIScale")
-	perfectScale.Parent = perfectLabel
-	local perfectToken = 0
+	-- Zone names beside the arc: PERFECT follows the gold, OVERCHARGE sits by the red cap
+	local function zoneTag(text: string, size: number, color: Color3): TextLabel
+		local label = SlUi.Label(arc, text, SlUi.Heavy, size, color)
+		label.AnchorPoint = if IS_SIDE then Vector2.new(0, 0.5) else Vector2.new(0.5, 1)
+		label.Size = UDim2.fromOffset(0, size + 4)
+		label.AutomaticSize = Enum.AutomaticSize.X
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.ZIndex = 10
+		SlUi.Stroke(label, C.Ink, 2.5)
+		return label
+	end
+	local perfectTag = zoneTag("PERFECT", 20, C.Gold)
+	local overTag = zoneTag("OVERCHARGE", 16, C.Red)
+	overTag.Position = arcPoint(0.97, ARC_RADIUS + ARC_OUTLINE / 2 + 6)
+	overTag.Visible = OVER.Enabled
+	local tagRadius = ARC_RADIUS + ARC_OUTLINE / 2 + 8
 
-	local function showPerfect(text: string, color: Color3)
-		perfectLabel.Text = text
-		perfectLabel.TextColor3 = color
-		perfectToken += 1
-		local token = perfectToken
-		perfectLabel.Visible = true
-		perfectLabel.TextTransparency = 0
-		perfectStroke.Transparency = 0
-		perfectLabel.Rotation = (math.random() - 0.5) * 8
-		perfectScale.Scale = 0.3
-		TweenService:Create(perfectScale, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Scale = 1.12,
-		}):Play()
-		task.delay(0.4, function()
-			if token ~= perfectToken then
-				return
-			end
-			local fade = TweenInfo.new(0.2)
-			TweenService:Create(perfectLabel, fade, { TextTransparency = 1 }):Play()
-			TweenService:Create(perfectStroke, fade, { Transparency = 1 }):Play()
-			task.wait(0.2)
-			if token == perfectToken then
-				perfectLabel.Visible = false
-			end
-		end)
+	-- MAX badge at the top of a full bar (only when there is no red cap up there)
+	local maxBadge = SlUi.Label(arc, "MAX", SlUi.Heavy, 22, C.GoldBright)
+	maxBadge.AnchorPoint = Vector2.new(0.5, 1)
+	maxBadge.Position = arcPoint(1, ARC_RADIUS + ARC_OUTLINE / 2 + 22)
+	maxBadge.Size = UDim2.fromOffset(74, 32)
+	maxBadge.BackgroundColor3 = C.Navy
+	maxBadge.BackgroundTransparency = 0
+	maxBadge.ZIndex = 10
+	maxBadge.Visible = false
+	SlUi.Corner(maxBadge, UDim.new(0, 10))
+	SlUi.Stroke(maxBadge, C.GoldBright, 4, 0, true)
+
+	-- The value you let go at, popped beside the head for a moment ("94")
+	local releaseValue = SlUi.Label(arc, "", SlUi.Heavy, 40, WHITE)
+	releaseValue.AnchorPoint = if IS_SIDE then Vector2.new(0, 0.5) else Vector2.new(0.5, 1)
+	releaseValue.Size = UDim2.fromOffset(0, 44)
+	releaseValue.AutomaticSize = Enum.AutomaticSize.X
+	releaseValue.ZIndex = 11
+	releaseValue.Visible = false
+	local releaseValueStroke = SlUi.Stroke(releaseValue, C.Navy, 5)
+
+	-- The readout plate under the arc: a small caption over a big word ("POWER" / "52%")
+	local plate = Instance.new("Frame")
+	plate.Name = "Readout"
+	plate.AnchorPoint = Vector2.new(0.5, 0)
+	plate.Position = if IS_SIDE then UDim2.new(0, ARC_RADIUS * 0.45, 1, 12) else UDim2.new(0.5, 0, 1, 12)
+	plate.Size = UDim2.fromOffset(0, 56)
+	plate.AutomaticSize = Enum.AutomaticSize.X
+	plate.BackgroundColor3 = SlUi.Hex("05060F")
+	plate.ZIndex = 10
+	plate.Parent = holder
+	SlUi.Corner(plate, UDim.new(0, 16))
+	local plateStroke = SlUi.Stroke(plate, C.Grey, 3, 0, true)
+	local platePad = Instance.new("UIPadding")
+	platePad.PaddingLeft = UDim.new(0, 20)
+	platePad.PaddingRight = UDim.new(0, 20)
+	platePad.Parent = plate
+	local plateList = Instance.new("UIListLayout")
+	plateList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	plateList.VerticalAlignment = Enum.VerticalAlignment.Center
+	plateList.SortOrder = Enum.SortOrder.LayoutOrder
+	plateList.Parent = plate
+	local caption = SlUi.Label(plate, "", SlUi.Mono, 12, C.Muted)
+	caption.AnchorPoint = Vector2.zero
+	caption.Size = UDim2.fromOffset(0, 14)
+	caption.AutomaticSize = Enum.AutomaticSize.X
+	caption.LayoutOrder = 1
+	caption.ZIndex = 11
+	local readout = SlUi.Label(plate, "", SlUi.Heavy, 30, C.Grey)
+	readout.AnchorPoint = Vector2.zero
+	readout.Size = UDim2.fromOffset(0, 34)
+	readout.AutomaticSize = Enum.AutomaticSize.X
+	readout.LayoutOrder = 2
+	readout.ZIndex = 11
+	SlUi.Stroke(readout, SlUi.Hex("05060F"), 2)
+	local function setPlate(top: string, word: string, color: Color3)
+		caption.Text = top
+		readout.Text = word
+		readout.TextColor3 = color
+		plateStroke.Color = color
+	end
+
+	-- Red glow around the screen edges while the bar is in the overcharge cap
+	local vignette = Instance.new("Frame")
+	vignette.Name = "OverchargeVignette"
+	vignette.Size = UDim2.new(1, 0, 1, 80)
+	vignette.Position = UDim2.fromOffset(0, -60)
+	vignette.BackgroundTransparency = 1
+	vignette.Visible = false
+	vignette.ZIndex = 0
+	vignette.Parent = gui
+	local vignetteEdges = {}
+	for _, edge in { { 0, 1, 0 }, { 0, 1, 180 }, { 1, 0, 90 }, { 1, 0, 270 } } do
+		local side = Instance.new("Frame")
+		side.BorderSizePixel = 0
+		side.BackgroundColor3 = C.Red
+		side.ZIndex = 0
+		local depth = 110
+		local rotation = edge[3]
+		side.Size = if rotation == 0 or rotation == 180 then UDim2.new(1, 0, 0, depth) else UDim2.new(0, depth, 1, 0)
+		side.AnchorPoint = if rotation == 0
+			then Vector2.new(0, 0)
+			elseif rotation == 180 then Vector2.new(0, 1)
+			elseif rotation == 90 then Vector2.new(0, 0)
+			else Vector2.new(1, 0)
+		side.Position = if rotation == 0
+			then UDim2.fromScale(0, 0)
+			elseif rotation == 180 then UDim2.fromScale(0, 1)
+			elseif rotation == 90 then UDim2.fromScale(0, 0)
+			else UDim2.fromScale(1, 0)
+		local fade = Instance.new("UIGradient")
+		fade.Rotation = if rotation == 0 then 90 elseif rotation == 180 then 270 elseif rotation == 90 then 0 else 180
+		fade.Transparency = NumberSequence.new(0.3, 1)
+		fade.Parent = side
+		side.Parent = vignette
+		table.insert(vignetteEdges, side)
+	end
+
+	-- Tier 2 PERFECT pops above the arc the moment you let go in the gold
+	local perfectSpot = Instance.new("Frame")
+	perfectSpot.Name = "Perfect"
+	perfectSpot.AnchorPoint = Vector2.new(0.5, 1)
+	perfectSpot.Size = UDim2.fromOffset(0, 0)
+	perfectSpot.BackgroundTransparency = 1
+	perfectSpot.ZIndex = 5
+	perfectSpot.Parent = panel
+	local perfectSpotScale = Instance.new("UIScale")
+	perfectSpotScale.Parent = perfectSpot
+	local perfectHost = ResultText.Host(perfectSpot, "PerfectHost", Vector2.new(560, 130))
+
+	local function showPerfect(text: string, border: Color3?)
+		local frame = ResultText.Clear(perfectHost)
+		ResultText.Perfect(frame, text, THROW.ResultSizes.Perfect, border)
+		ResultText.Pop(perfectHost, 0.6)
 	end
 
 	-- After each throw the gold glides to its new spot. It only glides while you can't throw,
 	-- so what you see while charging is always exactly what the server checks.
+	-- mode: "Idle", "Charge", "Gold", "Red", "Full" or "Released" (the white flash)
 	local shownCenter: number? = nil
-	local function drawBar(value: number, inGold: boolean, charging: boolean, dt: number?)
+	local glowSegments = {}
+	local function drawBar(value: number, mode: string, charging: boolean, dt: number?)
 		local center, size = sweetSpot()
 		if dt and shownCenter and not charging then
 			shownCenter += (center - shownCenter) * math.min(1, dt * 8)
@@ -363,6 +495,18 @@ function ThrowController:Start()
 		end
 		local shown = shownCenter :: number
 		local hook = ThrowRules.HookWidth(equippedBall(), size)
+		local now = os.clock()
+		local fillColor = if mode == "Gold"
+			then C.Gold
+			elseif mode == "Red" then C.Red
+			elseif mode == "Released" then WHITE
+			else nil -- the cyan flow
+		local outlineColor = if mode == "Idle"
+			then OUTLINE_IDLE
+			elseif mode == "Full" then C.GoldBright
+			elseif mode == "Released" then WHITE
+			else C.Cyan
+		table.clear(glowSegments)
 		for _, segment in segments do
 			local offset = math.abs(segment.Value - shown)
 			local zone = if offset <= size / 2
@@ -370,29 +514,134 @@ function ThrowController:Start()
 				elseif hook > 0 and offset <= size / 2 + hook then "Hook"
 				elseif ThrowRules.InOvercharge(segment.Value) then "Red"
 				else ""
-			local filled = segment.Value <= value
-			local key = zone .. (if filled then "F" else "") .. (if filled and inGold then "G" else "")
+			local filled = value > 0.005 and segment.Value <= value
+			local key = zone .. (if filled then "F" else "") .. mode
 			if key ~= segment.Key then
 				segment.Key = key
-				local frame = segment.Frame
-				frame.Size = UDim2.fromOffset(segmentLength, ARC_THICKNESS + (if zone == "Gold" then 10 else 0))
-				frame.ZIndex = if zone == "Gold" then 3 else 2
-				frame.BackgroundColor3 = if zone == "Gold"
-					then (if filled then Color3.new(1, 0.95, 0.6) else GOLD)
-					elseif zone == "Hook" then (if filled then hookColor:Lerp(WHITE, 0.35) else hookColor)
-					elseif zone == "Red" then (if filled then RED:Lerp(WHITE, 0.4) else RED:Lerp(DARK, 0.25))
-					elseif filled then (if inGold then GOLD else PINK)
-					else DARK
+				segment.Zone.BackgroundColor3 = if zone == "Gold"
+					then C.Gold
+					elseif zone == "Hook" then C.Track:Lerp(hookColor, 0.55)
+					elseif zone == "Red" then C.Red
+					else C.Track
+				segment.Fill.Visible = filled
+				segment.Fill.BackgroundColor3 = fillColor or segment.Flow
+				segment.Outline.BackgroundColor3 = outlineColor
+				segment.Glow.BackgroundColor3 = if mode == "Released"
+					then WHITE
+					elseif zone == "Red" then C.Red
+					else C.Gold
+			end
+			if mode == "Released" or zone == "Gold" or zone == "Red" then
+				table.insert(glowSegments, { segment.Glow, zone })
+			else
+				segment.Glow.BackgroundTransparency = 1
 			end
 		end
-		rider.Position, rider.Rotation = arcPoint(math.clamp(value, 0, 1), ARC_RADIUS)
-		rider.BackgroundColor3 = equippedBall().Color
-		local inRed = charging and not inGold and ThrowRules.InOvercharge(value)
-		riderStroke.Color = if inGold then GOLD elseif inRed then RED elseif charging then PINK else WHITE
-		riderStroke.Thickness = if inGold or inRed then 5 else 3
+		-- Glows: the gold zone always glows softly and pulses hard while you're in it; the red cap the same.
+		-- On release the whole arc flashes white.
+		local goldAlpha = if mode == "Gold" then 0.775 + 0.225 * math.cos(now * math.pi * 2 / 0.6) else 0.35
+		local redAlpha = if mode == "Red" then 0.675 + 0.325 * math.cos(now * math.pi * 2 / 0.45) else 0.15
+		for _, pair in glowSegments do
+			local alpha = if mode == "Released" then 0.3 elseif pair[2] == "Red" then redAlpha else goldAlpha
+			pair[1].BackgroundTransparency = 1 - alpha * 0.55
+		end
+		local fullPulse = 0.775 + 0.225 * math.cos(now * math.pi * 2 / 0.28)
+		for _, cap in outlineCaps do
+			cap.BackgroundColor3 = outlineColor
+		end
+		if mode == "Full" then
+			for _, segment in segments do
+				segment.Outline.BackgroundTransparency = 1 - fullPulse
+			end
+		elseif segments[1].Outline.BackgroundTransparency ~= 0 then
+			for _, segment in segments do
+				segment.Outline.BackgroundTransparency = 0
+			end
+		end
+		bottomCap.BackgroundColor3 = C.Track
+		topCap.BackgroundColor3 = if OVER.Enabled then C.Red else C.Track
+		fillCap.Visible = value > 0.005
+		fillCap.BackgroundColor3 = fillColor or segments[1].Flow
+
+		-- The head, its glow and the gold burst ring
+		local clamped = math.clamp(value, 0, 1)
+		local headColor = if mode == "Gold" or mode == "Full"
+			then C.Gold
+			elseif mode == "Red" then C.Red
+			else C.Cyan
+		head.Visible = value > 0.005 and mode ~= "Released"
+		head.Position = arcPoint(clamped, ARC_RADIUS)
+		headStroke.Color = headColor
+		headGlow.Visible = head.Visible
+		headGlow.Position = head.Position
+		headGlow.BackgroundColor3 = headColor
+		burst.Visible = mode == "Gold"
+		if burst.Visible then
+			local t = (now % 0.7) / 0.7
+			local diameter = 24 + 56 * t
+			burst.Position = head.Position
+			burst.Size = UDim2.fromOffset(diameter, diameter)
+			burstStroke.Transparency = t
+		end
+
+		-- kept clear of the OVERCHARGE name at the top
+		perfectTag.Position = arcPoint(math.clamp(shown, 0.04, if OVER.Enabled then 0.84 else 0.96), tagRadius)
+		perfectTag.Visible = size > 0 and not assisted()
+		maxBadge.Visible = mode == "Full"
+		vignette.Visible = mode == "Red"
+		if vignette.Visible then
+			for _, side in vignetteEdges do
+				side.BackgroundTransparency = 0.45 - 0.35 * math.cos(now * math.pi * 2 / 0.45)
+			end
+		end
+
+		-- The readout plate
+		local pct = math.floor(clamped * 100 + 0.5) .. "%"
 		local streak = player:GetAttribute("Streak") or 0
-		arcLabel.Text = if inRed then "RISKY!" elseif streak > 0 then "GOLD SHRINKS x" .. streak else "POWER"
-		arcLabel.TextColor3 = if inRed then RED elseif streak > 0 then GOLD else WHITE
+		if mode == "Gold" then
+			setPlate("RELEASE NOW", "PERFECT!", C.Gold)
+		elseif mode == "Red" then
+			setPlate("RISKY", "OVERCHARGE", C.Red)
+		elseif mode == "Full" then
+			setPlate("POWER", "MAX", C.GoldBright)
+		elseif mode == "Charge" then
+			setPlate("POWER", pct, C.Cyan)
+		elseif mode == "Released" then
+			setPlate("POWER", math.floor(releasedValue * 100 + 0.5) .. "%", WHITE)
+		elseif state == "Waiting" then
+			setPlate("LAST THROW", math.floor(releasedValue * 100 + 0.5) .. "%", C.Grey)
+		else
+			setPlate(if streak > 0 then "GOLD SHRINKS x" .. streak else "HOLD TO CHARGE", "READY", C.Grey)
+		end
+	end
+
+	-- What the meter shows while you charge
+	local function chargeMode(value: number, inGold: boolean): string
+		if inGold then
+			return "Gold"
+		elseif not assisted() and ThrowRules.InOvercharge(value) then
+			return "Red"
+		elseif not OVER.Enabled and value >= 0.995 then
+			return "Full"
+		end
+		return "Charge"
+	end
+
+	-- After a release: white for 140 ms, then the fill drains in 220 ms (and the value hangs by the arc)
+	local function drawReleased(dt: number)
+		local t = os.clock() - releasedAt
+		if t < 0.14 then
+			drawBar(releasedValue, "Released", false, dt)
+		elseif t < 0.36 then
+			local k = (t - 0.14) / 0.22
+			drawBar(releasedValue * (1 - k) * (1 - k), "Charge", false, dt)
+		else
+			drawBar(0, "Idle", false, dt)
+		end
+		releaseValue.Visible = t < 0.75
+		local fade = math.clamp((t - 0.5) / 0.25, 0, 1)
+		releaseValue.TextTransparency = fade
+		releaseValueStroke.Transparency = fade
 	end
 
 	local function setState(newState: string)
@@ -405,7 +654,7 @@ function ThrowController:Start()
 			charge = 0
 			hint.Text = readyHint()
 			button.Text = "HOLD!"
-			drawBar(0, false, false)
+			drawBar(0, "Idle", false)
 			lockFeet(false)
 		elseif newState == "Charging" then
 			charge, holdStartedAt = 0, os.clock()
@@ -439,17 +688,19 @@ function ThrowController:Start()
 		local gold = ThrowRules.InSpot(charge, center, size)
 		local hooked = not gold and ThrowRules.InSpot(charge, center, size, ThrowRules.HookWidth(equippedBall(), size))
 		local perfect = gold or hooked
-		releasedPerfect = perfect
-		drawBar(charge, perfect, false)
+		releasedAt, releasedValue = os.clock(), charge
+		releaseValue.Text = tostring(math.floor(charge * 100 + 0.5))
+		releaseValue.Position = arcPoint(math.min(charge, 0.92), ARC_RADIUS + ARC_OUTLINE / 2 + 14)
+		drawBar(charge, "Released", false)
 		if gold then
-			showPerfect("PERFECT!", GOLD)
+			showPerfect("PERFECT!")
 			UiFx.Flash(GOLD, 0.25, 0.2)
 		elseif hooked then
 			showPerfect("HOOK! PERFECT!", hookColor)
 			UiFx.Flash(hookColor, 0.25, 0.2)
 		elseif ThrowRules.InOvercharge(charge) and not assisted() then
 			-- The gamble: the server says whether it pays off when the ball lands
-			showPerfect("OVERCHARGE...?", RED)
+			showPerfect("OVERCHARGE?", C.Red)
 			UiFx.Flash(RED, 0.25, 0.2)
 		end
 		UiFx.Pop(arc, if perfect then 1.15 else 1.08, 0.25)
@@ -514,45 +765,32 @@ function ThrowController:Start()
 		held = nil
 	end)
 
-	local function showText(message: string, color: Color3, isStrike: boolean, size: number)
-		resultText.Text = message
-		resultText.TextColor3 = color
-		resultText.TextTransparency = 0
-		if resultStroke then
-			resultStroke.Transparency = 0
+	-- The owner's result text (UI 1.3) lives in a host on the old ResultText label (it keeps its place on screen)
+	local resultSpot = Instance.new("Frame")
+	resultSpot.Name = "ResultSpot"
+	resultSpot.AnchorPoint = Vector2.new(0.5, 0.5)
+	resultSpot.Position = UDim2.fromScale(0.5, 0.5)
+	resultSpot.Size = UDim2.fromOffset(0, 0)
+	resultSpot.BackgroundTransparency = 1
+	resultSpot.Parent = resultText
+	local resultScreenScale = Instance.new("UIScale")
+	resultScreenScale.Parent = resultSpot
+	local resultHost = ResultText.Host(resultSpot, "ResultHost", Vector2.new(960, 380))
+	local SIZES = THROW.ResultSizes
+
+	-- kind: "Strike", "Overcharge", "Overcooked" or "Pins"
+	local function showText(kind: string, text: string, isStrike: boolean, grow: number?, count: number?, note: string?)
+		local frame = ResultText.Clear(resultHost)
+		if kind == "Strike" or kind == "Overcharge" then
+			-- capped so long streak names still fit
+			local size = math.min(SIZES.Strike * (grow or 1), 840 / (#text * 0.74 + 1))
+			ResultText.Strike(frame, text, size, if kind == "Overcharge" then "Red" else "Pink")
+		elseif kind == "Overcooked" then
+			ResultText.Overcooked(frame, text, SIZES.Overcooked, note)
+		else
+			ResultText.Pins(frame, count or 0, SIZES.Pins, note)
 		end
-		resultText.Visible = true
-
-		-- Quick pop (from the Throw Lab): in big, settle, out
-		resultScale.Scale = size * 0.3
-		resultText.Rotation = (math.random() - 0.5) * 8
-		TweenService:Create(resultScale, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Scale = size * 1.12,
-		}):Play()
-
-		resultToken += 1
-		local token = resultToken
-		local time = if isStrike then THROW.CelebrationTime else 0.55
-		task.delay(0.14, function()
-			if token == resultToken then
-				TweenService:Create(resultScale, TweenInfo.new(0.1), { Scale = size }):Play()
-			end
-		end)
-		task.delay(time * 0.65, function()
-			if token ~= resultToken then
-				return
-			end
-			local out = TweenInfo.new(time * 0.35)
-			TweenService:Create(resultScale, out, { Scale = size * 1.1 }):Play()
-			TweenService:Create(resultText, out, { TextTransparency = 1 }):Play()
-			if resultStroke then
-				TweenService:Create(resultStroke, out, { Transparency = 1 }):Play()
-			end
-			task.wait(time * 0.35)
-			if token == resultToken then
-				resultText.Visible = false
-			end
-		end)
+		ResultText.Pop(resultHost, if isStrike then THROW.CelebrationTime else 0.55)
 	end
 
 	-- "STRIKE!", a Config.Streaks tier name when you reach that tier, otherwise "6 IN A ROW!"
@@ -575,27 +813,24 @@ function ThrowController:Start()
 		local isStrike = data.Tier == "Strike" or data.Tier == "PerfectStrike"
 		if data.Overcharge == "Wasted" then
 			Sfx.Play("Overcooked")
-			showText(if previous >= 2 then "OVERCOOKED! STREAK OVER" else "OVERCOOKED! GUTTER", RED, false, 1.15)
+			showText("Overcooked", "OVERCOOKED", false, nil, nil, if previous >= 2 then "STREAK OVER" else "GUTTER")
 		elseif data.Overcharge == "Blast" then
 			local name = if streak >= 2 then "OVERCHARGE x" .. streak .. "!" else "OVERCHARGE!"
-			showText(name, RED:Lerp(GOLD, 0.35), true, 1.4)
+			showText("Overcharge", name, true, 1.15)
 		elseif isStrike then
 			local level = math.min(math.max(streak, 1), THROW.StreakGrowthStopsAt)
 			local grow = 1 + THROW.StreakGrowth * (level - 1)
-			local special = table.find(THROW.SpecialStreaks, streak) ~= nil
-			if special then
+			if table.find(THROW.SpecialStreaks, streak) then
 				grow *= 1.3
 			end
-			local name = streakName(streak)
-			local color = if special then GOLD elseif streak <= 1 then PINK else CYAN
-			showText(name, color, true, math.min(grow, 1.7)) -- capped so it always fits on screen
+			showText("Strike", streakName(streak), true, math.min(grow, 1.35)) -- capped so it always fits on screen
 		elseif streak > 0 then
 			-- Streak Saver kept the streak alive: just the pin count
-			showText(data.Count .. " PINS", WHITE, false, 1)
+			showText("Pins", "", false, nil, data.Count)
 		elseif previous >= 2 then
-			showText(data.Count .. " PINS - STREAK OVER", Color3.fromRGB(200, 190, 230), false, 1)
+			showText("Pins", "", false, nil, data.Count, "STREAK OVER")
 		else
-			showText(if data.Count == 9 then "9 PINS! SO CLOSE" else data.Count .. " PINS", WHITE, false, 1)
+			showText("Pins", "", false, nil, data.Count, if data.Count == 9 then "SO CLOSE!" else nil)
 		end
 	end
 
@@ -612,8 +847,9 @@ function ThrowController:Start()
 		local screenScale = math.clamp(Workspace.CurrentCamera.ViewportSize.Y / 720, 0.6, 1)
 		holderScale.Scale = screenScale
 		holder.Position = UDim2.new(0.5, METER_SIDE * screenScale, 0, -ARC_LIFT * screenScale)
-		perfectLabel.Position =
-			UDim2.new(0.5, METER_SIDE * screenScale, 0, -(METER_HEIGHT + LABEL_ROOM + ARC_LIFT + 8) * screenScale)
+		perfectSpot.Position = UDim2.new(0.5, METER_SIDE * screenScale, 0, -(METER_HEIGHT + ARC_LIFT + 70) * screenScale)
+		perfectSpotScale.Scale = screenScale
+		resultScreenScale.Scale = screenScale
 
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 		local ownLane = LaneUtil.GetOwnedLane(player.UserId)
@@ -635,13 +871,13 @@ function ThrowController:Start()
 				ThrowPose.Stop(player.Character)
 				setState("Ready")
 			end
-			drawBar(0, false, false, dt)
+			drawBar(0, "Idle", false, dt)
 			hint.Text = "WAIT..."
 		elseif state == "Ready" then
 			if held and laneReady(currentLane) then
 				setState("Charging") -- pressed while the lane was still busy
 			else
-				drawBar(0, false, false, dt) -- the gold zone glides to its new spot (and slides with Moving Gold)
+				drawBar(0, "Idle", false, dt) -- the gold zone glides to its new spot (and slides with Moving Gold)
 				hint.Text = if laneReady(currentLane) then readyHint() else "WAIT..."
 			end
 		elseif state == "Charging" then
@@ -650,7 +886,7 @@ function ThrowController:Start()
 			local center, size = sweetSpot()
 			local hook = ThrowRules.HookWidth(equippedBall(), size)
 			local inGold = ThrowRules.InSpot(charge, center, size, hook)
-			drawBar(charge, inGold, true)
+			drawBar(charge, chargeMode(charge, inGold), true)
 			-- A warning buzz each time the bar climbs into the red cap
 			local inRed = not inGold and not assisted() and ThrowRules.InOvercharge(charge)
 			if inRed and not wasInRed then
@@ -660,7 +896,7 @@ function ThrowController:Start()
 			ThrowPose.Charge(player.Character, charge, ThrowRules.Level(player:GetAttribute("PowerLevel")))
 			faceLane(dt)
 		elseif state == "Waiting" then
-			drawBar(charge, releasedPerfect, false, dt)
+			drawReleased(dt)
 			if not ThrowPose.IsBusy(player.Character) then
 				lockFeet(false)
 			end

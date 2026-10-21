@@ -1,4 +1,4 @@
--- Shows coins, gems, the rank/XP bar and the streak panel, and a "+coins +XP" popup after each throw.
+-- Shows coins, gems, the rank/XP bar and the streak panel, and a "+XP +gems" popup after each throw.
 -- After a throw, coin (and gem) icons fly from the pins into the counters with a rising "ding".
 -- The UI itself (StarterGui.HUD) is built in Studio; this script only fills it in.
 -- Values come from Player attributes, which only the server sets.
@@ -248,13 +248,11 @@ function HudController:Start()
 	local popupToken = 0
 
 	local function showReward(reward)
-		if reward.Coins <= 0 and reward.XP <= 0 and reward.Gems <= 0 then
+		-- Coins show in the payout pop (ThrowFx.PayoutPop, the owner's design), so this line is only XP and gems
+		if reward.XP <= 0 and reward.Gems <= 0 then
 			return
 		end
 		local parts = {}
-		if reward.Coins > 0 then
-			table.insert(parts, ('<font color="#FFC828">+%s coins</font>'):format(formatNumber(reward.Coins)))
-		end
 		if reward.Gems > 0 then
 			local gemWord = if reward.Gems == 1 then "gem" else "gems"
 			table.insert(parts, ('<font color="#3CE6FF">+%d %s</font>'):format(reward.Gems, gemWord))

@@ -140,13 +140,14 @@ Config.Throw = {
 	SlowMotionLength = 0.2, -- Addendum 2: at most 0.2 seconds, so the next throw comes quickly
 	SlowMotionSpeed = 0.3,
 
-	-- Number pops out of each pin (coins earned); better balls make them bigger
-	NumberPopSize = 34,
-	NumberPopTime = 0.7,
-	-- The big "+12.5K" total that slams in over the pins on your own throws
-	PayoutPopSize = 46, -- text size for a small payout...
-	PayoutPopGrowth = 10, -- ...plus this much for every x10 more coins
-	PayoutPopTime = 1.1,
+	-- Number pops out of each pin (coins earned); better balls make them bigger (owner's design: SM 32, MD 52, CRIT 92)
+	NumberPopSize = 32,
+	NumberPopTime = 1.4, -- design: rise 130 px, gone at 1.4 s
+	-- The "+480 COINS" payout pop (owner's design UI 1.4): fixed on the screen above the lane
+	PayoutPopPosition = UDim2.fromScale(0.5, 0.52), -- under the result text, above the throw button
+	PayoutPopTime = 2.3, -- design: idle until 2.0 s, exit by 2.3 s
+	-- Throw result text (owner's design UI 1.3): text sizes in pixels at 720 px screen height
+	ResultSizes = { Strike = 92, Perfect = 50, Overcooked = 44, Pins = 40 },
 
 	-- Strike streak text on screen: "STRIKE!", then each Config.Streaks tier name the moment you reach it
 	-- (DOUBLE! TURKEY! HAMBONE! WILD TURKEY! STREAK MASTER! PERFECT RUN!), "6 IN A ROW!" and so on in between

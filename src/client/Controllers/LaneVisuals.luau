@@ -444,13 +444,9 @@ local function playThrow(data)
 		if isOwn then
 			if coinsEach > 0 then
 				local size = THROW.NumberPopSize * feel.PopScale * (0.9 + math.min(flew, 2) * 0.1)
-				-- Gold on a PERFECT; otherwise the ball's rarity colour from Rare up, so better balls pop brighter
-				local color = if data.Perfect
-					then GOLD
-					elseif feel.Rarity >= Balls.RarityIndex("Rare") and feel.RarityColor then feel.RarityColor
-					elseif isStrike then PINK
-					else WHITE
-				ThrowFx.NumberPop(spot, "+" .. coinsEach, size, color)
+				-- The owner's tones: gold on a PERFECT, pink on a strike, white otherwise
+				local tone = if data.Perfect then "gold" elseif isStrike then "pink" else "white"
+				ThrowFx.NumberPop(spot, coinsEach, size, tone)
 			end
 			ThrowFx.Shake(THROW.CameraShakeStrength * 0.25 * feel.Crash, THROW.CameraShakeTime * 0.6)
 		end
@@ -475,13 +471,20 @@ local function playThrow(data)
 		if isOwn and coins > 0 then
 			local polish = Balls.DecodePolish(Players.LocalPlayer:GetAttribute("Polish"))[ballInfo.Id]
 			local multiplier = math.floor(Balls.Multiplier(ballInfo, Balls.PolishLevel(polish)) * 100 + 0.5) / 100
-			local note = if multiplier > 1 then ("x%g %s"):format(multiplier, string.upper(ballInfo.Name)) else nil
-			local color = if data.Perfect
-				then GOLD
-				elseif feel.RarityColor and feel.Rarity >= Balls.RarityIndex("Uncommon") then feel.RarityColor
-				else WHITE
+			-- The owner's variants: pink for a strike streak, gold for a strike or PERFECT, cyan otherwise.
+			-- The chip says the streak, else the ball's multiplier ("x2.5 RUBY"), else BONUS on gold.
+			local strikeRun = data.Streak or 0
+			local variant = if isStrike and strikeRun >= 2
+				then "streak"
+				elseif isStrike or data.Perfect then "bonus"
+				else "coin"
+			local tag = if variant == "streak"
+				then "STREAK \u{00D7}" .. strikeRun
+				elseif multiplier > 1 then ("x%g %s"):format(multiplier, string.upper(ballInfo.Name))
+				elseif variant == "bonus" then "BONUS"
+				else nil
 			task.delay(feel.HitStop + 0.1, function()
-				ThrowFx.PayoutPop(rack.HeadPinCFrame.Position + Vector3.new(0, LANE.PinHeight, 0), coins, note, color)
+				ThrowFx.PayoutPop(coins, variant, tag)
 			end)
 		end
 		-- Hit-stop: a PERFECT freezes everything for a split second before the explosion
