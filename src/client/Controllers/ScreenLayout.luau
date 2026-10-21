@@ -32,7 +32,7 @@ local COMPACT = {
 	},
 	["ThrowUI.PowerBar.Label"] = { Size = UDim2.fromOffset(80, 22) },
 	["ThrowUI.ResultText"] = { Position = UDim2.new(0.5, 0, 0, 84), Size = UDim2.new(0.45, 0, 0, 40) },
-	["HUD.RewardPopup"] = { Position = UDim2.new(0.5, 0, 0, 132), Size = UDim2.new(0.7, 0, 0, 30) },
+	["HUD.RewardPopup"] = { Position = UDim2.new(0.5, 0, 0, 138), Size = UDim2.new(0.7, 0, 0, 20) },
 	["ThrowUI.TraitPopups"] = { Position = UDim2.new(0.5, 0, 0, 166) },
 
 	-- Rank Trial: on phones the ready button and a compact tracker (no goal line, smaller dots) share the

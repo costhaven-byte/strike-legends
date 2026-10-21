@@ -141,13 +141,17 @@ Config.Throw = {
 	SlowMotionSpeed = 0.3,
 
 	-- Number pops out of each pin (coins earned); better balls make them bigger (owner's design: SM 32, MD 52, CRIT 92)
-	NumberPopSize = 32,
-	NumberPopTime = 1.4, -- design: rise 130 px, gone at 1.4 s
+	NumberPopSize = 22, -- 2026-10-22 owner: smaller so the pin numbers don't pile up (design was 32)
+	NumberPopTime = 1.4, -- design: gone at 1.4 s
+	NumberPopRise = 60, -- pixels it floats up (design 130; 2026-10-22 owner: less, so it stays out of the strike text)
 	-- The "+480 COINS" payout pop (owner's design UI 1.4): fixed on the screen above the lane
-	PayoutPopPosition = UDim2.fromScale(0.5, 0.52), -- under the result text, above the throw button
+	PayoutPopPosition = UDim2.fromScale(0.5, 0.56), -- under the result text and the XP line, above the throw button
+	PayoutPopScale = 0.75, -- 2026-10-22 owner: smaller than the design so it doesn't overlap the strike text
 	PayoutPopTime = 2.3, -- design: idle until 2.0 s, exit by 2.3 s
 	-- Throw result text (owner's design UI 1.3): text sizes in pixels at 720 px screen height
-	ResultSizes = { Strike = 92, Perfect = 50, Overcooked = 44, Pins = 40 },
+	-- 2026-10-22 owner: all smaller so they don't overlap (design was Strike 92, Perfect 50, Overcooked 44, Pins 40)
+	ResultSizes = { Strike = 62, Perfect = 36, Overcooked = 32, Pins = 28 },
+	StreakGrowCap = 1.2, -- streak text never grows past this (was 1.35)
 
 	-- Strike streak text on screen: "STRIKE!", then each Config.Streaks tier name the moment you reach it
 	-- (DOUBLE! TURKEY! HAMBONE! WILD TURKEY! STREAK MASTER! PERFECT RUN!), "6 IN A ROW!" and so on in between
@@ -241,7 +245,7 @@ Config.Onboarding = {
 	LegendsPanTime = 3.5, -- seconds the camera looks at the locked ball
 	-- Studio testing: every play test starts as a brand new player and nothing is saved (your real save is untouched).
 	-- Never affects the live game. Set to false to test with your saved progress.
-	StudioNewPlayer = false,
+	StudioNewPlayer = true,
 }
 
 -- Session log: one line per play session (join, leave, throws, crates, level), printed in Output
@@ -494,8 +498,8 @@ Config.TraitFx = {
 	FloorLift = 0.04, -- flat effects sit this far above the lane so they don't flicker
 	-- Popup text for every trait: Luckiest Guy, ink drop shadow, a glow in the trait colour
 	Popup = {
-		TextSize = 40, -- pixels on a 1080p screen, scaled with the screen
-		MinTextSize = 26,
+		TextSize = 30, -- pixels on a 1080p screen, scaled with the screen (was 40 before 2026-10-22)
+		MinTextSize = 20,
 		Shadow = 4, -- ink drop shadow, pixels down
 		GlowTransparency = 0.6,
 		PopFrom = 0.6, -- pops in from this size (ease-pop overshoots to ~1.08)

@@ -77,7 +77,7 @@ function ThrowFx.Shockwave(position: Vector3, color: Color3, radius: number, tim
 end
 
 -- The owner's "Floating numbers" design (UI 1.4 B): a number that jumps out of a pin, punches to 120%,
--- rises 130 px and fades by the end of NumberPopTime. No plate, the thick outline does the work.
+-- rises NumberPopRise px and fades by the end of NumberPopTime. No plate, the thick outline does the work.
 -- tone = "white", "gold" or "pink"; tag = an optional small label above it ("BONUS")
 local TONES = {
 	white = { Color = SlUi.Colors.White, Glow = Color3.fromRGB(140, 230, 255), Tag = SlUi.Hex("35E8FF") },
@@ -89,7 +89,7 @@ function ThrowFx.NumberPop(position: Vector3, value: number, size: number, tone:
 	local t = THROW.NumberPopTime
 	local anchor = holder(position, t + 0.2)
 	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromOffset(size * 6, size * 2.4 + 140)
+	gui.Size = UDim2.fromOffset(size * 6, size * 2.4 + THROW.NumberPopRise + 10)
 	gui.AlwaysOnTop = true
 	gui.LightInfluence = 0
 	gui.MaxDistance = 200
@@ -133,14 +133,14 @@ function ThrowFx.NumberPop(position: Vector3, value: number, size: number, tone:
 		pad.Parent = pill
 	end
 
-	-- Punch to 120% (first 10%), settle, rise 130 px; fades over the last third
+	-- Punch to 120% (first 10%), settle, rise; fades over the last third
 	TweenService:Create(scale, TweenInfo.new(t * 0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1.2 })
 		:Play()
 	task.delay(t * 0.1, function()
 		TweenService:Create(scale, TweenInfo.new(t * 0.115), { Scale = 1 }):Play()
 	end)
 	TweenService:Create(group, TweenInfo.new(t, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-		Position = UDim2.new(0.5, (math.random() - 0.5) * 40, 1, -130),
+		Position = UDim2.new(0.5, (math.random() - 0.5) * 40, 1, -THROW.NumberPopRise),
 	}):Play()
 	task.delay(t * 0.64, function()
 		local fade = TweenInfo.new(t * 0.36)
@@ -310,7 +310,7 @@ function ThrowFx.PayoutPop(coins: number, variant: string, tag: string?)
 	word.LayoutOrder = 2
 	word.ZIndex = 4
 
-	local screen = math.clamp(Workspace.CurrentCamera.ViewportSize.Y / 720, 0.6, 1)
+	local screen = math.clamp(Workspace.CurrentCamera.ViewportSize.Y / 720, 0.6, 1) * THROW.PayoutPopScale
 	row.Parent = UiFx.Layer()
 
 	-- Spawn -> burst (90 ms) -> overshoot (180 ms, 114%, tipped 2 degrees) -> idle (300 ms)

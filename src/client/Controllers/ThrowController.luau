@@ -823,7 +823,7 @@ function ThrowController:Start()
 			if table.find(THROW.SpecialStreaks, streak) then
 				grow *= 1.3
 			end
-			showText("Strike", streakName(streak), true, math.min(grow, 1.35)) -- capped so it always fits on screen
+			showText("Strike", streakName(streak), true, math.min(grow, THROW.StreakGrowCap)) -- capped so it always fits on screen
 		elseif streak > 0 then
 			-- Streak Saver kept the streak alive: just the pin count
 			showText("Pins", "", false, nil, data.Count)
