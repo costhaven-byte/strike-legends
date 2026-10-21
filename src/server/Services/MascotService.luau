@@ -1,7 +1,9 @@
 -- Mascot eggs, hatching and equipping (Addendum 2 Phase 3 step 8). The server rolls every hatch.
--- Saved: Mascots ({ Id = count }, Shiny versions as "Pinny_Shiny"), EquippedMascots ({ Id, ... } one per slot), EggsHatched.
+-- Saved: Mascots ({ Id = count }, Shiny versions as "Pinny_Shiny"), EquippedMascots ({ Id, ... } one per slot), EggsHatched,
+-- FreeEggs ({ Alley = 1 }: free hatches from playtime gifts, used before coins).
 -- Published to everyone as Player attributes (each client draws every player's mascots from them):
---   Mascots "Pinny=2,Gus=1", EquippedMascots "Pinny,Gus", MascotSlots, MascotBonus (0.04 = +4% coins).
+--   Mascots "Pinny=2,Gus=1", EquippedMascots "Pinny,Gus", MascotSlots, MascotBonus (0.04 = +4% coins),
+--   FreeEgg_<egg Id> (free hatches waiting).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -60,8 +62,17 @@ local function repairEquipped(player: Player)
 	end
 end
 
+local function getFreeEggs(player: Player): { [string]: number }
+	local value = PlayerDataService.Get(player, "FreeEggs")
+	return if type(value) == "table" then value else {}
+end
+
 local function publish(player: Player)
 	repairEquipped(player)
+	local free = getFreeEggs(player)
+	for _, egg in Config.Economy.Eggs do
+		player:SetAttribute("FreeEgg_" .. egg.Id, free[egg.Id] or 0)
+	end
 	local equipped = getEquipped(player)
 	player:SetAttribute("Mascots", Mascots.EncodeOwned(getOwned(player)))
 	player:SetAttribute("EquippedMascots", Mascots.EncodeEquipped(equipped))
@@ -135,14 +146,23 @@ local function hatch(player: Player, eggId: any)
 	if not unlocked then
 		return { Ok = false, Error = "Unlocks at " .. tostring(why) }
 	end
-	if (PlayerDataService.Get(player, "Coins") or 0) < egg.Price then
+	local freeEggs = getFreeEggs(player)
+	local free = (freeEggs[egg.Id] or 0) > 0 -- a free hatch from a playtime gift goes first
+	if not free and (PlayerDataService.Get(player, "Coins") or 0) < egg.Price then
 		return { Ok = false, Error = "Not enough coins" }
 	end
 	if not RateLimit.Allow(player, "HatchEgg") then
 		return { Ok = false, Error = "Slow down!" }
 	end
 
-	PlayerDataService.Add(player, "Coins", -egg.Price)
+	if free then
+		freeEggs[egg.Id] -= 1
+		if freeEggs[egg.Id] <= 0 then
+			freeEggs[egg.Id] = nil
+		end
+	else
+		PlayerDataService.Add(player, "Coins", -egg.Price)
+	end
 	PlayerDataService.Add(player, "EggsHatched", 1)
 	local mascot = roll(egg.Id)
 	local owned = getOwned(player)
@@ -158,13 +178,16 @@ local function hatch(player: Player, eggId: any)
 	publish(player)
 
 	local hatched = PlayerDataService.Get(player, "EggsHatched") or 0
-	Analytics.Currency(player, "Coins", -egg.Price, "Shop", egg.Id .. "Egg")
-	Analytics.Purchase(player, "Egg", egg.Id)
+	if not free then
+		Analytics.Currency(player, "Coins", -egg.Price, "Shop", egg.Id .. "Egg")
+		Analytics.Purchase(player, "Egg", egg.Id)
+	end
 	Analytics.Event(player, "MascotHatched", hatched, { egg.Id, mascot.Rarity, mascot.Id })
 	Analytics.Step(player, "Hatched Mascot")
 	SessionLog.Moment(
 		player,
-		("Egg hatched: %s -> %s (%s, %s)"):format(
+		("Egg hatched%s: %s -> %s (%s, %s)"):format(
+			if free then " (free)" else "",
 			egg.Id,
 			mascot.Id,
 			mascot.Rarity,
@@ -177,6 +200,20 @@ local function hatch(player: Player, eggId: any)
 		IsNew = isNew,
 		Equipped = autoEquipped,
 	}
+end
+
+-- Adds free hatches of an egg (playtime gifts); they wait at the egg stand until used
+function MascotService.GiveFreeEgg(player: Player, eggId: string, count: number?): boolean
+	if not Mascots.GetEgg(eggId) or not PlayerDataService.IsLoaded(player) then
+		return false
+	end
+	local freeEggs = PlayerDataService.Get(player, "FreeEggs")
+	if type(freeEggs) ~= "table" then
+		return false
+	end
+	freeEggs[eggId] = (freeEggs[eggId] or 0) + (count or 1)
+	publish(player)
+	return true
 end
 
 local function onHatch(player: Player, eggId: any)

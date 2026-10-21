@@ -113,10 +113,15 @@ local function button(
 	return b
 end
 
+-- Free hatches of the egg waiting (playtime gifts); a hatch uses one before any coins
+local function freeEggs(): number
+	return player:GetAttribute("FreeEgg_" .. EGG.Id) or 0
+end
+
 local function eggState(): (boolean, string?, boolean)
 	local level = player:GetAttribute("RankLevel") or 1
 	local unlocked, why = Mascots.EggUnlocked(EGG, level, Zones.Highest(level))
-	local affordable = (player:GetAttribute("Coins") or 0) >= EGG.Price
+	local affordable = (player:GetAttribute("Coins") or 0) >= EGG.Price or freeEggs() > 0
 	return unlocked, why, affordable
 end
 
@@ -227,14 +232,8 @@ function MascotController:Start()
 	lockShade.ZIndex = 5
 	lockShade.Visible = false
 	corner(lockShade, 12)
-	local lockIcon = text(
-		lockShade,
-		"Icon",
-		FONT,
-		Color3.new(1, 1, 1),
-		UDim2.fromScale(0.25, 0.15),
-		UDim2.fromScale(0.5, 0.5)
-	)
+	local lockIcon =
+		text(lockShade, "Icon", FONT, Color3.new(1, 1, 1), UDim2.fromScale(0.25, 0.15), UDim2.fromScale(0.5, 0.5))
 	lockIcon.Text = "🔒"
 	lockIcon.ZIndex = 6
 	lockShade.Parent = petsButton
@@ -1082,11 +1081,19 @@ function MascotController:Start()
 
 		local function refreshStand()
 			local unlocked, why = eggState()
-			boardPrice.Text = if unlocked then formatNumber(EGG.Price) .. " COINS" else "REACH " .. tostring(why)
-			boardPrice.TextColor3 = if unlocked then GOLD else GREY
-			prompt.ActionText = if unlocked then ("Hatch (%s)"):format(formatNumber(EGG.Price)) else "Locked"
+			local free = freeEggs()
+			boardPrice.Text = if not unlocked
+				then "REACH " .. tostring(why)
+				elseif free > 0 then ("FREE EGG x%d"):format(free)
+				else formatNumber(EGG.Price) .. " COINS"
+			boardPrice.TextColor3 = if not unlocked then GREY elseif free > 0 then LIME else GOLD
+			prompt.ActionText = if not unlocked
+				then "Locked"
+				elseif free > 0 then "Hatch (FREE)"
+				else ("Hatch (%s)"):format(formatNumber(EGG.Price))
 		end
 		player:GetAttributeChangedSignal("RankLevel"):Connect(refreshStand)
+		player:GetAttributeChangedSignal("FreeEgg_" .. EGG.Id):Connect(refreshStand)
 		refreshStand()
 
 		-- Idle (hatch storyboard frame 1): the core pulses slowly while the camera is near

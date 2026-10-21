@@ -210,12 +210,13 @@ Config.StartingData = {
 	ZoneSeen = 1, -- highest zone whose "ZONE UNLOCKED" window was shown (v14)
 	Potions = {}, -- potions waiting to be drunk, by Id: { CoinSmall = 2 } (Config.Potions; v15)
 	Boosts = {}, -- seconds left on each drunk potion, by Id: { CoinSmall = 840 } (only ticks while playing; v15)
+	FreeEggs = {}, -- free hatches waiting at the egg stand, by egg Id: { Alley = 1 } (Config.Playtime; v16)
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 15, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 16, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -275,6 +276,7 @@ Config.RateLimits = {
 	HatchEgg = 1,
 	EquipMascot = 0.15,
 	UsePotion = 0.3,
+	ClaimPlaytime = 0.5,
 }
 
 -- Gems on/off switch. Addendum 1 keeps gems (earned only, a gem sink comes later); set Enabled = false to hide them.
@@ -2406,6 +2408,29 @@ Config.Potions = {
 	Tick = 1, -- seconds between timer updates
 }
 
+-- Playtime rewards (owner 2026-10-22): a free gift every 15 minutes of play, 12 of them (3 hours). They start over
+-- on every visit (not daily). Tap the GIFTS button and CLAIM a gift once its timer is done; unclaimed gifts stay
+-- claimable until you leave. A gift is one of: Potion (a Config.Potions Id, goes to the POTIONS stash), Egg (a
+-- free hatch of that egg at the egg stand, kept until used) or Crate (opened right away). A Crate from a zone you
+-- haven't reached comes as your zone's crate, unless Exact = true (the 3-hour Gold Crate: exactly a Gold Crate).
+Config.Playtime = {
+	Enabled = true,
+	Rewards = {
+		{ Minutes = 15, Potion = "CoinSmall" },
+		{ Minutes = 30, Egg = "Alley" }, -- the Neon Egg (owner: zone 2 is open by then)
+		{ Minutes = 45, Potion = "XpSmall" },
+		{ Minutes = 60, Crate = "Bronze" },
+		{ Minutes = 75, Potion = "CoinSmall" },
+		{ Minutes = 90, Potion = "XpBig" },
+		{ Minutes = 105, Crate = "Bronze" },
+		{ Minutes = 120, Potion = "CoinBig" },
+		{ Minutes = 135, Potion = "XpSmall" },
+		{ Minutes = 150, Crate = "Silver" },
+		{ Minutes = 165, Potion = "CoinBig" },
+		{ Minutes = 180, Crate = "Gold", Exact = true }, -- owner: players are in zone 3 by 3 hours
+	},
+}
+
 -- Leaderboards (OrderedDataStores). Boards are read every RefreshInterval and
 -- each player's scores are written every WriteInterval and when they leave, never per throw.
 -- Stat = the saved player value the board ranks. Weekly boards start fresh every Monday 00:00 UTC.
@@ -2480,6 +2505,7 @@ Config.Analytics = {
 		"PerfectRate", -- value = PERFECT % of the session's throws (assisted first throw left out); labels = throws, perfects
 		"PolishLevel", -- value = new Polish level; labels = ball
 		"PotionUsed", -- value = minutes left on that potion after drinking; labels = potion
+		"PlaytimeClaimed", -- value = the gift's minute mark; labels = Potion/Egg/Crate, item
 		"Rebirth", -- later (Milestone 17)
 		"QuestCompleted", -- later (Milestone 18)
 	},
@@ -2626,9 +2652,11 @@ Config.Economy.PowerLevels = {
 -- Crate tiers (Addendum 1). Crates drop only the balls in Config.Balls: roll a rarity with these odds, then every
 -- ball of that rarity is equally likely. Every row adds up to 100.
 -- Prices move with the Power Level they sit next to (plan: 100, 1K, 15K, 250K, 5M).
+-- Owner 2026-10-22: Alley Crate 1.6K -> 15K and Bronze 9.2K -> 100K (too easy to get). The very first Alley Crate
+-- still costs Config.Onboarding.FirstCratePrice.
 Config.Economy.Crates = {
-	{ Id = "Basic", Price = 1600, Odds = { Common = 70, Uncommon = 25, Rare = 5 } },
-	{ Id = "Bronze", Price = 9200, Odds = { Common = 45, Uncommon = 35, Rare = 17, Epic = 3 } },
+	{ Id = "Basic", Price = 15000, Odds = { Common = 70, Uncommon = 25, Rare = 5 } },
+	{ Id = "Bronze", Price = 100000, Odds = { Common = 45, Uncommon = 35, Rare = 17, Epic = 3 } },
 	{ Id = "Silver", Price = 1000000, Odds = { Common = 20, Uncommon = 35, Rare = 32, Epic = 11, Legendary = 2 } },
 	{ Id = "Gold", Price = 87000000, Odds = { Uncommon = 20, Rare = 45, Epic = 28, Legendary = 6.5, Mythic = 0.5 } },
 	{ Id = "Neon", Price = 5900000000, Odds = { Rare = 40, Epic = 38, Legendary = 18, Mythic = 4 } }, -- simulator only (not in Config.Crates)
@@ -2669,7 +2697,7 @@ end
 -- BonusScale: this egg's mascots get Mascots.Bonus times this (not in the plan, where every egg gave the same
 -- bonuses: cheap eggs made coins explode and expensive eggs were pointless). Plan prices: 400, 6K, 90K, 1.5M, 30M.
 Config.Economy.Eggs = {
-	{ Id = "Alley", Price = 3700, Zone = 2, BonusScale = 0.1 }, -- owner 2026-10-21: pets open with Neon Lanes
+	{ Id = "Alley", Price = 75000, Zone = 2, BonusScale = 0.1 }, -- owner 2026-10-21: pets open with Neon Lanes; 3,700 -> 75K (owner 2026-10-22: too easy)
 	{ Id = "Neon", Price = 420000, Zone = 2, BonusScale = 0.2 },
 	{ Id = "Arcade", Price = 6300000, Zone = 3, BonusScale = 0.4 },
 	{ Id = "Skyline", Price = 1500000000, Zone = 4, BonusScale = 0.7 },

@@ -176,6 +176,8 @@ local function flask(parent: Instance, color: Color3, big: boolean, position: UD
 	return holder
 end
 
+PotionController.Flask = flask -- the playtime gifts panel draws its potions with it too
+
 local function boostText(potion): string
 	return ("x%d %s"):format(potion.Multiplier, if potion.Boost == "Coins" then "COINS" else "XP")
 end
