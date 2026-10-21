@@ -8,6 +8,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Calendar = require(Shared.Modules.Calendar)
 local Balls = require(Shared.Modules.Balls)
+local Zones = require(Shared.Modules.Zones)
 local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local BallService = require(script.Parent.BallService)
@@ -69,7 +70,8 @@ local function claim(player: Player)
 	Analytics.Event(player, "DailyClaimed", day)
 	SessionLog.Moment(player, ("Daily reward day %d claimed"):format(day))
 	local crateResult
-	local crate = Balls.GetCrate(reward.Crate)
+	-- A crate from a zone you haven't unlocked yet comes as your zone's crate
+	local crate = Balls.GetCrate(Zones.RewardCrateId(reward.Crate, PlayerDataService.Get(player, "RankLevel")))
 	if crate then
 		crateResult = BallService.GiveCrate(player, crate)
 	end

@@ -202,12 +202,13 @@ Config.StartingData = {
 	Mascots = {}, -- mascots owned, by Id: { Pinny = 2 } (v13)
 	EquippedMascots = {}, -- Ids following the player, one per slot (the same Id can fill two slots if owned twice)
 	EggsHatched = 0, -- eggs hatched ever
+	ZoneSeen = 1, -- highest zone whose "ZONE UNLOCKED" window was shown (v14)
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 13, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 14, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -1413,6 +1414,7 @@ Config.Rarities = {
 --   StreakSaver (seconds between saves, lower = better)  Rare 60  Legendary 45  Mythic 30
 -- Epic and up get two traits.
 -- InCrates = false keeps a ball out of crates (the starter ball).
+-- Zone = the zone's own crate (Config.Crates ZoneBallsOnly) gives only that zone's balls; other crates give any ball.
 Config.Balls = {
 	-- Common
 	{
@@ -1472,6 +1474,7 @@ Config.Balls = {
 	}, -- Back Alley balls (owner's "Back Alley Bowling Assets" design, 2026-10-20): junk turned into prizes
 	{
 		Id = "DuctTape",
+		Zone = 1, -- a Back Alley ball: the Alley Crate only gives these
 		Name = "Duct Tape",
 		Rarity = "Common",
 		Multiplier = 1.1,
@@ -1483,6 +1486,7 @@ Config.Balls = {
 	},
 	{
 		Id = "RustBucket",
+		Zone = 1, -- a Back Alley ball: the Alley Crate only gives these
 		Name = "Rust Bucket",
 		Rarity = "Common",
 		Multiplier = 1.15,
@@ -1540,6 +1544,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Hubcap",
+		Zone = 1, -- a Back Alley ball: the Alley Crate only gives these
 		Name = "Hubcap",
 		Rarity = "Uncommon",
 		Multiplier = 1.4,
@@ -1597,6 +1602,7 @@ Config.Balls = {
 	},
 	{
 		Id = "DumpsterDiamond",
+		Zone = 1, -- a Back Alley ball: the Alley Crate only gives these
 		Name = "Dumpster Diamond",
 		Rarity = "Rare",
 		Multiplier = 2.0,
@@ -1692,12 +1698,15 @@ Config.Balls = {
 -- Crates, bought with coins: name and colour here, cheapest first. Price and Odds come from Config.Economy.Crates
 -- (filled in below it), pity from Config.Economy.CratePity, duplicates from Config.Economy.Polish.
 -- Looks: ReplicatedStorage.CrateModels has one model per Id (Bronze, Silver and Gold are recoloured copies for now).
+-- Zone = the zone that must be unlocked to open it (locked crates show blacked out: "UNLOCKS IN <zone>").
+-- ZoneBallsOnly = gives only balls with that Zone (Config.Balls). Owner 2026-10-21: zone 1 = the Alley Crate with
+-- the Back Alley balls only; the zone 2 crate changes come when zone 3 is built.
 Config.Crates = {
-	{ Id = "Basic", Name = "Alley Crate", Color = Color3.fromRGB(60, 200, 255) },
-	{ Id = "Bronze", Name = "Bronze Crate", Color = Color3.fromRGB(215, 135, 70) },
-	{ Id = "Silver", Name = "Silver Crate", Color = Color3.fromRGB(200, 215, 235) },
-	{ Id = "Gold", Name = "Gold Crate", Color = Color3.fromRGB(255, 200, 40) },
-	{ Id = "Neon", Name = "Neon Crate", Color = Color3.fromRGB(255, 60, 210) },
+	{ Id = "Basic", Name = "Alley Crate", Color = Color3.fromRGB(60, 200, 255), Zone = 1, ZoneBallsOnly = true },
+	{ Id = "Bronze", Name = "Bronze Crate", Color = Color3.fromRGB(215, 135, 70), Zone = 2 },
+	{ Id = "Silver", Name = "Silver Crate", Color = Color3.fromRGB(200, 215, 235), Zone = 2 },
+	{ Id = "Gold", Name = "Gold Crate", Color = Color3.fromRGB(255, 200, 40), Zone = 2 },
+	{ Id = "Neon", Name = "Neon Crate", Color = Color3.fromRGB(255, 60, 210), Zone = 2 },
 }
 
 -- Rizzo, the Back Alley crate dealer (owner's "Rizzo's Crate Cart" design), at Workspace.BackAlley.RizzoStand.
@@ -1719,7 +1728,9 @@ Config.Rizzo = {
 		Rare = "Whoa, a rare one! Shh, don't tell anyone where you got it.",
 		CantAfford = "Aw, not enough coins yet? Knock down some pins and come right back!",
 		Goodbye = "See ya, kid! Keep it out of the gutter.",
+		CallOver = "Psst! You got the coins now, kid. Come get a crate!", -- your first crate is affordable
 	},
+	FirstCrateMarker = true, -- a bouncing "!" over Rizzo (seen through walls) while your first crate waits for you
 }
 
 -- The crate shop kiosk in the lobby (Workspace.Hub.CrateShop, built in Studio). Crate looks live in
@@ -2034,6 +2045,27 @@ Config.Analytics = {
 Config.Zones = {
 	LaneFolders = { "BackAlley", "NeonAlley" }, -- every Workspace model that holds lanes, in zone order
 	AssignFolder = "BackAlley", -- new lanes are handed out here
+	BuiltZones = 2, -- zones that exist in the world so far (crates of later zones stay locked)
+	-- Zones you walk into and claim a lane in (zone 2+). Locked (rank level < Config.Economy.Zones Rank): a glowing
+	-- wall (Wall boxes, only on your screen) keeps you out, and the server walks you back out to KickTo.
+	-- Unlocked: step onto any OPEN lane in the Area to claim it; it's yours until you leave the Area for LeaveGrace
+	-- seconds (or leave the game). Your Back Alley lane stays yours the whole time.
+	Gated = {
+		{
+			Zone = 2,
+			Folder = "NeonAlley",
+			Area = { Center = Vector3.new(0, 12, -32), Size = Vector3.new(86, 30, 98) },
+			Walls = { -- centre + size in studs: front (lobby side) and both sides of the 6 lanes
+				{ Center = Vector3.new(0, 7, 17.5), Size = Vector3.new(86, 14, 1) },
+				{ Center = Vector3.new(-43, 7, -32), Size = Vector3.new(1, 14, 100) },
+				{ Center = Vector3.new(43, 7, -32), Size = Vector3.new(1, 14, 100) },
+			},
+			WallColor = Color3.fromRGB(255, 60, 210),
+			KickTo = Vector3.new(0, 4, 24), -- lobby floor just in front of the lanes
+			LeaveGrace = 2,
+		},
+	},
+	ClaimCheck = 0.25, -- seconds between the server's "who stands where" checks
 	LookBlend = 0.6, -- seconds to fade between looks
 	Worlds = {
 		{
@@ -2059,6 +2091,24 @@ Config.Zones = {
 				Dim = Color3.fromHex("7a3a5e"),
 			},
 		},
+	},
+}
+
+-- The "ZONE UNLOCKED" window (ZoneGateController): pops up once when your rank level opens a zone (save ZoneSeen),
+-- with what's waiting there in 3D. Crates = Config.Crates Ids, Balls = Config.Balls Ids (best first).
+Config.ZoneUnlock = {
+	[2] = {
+		Title = "ZONE 2 UNLOCKED!",
+		Name = "NEON LANES",
+		Tagline = "The bouncer just waved you in. Glowing lanes, four brand-new crates and the rarest balls in town are waiting inside.",
+		Crates = { "Bronze", "Silver", "Gold", "Neon" },
+		CratesLine = "4 NEW CRATES",
+		Balls = { "Supernova", "Void", "Dragon", "Golden", "Galaxy", "Electric" },
+		BallsLine = "%d NEW BALLS TO WIN", -- %d = how many balls those crates can give that you don't own
+		Button = "TAKE ME THERE!",
+		Hint = "Step onto any OPEN lane to claim it.",
+		Color = Color3.fromRGB(255, 60, 210),
+		Accent = Color3.fromRGB(70, 230, 255),
 	},
 }
 

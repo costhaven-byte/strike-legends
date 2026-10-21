@@ -1,5 +1,6 @@
 -- Looks up balls, rarities and crates from the tables in Config. Used by both server and client.
 local Config = require(script.Parent.Parent.Config)
+local Zones = require(script.Parent.Zones)
 
 local Balls = {}
 
@@ -172,7 +173,7 @@ function Balls.CrateBallOdds(crate): { { Ball: any, Chance: number } }
 	for _, rarity in Config.Rarities do
 		local pool = {}
 		for _, ball in Config.Balls do
-			if ball.Rarity == rarity.Name and ball.InCrates ~= false then
+			if ball.Rarity == rarity.Name and Zones.BallInCrate(ball, crate) then
 				table.insert(pool, ball)
 			end
 		end

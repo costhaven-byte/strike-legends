@@ -10,6 +10,7 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
+local Zones = require(Shared.Modules.Zones)
 local BallInventoryController = require(script.Parent.BallInventoryController)
 local CollectionBookController = require(script.Parent.CollectionBookController)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
@@ -47,6 +48,18 @@ local function formatNumber(n: number): string
 	return text
 end
 
+-- Locked crates (their zone isn't open yet) show blacked out and can't be opened
+function CrateController.Locked(crate): boolean
+	return not Zones.CrateUnlocked(crate, player:GetAttribute("RankLevel"))
+end
+
+-- "UNLOCKS IN NEON LANES" + the rank level it opens at
+function CrateController.LockText(crate): (string, string)
+	local zone = crate.Zone or 1
+	return ("UNLOCKS IN %s"):format(Zones.Name(zone):upper()),
+		("ZONE %d  ·  REACH LEVEL %d"):format(zone, Zones.UnlockLevel(zone))
+end
+
 -- A random ball using the crate's odds, for the filler tiles on the reel
 local function randomBall(crate)
 	local roll = math.random() * 100
@@ -60,8 +73,15 @@ local function randomBall(crate)
 	end
 	local pool = {}
 	for _, ball in Config.Balls do
-		if ball.Rarity == rarityName and ball.InCrates ~= false then
+		if ball.Rarity == rarityName and Zones.BallInCrate(ball, crate) then
 			table.insert(pool, ball)
+		end
+	end
+	if #pool == 0 then
+		for _, ball in Config.Balls do
+			if Zones.BallInCrate(ball, crate) then
+				table.insert(pool, ball)
+			end
 		end
 	end
 	return pool[math.random(#pool)]
@@ -144,7 +164,7 @@ function CrateController:Start()
 		local list = {}
 		for _, ball in Balls.Sorted() do
 			if
-				ball.InCrates ~= false
+				(if crate then Zones.BallInCrate(ball, crate) else ball.InCrates ~= false)
 				and not owned[ball.Id]
 				and Balls.RarityIndex(ball.Rarity) >= minRarity
 				and (not crate or (crate.Odds[ball.Rarity] or 0) > 0)
@@ -162,6 +182,9 @@ function CrateController:Start()
 		-- Cheapest guarantee that still has locked balls behind it
 		local best, bestCrate, bestLeft, bestCost, bestLocked = nil, nil, 0, math.huge, nil
 		for _, crate in Config.Crates do
+			if CrateController.Locked(crate) then
+				continue -- its zone isn't open yet
+			end
 			for _, row in Balls.PityRows(crate.Id) do
 				local locked = lockedBalls(Balls.RarityIndex(row.Rarity), owned, crate)
 				local left = pullsLeft(row)
@@ -180,7 +203,16 @@ function CrateController:Start()
 
 		local target, bar, sub, coinsLabel = goal.Target, goal.Bar, goal.Sub, goal.Coins
 		if not best then
-			local anyLocked = lockedBalls(1, owned)
+			local anyLocked = {}
+			for _, crate in Config.Crates do
+				if not CrateController.Locked(crate) then
+					for _, ball in lockedBalls(1, owned, crate) do
+						if not table.find(anyLocked, ball) then
+							table.insert(anyLocked, ball)
+						end
+					end
+				end
+			end
 			target.Text = if #anyLocked == 0 then "ALL BALLS!" else "NEW BALLS"
 			target.TextColor3 = Color3.fromRGB(255, 240, 90)
 			sub.Text = if #anyLocked == 0 then "You own every ball" else "Keep opening crates"
@@ -235,6 +267,7 @@ function CrateController:Start()
 	end
 	player:GetAttributeChangedSignal("OwnedBalls"):Connect(refreshGoal)
 	player:GetAttributeChangedSignal("Coins"):Connect(refreshGoal)
+	player:GetAttributeChangedSignal("RankLevel"):Connect(refreshGoal)
 	refreshGoal()
 
 	-- Intro: the crate itself (ReplicatedStorage.CrateModels) shakes harder and harder, then bursts in a flash
@@ -511,6 +544,10 @@ function CrateController:Start()
 	-- backToShop: reopen the shop afterwards (when bought from the shop screen, not the kiosk)
 	local function buy(crate, backToShop: boolean?)
 		if busy then
+			return
+		end
+		if CrateController.Locked(crate) then
+			task.spawn(showToast, (CrateController.LockText(crate)))
 			return
 		end
 		if not hasFree(crate) and (player:GetAttribute("Coins") or 0) < CrateController.Price(crate) then
@@ -807,6 +844,47 @@ function CrateController:Start()
 		player:GetAttributeChangedSignal("FreeCrates"):Connect(refreshAfford)
 		player:GetAttributeChangedSignal("CratesBought"):Connect(refreshAfford)
 		refreshAfford()
+
+		-- Blacked out with "UNLOCKS IN <ZONE>" until its zone opens
+		local lock = Instance.new("TextButton") -- a button, so taps on it don't reach the card underneath
+		lock.Name = "ZoneLock"
+		lock.AutoButtonColor = false
+		lock.Text = ""
+		lock.Size = UDim2.fromScale(1, 1)
+		lock.BackgroundColor3 = Color3.fromRGB(4, 3, 10)
+		lock.BackgroundTransparency = 0.06
+		lock.ZIndex = 10
+		local lockCorner = card:FindFirstChildOfClass("UICorner")
+		if lockCorner then
+			lockCorner:Clone().Parent = lock
+		end
+		local function lockLabel(name: string, text: string, color: Color3, y: number, height: number): TextLabel
+			local l = Instance.new("TextLabel")
+			l.Name = name
+			l.BackgroundTransparency = 1
+			l.AnchorPoint = Vector2.new(0.5, 0.5)
+			l.Position = UDim2.fromScale(0.5, y)
+			l.Size = UDim2.new(0.86, 0, 0, height)
+			l.FontFace = card.CrateName.FontFace
+			l.TextScaled = true
+			l.TextWrapped = true
+			l.Text = text
+			l.TextColor3 = color
+			l.ZIndex = 11
+			l.Parent = lock
+			return l
+		end
+		local lockTitle, lockSub = CrateController.LockText(crate)
+		lockLabel("Padlock", "🔒", Color3.new(1, 1, 1), 0.3, 54)
+		lockLabel("CrateName", crate.Name:upper(), Color3.fromRGB(90, 85, 110), 0.47, 22)
+		lockLabel("Title", lockTitle, crate.Color, 0.62, 40)
+		lockLabel("Sub", lockSub, Color3.fromRGB(170, 160, 200), 0.78, 18)
+		lock.Parent = card
+		local function refreshLock()
+			lock.Visible = CrateController.Locked(crate)
+		end
+		player:GetAttributeChangedSignal("RankLevel"):Connect(refreshLock)
+		refreshLock()
 
 		card.Parent = cards
 	end

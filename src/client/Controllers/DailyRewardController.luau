@@ -10,6 +10,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Calendar = require(Shared.Modules.Calendar)
 local Balls = require(Shared.Modules.Balls)
+local Zones = require(Shared.Modules.Zones)
 local CrateController = require(script.Parent.CrateController)
 local OnboardingController = require(script.Parent.OnboardingController)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
@@ -38,7 +39,8 @@ end
 -- "1,000 coins" / "5 gems" / "Neon Crate + 15 gems"
 local function rewardText(reward): string
 	local parts = {}
-	local crate = Balls.GetCrate(reward.Crate)
+	-- A crate from a zone you haven't unlocked yet comes as your zone's crate (same rule as the server)
+	local crate = Balls.GetCrate(Zones.RewardCrateId(reward.Crate, player:GetAttribute("RankLevel")))
 	if crate then
 		table.insert(parts, crate.Name:upper())
 	end
@@ -134,14 +136,18 @@ function DailyRewardController:Start()
 		tile.LayoutOrder = day
 		tile.Visible = true
 		tile.DayLabel.Text = "DAY " .. day
-		tile.Amount.Text = rewardText(reward)
 		tile.Icons.Coin.Visible = reward.Coins ~= nil and reward.Crate == nil
 		tile.Icons.Gem.Visible = reward.Gems ~= nil and reward.Crate == nil
 		tile.Icons.Crate.Visible = reward.Crate ~= nil
-		local crate = Balls.GetCrate(reward.Crate)
-		if crate then
-			tile.Icons.Crate.BackgroundColor3 = crate.Color
+		local function paint()
+			tile.Amount.Text = rewardText(reward)
+			local crate = Balls.GetCrate(Zones.RewardCrateId(reward.Crate, player:GetAttribute("RankLevel")))
+			if crate then
+				tile.Icons.Crate.BackgroundColor3 = crate.Color
+			end
 		end
+		paint()
+		player:GetAttributeChangedSignal("RankLevel"):Connect(paint)
 		tile.Parent = days
 		tiles[day] = tile
 	end

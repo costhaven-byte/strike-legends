@@ -1,10 +1,14 @@
--- Gives each player their own lane when they join and puts them on it every time they spawn.
+-- Gives each player their own Back Alley lane when they join and puts them on it every time they spawn.
+-- Later zones (Config.Zones.Gated): locked players get walked back out; unlocked players claim an OPEN lane by
+-- stepping onto it and keep it until they leave the zone.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local LaneUtil = require(Shared.Modules.LaneUtil)
+local Zones = require(Shared.Modules.Zones)
 local Config = require(Shared.Config)
+local PlayerDataService = require(script.Parent.PlayerDataService)
 
 local LaneService = {}
 
@@ -58,11 +62,66 @@ local function onPlayerAdded(player: Player)
 	end
 end
 
+local function release(lane: Model)
+	lane:SetAttribute("OwnerId", nil)
+	setSign(lane, nil)
+end
+
 local function onPlayerRemoving(player: Player)
-	local lane = LaneUtil.GetOwnedLane(player.UserId)
-	if lane then
-		lane:SetAttribute("OwnerId", nil)
-		setSign(lane, nil)
+	for _, lane in LaneUtil.GetLanes() do
+		if lane:GetAttribute("OwnerId") == player.UserId then
+			release(lane)
+		end
+	end
+end
+
+-- The lane this player claimed inside a gated zone, if any
+local function claimedIn(gate, userId: number): Model?
+	local folder = workspace:FindFirstChild(gate.Folder)
+	if not folder then
+		return nil
+	end
+	for _, lane in folder:GetChildren() do
+		if lane:IsA("Model") and lane:GetAttribute("OwnerId") == userId then
+			return lane
+		end
+	end
+	return nil
+end
+
+local outsideSince: { [Player]: { [number]: number } } = {}
+
+-- One look at where everyone stands: keep locked players out, hand out lanes, free lanes of players who left
+local function checkGates()
+	local now = os.clock()
+	for _, player in Players:GetPlayers() do
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local level = PlayerDataService.Get(player, "RankLevel") or 1
+		local away = outsideSince[player] or {}
+		outsideSince[player] = away
+		for index, gate in Config.Zones.Gated do
+			local inside = root ~= nil and Zones.InArea(gate.Area, root.Position)
+			local claimed = claimedIn(gate, player.UserId)
+			if inside and not Zones.Unlocked(level, gate.Zone) then
+				-- The wall on their screen should stop them; this catches anyone who got past it
+				(player.Character :: Model):PivotTo(CFrame.new(gate.KickTo))
+			elseif inside then
+				away[index] = nil
+				if not claimed then
+					local lane = LaneUtil.GetLaneAt(root.Position)
+					if lane and lane.Parent.Name == gate.Folder and lane:GetAttribute("OwnerId") == nil then
+						lane:SetAttribute("OwnerId", player.UserId)
+						setSign(lane, player.DisplayName)
+					end
+				end
+			elseif claimed then
+				away[index] = away[index] or now
+				if now - away[index] >= gate.LeaveGrace then
+					away[index] = nil
+					release(claimed)
+				end
+			end
+		end
 	end
 end
 
@@ -72,7 +131,32 @@ function LaneService:Start()
 		setSign(lane, nil)
 	end
 	Players.PlayerAdded:Connect(onPlayerAdded)
-	Players.PlayerRemoving:Connect(onPlayerRemoving)
+	Players.PlayerRemoving:Connect(function(player)
+		outsideSince[player] = nil
+		onPlayerRemoving(player)
+	end)
+	-- The client showed the "ZONE UNLOCKED" window for this zone: don't show it again
+	local zoneSeen = Instance.new("RemoteEvent")
+	zoneSeen.Name = "ZoneSeen"
+	zoneSeen.Parent = ReplicatedStorage:WaitForChild("Remotes")
+	zoneSeen.OnServerEvent:Connect(function(player, zone)
+		if not PlayerDataService.IsLoaded(player) or type(zone) ~= "number" then
+			return
+		end
+		local highest = Zones.Highest(PlayerDataService.Get(player, "RankLevel"))
+		local seen = PlayerDataService.Get(player, "ZoneSeen") or 1
+		zone = math.clamp(math.floor(zone), 1, highest)
+		if zone > seen then
+			PlayerDataService.Set(player, "ZoneSeen", zone)
+		end
+	end)
+
+	task.spawn(function()
+		while true do
+			task.wait(Config.Zones.ClaimCheck)
+			checkGates()
+		end
+	end)
 	for _, player in Players:GetPlayers() do
 		task.spawn(onPlayerAdded, player)
 	end

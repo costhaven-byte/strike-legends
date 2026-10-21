@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
+local Zones = require(Shared.Modules.Zones)
 
 local CrateRoller = {}
 
@@ -58,9 +59,21 @@ function CrateRoller.Roll(crate, pity: { [string]: number }, minRarity: string?,
 	end
 	local pool = {}
 	for _, ball in Config.Balls do
-		if ball.Rarity == rarity and ball.InCrates ~= false then
+		if ball.Rarity == rarity and Zones.BallInCrate(ball, crate) then
 			table.insert(pool, ball)
 		end
+	end
+	if #pool == 0 then
+		-- This crate has no ball of that rarity (a guarantee above its pool): its best ball instead
+		for _, other in Config.Balls do
+			if
+				Zones.BallInCrate(other, crate)
+				and (#pool == 0 or Balls.RarityIndex(other.Rarity) > Balls.RarityIndex(pool[1].Rarity))
+			then
+				pool = { other }
+			end
+		end
+		rarity = pool[1].Rarity
 	end
 	local ball = pool[math.random(#pool)]
 

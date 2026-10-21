@@ -220,7 +220,10 @@ local function buildPrice(screen: BasePart, crate)
 		RichText = true,
 	})
 	local function refresh()
-		if CrateController.HasFree and CrateController.HasFree(crate) then
+		if CrateController.Locked(crate) then
+			text.Text = ("🔒 ZONE %d"):format(crate.Zone or 1)
+			text.TextColor3 = Color3.fromRGB(150, 140, 175)
+		elseif CrateController.HasFree and CrateController.HasFree(crate) then
 			text.Text = ("FREE  x%d"):format(player:GetAttribute("FreeCrates") or 0)
 			text.TextColor3 = FREE_COLOR
 		else
@@ -233,7 +236,48 @@ local function buildPrice(screen: BasePart, crate)
 	end
 	player:GetAttributeChangedSignal("FreeCrates"):Connect(refresh)
 	player:GetAttributeChangedSignal("CratesBought"):Connect(refresh)
+	player:GetAttributeChangedSignal("RankLevel"):Connect(refresh)
 	return refresh
+end
+
+-- A locked crate's station: its display crate goes black with an "UNLOCKS IN <ZONE>" sign over it
+local function buildLock(station: Instance, crate): (boolean) -> ()
+	local display = station:FindFirstChild("Display")
+	local looks = {}
+	if display then
+		for _, part in display:GetDescendants() do
+			if part:IsA("BasePart") then
+				looks[part] = { Color = part.Color, Material = part.Material }
+			end
+		end
+	end
+	local sign = Instance.new("BillboardGui")
+	sign.Name = "ZoneLockSign"
+	sign.Size = UDim2.fromScale(7, 2.4)
+	sign.StudsOffsetWorldSpace = Vector3.new(0, 3.2, 0)
+	sign.MaxDistance = 60
+	sign.LightInfluence = 0
+	local title, sub = CrateController.LockText(crate)
+	local top = label(sign, { Size = UDim2.fromScale(1, 0.6), Text = "🔒 " .. title, TextColor3 = crate.Color })
+	glow(top, Color3.new(0, 0, 0), 2)
+	local bottom = label(sign, {
+		Position = UDim2.fromScale(0, 0.6),
+		Size = UDim2.fromScale(1, 0.4),
+		Text = sub,
+		TextColor3 = Color3.new(1, 1, 1),
+	})
+	glow(bottom, Color3.new(0, 0, 0), 2)
+	sign.Adornee = if display and display:IsA("Model")
+		then display.PrimaryPart or display:FindFirstChildWhichIsA("BasePart", true)
+		else nil
+	sign.Parent = station
+	return function(locked: boolean)
+		sign.Enabled = locked and sign.Adornee ~= nil
+		for part, look in looks do
+			part.Color = if locked then Color3.fromRGB(8, 7, 14) else look.Color
+			part.Material = if locked then Enum.Material.SmoothPlastic else look.Material
+		end
+	end
 end
 
 -- Pushes a button down for a moment
@@ -289,7 +333,11 @@ function KioskController:Start()
 			ObjectText = crate.Name,
 			HoldDuration = SHOP.HoldDuration,
 		})
+		local setLocked = buildLock(station, crate)
 		local function refreshPrompt()
+			local locked = CrateController.Locked(crate)
+			setLocked(locked)
+			buyPrompt.Enabled = not locked
 			local free = CrateController.HasFree(crate)
 			buyPrompt.ActionText = if free
 				then "Open FREE"
@@ -298,6 +346,7 @@ function KioskController:Start()
 		end
 		player:GetAttributeChangedSignal("FreeCrates"):Connect(refreshPrompt)
 		player:GetAttributeChangedSignal("CratesBought"):Connect(refreshPrompt)
+		player:GetAttributeChangedSignal("RankLevel"):Connect(refreshPrompt)
 		refreshPrompt()
 		buyPrompt.Triggered:Connect(function()
 			press(button)

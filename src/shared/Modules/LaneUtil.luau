@@ -24,14 +24,16 @@ function LaneUtil.GetLanes(): { Model }
 	return lanes
 end
 
--- The lane this player owns (set by LaneService on the server), if any.
+-- The lane this player owns (set by LaneService on the server), if any. A player owns their Back Alley lane and,
+-- while inside a later zone, the lane they claimed there: that one (the later zone) wins.
 function LaneUtil.GetOwnedLane(userId: number): Model?
+	local owned = nil
 	for _, lane in LaneUtil.GetLanes() do
 		if lane:GetAttribute("OwnerId") == userId then
-			return lane
+			owned = lane
 		end
 	end
-	return nil
+	return owned
 end
 
 -- True if the position is standing on (or right next to) this lane's approach.

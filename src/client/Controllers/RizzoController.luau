@@ -191,6 +191,60 @@ function RizzoController:Start()
 		end
 	end)
 
+	-- Your first crate is affordable: a bouncing "!" over his head (seen through walls, from your lane) and he
+	-- calls you over, until you've bought a crate
+	local marker = Instance.new("BillboardGui")
+	marker.Name = "CallMarker"
+	marker.Adornee = head
+	marker.AlwaysOnTop = true
+	marker.LightInfluence = 0
+	marker.Size = UDim2.fromOffset(150, 96)
+	marker.StudsOffsetWorldSpace = Vector3.new(0, 4.6, 0)
+	marker.Enabled = false
+	local bang = Instance.new("TextLabel")
+	bang.Name = "Bang"
+	bang.BackgroundTransparency = 1
+	bang.Size = UDim2.new(1, 0, 0, 62)
+	bang.FontFace = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
+	bang.TextScaled = true
+	bang.Text = "!"
+	bang.TextColor3 = Color3.fromRGB(255, 200, 40)
+	local bangStroke = Instance.new("UIStroke")
+	bangStroke.Color = Color3.fromHex("06060F")
+	bangStroke.Thickness = 3
+	bangStroke.Parent = bang
+	bang.Parent = marker
+	local tag = bang:Clone()
+	tag.Name = "Tag"
+	tag.Position = UDim2.fromOffset(0, 64)
+	tag.Size = UDim2.new(1, 0, 0, 24)
+	tag.Text = "NEW BALL HERE"
+	tag.Parent = marker
+	marker.Parent = stand
+	local calling = false
+	local function refreshCall()
+		local want = RIZZO.FirstCrateMarker
+			and Config.Onboarding.FirstCrateGoal == crate.Id
+			and (player:GetAttribute("CratesBought") or 0) == 0
+			and (player:GetAttribute("Coins") or 0) >= Balls.CratePrice(crate, 0)
+		marker.Enabled = want
+		if want and not calling then
+			say(RIZZO.Lines.CallOver)
+			wave()
+		end
+		calling = want
+	end
+	player:GetAttributeChangedSignal("Coins"):Connect(refreshCall)
+	player:GetAttributeChangedSignal("CratesBought"):Connect(refreshCall)
+	refreshCall()
+	RunService.RenderStepped:Connect(function()
+		if calling then
+			local t = os.clock()
+			bang.Position = UDim2.fromOffset(0, -math.abs(math.sin(t * 4)) * 14)
+			bang.Rotation = math.sin(t * 6) * 8
+		end
+	end)
+
 	-- Hi when you walk up, bye when you leave
 	local near = false
 	task.spawn(function()

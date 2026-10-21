@@ -238,6 +238,7 @@ function EventController:Start()
 		{ Scale = 1.08 }
 	)
 	local pulsing = false
+	local calledOut = false
 	local function refreshBar()
 		local options = {}
 
@@ -274,9 +275,9 @@ function EventController:Start()
 			table.insert(options, {
 				Progress = math.min(coins / math.max(price, 1), 1),
 				Text = if coins >= price
-					then "NEW BALL! FOLLOW THE BEAM"
-					else ("NEXT: NEW BALL (%s CRATE)  %s / %s"):format(
-						firstCrate.Id:upper(),
+					then "GO SEE RIZZO: NEW BALL!"
+					else ("NEXT: NEW BALL (%s)  %s / %s"):format(
+						firstCrate.Name:upper(),
 						short(coins),
 						short(price)
 					),
@@ -300,7 +301,13 @@ function EventController:Start()
 				best = option
 			end
 		end
-		wantGuide = best.Guide == true
+		-- The moment the first crate is the goal and affordable: a big callout pointing at Rizzo, once a session
+		local guideNow = best.Guide == true
+		if guideNow and not wantGuide and not calledOut then
+			calledOut = true
+			showPopup("RIZZO HAS A CRATE FOR YOU!", GOLD, "FOLLOW THE GOLD BEAM TO HIS CART", true)
+		end
+		wantGuide = guideNow
 		setGuide(wantGuide)
 		bar.Label.Text = best.Text
 		bar.UIStroke.Color = best.Color

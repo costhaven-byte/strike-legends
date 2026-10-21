@@ -9,6 +9,7 @@ local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local ThrowRules = require(Shared.Modules.ThrowRules)
 local BallLook = require(Shared.Modules.BallLook)
+local Zones = require(Shared.Modules.Zones)
 local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local CrateRoller = require(script.Parent.Parent.Modules.CrateRoller)
@@ -343,6 +344,9 @@ local function openCrate(player: Player, crateId: any)
 	end
 	if not PlayerDataService.IsLoaded(player) then
 		return { Ok = false, Error = "Still loading" }
+	end
+	if not Zones.CrateUnlocked(crate, PlayerDataService.Get(player, "RankLevel")) then
+		return { Ok = false, Error = ("Unlocks in %s"):format(Zones.Name(crate.Zone)) }
 	end
 	-- A waiting free crate is used before any coins are spent
 	local useFree = crate.Id == Config.FreeCrates.CrateId and (PlayerDataService.Get(player, "FreeCrates") or 0) > 0

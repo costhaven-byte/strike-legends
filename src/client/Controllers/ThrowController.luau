@@ -61,6 +61,7 @@ local POPUPS = {
 	{ "BallsUI", "Opening" },
 	{ "DailyUI", "Popup" },
 	{ "TrialUI", "Intro" },
+	{ "ZoneUnlockUI", "Window" },
 }
 
 local ThrowController = {}
