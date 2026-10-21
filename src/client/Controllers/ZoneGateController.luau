@@ -1,7 +1,7 @@
 -- Later zones on your screen (Config.Zones.Gated, Config.ZoneUnlock):
 --   while a zone is locked, a glowing wall (only on your screen) keeps you out, with "REACH LEVEL N" on it;
 --   the moment your rank level opens it, a "ZONE UNLOCKED" window shows what's waiting there in 3D
---   (its crates and balls), once per zone (save ZoneSeen). "TAKE ME THERE" draws a gold beam to the zone.
+--   (its pets, crates and balls), once per zone (save ZoneSeen). "TAKE ME THERE" teleports you inside the zone.
 -- Claiming a lane there happens on the server (LaneService): step onto any OPEN lane.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -17,13 +17,13 @@ local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
 local BallView = require(Modules.BallView)
+local MascotView = require(Modules.MascotView)
 local ThrowController = require(script.Parent.ThrowController)
 
 local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
 local BODY_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
 local INK = Color3.fromHex("06060F")
 local GOLD = Color3.fromRGB(255, 200, 40)
-local BEAM_TIME = 60 -- seconds the "take me there" beam stays up if you never walk in
 
 local player = Players.LocalPlayer
 
@@ -240,49 +240,22 @@ function ZoneGateController:Start()
 		end
 	end
 
-	-- "TAKE ME THERE": a gold beam from you to the zone's front, until you walk in (or a minute passes)
-	local function guideTo(gate)
-		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if not root then
+	-- "TAKE ME THERE": straight into the zone (its Arrival spot), facing the pins
+	local function teleportTo(gate)
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if not root or not humanoid or humanoid.Health <= 0 then
 			return
 		end
-		local target = Instance.new("Part")
-		target.Name = "ZoneGuideTarget"
-		target.Anchored = true
-		target.CanCollide = false
-		target.CanQuery = false
-		target.CanTouch = false
-		target.Transparency = 1
-		target.Size = Vector3.one
-		local front = gate.Walls[1]
-		target.Position = front.Center - Vector3.new(0, front.Center.Y - 2, 4)
-		target.Parent = Workspace
-		local to = Instance.new("Attachment")
-		to.Parent = target
-		local from = Instance.new("Attachment")
-		from.Position = Vector3.new(0, -1.5, 0)
-		from.Parent = root
-		local beam = Instance.new("Beam")
-		beam.Attachment0 = from
-		beam.Attachment1 = to
-		beam.Color = ColorSequence.new(GOLD)
-		beam.LightEmission = 1
-		beam.FaceCamera = true
-		beam.Width0 = 2.4
-		beam.Width1 = 2.4
-		beam.Brightness = 5
-		beam.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-		beam.TextureMode = Enum.TextureMode.Wrap
-		beam.TextureLength = 3
-		beam.TextureSpeed = 2.5
-		beam.Parent = root
-		local start = os.clock()
-		while os.clock() - start < BEAM_TIME and root.Parent and not Zones.InArea(gate.Area, root.Position) do
-			task.wait(0.3)
+		if humanoid.Sit then
+			humanoid.Sit = false
 		end
-		beam:Destroy()
-		from:Destroy()
-		target:Destroy()
+		local spot = gate.Arrival
+		character:PivotTo(CFrame.lookAt(spot, spot - Vector3.zAxis))
+		root.AssemblyLinearVelocity = Vector3.zero
+		UiFx.Flash(Color3.new(1, 1, 1), 0.5, 0.35)
+		Sfx.Play("Reveal", 1)
 	end
 
 	-- The "ZONE UNLOCKED" window
@@ -366,6 +339,51 @@ function ZoneGateController:Start()
 		taglineLimit.MaxTextSize = 17
 		taglineLimit.Parent = tagline
 
+		-- The pets waiting there: their egg, turning in 3D
+		local eggViews, eggNames, eggColors = {}, {}, {}
+		for _, eggId in info.Eggs or {} do
+			local look = Config.EggLooks[eggId]
+			if look then
+				local egg = MascotView.Egg(eggId, 4)
+				local view = MascotView.Viewport(nil :: any, egg, 1.7)
+				local home = egg:GetPivot()
+				local spin = RunService.RenderStepped:Connect(function()
+					if view.Visible then
+						egg:PivotTo(home * CFrame.Angles(0, os.clock() * 0.8, 0))
+					end
+				end)
+				view.Destroying:Connect(function()
+					spin:Disconnect()
+				end)
+				table.insert(eggViews, view)
+				table.insert(eggNames, look.Name:upper())
+				table.insert(eggColors, look.Color)
+			end
+		end
+		-- Its pets are a surprise: mystery cards next to the egg
+		for _ = 1, #eggViews > 0 and (info.MysteryPets or 0) or 0 do
+			local card = Instance.new("Frame")
+			card.BackgroundTransparency = 1
+			local bubble = text(card, {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromScale(0.8, 0.8),
+				BackgroundTransparency = 0,
+				BackgroundColor3 = Color3.fromRGB(40, 24, 70),
+				Text = "?",
+				TextColor3 = info.Accent,
+			})
+			Instance.new("UIAspectRatioConstraint").Parent = bubble
+			corner(bubble, 999)
+			stroke(bubble, info.Accent, 2).ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			table.insert(eggViews, card)
+			table.insert(eggNames, "NEW PET")
+			table.insert(eggColors, Color3.fromRGB(200, 190, 230))
+		end
+		if #eggViews > 0 then
+			showcaseRow(scroll, 4, info.PetsLine, info.Accent, eggViews, eggNames, eggColors)
+		end
+
 		-- The crates waiting there
 		local crateViews, crateNames, crateColors = {}, {}, {}
 		for _, crateId in info.Crates do
@@ -378,7 +396,7 @@ function ZoneGateController:Start()
 			end
 		end
 		if #crateViews > 0 then
-			showcaseRow(scroll, 4, info.CratesLine, info.Accent, crateViews, crateNames, crateColors)
+			showcaseRow(scroll, 5, info.CratesLine, info.Accent, crateViews, crateNames, crateColors)
 		end
 
 		-- Its best balls, and how many new ones those crates can give you
@@ -399,11 +417,11 @@ function ZoneGateController:Start()
 			end
 		end
 		if #ballViews > 0 then
-			showcaseRow(scroll, 5, info.BallsLine:format(count), GOLD, ballViews, ballNames, ballColors)
+			showcaseRow(scroll, 6, info.BallsLine:format(count), GOLD, ballViews, ballNames, ballColors)
 		end
 
 		local hint = text(scroll, {
-			LayoutOrder = 6,
+			LayoutOrder = 7,
 			Size = UDim2.new(1, 0, 0, 20),
 			Text = info.Hint,
 			FontFace = BODY_FONT,
@@ -413,7 +431,7 @@ function ZoneGateController:Start()
 
 		local buttons = Instance.new("Frame")
 		buttons.BackgroundTransparency = 1
-		buttons.LayoutOrder = 7
+		buttons.LayoutOrder = 8
 		buttons.Size = UDim2.new(1, 0, 0, 56)
 		buttons.Parent = scroll
 		local go = Instance.new("TextButton")
@@ -477,7 +495,7 @@ function ZoneGateController:Start()
 			task.delay(0.4, gui.Destroy, gui)
 			showing = false
 			if take then
-				task.spawn(guideTo, gate)
+				task.spawn(teleportTo, gate)
 			end
 		end
 		go.Activated:Connect(function()

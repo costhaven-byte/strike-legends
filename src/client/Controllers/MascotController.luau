@@ -230,7 +230,7 @@ function MascotController:Start()
 		outline.Color = PINK
 	end
 	local title = panel:WaitForChild("Title") :: TextLabel
-	title.Text = "MASCOTS"
+	title.Text = "PETS"
 	title.TextColor3 = PINK
 	local countLabel = panel:WaitForChild("Count") :: TextLabel
 	local close = panel:WaitForChild("Close") :: TextButton
@@ -747,7 +747,7 @@ function MascotController:Start()
 			model:PivotTo(CFrame.Angles(0, math.sin(angle) * 0.6, 0))
 		end)
 
-		revealNew.Text = if result.IsNew then "NEW MASCOT!" else "ANOTHER ONE!"
+		revealNew.Text = if result.IsNew then "NEW PET!" else "ANOTHER ONE!"
 		revealNew.TextColor3 = if result.IsNew then LIME else Color3.fromRGB(200, 190, 230)
 		revealName.Text = string.upper(mascot.Name)
 		revealName.TextColor3 = Mascots.RarityColor(mascot.Rarity)

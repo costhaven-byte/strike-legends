@@ -2062,6 +2062,7 @@ Config.Zones = {
 			},
 			WallColor = Color3.fromRGB(255, 60, 210),
 			KickTo = Vector3.new(0, 4, 24), -- lobby floor just in front of the lanes
+			Arrival = Vector3.new(0, 4, 14), -- "TAKE ME THERE" puts you here: inside, behind the approaches, facing the pins
 			LeaveGrace = 2,
 		},
 	},
@@ -2100,7 +2101,10 @@ Config.ZoneUnlock = {
 	[2] = {
 		Title = "ZONE 2 UNLOCKED!",
 		Name = "NEON LANES",
-		Tagline = "The bouncer just waved you in. Glowing lanes, four brand-new crates and the rarest balls in town are waiting inside.",
+		Tagline = "The bouncer just waved you in. Glowing lanes, brand-new pets in the Neon Egg, four new crates and the rarest balls in town are waiting inside.",
+		Eggs = { "Neon" }, -- Config.EggLooks Ids: shown in 3D on the pets row
+		PetsLine = "NEW PETS TO HATCH",
+		MysteryPets = 3, -- "?" cards beside the egg (its pets stay a surprise)
 		Crates = { "Bronze", "Silver", "Gold", "Neon" },
 		CratesLine = "4 NEW CRATES",
 		Balls = { "Supernova", "Void", "Dragon", "Golden", "Galaxy", "Electric" },
@@ -2257,7 +2261,7 @@ Config.Economy.Timeline = {
 	{ Goal = "Level2", Text = "Buy Power Level 2", From = 0.3, To = 1 }, -- Addendum 2: about 6 throws
 	{ Goal = "FirstCrate", Text = "Afford first crate", From = 1.5, To = 2 },
 	{ Goal = "Rank3", Text = "Reach rank 3", From = 4, To = 5 },
-	{ Goal = "FirstEgg", Text = "Afford first mascot egg", From = 4, To = 5 },
+	{ Goal = "FirstEgg", Text = "Afford first pet egg", From = 4, To = 5 },
 	{ Goal = "Zone2", Text = "Unlock Zone 2 (rank 5)", From = 8, To = 10 },
 	{ Goal = "Zone3", Text = "Unlock Zone 3", From = 30, To = 45 },
 	{ Goal = "RebirthReady", Text = "First rebirth available", From = 60, To = 90 },

@@ -735,7 +735,7 @@ local function buildMascotShelf(shelf: BasePart, parent: Instance): (number) -> 
 				spot.Plate.Transparency = if id == "" then 0.85 else 0.4
 			end
 		end
-		signText.Text = ("MASCOTS  %d / %d"):format(found, #spots)
+		signText.Text = ("PETS  %d / %d"):format(found, #spots)
 	end
 	player:GetAttributeChangedSignal("Mascots"):Connect(refresh)
 	refresh()

@@ -28,7 +28,7 @@ local LIME = Color3.fromRGB(125, 255, 60)
 local SOURCES = {
 	{ Key = "PowerLevel", Name = "POWER LEVEL" },
 	{ Key = "Ball", Name = "BALL + POLISH" },
-	{ Key = "Mascots", Name = "MASCOTS" },
+	{ Key = "Mascots", Name = "PETS" },
 	{ Key = "Rank", Name = "RANK" },
 	{ Key = "Streak", Name = "STREAK" },
 	{ Key = "Modifier", Name = "LANE EVENT" },

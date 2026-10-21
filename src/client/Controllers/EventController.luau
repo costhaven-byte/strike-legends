@@ -307,7 +307,8 @@ function EventController:Start()
 			calledOut = true
 			showPopup("RIZZO HAS A CRATE FOR YOU!", GOLD, "FOLLOW THE GOLD BEAM TO HIS CART", true)
 		end
-		wantGuide = guideNow
+		-- Rizzo draws his own beam (RizzoController, same moment as his "!"); this one is only the kiosk fallback
+		wantGuide = guideNow and not (guideTarget() and guideTarget().Name == "PromptPoint")
 		setGuide(wantGuide)
 		bar.Label.Text = best.Text
 		bar.UIStroke.Color = best.Color

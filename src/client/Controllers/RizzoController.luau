@@ -14,6 +14,7 @@ local CrateController = require(script.Parent.CrateController)
 
 local RIZZO = Config.Rizzo
 local FONT = "rbxasset://fonts/families/GothamSSm.json"
+local GOLD = Color3.fromRGB(255, 200, 40)
 local WAVE_PARTS = { "RightUpperArm_Node", "RightLowerArm_Node", "RightHand_Node", "Acc_SleeveR", "Acc_GloveR" }
 
 local player = Players.LocalPlayer
@@ -191,15 +192,15 @@ function RizzoController:Start()
 		end
 	end)
 
-	-- Your first crate is affordable: a bouncing "!" over his head (seen through walls, from your lane) and he
-	-- calls you over, until you've bought a crate
+	-- Your first crate is affordable: a bouncing "!" over his head (seen through walls, from your lane, above his
+	-- speech bubble) and a gold beam from you to his buy pad, and he calls you over, until you've bought a crate
 	local marker = Instance.new("BillboardGui")
 	marker.Name = "CallMarker"
 	marker.Adornee = head
 	marker.AlwaysOnTop = true
 	marker.LightInfluence = 0
-	marker.Size = UDim2.fromOffset(150, 96)
-	marker.StudsOffsetWorldSpace = Vector3.new(0, 4.6, 0)
+	marker.Size = UDim2.fromOffset(80, 80)
+	marker.StudsOffsetWorldSpace = Vector3.new(0, 6.6, 0)
 	marker.Enabled = false
 	local bang = Instance.new("TextLabel")
 	bang.Name = "Bang"
@@ -208,19 +209,70 @@ function RizzoController:Start()
 	bang.FontFace = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
 	bang.TextScaled = true
 	bang.Text = "!"
-	bang.TextColor3 = Color3.fromRGB(255, 200, 40)
+	bang.TextColor3 = GOLD
 	local bangStroke = Instance.new("UIStroke")
 	bangStroke.Color = Color3.fromHex("06060F")
 	bangStroke.Thickness = 3
 	bangStroke.Parent = bang
 	bang.Parent = marker
-	local tag = bang:Clone()
-	tag.Name = "Tag"
-	tag.Position = UDim2.fromOffset(0, 64)
-	tag.Size = UDim2.new(1, 0, 0, 24)
-	tag.Text = "NEW BALL HERE"
-	tag.Parent = marker
 	marker.Parent = stand
+
+	local beamTo = Instance.new("Attachment")
+	beamTo.Name = "CallBeamTo"
+	beamTo.Position = Vector3.new(0, -1.5, 0)
+	beamTo.Parent = point
+	local beamFrom: Attachment? = nil
+	local beams: { Beam } = {}
+	local function setBeam(on: boolean)
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if on and root and beamFrom and beamFrom.Parent == root then
+			return
+		end
+		for _, beam in beams do
+			beam:Destroy()
+		end
+		table.clear(beams)
+		if beamFrom then
+			beamFrom:Destroy()
+			beamFrom = nil
+		end
+		if not on or not root then
+			return
+		end
+		local from = Instance.new("Attachment")
+		from.Name = "CallBeamFrom"
+		from.Position = Vector3.new(0, -1.5, 0)
+		from.Parent = root
+		beamFrom = from
+		-- A soft gold band with sparkles running along it toward Rizzo
+		for i = 1, 2 do
+			local beam = Instance.new("Beam")
+			beam.Name = "RizzoGuide"
+			beam.Attachment0 = from
+			beam.Attachment1 = beamTo
+			beam.Color = ColorSequence.new(GOLD)
+			beam.LightEmission = 1
+			beam.FaceCamera = true
+			beam.Segments = 1 -- a straight line: no sag, and no gaps over long distances
+			if i == 1 then
+				beam.Width0 = 1.6
+				beam.Width1 = 1.6
+				beam.Brightness = 2
+				beam.Transparency = NumberSequence.new(0.55)
+			else
+				beam.Width0 = 2.4
+				beam.Width1 = 2.4
+				beam.Brightness = 5
+				beam.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+				beam.TextureMode = Enum.TextureMode.Wrap
+				beam.TextureLength = 3
+				beam.TextureSpeed = 2.5
+			end
+			beam.Parent = root
+			table.insert(beams, beam)
+		end
+	end
+
 	local calling = false
 	local function refreshCall()
 		local want = RIZZO.FirstCrateMarker
@@ -228,6 +280,7 @@ function RizzoController:Start()
 			and (player:GetAttribute("CratesBought") or 0) == 0
 			and (player:GetAttribute("Coins") or 0) >= Balls.CratePrice(crate, 0)
 		marker.Enabled = want
+		setBeam(want)
 		if want and not calling then
 			say(RIZZO.Lines.CallOver)
 			wave()
@@ -236,6 +289,10 @@ function RizzoController:Start()
 	end
 	player:GetAttributeChangedSignal("Coins"):Connect(refreshCall)
 	player:GetAttributeChangedSignal("CratesBought"):Connect(refreshCall)
+	player.CharacterAdded:Connect(function(character)
+		character:WaitForChild("HumanoidRootPart", 10)
+		setBeam(calling)
+	end)
 	refreshCall()
 	RunService.RenderStepped:Connect(function()
 		if calling then
