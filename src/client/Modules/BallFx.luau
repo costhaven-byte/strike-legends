@@ -1,5 +1,5 @@
--- Builds a ball's effects from Config.BallVfx: comet trails, sparkles, orbit rings, glowing disk, halos,
--- floor rings, the floating trait badge and the glow light.
+-- Builds a ball's effects from Config.BallVfx: comet trails, sparkles, orbit rings, glowing disk, floating
+-- model pieces, halos, floor rings, the floating trait badge and the glow light.
 -- Everything hangs off an invisible upright "rig" that follows the ball without spinning,
 -- so rings and badges stay steady while the ball rolls.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,6 +20,22 @@ local BallFx = {}
 export type Mode = "Lane" | "Held" | "Display"
 
 local active = {}
+
+-- Turns every glow under root down to Config.BallVfx.Dim (lights, trails, beams, sparkles, glowing labels)
+function BallFx.Dim(root: Instance)
+	for _, item in root:GetDescendants() do
+		if
+			item:IsA("Light")
+			or item:IsA("Trail")
+			or item:IsA("Beam")
+			or item:IsA("ParticleEmitter")
+			or item:IsA("BillboardGui")
+			or item:IsA("SurfaceGui")
+		then
+			item.Brightness *= VFX.Dim
+		end
+	end
+end
 
 local function colorSequence(colors: { Color3 }): ColorSequence
 	if #colors == 1 then
@@ -196,7 +212,7 @@ local function moveTrail(motion, t: number)
 	motion.Top.Position = sway + half
 	motion.Bottom.Position = sway - half
 	if motion.Shimmer > 0 then
-		motion.Trail.Brightness = math.max(0.2, 1 + motion.Shimmer * math.noise(t * 9, motion.Seed + 13) * 2)
+		motion.Trail.Brightness = math.max(0.2, 1 + motion.Shimmer * math.noise(t * 9, motion.Seed + 13) * 2) * VFX.Dim
 	end
 end
 
@@ -341,6 +357,7 @@ function BallFx.Attach(ball: BasePart, ballId: string?, mode: Mode, forward: Vec
 		Follow = mode ~= "Lane",
 		Rings = {},
 		Spinners = {},
+		Pieces = {},
 		Badge = nil,
 		BadgeHeight = 0,
 		Emitters = {},
@@ -370,6 +387,30 @@ function BallFx.Attach(ball: BasePart, ballId: string?, mode: Mode, forward: Vec
 			label.ImageTransparency = disk.Transparency or 0
 			table.insert(handle.Spinners, { Label = label, Speed = disk.Spin or 0 })
 		end
+	end
+	local pieceFolder = look.Pieces and ReplicatedStorage:FindFirstChild("BallFxPieces")
+	local pieceSource = pieceFolder and pieceFolder:FindFirstChild(info.Id)
+	if pieceSource then
+		-- Stored with a 1-stud ball and the pivot at its centre, like BallModels
+		local pieces = pieceSource:Clone()
+		pieces:ScaleTo(size)
+		pieces:PivotTo(CFrame.new())
+		for _, part in pieces:GetChildren() do
+			if not part:IsA("BasePart") then
+				continue
+			end
+			local offset = part.CFrame
+			part.Anchored = false
+			part.CFrame = rig.CFrame * offset
+			local weld = Instance.new("Weld")
+			weld.Part0 = rig
+			weld.Part1 = part
+			weld.C0 = offset
+			weld.Parent = part
+			part.Parent = rig
+			table.insert(handle.Pieces, { Weld = weld, Offset = offset, Speed = look.Pieces[part.Name] or 0 })
+		end
+		pieces:Destroy()
 	end
 	for _, row in look.Halos or {} do
 		addHalo(rig, row, size)
@@ -409,6 +450,7 @@ function BallFx.Attach(ball: BasePart, ballId: string?, mode: Mode, forward: Vec
 		light.Range = math.max(lightRow.Range * size, 4)
 		light.Parent = rig
 	end
+	BallFx.Dim(rig)
 	for _, descendant in rig:GetDescendants() do
 		if descendant:IsA("Trail") then
 			table.insert(handle.Trails, descendant)
@@ -471,6 +513,9 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 		for _, spinner in handle.Spinners do
 			spinner.Label.Rotation = (t * spinner.Speed) % 360
+		end
+		for _, piece in handle.Pieces do
+			piece.Weld.C0 = CFrame.Angles(0, math.rad(t * piece.Speed % 360), 0) * piece.Offset
 		end
 		if handle.Badge then
 			handle.Badge.StudsOffsetWorldSpace = Vector3.new(0, handle.BadgeHeight + math.sin(t * 2.5) * 0.08, 0)

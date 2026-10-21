@@ -57,7 +57,7 @@ function LaneFx.FollowLights(lane: Model, color: Color3)
 			local light = Instance.new("PointLight")
 			light.Color = color
 			light.Range = 10
-			light.Brightness = 3
+			light.Brightness = 3 * Config.BallVfx.Dim
 			light.Parent = runner
 			runner.Parent = lane
 			table.insert(runners, { Part = runner, Strip = strip })

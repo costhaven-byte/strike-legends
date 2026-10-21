@@ -770,6 +770,7 @@ Config.BallFx = {
 -- A ball without a row gets a simple trail in its Trail colour.
 local WHITE = Color3.fromRGB(255, 255, 255)
 Config.BallVfx = {
+	Dim = 0.8, -- every ball effect's glow (lights, trails, sparkles) is this bright; lower = dimmer (owner 2026-10-22: a tad too bright)
 	HeldRate = 0.5, -- the ball in your hand uses this share of the sparkles (no trail, floor rings or badge)
 	Images = {
 		Ring = "rbxassetid://132592068787018",
@@ -1753,7 +1754,6 @@ Config.Rizzo = {
 Config.CrateShop = {
 	PromptDistance = 10, -- studs from the buy button where "Open" shows up
 	HoldDuration = 0.4, -- seconds to hold the buy button, so nobody spends coins by accident
-	LidOpenTime = 0.35, -- seconds a hinged crate lid (Alley Crate) takes to flip open at the end of the intro
 	CrateSpin = 0.12, -- turns per second for the crates on display
 	CrateBob = 0.25, -- studs the display crates float up and down
 	SparkleOrbit = 0.08, -- turns per second the gold sparkles drift around the crate
@@ -1772,7 +1772,32 @@ Config.CrateShop = {
 		DropoutChance = 0.35, -- chance a flicker ends with the sign going dark for a moment
 	},
 	AnimateDistance = 90, -- only animate while your camera is this close (saves phone battery)
-	IntroTime = 1.1, -- seconds the crate shakes on screen before the reel starts
+	Intro = { -- the crate on screen before the reel: slams down, hops to the beat, lid blasts off (about 2 s)
+		CrateSize = 4.3, -- studs wide on screen (every crate model is fitted to this)
+		FaceAngle = -25, -- degrees the crate is turned from facing you straight on
+		CameraDistance = 13,
+		Kick = 0.12, -- camera punches in by this share on every landing
+		DropTime = 0.35, -- seconds to slam down from above
+		DropHeight = 7, -- studs it falls
+		DropSpin = 1, -- turns while falling
+		Hops = 3,
+		HopTime = 0.3, -- seconds per hop
+		HopHeight = 0.6, -- studs of the first hop
+		HopGrow = 0.45, -- each next hop this much higher
+		HopTurn = 90, -- degrees turned per hop
+		HopWiggle = 10, -- degrees of side wiggle in the air
+		LidPeek = 9, -- degrees the lid rests more open after each hop
+		BlastTime = 0.6, -- seconds of crouch + lid blast
+		CrouchShare = 0.3, -- share of BlastTime spent crouching and rattling
+		LidFly = 9, -- studs the lid rockets up
+		LidSpin = 1.5, -- turns the lid tumbles while flying off
+		BeamHeight = 14, -- studs of the light beam out of the crate
+		Rays = 8, -- light spokes behind the crate (each = 2 rays)
+		RayWidth = 0.06, -- spoke width (share of the stage)
+		RaySpin = 0.1, -- turns per second when calm
+		RaySpinHot = 0.6, -- extra turns per second when it's about to blow
+		Confetti = 35, -- pieces at the blast
+	},
 	SpinTime = 4.5, -- seconds the crate reel spins before it stops on the result
 	ScreenBrightness = 1.15, -- glow of the kiosk screens (marquee, odds, prices); higher = more vibrant
 	-- The owner's Crate Kiosk design (2026-10-21): Bronze, Silver, Gold stations
@@ -2449,7 +2474,7 @@ Config.Zones = {
 			Look = {
 				Ambient = Color3.fromRGB(18, 18, 26),
 				OutdoorAmbient = Color3.fromRGB(22, 22, 32),
-				Exposure = -0.1, -- Lighting.ExposureCompensation here (place default 0.15); lower = darker
+				Exposure = -0.2, -- Lighting.ExposureCompensation here (place default 0, was 0.15 before 2026-10-22); lower = darker
 				Saturation = -0.22,
 				Contrast = 0.06,
 				Tint = Color3.fromRGB(214, 218, 240),
@@ -2457,7 +2482,7 @@ Config.Zones = {
 				HazeDecay = Color3.fromHex("3a3936"),
 				HazeDensity = 0.32,
 				Haze = 1.2,
-				Bloom = 0.15,
+				Bloom = 0.12,
 			},
 			Flicker = {
 				Path = { "NeonSign", "Letter_N_broken" },

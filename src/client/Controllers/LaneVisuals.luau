@@ -181,6 +181,7 @@ local function powerTrail(lane: Model, level: number, diameter: number, color: C
 	upright.Transparency = NumberSequence.new(0.35, 1)
 	upright.Color = if level >= THROW.RainbowFromLevel then RAINBOW else ColorSequence.new(color)
 	upright.Parent = rig
+	BallFx.Dim(rig)
 	rig.Parent = lane
 	return {
 		Move = function(position: Vector3)
@@ -395,6 +396,7 @@ local function playThrow(data)
 	local fx = BallFx.Attach(ball, data.BallId, "Lane", forward)
 	local lights = LaneFx.FollowLights(lane, ballInfo.Trail)
 	local streak = powerTrail(lane, feel.Level, ball.Size.X, ballInfo.Trail or ballInfo.Color, forward)
+	BallFx.Dim(ball)
 	local fired = data.Traits or {}
 	local curveTrail = if table.find(fired, "Curve") then TraitFx.CurveTrail(lane, headDistance) else nil
 	local gemTrail = if table.find(fired, "GemHunter") then TraitFx.GemTrail(lane) else nil

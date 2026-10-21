@@ -270,93 +270,308 @@ function CrateController:Start()
 	player:GetAttributeChangedSignal("RankLevel"):Connect(refreshGoal)
 	refreshGoal()
 
-	-- Intro: the crate itself (ReplicatedStorage.CrateModels) shakes harder and harder, then bursts in a flash
+	-- Intro (Config.CrateShop.Intro): the crate (ReplicatedStorage.CrateModels, the kiosk designs) slams down,
+	-- does a few funky hops with the lid peeking open and light leaking out, then the lid blasts off
+	-- with a beam of light. Spinning rays and a glow ring dance behind it to the beat.
+	local INTRO = Config.CrateShop.Intro
 	local crateModels = ReplicatedStorage:WaitForChild("CrateModels", 10)
+
+	local introStage = Instance.new("Frame")
+	introStage.Name = "CrateIntro"
+	introStage.AnchorPoint = Vector2.new(0.5, 0.5)
+	introStage.Position = UDim2.fromScale(0.5, 0.55)
+	introStage.Size = UDim2.fromScale(0.6, 0.6)
+	introStage.BackgroundTransparency = 1
+	introStage.Visible = false
+	introStage.ZIndex = 5
+	local stageAspect = Instance.new("UIAspectRatioConstraint")
+	stageAspect.Parent = introStage
+	introStage.Parent = opening
+
+	-- Glow ring behind the crate
+	local introGlow = Instance.new("Frame")
+	introGlow.Name = "Glow"
+	introGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+	introGlow.Position = UDim2.fromScale(0.5, 0.5)
+	introGlow.Size = UDim2.fromScale(0.5, 0.5)
+	introGlow.BorderSizePixel = 0
+	introGlow.ZIndex = 5
+	local glowCorner = Instance.new("UICorner")
+	glowCorner.CornerRadius = UDim.new(0.5, 0)
+	glowCorner.Parent = introGlow
+	local glowStroke = Instance.new("UIStroke")
+	glowStroke.Thickness = 6
+	glowStroke.Parent = introGlow
+	introGlow.Parent = introStage
+
+	-- Light rays: each spoke is a full-height bar (two rays, one each way) so it turns around the centre
+	local introRays = Instance.new("Frame")
+	introRays.Name = "Rays"
+	introRays.AnchorPoint = Vector2.new(0.5, 0.5)
+	introRays.Position = UDim2.fromScale(0.5, 0.5)
+	introRays.Size = UDim2.fromScale(1, 1)
+	introRays.BackgroundTransparency = 1
+	introRays.ZIndex = 5
+	introRays.Parent = introStage
+	local rayBars = {}
+	for i = 1, INTRO.Rays do
+		local spoke = Instance.new("Frame")
+		spoke.AnchorPoint = Vector2.new(0.5, 0.5)
+		spoke.Position = UDim2.fromScale(0.5, 0.5)
+		spoke.Size = UDim2.fromScale(INTRO.RayWidth, 1)
+		spoke.Rotation = (i - 1) * 180 / INTRO.Rays
+		spoke.BackgroundTransparency = 1
+		spoke.ZIndex = 5
+		spoke.Parent = introRays
+		for _, top in { true, false } do
+			local ray = Instance.new("Frame")
+			ray.Size = UDim2.fromScale(1, 0.5)
+			ray.Position = UDim2.fromScale(0, if top then 0 else 0.5)
+			ray.BorderSizePixel = 0
+			ray.ZIndex = 5
+			local fade = Instance.new("UIGradient")
+			fade.Rotation = if top then 90 else -90 -- bright at the centre, gone at the tip
+			fade.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 1),
+				NumberSequenceKeypoint.new(0.6, 0.55),
+				NumberSequenceKeypoint.new(1, 0.15),
+			})
+			fade.Parent = ray
+			ray.Parent = spoke
+			table.insert(rayBars, { Ray = ray, Even = i % 2 == 0 })
+		end
+	end
+	local raysScale = Instance.new("UIScale")
+	raysScale.Parent = introRays
+
 	local introView = Instance.new("ViewportFrame")
-	introView.Name = "CrateIntro"
+	introView.Name = "Crate"
 	introView.AnchorPoint = Vector2.new(0.5, 0.5)
-	introView.Position = UDim2.fromScale(0.5, 0.55)
-	introView.Size = UDim2.fromScale(0.5, 0.5)
+	introView.Position = UDim2.fromScale(0.5, 0.5)
+	introView.Size = UDim2.fromScale(1, 1)
 	introView.BackgroundTransparency = 1
 	introView.Ambient = Color3.fromRGB(200, 200, 220)
 	introView.LightColor = Color3.new(1, 1, 1)
 	introView.LightDirection = Vector3.new(-1, -1.5, -1)
-	introView.Visible = false
-	introView.ZIndex = 5
-	local introAspect = Instance.new("UIAspectRatioConstraint")
-	introAspect.Parent = introView
+	introView.ZIndex = 6
 	local introCamera = Instance.new("Camera")
 	introCamera.FieldOfView = 40
 	introCamera.Parent = introView
 	introView.CurrentCamera = introCamera
-	introView.Parent = opening
+	introView.Parent = introStage
+
+	local function easeOut(k: number): number
+		return 1 - (1 - k) ^ 3
+	end
+
+	local CORNERS = {}
+	for _, x in { -1, 1 } do
+		for _, y in { -1, 1 } do
+			for _, z in { -1, 1 } do
+				table.insert(CORNERS, Vector3.new(x, y, z))
+			end
+		end
+	end
+
+	-- The lid's bottom back edge (model space, front = +Z): it swings open around this line
+	local function lidHinge(model: Model, lid: Model): CFrame
+		local pivot = model:GetPivot()
+		local lowY, backZ = math.huge, math.huge
+		for _, part in lid:GetDescendants() do
+			if part:IsA("BasePart") then
+				for _, corner in CORNERS do
+					local point = pivot:PointToObjectSpace(part.CFrame:PointToWorldSpace(part.Size / 2 * corner))
+					lowY = math.min(lowY, point.Y)
+					backZ = math.min(backZ, point.Z)
+				end
+			end
+		end
+		return CFrame.new(0, lowY, backZ)
+	end
 
 	local function playIntro(crate)
 		local template = crateModels and crateModels:FindFirstChild(crate.Id)
 		if not template then
 			return
 		end
-		local model = template:Clone()
-		model:ScaleTo(4)
-		local base = CFrame.Angles(0, math.rad(-25), 0)
-		model:PivotTo(base)
+		local model = template:Clone() :: Model
+		local _, size = model:GetBoundingBox()
+		model:ScaleTo(model:GetScale() * INTRO.CrateSize / math.max(size.X, size.Z))
+		model:PivotTo(CFrame.new())
+		local _, scaled = model:GetBoundingBox()
 		model.Parent = introView
-		introCamera.CFrame = CFrame.lookAt(Vector3.new(0, 2.6, 12), Vector3.new(0, 0.3, 0))
-		introView.Visible = true
+
+		-- Hinged lid (every crate model has a Lid): peeks open on each hop, blasts off at the end
+		local lid = model:FindFirstChild("Lid") :: Model?
+		local hinge, lidHome
+		if lid then
+			hinge = lidHinge(model, lid)
+			lidHome = hinge:Inverse() * lid:GetPivot()
+		end
+		local hingeY = if hinge then hinge.Y else scaled.Y * 0.2
+		-- Light inside the crate, seen through the gap under the lid (the Alley Crate has its own Loot_Glow)
+		local core = Instance.new("Part")
+		core.Material = Enum.Material.Neon
+		core.Color = crate.Color:Lerp(Color3.new(1, 1, 1), 0.35)
+		core.Size = Vector3.new(scaled.X * 0.8, scaled.Y * 0.25, scaled.Z * 0.8)
+		core.Transparency = 1
+		core.Parent = model
+		local beam = Instance.new("Part")
+		beam.Shape = Enum.PartType.Cylinder
+		beam.Material = Enum.Material.Neon
+		beam.Color = crate.Color:Lerp(Color3.new(1, 1, 1), 0.5)
+		beam.Transparency = 1
+		beam.Parent = model
+		local lootGlow = model:FindFirstChild("Loot_Glow", true)
+
+		local color = crate.Color
+		local white = Color3.new(1, 1, 1)
+		introGlow.BackgroundColor3 = color
+		glowStroke.Color = color:Lerp(white, 0.5)
+		for _, bar in rayBars do
+			bar.Ray.BackgroundColor3 = if bar.Even then color else color:Lerp(white, 0.6)
+		end
+		introView.ImageColor3 = white
+		introView.ImageTransparency = 1
+		introRays.Visible = false
+		introGlow.Visible = false
+		introStage.Visible = true
 		status.Visible = true
 		status.Text = crate.Name:upper()
-		status.TextColor3 = crate.Color
-		UiFx.Pop(introView, 0.4, 0.25)
+		status.TextColor3 = color
+		UiFx.Pop(status, 1.4, 0.3)
 
-		local length = Config.CrateShop.IntroTime
+		local turn = math.rad(INTRO.HopTurn)
+		local hopsEnd = INTRO.DropTime + INTRO.Hops * INTRO.HopTime
+		local total = hopsEnd + INTRO.BlastTime
 		local start = os.clock()
-		local nextTick = 0
+		local lastFrame = start
+		local hop, landed, blasted = 0, false, false
+		local kick = 0 -- camera punch-in on every landing, fades out
+		local shake = 0
+		local raysAngle = 0
 		while true do
-			local t = (os.clock() - start) / length
-			if t >= 1 then
+			local now = os.clock()
+			local t = now - start
+			local dt = now - lastFrame
+			lastFrame = now
+			if t >= total then
 				break
 			end
-			local shake = 0.04 + t * t * 0.3 -- gentle wobble that builds up
-			model:PivotTo(
-				base
-					* CFrame.new(0, t * 0.4, 0)
-					* CFrame.Angles(
-						(math.random() - 0.5) * shake,
-						(math.random() - 0.5) * shake,
-						(math.random() - 0.5) * shake
-					)
-			)
-			introView.ImageColor3 = Color3.new(1, 1, 1):Lerp(crate.Color, t * 0.5)
-			if t >= nextTick then
-				Sfx.Play("ReelTick", 0.8 + t * 0.6)
-				nextTick += 0.25 - t * 0.15
+			local lift, spin, tilt, lidAngle, lidLift, lidSpin = 0, 0, 0, 0, 0, 0
+			local heat = 0 -- 0..1 how worked up the crate is (ray speed, glow)
+			if t < INTRO.DropTime then
+				-- Slams down from above, spinning in
+				local k = t / INTRO.DropTime
+				lift = INTRO.DropHeight * (1 - k * k)
+				spin = -INTRO.DropSpin * 2 * math.pi * (1 - easeOut(k))
+				introView.ImageTransparency = 1 - math.min(k * 3, 1)
+			elseif t < hopsEnd then
+				introView.ImageTransparency = 0
+				if not landed then
+					landed = true
+					kick, shake = 1, 1
+					Sfx.Play("PinHit", 0.7, 1.2)
+					UiFx.Pop(introGlow, 1.6, 0.3)
+				end
+				-- Hops: each one higher, a quarter turn each, a little wiggle in the air
+				local h = (t - INTRO.DropTime) / INTRO.HopTime
+				local index = math.floor(h)
+				local k = h - index
+				if index + 1 ~= hop then
+					hop = index + 1
+					Sfx.Play("ReelTick", 0.9 + hop * 0.2)
+					if index > 0 then
+						-- landed the previous hop: thump
+						kick, shake = 0.6 + index * 0.2, 0.5 + index * 0.25
+						UiFx.Pop(introGlow, 1.3 + index * 0.15, 0.25)
+						raysScale.Scale = 1.2 + index * 0.1
+					end
+				end
+				heat = (index + k) / INTRO.Hops
+				local height = INTRO.HopHeight * (1 + index * INTRO.HopGrow)
+				lift = height * 4 * k * (1 - k)
+				spin = (index + easeOut(k)) * turn
+				tilt = math.sin(k * math.pi * 2) * math.rad(INTRO.HopWiggle) * (if index % 2 == 0 then 1 else -1)
+				-- The lid flaps while airborne and rests a little more open after each hop
+				lidAngle = INTRO.LidPeek * (index + math.sin(k * math.pi) * 1.5)
+			else
+				-- Blast: crouch and rattle, then the lid rockets off and a beam of light shoots out
+				local k = (t - hopsEnd) / INTRO.BlastTime
+				spin = INTRO.Hops * turn
+				heat = 1
+				if k < INTRO.CrouchShare then
+					local c = k / INTRO.CrouchShare
+					lift = -0.15 * c
+					shake = math.max(shake, 0.6 + c)
+					tilt = (math.random() - 0.5) * 0.1 * c
+					lidAngle = INTRO.LidPeek * INTRO.Hops * (1 - c * 0.7)
+				else
+					local b = (k - INTRO.CrouchShare) / (1 - INTRO.CrouchShare)
+					if not blasted then
+						blasted = true
+						kick, shake = 1.6, 1.4
+						Sfx.Play("StrikeCrash", 1.35, 0.8)
+						Sfx.Play("Firework", 1.1, 0.7)
+						UiFx.Flash(color, 0.5, 0.3)
+						UiFx.Confetti(opening, INTRO.Confetti, { color, white, color:Lerp(white, 0.5) })
+						UiFx.Pop(introGlow, 2.2, 0.4)
+					end
+					lidLift = INTRO.LidFly * easeOut(b)
+					lidSpin = INTRO.LidSpin * 2 * math.pi * b
+					lidAngle = 70
+					local beamHeight = INTRO.BeamHeight * easeOut(math.min(b * 2, 1))
+					local beamWidth = scaled.X * 0.55 * (1 - b * 0.6)
+					beam.Size = Vector3.new(math.max(beamHeight, 0.05), beamWidth, beamWidth)
+					beam.Transparency = 0.25 + b * 0.75
+					introView.ImageColor3 = white:Lerp(color:Lerp(white, 0.4), b)
+				end
 			end
+
+			-- Beat-driven extras: the rays turn faster as it heats up, alternate colours swap on every beat
+			raysAngle += dt * 360 * (INTRO.RaySpin + heat * INTRO.RaySpinHot)
+			introRays.Rotation = raysAngle
+			local rayTarget = if blasted then 1.9 else 1 + heat * 0.25
+			raysScale.Scale += (rayTarget - raysScale.Scale) * math.min(dt * 8, 1)
+			local beat = (hop + (if blasted then 1 else 0)) % 2 == 0
+			for _, bar in rayBars do
+				bar.Ray.BackgroundTransparency = 0.15 + (if bar.Even == beat then 0 else 0.4) * (1 - heat * 0.5)
+			end
+			introRays.Visible = landed
+			introGlow.Visible = landed
+			introGlow.BackgroundTransparency = 0.78 - heat * 0.25
+			kick = math.max(kick - dt * 5, 0)
+			shake = math.max(shake - dt * 4, 0)
+			introStage.Position =
+				UDim2.new(0.5, (math.random() - 0.5) * 16 * shake, 0.55, (math.random() - 0.5) * 16 * shake)
+
+			local cf = CFrame.new(0, lift, 0) * CFrame.Angles(0, math.rad(INTRO.FaceAngle) + spin, tilt)
+			model:PivotTo(cf)
+			if lid and hinge and lidHome then
+				lid:PivotTo(
+					cf
+						* CFrame.new(0, lidLift, -lidLift * 0.3)
+						* hinge
+						* CFrame.Angles(-math.rad(lidAngle) - lidSpin, 0, 0)
+						* lidHome
+				)
+			end
+			core.CFrame = cf * CFrame.new(0, hingeY - core.Size.Y / 2, 0)
+			beam.CFrame = cf * CFrame.new(0, hingeY + beam.Size.X / 2, 0) * CFrame.Angles(0, 0, math.rad(90))
+			local leak = math.clamp(lidAngle / 25, 0, 1)
+			core.Transparency = 1 - leak * 0.9
+			if lootGlow and lootGlow:IsA("BasePart") then
+				lootGlow.Transparency = 1 - leak * 0.9
+			end
+			local distance = INTRO.CameraDistance * (1 - kick * INTRO.Kick)
+			introCamera.CFrame =
+				CFrame.lookAt(Vector3.new(0, distance * 0.3, distance), Vector3.new(0, scaled.Y * 0.35, 0))
 			RunService.RenderStepped:Wait()
 		end
-		-- Crates with a hinged Lid (the Alley Crate: attribute Hinge = the lid's back edge in model units)
-		-- flip it open with light spilling out of the Loot_Glow panel, then flash
-		local lid = model:FindFirstChild("Lid")
-		local hinge = lid and lid:GetAttribute("Hinge")
-		if lid and typeof(hinge) == "Vector3" then
-			local glow = model:FindFirstChild("Loot_Glow", true)
-			if glow and glow:IsA("BasePart") then
-				glow.Transparency = 0.1
-			end
-			local hingeCFrame = model:GetPivot() * CFrame.new(hinge * model:GetScale())
-			local home = hingeCFrame:ToObjectSpace(lid:GetPivot())
-			local lidStart = os.clock()
-			while true do
-				local k = math.min((os.clock() - lidStart) / Config.CrateShop.LidOpenTime, 1)
-				lid:PivotTo(hingeCFrame * CFrame.Angles(-math.rad(110) * (1 - (1 - k) ^ 3), 0, 0) * home)
-				if k >= 1 then
-					break
-				end
-				RunService.RenderStepped:Wait()
-			end
-		end
-		UiFx.Flash(crate.Color, 0.6, 0.35)
-		introView.Visible = false
+		introStage.Visible = false
+		introStage.Position = UDim2.fromScale(0.5, 0.55)
 		introView.ImageColor3 = Color3.new(1, 1, 1)
+		raysScale.Scale = 1
 		model:Destroy()
 	end
 
