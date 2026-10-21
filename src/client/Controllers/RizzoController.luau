@@ -37,6 +37,7 @@ local function buildBubble(head: BasePart)
 	gui.Size = UDim2.fromScale(9, 2.6)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, 3.2, 0)
 	gui.MaxDistance = 60
+	gui.AlwaysOnTop = true -- never hidden behind the shop or walls
 	gui.Enabled = false
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.fromScale(1, 1)

@@ -235,9 +235,7 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 			ProgressionService.AddXP(player, reward.XP)
 			LeaderboardService.RecordThrow(player, result.Count, reward.Coins)
 			TrialService.OnThrow(player, trialAttempt, result.Tier, saved)
-			if isStrike then
-				BallService.AddCrateStrike(player)
-			end
+			BallService.AddCrateThrow(player)
 			if goldenHit then
 				SessionLog.Moment(player, "Golden Pin hit")
 			end

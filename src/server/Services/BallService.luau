@@ -325,11 +325,11 @@ function BallService.GiveFreeCrate(player: Player)
 	SessionLog.Moment(player, "Free crate earned")
 end
 
--- Counts a strike toward the next free crate. Returns true when this strike earned one.
-function BallService.AddCrateStrike(player: Player): boolean
-	local strikes = (PlayerDataService.Get(player, "CrateStrikes") or 0) + 1
-	local earned = strikes >= Config.FreeCrates.StrikesPerCrate
-	PlayerDataService.Set(player, "CrateStrikes", if earned then 0 else strikes)
+-- Counts a throw toward the next free crate (saved in the old CrateStrikes field). Returns true when this throw earned one.
+function BallService.AddCrateThrow(player: Player): boolean
+	local throws = (PlayerDataService.Get(player, "CrateStrikes") or 0) + 1
+	local earned = throws >= Config.FreeCrates.ThrowsPerCrate
+	PlayerDataService.Set(player, "CrateStrikes", if earned then 0 else throws)
 	if earned then
 		BallService.GiveFreeCrate(player)
 	end

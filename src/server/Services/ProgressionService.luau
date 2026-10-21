@@ -115,7 +115,7 @@ end
 
 -- Gives every rank level the player's XP has reached (inside their tier) and its reward:
 -- LevelGems for a level inside a tier (a tier's first level gets the tier's Gems in PromoteRank instead),
--- and a free crate every FreeCrateEvery levels.
+-- and a free crate every FreeCrateEvery levels (nil = none).
 local function refreshLevel(player: Player)
 	local done = PlayerDataService.Get(player, "RankLevel") or 1
 	local level =
@@ -129,7 +129,7 @@ local function refreshLevel(player: Player)
 			inTier = true
 			gems += if Config.Gems.Enabled then LEVELS.LevelGems else 0
 		end
-		if reached % LEVELS.FreeCrateEvery == 0 then
+		if LEVELS.FreeCrateEvery and reached % LEVELS.FreeCrateEvery == 0 then
 			crates += 1
 		end
 		Analytics.Event(player, "LevelUp", reached)

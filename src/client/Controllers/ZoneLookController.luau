@@ -24,6 +24,7 @@ local function readLook()
 	return {
 		Ambient = Lighting.Ambient,
 		OutdoorAmbient = Lighting.OutdoorAmbient,
+		Exposure = Lighting.ExposureCompensation,
 		Saturation = color and color.Saturation,
 		Contrast = color and color.Contrast,
 		Tint = color and color.TintColor,
@@ -38,6 +39,9 @@ end
 local function applyLook(look)
 	local info = TweenInfo.new(ZONES.LookBlend, Enum.EasingStyle.Sine)
 	TweenService:Create(Lighting, info, { Ambient = look.Ambient, OutdoorAmbient = look.OutdoorAmbient }):Play()
+	if look.Exposure then
+		TweenService:Create(Lighting, info, { ExposureCompensation = look.Exposure }):Play()
+	end
 	if color and look.Saturation then
 		TweenService:Create(color, info, { Saturation = look.Saturation, Contrast = look.Contrast, TintColor = look.Tint }):Play()
 	end

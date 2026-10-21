@@ -192,7 +192,7 @@ Config.StartingData = {
 	WeeklyCoinsWeek = 0, -- ...and which week that was (see Calendar.Week)
 	DailyDay = 0, -- last daily reward day claimed (1-7), 0 = never
 	DailyLastClaim = 0, -- the day number (see Calendar.Day) it was claimed on
-	CrateStrikes = 0, -- strikes toward the next free crate (see Config.FreeCrates)
+	CrateStrikes = 0, -- throws toward the next free crate (see Config.FreeCrates; was strikes before 2026-10-21)
 	FreeCrates = 0, -- free crates waiting to be opened in the shop
 	PlayTime = 0, -- total seconds played, for analytics ("bought ball tier 3 after 12 minutes")
 	PowerLevel = 1, -- Power Level bought so far (Config.Economy.PowerLevels)
@@ -221,7 +221,7 @@ Config.Data = {
 -- 2. A big "BUY" callout points at the Power Level button the moment Level 2 is affordable.
 -- 3. The first crate bought with coins (FirstCrateGoal) costs FirstCratePrice, so it's affordable inside the first
 --    minute, and gives exactly a FirstBoughtRarity ball. Only that one purchase; crate odds and prices stay the same otherwise.
--- 4. After GiftAfterThrows throws (about 4 minutes): a free gift crate, opened right there, exactly a GiftRarity ball,
+-- 4. After GiftAfterThrows throws (about 4 minutes): a free gift crate, opened right there (GiftRarity nil = normal odds),
 --    with an EQUIP button.
 -- 5. LegendsAfterThrows throws later: the camera swings to a locked ball in the lobby showcase (the chase).
 -- The "next goal" bar on the HUD always shows the closest goal (next Power Level, the gift, the next free crate,
@@ -231,7 +231,7 @@ Config.Onboarding = {
 	Enabled = true,
 	GiftAfterThrows = 65, -- about 4:00 (measured ~3.6 seconds a throw with buying and crates), after the first bought crate
 	GiftCrateId = "Basic", -- the gift opens as this crate
-	GiftRarity = "Rare", -- the gift crate's ball is always this rarity
+	GiftRarity = nil, -- nil = the gift crate rolls normal odds (owner 2026-10-21: only the first crate is guaranteed)
 	FirstCrateGoal = "Basic", -- this crate is a "next goal" until the first crate bought with coins (CratesBought)
 	FirstCratePrice = 1000, -- the first FirstCrateGoal crate a player buys costs this (normal price after), ~0:45
 	FirstBoughtRarity = "Uncommon", -- the first crate a player buys with coins always gives this rarity
@@ -601,15 +601,16 @@ Config.GoldenPin = {
 	CoinMultiplier = 5, -- that throw's coins are multiplied by this
 	GemChance = 0.3, -- chance of gems too...
 	GemAmount = 2,
-	CrateChance = 0.1, -- ...and chance of a free crate (see Config.FreeCrates)
+	CrateChance = 0, -- ...and chance of a free crate (owner 2026-10-21: no random free crates; see Config.FreeCrates)
 	Color = Color3.fromRGB(255, 200, 40),
 }
 
--- Free crates: earned from strikes (every StrikesPerCrate strikes) and Golden Pins.
--- They wait in the shop until the player opens them.
+-- Free crates: one every ThrowsPerCrate throws (owner 2026-10-21: rare, so they feel valuable; no random ones).
+-- They wait at Rizzo's cart / the Crate Shop until the player opens them.
+-- The count is saved in the old CrateStrikes field (now counts throws, not strikes).
 Config.FreeCrates = {
 	CrateId = "Basic", -- which crate a free crate is
-	StrikesPerCrate = 15,
+	ThrowsPerCrate = 250, -- about 12-15 minutes of play
 }
 
 -- The "almost there" bar above the throw meter: always shows the nearest reward.
@@ -2040,8 +2041,9 @@ Config.Zones = {
 			Folder = "BackAlley",
 			Area = { Center = Vector3.new(0, 20, 152), Size = Vector3.new(132, 60, 190) },
 			Look = {
-				Ambient = Color3.fromRGB(26, 26, 36),
-				OutdoorAmbient = Color3.fromRGB(34, 34, 46),
+				Ambient = Color3.fromRGB(18, 18, 26),
+				OutdoorAmbient = Color3.fromRGB(22, 22, 32),
+				Exposure = -0.1, -- Lighting.ExposureCompensation here (place default 0.15); lower = darker
 				Saturation = -0.22,
 				Contrast = 0.06,
 				Tint = Color3.fromRGB(214, 218, 240),
@@ -2049,7 +2051,7 @@ Config.Zones = {
 				HazeDecay = Color3.fromHex("3a3936"),
 				HazeDensity = 0.32,
 				Haze = 1.2,
-				Bloom = 0.25,
+				Bloom = 0.15,
 			},
 			Flicker = {
 				Path = { "NeonSign", "Letter_N_broken" },
@@ -2128,7 +2130,7 @@ Config.Economy.CratePity = {
 	{ Crates = { Silver = true, Gold = true }, Rarity = "Epic", After = 20 },
 	{ Crates = { Gold = true, Neon = true }, Rarity = "Legendary", After = 80 },
 }
-Config.Economy.FirstCrateMin = "Rare" -- the very first crate a player opens gives at least this (unless it's the
+Config.Economy.FirstCrateMin = "Uncommon" -- the very first crate a player opens gives at least this (unless it's the
 -- first bought crate or the gift crate, which use Config.Onboarding.FirstBoughtRarity / GiftRarity)
 -- Duplicates become Polish Points; Polish levels raise one ball's Multiplier. A maxed ball's duplicates pay coins.
 Config.Economy.Polish = {
@@ -2186,7 +2188,7 @@ Config.Economy.Ranks = {
 	-- Live since step 7a (rank levels 1-60; XP per throw is still zone 1's, so later levels wait for zones 2-6)
 	LevelsPerTier = 6, -- levels per Pro Tier (Config.Ranks)
 	LevelGems = 2, -- gems for a level-up inside a tier (a new tier gives its own Gems instead)
-	FreeCrateEvery = 3, -- every 3rd level also gives a free crate (Config.FreeCrates)
+	FreeCrateEvery = nil, -- nil = levels give no free crate (owner 2026-10-21); a number = every Nth level does
 }
 
 -- Rebirth ("Go Pro Tour", Milestone 17)

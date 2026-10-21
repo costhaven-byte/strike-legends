@@ -151,16 +151,25 @@ function EventController:Start()
 	end)
 
 	-- First crate goal (Config.Onboarding.FirstCrateGoal): when it's the goal and affordable, a beam runs from the
-	-- player to that crate's kiosk station
+	-- player to Rizzo's buy pad (RizzoController's PromptPoint), or to the crate's kiosk station if Rizzo is missing
 	local firstCrate = Balls.GetCrate(Config.Onboarding.FirstCrateGoal)
-	local station = Workspace:FindFirstChild("Hub")
-		and Workspace.Hub:FindFirstChild("CrateShop")
-		and Workspace.Hub.CrateShop:FindFirstChild("Stations")
-		and Workspace.Hub.CrateShop.Stations:FindFirstChild(Config.Onboarding.FirstCrateGoal)
-	local stationButton = station and station:FindFirstChild("BuyButton") :: BasePart?
+	local function guideTarget(): BasePart?
+		local rizzo = Workspace:FindFirstChild("BackAlley")
+			and Workspace.BackAlley:FindFirstChild("RizzoStand")
+			and Workspace.BackAlley.RizzoStand:FindFirstChild("PromptPoint")
+		if rizzo and Config.Rizzo.CrateId == Config.Onboarding.FirstCrateGoal then
+			return rizzo :: BasePart
+		end
+		local station = Workspace:FindFirstChild("Hub")
+			and Workspace.Hub:FindFirstChild("CrateShop")
+			and Workspace.Hub.CrateShop:FindFirstChild("Stations")
+			and Workspace.Hub.CrateShop.Stations:FindFirstChild(Config.Onboarding.FirstCrateGoal)
+		return station and station:FindFirstChild("BuyButton") :: BasePart?
+	end
 	local guide: { Beams: { Beam }, From: Attachment }? = nil
 	local function setGuide(on: boolean)
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local stationButton = guideTarget()
 		if not on or not stationButton or not root then
 			if guide then
 				for _, beam in guide.Beams do
@@ -276,12 +285,12 @@ function EventController:Start()
 			})
 		end
 
-		local per = Config.FreeCrates.StrikesPerCrate
-		local strikes = player:GetAttribute("CrateStrikes") or 0
-		local left = per - strikes
+		local per = Config.FreeCrates.ThrowsPerCrate
+		local throws = player:GetAttribute("CrateStrikes") or 0
+		local left = per - throws
 		table.insert(options, {
-			Progress = strikes / per,
-			Text = ("FREE CRATE IN %d STRIKE%s"):format(left, if left == 1 then "" else "S"),
+			Progress = throws / per,
+			Text = ("FREE CRATE IN %d THROW%s"):format(left, if left == 1 then "" else "S"),
 			Color = CRATE_COLOR,
 		})
 
@@ -314,12 +323,12 @@ function EventController:Start()
 	end
 	refreshBar()
 
-	-- Free crates: a popup when one is earned (they wait at the Crate Shop kiosk, whose price plaque shows FREE xN)
+	-- Free crates: a popup when one is earned (they wait at Rizzo's cart and the Crate Shop kiosk, plaque shows FREE xN)
 	local freeCrates = player:GetAttribute("FreeCrates") or 0
 	local function refreshBadge()
 		local count = player:GetAttribute("FreeCrates") or 0
 		if count > freeCrates then
-			showPopup("FREE CRATE!", CRATE_COLOR, "Open it at the Crate Shop", true)
+			showPopup("FREE CRATE!", CRATE_COLOR, "Open it at Rizzo's cart", true)
 			Sfx.Play("RevealBig", 1.1)
 		end
 		freeCrates = count
