@@ -30,6 +30,8 @@ local EPIC_INDEX = 4 -- Epic and better get the extra-special reveal
 local LEGENDARY_INDEX = 5 -- Legendary and better get even more
 
 local CrateController = {}
+-- Fires (crate, result) after a bought crate finished its opening (Rizzo reacts to rare pulls)
+CrateController.Opened = Instance.new("BindableEvent")
 
 -- What this crate costs you right now (the first crate you buy is cheaper: Balls.CratePrice)
 function CrateController.Price(crate): number
@@ -298,6 +300,27 @@ function CrateController:Start()
 			end
 			RunService.RenderStepped:Wait()
 		end
+		-- Crates with a hinged Lid (the Alley Crate: attribute Hinge = the lid's back edge in model units)
+		-- flip it open with light spilling out of the Loot_Glow panel, then flash
+		local lid = model:FindFirstChild("Lid")
+		local hinge = lid and lid:GetAttribute("Hinge")
+		if lid and typeof(hinge) == "Vector3" then
+			local glow = model:FindFirstChild("Loot_Glow", true)
+			if glow and glow:IsA("BasePart") then
+				glow.Transparency = 0.1
+			end
+			local hingeCFrame = model:GetPivot() * CFrame.new(hinge * model:GetScale())
+			local home = hingeCFrame:ToObjectSpace(lid:GetPivot())
+			local lidStart = os.clock()
+			while true do
+				local k = math.min((os.clock() - lidStart) / Config.CrateShop.LidOpenTime, 1)
+				lid:PivotTo(hingeCFrame * CFrame.Angles(-math.rad(110) * (1 - (1 - k) ^ 3), 0, 0) * home)
+				if k >= 1 then
+					break
+				end
+				RunService.RenderStepped:Wait()
+			end
+		end
 		UiFx.Flash(crate.Color, 0.6, 0.35)
 		introView.Visible = false
 		introView.ImageColor3 = Color3.new(1, 1, 1)
@@ -505,6 +528,7 @@ function CrateController:Start()
 		setOpen(false)
 		playOpening(crate, result)
 		busy = false
+		CrateController.Opened:Fire(crate, result)
 		if firstBought and result.IsNew then
 			-- The first crate bought with coins: arrows show how to equip its new ball (BALLS button, then EQUIP)
 			CollectionBookController.GuideEquip(result.BallId)

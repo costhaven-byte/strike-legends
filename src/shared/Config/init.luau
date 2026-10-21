@@ -670,7 +670,7 @@ Config.LaneModifiers = {
 -- Lobby showcase: display cases for the best balls, built from Config.Balls on the slots in Workspace.Showcase.Slots.
 -- Every ball of MinRarity or better gets a case (best balls on the first slots). More balls than slots = add slots in Studio.
 Config.Showcase = {
-	MinRarity = "Rare", -- 11 balls on 11 slots (Rare, Epic, Legendary, Mythic)
+	MinRarity = "Rare", -- 12 balls on 12 slots (Rare, Epic, Legendary, Mythic)
 	SparkleRate = 4, -- trait sparkles per second, per trait
 	AnimateDistance = 110, -- only animate while your camera is this close (saves phone battery)
 
@@ -865,6 +865,75 @@ Config.BallVfx = {
 		Emission = 0.6,
 	},
 	Balls = {
+		-- Back Alley balls: effects from the design notes (tape scraps, rust sparks, chrome glint, crystal shards)
+		DuctTape = {
+			Particles = {
+				{
+					Image = "Diamond",
+					Colors = { Color3.fromHex("C0C4C9"), Color3.fromHex("E2579B") },
+					Rate = 6,
+					Size = 0.08,
+					Life = { 0.3, 0.6 },
+					Speed = { 0.3, 0.8 },
+					Radius = 0.45,
+				},
+			},
+		},
+		RustBucket = {
+			Particles = {
+				{
+					Image = "Star",
+					Colors = { Color3.fromHex("FFB060"), Color3.fromHex("D2692A") },
+					Rate = 10,
+					Size = 0.07,
+					Life = { 0.2, 0.5 },
+					Speed = { 0.6, 1.4 },
+					Radius = 0.45,
+				},
+			},
+		},
+		Hubcap = {
+			Trails = {
+				{
+					Colors = { Color3.fromHex("E9EEF3"), Color3.fromHex("7DF0A6") },
+					Width = 0.8,
+					Lifetime = 0.25,
+				},
+			},
+			Particles = {
+				{
+					Image = "Star",
+					Colors = { WHITE, Color3.fromHex("7DF0A6") },
+					Rate = 4,
+					Size = 0.2,
+					Life = { 0.2, 0.35 },
+					Speed = { 0, 0.1 },
+					Radius = 0.5,
+				},
+			},
+		},
+		DumpsterDiamond = {
+			Trails = {
+				{
+					Colors = { Color3.fromHex("9FE6FF"), Color3.fromHex("38C6FF"), Color3.fromHex("1565C0") },
+					Width = 1,
+					Lifetime = 0.35,
+				},
+			},
+			Particles = {
+				{
+					Image = "Diamond",
+					Colors = { Color3.fromHex("E8FCFF"), Color3.fromHex("3CC8FF") },
+					Rate = 25,
+					Size = 0.1,
+					Life = { 0.4, 0.8 },
+					Speed = { 0.2, 0.6 },
+					Radius = 0.45,
+				},
+			},
+			Badge = { Image = "Burst", Size = 0.5, Height = 0.95 },
+			Light = { Color = Color3.fromHex("3CC8FF"), Brightness = 2, Range = 4 },
+		},
 		-- Uncommon: a soft streak in the ball's colour
 		Electric = {
 			Trails = {
@@ -1399,7 +1468,30 @@ Config.Balls = {
 		Material = Enum.Material.SmoothPlastic,
 		Trail = Color3.fromRGB(60, 140, 255),
 		Traits = { GemHunter = 0.01 },
+	}, -- Back Alley balls (owner's "Back Alley Bowling Assets" design, 2026-10-20): junk turned into prizes
+	{
+		Id = "DuctTape",
+		Name = "Duct Tape",
+		Rarity = "Common",
+		Multiplier = 1.1,
+		Forgiveness = 0,
+		Color = Color3.fromHex("C0C4C9"),
+		Material = Enum.Material.SmoothPlastic,
+		Trail = Color3.fromHex("C7CCD2"),
+		Traits = { Lucky = 0.1 },
 	},
+	{
+		Id = "RustBucket",
+		Name = "Rust Bucket",
+		Rarity = "Common",
+		Multiplier = 1.15,
+		Forgiveness = 0,
+		Color = Color3.fromHex("D2692A"),
+		Material = Enum.Material.Metal,
+		Trail = Color3.fromHex("D2692A"),
+		Traits = { Heavy = 0.05 },
+	},
+
 	-- Uncommon
 	{
 		Id = "Electric",
@@ -1445,6 +1537,18 @@ Config.Balls = {
 		Trail = Color3.fromRGB(200, 250, 255),
 		Traits = { Heavy = 0.15 },
 	},
+	{
+		Id = "Hubcap",
+		Name = "Hubcap",
+		Rarity = "Uncommon",
+		Multiplier = 1.4,
+		Forgiveness = 0.01,
+		Color = Color3.fromHex("E9EEF3"),
+		Material = Enum.Material.Metal,
+		Trail = Color3.fromHex("7DF0A6"),
+		Traits = { Curve = 0.12 },
+	},
+
 	-- Rare
 	{
 		Id = "Magma",
@@ -1490,6 +1594,18 @@ Config.Balls = {
 		Trail = Color3.fromRGB(180, 180, 255),
 		Traits = { Curve = 0.25 },
 	},
+	{
+		Id = "DumpsterDiamond",
+		Name = "Dumpster Diamond",
+		Rarity = "Rare",
+		Multiplier = 2.0,
+		Forgiveness = 0.02,
+		Color = Color3.fromHex("3CC8FF"),
+		Material = Enum.Material.SmoothPlastic,
+		Trail = Color3.fromHex("38C6FF"),
+		Traits = { Blast = 0.35 },
+	},
+
 	-- Epic
 	{
 		Id = "Plasma",
@@ -1576,11 +1692,33 @@ Config.Balls = {
 -- (filled in below it), pity from Config.Economy.CratePity, duplicates from Config.Economy.Polish.
 -- Looks: ReplicatedStorage.CrateModels has one model per Id (Bronze, Silver and Gold are recoloured copies for now).
 Config.Crates = {
-	{ Id = "Basic", Name = "Basic Crate", Color = Color3.fromRGB(60, 200, 255) },
+	{ Id = "Basic", Name = "Alley Crate", Color = Color3.fromRGB(60, 200, 255) },
 	{ Id = "Bronze", Name = "Bronze Crate", Color = Color3.fromRGB(215, 135, 70) },
 	{ Id = "Silver", Name = "Silver Crate", Color = Color3.fromRGB(200, 215, 235) },
 	{ Id = "Gold", Name = "Gold Crate", Color = Color3.fromRGB(255, 200, 40) },
 	{ Id = "Neon", Name = "Neon Crate", Color = Color3.fromRGB(255, 60, 210) },
+}
+
+-- Rizzo, the Back Alley crate dealer (owner's "Rizzo's Crate Cart" design), at Workspace.BackAlley.RizzoStand.
+-- His cart's pink BuyPad sells the zone's crate; his lines come from the design.
+Config.Rizzo = {
+	CrateId = "Basic", -- the Alley Crate
+	GreetDistance = 16, -- studs from the buy pad: Rizzo says hi
+	ByeDistance = 24, -- walk this far away again: goodbye
+	BubbleTime = 3.5, -- seconds a line stays up
+	TypeSpeed = 45, -- letters per second
+	TurntableSpin = 0.15, -- turns per second
+	AnimateDistance = 90, -- only animate while your camera is this close
+	Bob = 0.06, -- studs he bobs while idle
+	WaveTime = 1.4, -- seconds a wave lasts
+	RareFrom = "Rare", -- pulls of this rarity or better get the "something rare" line
+	Lines = {
+		Greeting = "Psst, kid, over here! Rizzo's got crates full of surprises.",
+		Opening = "Luck's a lane, kid. Let's see where yours rolls!",
+		Rare = "Whoa, a rare one! Shh, don't tell anyone where you got it.",
+		CantAfford = "Aw, not enough coins yet? Knock down some pins and come right back!",
+		Goodbye = "See ya, kid! Keep it out of the gutter.",
+	},
 }
 
 -- The crate shop kiosk in the lobby (Workspace.Hub.CrateShop, built in Studio). Crate looks live in
@@ -1588,6 +1726,7 @@ Config.Crates = {
 Config.CrateShop = {
 	PromptDistance = 10, -- studs from the buy button where "Open" shows up
 	HoldDuration = 0.4, -- seconds to hold the buy button, so nobody spends coins by accident
+	LidOpenTime = 0.35, -- seconds a hinged crate lid (Alley Crate) takes to flip open at the end of the intro
 	CrateSpin = 0.12, -- turns per second for the crates on display
 	CrateBob = 0.25, -- studs the display crates float up and down
 	SparkleOrbit = 0.08, -- turns per second the gold sparkles drift around the crate
@@ -1912,7 +2051,11 @@ Config.Zones = {
 				Haze = 1.2,
 				Bloom = 0.25,
 			},
-			Flicker = { Path = { "NeonSign", "Letter_N_broken" }, Color = Color3.fromHex("ff4fb0"), Dim = Color3.fromHex("7a3a5e") },
+			Flicker = {
+				Path = { "NeonSign", "Letter_N_broken" },
+				Color = Color3.fromHex("ff4fb0"),
+				Dim = Color3.fromHex("7a3a5e"),
+			},
 		},
 	},
 }

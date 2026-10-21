@@ -95,8 +95,64 @@ local function attach(body: BasePart, part: BasePart)
 	part.Parent = body.Parent
 end
 
-local function buildMeshPin(baseCFrame: CFrame, scale: number, golden: boolean): Model?
+-- Zone pin sets: ReplicatedStorage.PinModels.<zone folder> holds StandardPin and GoldenPin models (several
+-- coloured MeshParts, bottom centre at the pivot, PrimaryPart "Body"). Back Alley's beat-up pins come from the
+-- owner's design; the Golden Pin bonus uses the design's Golden Star pin.
+local function buildZonePin(set: Instance, baseCFrame: CFrame, scale: number, golden: boolean): Model?
+	local template = set:FindFirstChild(if golden then "GoldenPin" else "StandardPin")
+	if not (template and template:IsA("Model") and template.PrimaryPart) then
+		return nil
+	end
+	local h = LANE.PinHeight * scale
+	local pin = template:Clone()
+	local _, size = pin:GetBoundingBox()
+	pin:ScaleTo(h / size.Y)
+	pin:PivotTo(baseCFrame)
+	local body = pin.PrimaryPart :: BasePart
+	body.CustomPhysicalProperties = PhysicalProperties.new(LANE.PinDensity, 0.4, 0.3)
+	for _, part in pin:GetDescendants() do
+		if part:IsA("BasePart") and part ~= body then
+			part.Anchored = false
+			part.CanCollide = false
+			part.CanQuery = false
+			part.CanTouch = false
+			part.Massless = true
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = body
+			weld.Part1 = part
+			weld.Parent = part
+		end
+	end
+	if golden then
+		-- Glow on the deck under the pin, like the lobby set's Golden Pin. Not welded, so it stays put.
+		local w = LANE.PinWidth * scale
+		local glow = Instance.new("Part")
+		glow.Name = "FloorGlow"
+		glow.Shape = Enum.PartType.Cylinder
+		glow.Size = Vector3.new(0.04, w * 2.8, w * 2.8)
+		glow.CFrame = baseCFrame * CFrame.new(0, 0.03, 0) * UPRIGHT
+		glow.Color = GOLD_AURA
+		glow.Material = Enum.Material.Neon
+		glow.Transparency = 0.6
+		glow.Anchored = true
+		glow.CanCollide = false
+		glow.CanQuery = false
+		glow.CanTouch = false
+		glow.CastShadow = false
+		glow.Parent = pin
+	end
+	return pin
+end
+
+local function buildMeshPin(baseCFrame: CFrame, scale: number, golden: boolean, zone: string?): Model?
 	local models = ReplicatedStorage:FindFirstChild("PinModels")
+	local set = models and zone and models:FindFirstChild(zone)
+	if set then
+		local pin = buildZonePin(set, baseCFrame, scale, golden)
+		if pin then
+			return pin
+		end
+	end
 	local template = models and models:FindFirstChild(if golden then "GoldenPin" else "StandardPin")
 	if not template then
 		return nil
@@ -194,6 +250,13 @@ function PinRack.new(headPinCFrame: CFrame, parent: Instance)
 	self.Offset = 0 -- studs the rack has slid sideways (Moving Pins)
 	self.Golden = 0 -- which pin is golden (0 = none)
 	self.TimeScale = 1 -- below 1 during strike slow motion
+	-- Which zone the lane is in (its Workspace lane folder), for that zone's pin set
+	for _, folder in Config.Zones.LaneFolders do
+		if parent:FindFirstAncestor(folder) then
+			self.Zone = folder
+			break
+		end
+	end
 	self:Reset()
 	return self
 end
@@ -258,7 +321,7 @@ function PinRack:Reset()
 
 	for index in PinRack.Offsets() do
 		local golden = index == self.Golden
-		local pin = buildMeshPin(self:SpotFor(index), self.Scale, golden)
+		local pin = buildMeshPin(self:SpotFor(index), self.Scale, golden, self.Zone)
 		if not pin then
 			pin = buildPin(self:SpotFor(index), self.Scale)
 		end
