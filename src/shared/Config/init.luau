@@ -240,7 +240,7 @@ Config.Onboarding = {
 	LegendsPanTime = 3.5, -- seconds the camera looks at the locked ball
 	-- Studio testing: every play test starts as a brand new player and nothing is saved (your real save is untouched).
 	-- Never affects the live game. Set to false to test with your saved progress.
-	StudioNewPlayer = true,
+	StudioNewPlayer = false,
 }
 
 -- Session log: one line per play session (join, leave, throws, crates, level), printed in Output
@@ -762,7 +762,9 @@ Config.BallFx = {
 --   Particles: Image, Colors, Rate (per second), Size, Life, Speed, Rise (pull upward),
 --              Radius (spawn on a shell this far out), Twinkle (grow then shrink), Spin (degrees/second)
 --   Rings:     thin glowing orbit rings. Tilt = { x, z } degrees, Spin = turns per second around the ball
---   Disk:      a flat glowing disk around the ball (The Void). Spin in degrees per second
+--   Disk:      a flat glowing disk around the ball. Spin in degrees per second
+--   Pieces:    the ball's own model pieces that float around it without rolling (ReplicatedStorage.BallFxPieces.<Id>,
+--              built in Studio from the owner's files). { PieceName = degrees per second it turns round the up axis }
 --   Halos:     camera-facing glows around the ball. Ground: glowing rings on the floor under the ball
 --   Badge:     the trait icon floating above Rare balls. Light: the glow the ball throws around it
 -- A ball without a row gets a simple trail in its Trail colour.
@@ -1315,15 +1317,9 @@ Config.BallVfx = {
 					Spin = 90,
 				},
 			},
-			Disk = {
-				Color = Color3.fromRGB(255, 70, 220),
-				Radius = 1.25,
-				Tilt = { 72, 8 },
-				Spin = 70,
-				Transparency = 0.05,
-			},
+			-- the owner's accretion disk, photon ring and shards (the-void-ball.obj)
+			Pieces = { Disk = 25, PhotonRing = -40, Shards = 15 },
 			Halos = {
-				{ Image = "Ring", Color = Color3.fromRGB(255, 120, 245), Size = 1.38, Transparency = 0 },
 				{ Image = "Dot", Color = Color3.fromRGB(190, 40, 255), Size = 2.6, Transparency = 0.45 },
 			},
 			Light = { Color = Color3.fromRGB(230, 60, 255), Brightness = 4, Range = 7 },
@@ -1379,11 +1375,8 @@ Config.BallVfx = {
 					Twinkle = true,
 				},
 			},
-			Rings = {
-				{ Color = Color3.fromRGB(70, 230, 255), Radius = 0.9, Width = 0.035, Tilt = { 70, 25 }, Spin = 0.25 },
-				{ Color = Color3.fromRGB(255, 80, 230), Radius = 0.82, Width = 0.035, Tilt = { 75, -30 }, Spin = -0.2 },
-				{ Color = Color3.fromRGB(60, 225, 255), Radius = 0.7, Width = 0.05, Tilt = { 8, -6 }, Spin = 0.1 },
-			},
+			-- the owner's three rings and mini stars (supernova-ball.obj)
+			Pieces = { RingMagenta1 = 60, RingCyan = -45, RingMagenta2 = 35, Stars = 12 },
 			-- tinted glow and light: a white glow reflects off the shiny lane as a white streak behind the ball
 			Halos = { { Image = "Dot", Color = Color3.fromRGB(150, 70, 255), Size = 2.4, Transparency = 0.6 } },
 			Light = { Color = Color3.fromRGB(255, 70, 190), Brightness = 2.5, Range = 6 },
@@ -1782,6 +1775,28 @@ Config.CrateShop = {
 	IntroTime = 1.1, -- seconds the crate shakes on screen before the reel starts
 	SpinTime = 4.5, -- seconds the crate reel spins before it stops on the result
 	ScreenBrightness = 1.15, -- glow of the kiosk screens (marquee, odds, prices); higher = more vibrant
+	-- The owner's Crate Kiosk design (2026-10-21): Bronze, Silver, Gold stations
+	PriceShineEvery = 3, -- seconds between shine sweeps across a price plate
+	RingSpin = 0.15, -- turns per second of Silver's light ring
+	ButtonPulse = 1.6, -- BUY button glow pulses per second
+	Hover = { -- while you stand close enough to buy
+		Lift = 0.5, -- studs the crate rises
+		Tilt = 14, -- degrees the crate leans toward you
+		ButtonSwell = 1.12, -- BUY button grows to this size
+		LightBoost = 1.8, -- station lights get this much brighter
+		Speed = 8, -- how fast it eases in and out
+	},
+	Purchase = { -- plays on the kiosk when you buy, before the crate screen opens
+		ShakeTime = 0.45, -- seconds the crate shakes before the lid flashes
+		ShakeAngle = 9, -- degrees
+		FlashTime = 0.15, -- seconds the lid stays white
+		Rays = 10, -- light rays out of the crate
+		Coins = 18, -- coins sprayed out
+		CoinSpeed = 16, -- studs per second
+		CoinLife = 2.2, -- seconds before the coins fade
+		RingGrow = 5, -- studs the light ring grows to
+		BurstTime = 0.7, -- seconds the rays and ring take to fade
+	},
 }
 
 -- Mascots (pets, Addendum 2 Phase 3 step 8): small buddies that follow you and add to your coins.
@@ -1975,14 +1990,40 @@ Config.MascotFx = {
 		TierOf = { Epic = "Epic", Legendary = "Legendary", Mythic = "Mythic" }, -- everything else = Base
 		Tiers = {
 			Base = { Shards = 10, Sparks = 24, Rings = 1, Flash = 1, Sparkles = 16, SparksPerHit = 4 },
-			Epic = { Shards = 14, Sparks = 36, Rings = 2, Flash = 1.25, Sparkles = 24, SparksPerHit = 6, DoubleFlash = true },
+			Epic = {
+				Shards = 14,
+				Sparks = 36,
+				Rings = 2,
+				Flash = 1.25,
+				Sparkles = 24,
+				SparksPerHit = 6,
+				DoubleFlash = true,
+			},
 			Legendary = {
-				Shards = 18, Sparks = 50, Rings = 2, Flash = 1.5, Sparkles = 36, SparksPerHit = 9,
-				CrackSteps = 3, Pillar = true, CamShake = 0.1, Extra = 0.15,
+				Shards = 18,
+				Sparks = 50,
+				Rings = 2,
+				Flash = 1.5,
+				Sparkles = 36,
+				SparksPerHit = 9,
+				CrackSteps = 3,
+				Pillar = true,
+				CamShake = 0.1,
+				Extra = 0.15,
 			},
 			Mythic = {
-				Shards = 24, Sparks = 72, Rings = 3, Flash = 1.8, Sparkles = 48, SparksPerHit = 12,
-				CrackSteps = 3, Pillar = true, CamShake = 0.1, EdgePulse = true, Extra = 0.3, Hold = 0.25,
+				Shards = 24,
+				Sparks = 72,
+				Rings = 3,
+				Flash = 1.8,
+				Sparkles = 48,
+				SparksPerHit = 12,
+				CrackSteps = 3,
+				Pillar = true,
+				CamShake = 0.1,
+				EdgePulse = true,
+				Extra = 0.3,
+				Hold = 0.25,
 			},
 		},
 	},
