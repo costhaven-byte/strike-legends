@@ -1767,7 +1767,7 @@ Config.CrateShop = {
 -- Hatched from eggs (Config.Economy.Eggs: price, unlock, BonusScale). A mascot's bonus =
 -- Config.Economy.Mascots.Bonus[its rarity] x its egg's BonusScale; equipped bonuses add up: coins x (1 + total).
 -- Placeholder looks (Addendum 2 section 9.7): a coloured ball with eyes. Color = body, Accent = tuft and cheeks.
--- Egg = which egg hatches it. Only the Alley Egg has mascots so far; the others come with zones 2 to 5.
+-- Egg = which egg hatches it. Only the Neon Egg (Id "Alley", sold in zone 2) has mascots so far; the others come with zones 2 to 5.
 -- Adding a mascot = adding a row. Each egg needs at least one mascot per rarity in Config.Economy.Mascots.Odds.
 Config.Mascots = {
 	{
@@ -1893,7 +1893,7 @@ Config.AutoBowl = {
 
 -- Egg names and colours (prices, unlocks and odds: Config.Economy.Eggs / Config.Economy.Mascots)
 Config.EggLooks = {
-	Alley = { Name = "Alley Egg", Color = Color3.fromRGB(255, 225, 140), Spots = Color3.fromRGB(255, 90, 200) },
+	Alley = { Name = "Neon Egg", Color = Color3.fromRGB(255, 225, 140), Spots = Color3.fromRGB(255, 90, 200) },
 	Neon = { Name = "Neon Egg", Color = Color3.fromRGB(80, 230, 255), Spots = Color3.fromRGB(255, 60, 210) },
 	Arcade = { Name = "Arcade Egg", Color = Color3.fromRGB(190, 120, 255), Spots = Color3.fromRGB(255, 240, 90) },
 	Skyline = { Name = "Skyline Egg", Color = Color3.fromRGB(150, 200, 255), Spots = Color3.fromRGB(255, 255, 255) },

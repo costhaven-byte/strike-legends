@@ -1,8 +1,7 @@
 -- Mascots on screen (Addendum 2 Phase 3 step 8): the PETS button, the mascot panel, the hatching moment and the
 -- egg stand in the lobby (Workspace.Hub.EggPad, the old daily-reward pad).
--- Hatching happens only at the egg stand (owner's call, 2026-10-19): the panel shows the egg's price, where to
--- hatch it and its ODDS, your equipped slots with EQUIP BEST, and every mascot the egg can hatch
--- (owned ones lit with EQUIP buttons, missing ones as dark silhouettes). Step 8b: a MERGE button when you own
+-- Hatching happens only at the egg stand (owner's call, 2026-10-19): the panel shows your equipped slots with
+-- EQUIP BEST and only the pets you own, with EQUIP buttons (owner 2026-10-21: no egg card, no silhouettes). Step 8b: a MERGE button when you own
 -- Config.Economy.Mascots.ShinyMerge of one mascot, and gold Shiny cards once you own a Shiny.
 -- Built in code (not in Studio), so it lives in git. The server rolls every hatch (MascotService); this only shows it.
 local Players = game:GetService("Players")
@@ -23,7 +22,7 @@ local player = Players.LocalPlayer
 
 local FX = Config.MascotFx
 local ECONOMY = Config.Economy.Mascots
-local EGG = Config.Economy.Eggs[1] -- the Alley Egg: the only egg with mascots until zones 2 to 5 come
+local EGG = Config.Economy.Eggs[1] -- the Neon Egg (Id "Alley"): the only egg with mascots until zones 2 to 5 come
 local EGG_LOOK = Config.EggLooks[EGG.Id]
 
 local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
@@ -35,7 +34,6 @@ local PINK = Color3.fromRGB(255, 60, 210)
 local GOLD = Color3.fromRGB(255, 200, 40)
 local LIME = Color3.fromRGB(125, 255, 60)
 local GREY = Color3.fromRGB(120, 110, 150)
-local SILHOUETTE = Color3.fromRGB(24, 16, 44)
 
 -- The PETS button sits right of BALLS and DAILY (and the same on short phone screens)
 local BUTTON_NORMAL = UDim2.fromOffset(142, 304)
@@ -262,106 +260,12 @@ function MascotController:Start()
 	local close = panel:WaitForChild("Close") :: TextButton
 	panel.Parent = gui
 
-	-- Left: the egg card
-	local eggCard = Instance.new("Frame")
-	eggCard.Name = "EggCard"
-	eggCard.BackgroundColor3 = CARD
-	eggCard.Position = UDim2.fromOffset(12, 66)
-	eggCard.Size = UDim2.new(0.3, -18, 1, -78)
-	eggCard.Parent = panel
-	corner(eggCard, 12)
-	stroke(eggCard, EGG_LOOK.Color, 2, true)
-	local eggViewHolder = Instance.new("Frame")
-	eggViewHolder.BackgroundTransparency = 1
-	eggViewHolder.Position = UDim2.fromScale(0.1, 0.02)
-	eggViewHolder.Size = UDim2.fromScale(0.8, 0.44)
-	eggViewHolder.Parent = eggCard
-	local eggModel = MascotView.Egg(EGG.Id, 4)
-	MascotView.Viewport(eggViewHolder, eggModel, 0.85)
-	local eggName =
-		text(eggCard, "EggName", FONT, EGG_LOOK.Color, UDim2.fromScale(0.05, 0.47), UDim2.fromScale(0.9, 0.09))
-	eggName.Text = string.upper(EGG_LOOK.Name)
-	local eggPrice = text(eggCard, "Price", FONT, GOLD, UDim2.fromScale(0.05, 0.56), UDim2.fromScale(0.9, 0.08))
-	-- Where to hatch (not a button: eggs hatch only at the egg stand in the lobby)
-	local hatchHint = text(
-		eggCard,
-		"HatchHint",
-		BODY_FONT,
-		Color3.new(1, 1, 1),
-		UDim2.fromScale(0.06, 0.67),
-		UDim2.fromScale(0.88, 0.14)
-	)
-	local oddsButton =
-		button(eggCard, "OddsButton", "ODDS", GREY, UDim2.fromScale(0.25, 0.84), UDim2.fromScale(0.5, 0.11))
-	oddsButton.TextColor3 = Color3.new(1, 1, 1)
-
-	-- The odds list (every rarity's chance and what each mascot gives), over the egg card
-	local odds = Instance.new("TextButton")
-	odds.Name = "Odds"
-	odds.Text = ""
-	odds.AutoButtonColor = false
-	odds.BackgroundColor3 = INK
-	odds.BackgroundTransparency = 0.04
-	odds.Size = UDim2.fromScale(1, 1)
-	odds.Visible = false
-	odds.ZIndex = 5
-	odds.Parent = eggCard
-	corner(odds, 12)
-	local oddsList = Instance.new("Frame")
-	oddsList.BackgroundTransparency = 1
-	oddsList.Position = UDim2.fromScale(0.06, 0.03)
-	oddsList.Size = UDim2.fromScale(0.88, 0.94)
-	oddsList.ZIndex = 5
-	oddsList.Parent = odds
-	local oddsLayout = Instance.new("UIListLayout")
-	oddsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	oddsLayout.Padding = UDim.new(0.01, 0)
-	oddsLayout.Parent = oddsList
-	local oddsTitle = text(oddsList, "Title", FONT, Color3.new(1, 1, 1), UDim2.new(), UDim2.fromScale(1, 0.1))
-	oddsTitle.Text = "ODDS (TAP TO CLOSE)"
-	oddsTitle.ZIndex = 5
-	for index, rarityName in Mascots.Rarities do
-		local chance = ECONOMY.Odds[rarityName]
-		if chance and chance > 0 then
-			local row = text(
-				oddsList,
-				rarityName,
-				BODY_FONT,
-				Mascots.RarityColor(rarityName),
-				UDim2.new(),
-				UDim2.fromScale(1, 0.12)
-			)
-			row.LayoutOrder = index
-			row.ZIndex = 5
-			row.RichText = true
-			local names = {}
-			for _, mascot in Mascots.InEgg(EGG.Id) do
-				if mascot.Rarity == rarityName then
-					table.insert(names, mascot.Name)
-				end
-			end
-			local bonus = (ECONOMY.Bonus[rarityName] or 0) * (EGG.BonusScale or 1)
-			row.Text = ('%s %s%%  %s COINS\n<font color="#C8BEE6">%s</font>'):format(
-				string.upper(rarityName),
-				tostring(chance),
-				Mascots.BonusText(bonus),
-				table.concat(names, ", ")
-			)
-		end
-	end
-	oddsButton.Activated:Connect(function()
-		odds.Visible = true
-	end)
-	odds.Activated:Connect(function()
-		odds.Visible = false
-	end)
-
 	-- Right: equipped slots and EQUIP BEST
 	local right = Instance.new("Frame")
 	right.Name = "Right"
 	right.BackgroundTransparency = 1
-	right.Position = UDim2.new(0.3, 0, 0, 66)
-	right.Size = UDim2.new(0.7, -12, 1, -78)
+	right.Position = UDim2.fromOffset(12, 66)
+	right.Size = UDim2.new(1, -24, 1, -78)
 	right.Parent = panel
 	local slotsTitle =
 		text(right, "SlotsTitle", FONT, Color3.new(1, 1, 1), UDim2.fromOffset(4, 0), UDim2.new(0.6, 0, 0, 22))
@@ -381,7 +285,7 @@ function MascotController:Start()
 	slotLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	slotLayout.Parent = slotRow
 
-	-- Every mascot this egg can hatch
+	-- The pets you own (the others stay hidden)
 	local grid = Instance.new("ScrollingFrame")
 	grid.Name = "Grid"
 	grid.BackgroundTransparency = 1
@@ -402,6 +306,9 @@ function MascotController:Start()
 	gridPad.PaddingTop = UDim.new(0, 4)
 	gridPad.PaddingLeft = UDim.new(0, 4)
 	gridPad.Parent = grid
+	local noPets = text(right, "NoPets", FONT, GREY, UDim2.fromOffset(0, 140), UDim2.new(1, 0, 0, 60))
+	noPets.Text = "NO PETS YET\nHATCH THE NEON EGG AT THE EGG STAND"
+	noPets.Visible = false
 
 	type Tile = {
 		Frame: Frame,
@@ -415,7 +322,7 @@ function MascotController:Start()
 	}
 	local tiles: { Tile } = {}
 	local doMerge: (mascot: any) -> ()
-	-- Each mascot's card, then its Shiny card right after it (shown only once owned)
+	-- Each mascot's card, then its Shiny card right after it (each shown only once owned)
 	local cards = {}
 	for index, mascot in Mascots.InEgg(EGG.Id) do
 		local order = Mascots.RarityIndex(mascot.Rarity) * 100 + index * 2
@@ -565,11 +472,8 @@ function MascotController:Start()
 			if tile.Merge then
 				tile.Merge.Visible = have >= (Mascots.MergeCost(mascot) or math.huge)
 			end
-			if mascot.Shiny then
-				tile.Frame.Visible = have > 0 -- Shiny cards appear once you make one
-			end
+			tile.Frame.Visible = have > 0
 			if have > 0 then
-				tile.View.ImageColor3 = Color3.new(1, 1, 1)
 				tile.Name.Text = string.upper(mascot.Name)
 				tile.Count.Text = ("%s%s"):format(
 					Mascots.BonusText(Mascots.Bonus(mascot)),
@@ -591,25 +495,11 @@ function MascotController:Start()
 					elseif mascot.Shiny then Color3.fromRGB(60, 45, 20)
 					else CARD
 				tile.Outline.Thickness = if inUse > 0 then 3 else 2
-			else
-				tile.View.ImageColor3 = SILHOUETTE
-				tile.Name.Text = "???"
-				tile.Count.Text = string.upper(mascot.Rarity)
-				tile.Equip.Visible = false
-				tile.Frame.BackgroundColor3 = CARD
-				tile.Outline.Thickness = 2
 			end
 		end
+		noPets.Visible = kinds == 0
 
-		local unlocked, why, affordable = eggState()
-		eggPrice.Text = formatNumber(EGG.Price) .. " COINS"
-		if not unlocked then
-			hatchHint.Text = "REACH " .. tostring(why)
-			hatchHint.TextColor3 = GREY
-		else
-			hatchHint.Text = "HATCH IT AT THE\nEGG STAND IN THE LOBBY"
-			hatchHint.TextColor3 = if affordable then LIME else Color3.new(1, 1, 1)
-		end
+		local unlocked, _, affordable = eggState()
 		dot.Visible = unlocked and affordable
 		refreshSlots()
 	end
@@ -952,7 +842,6 @@ function MascotController:Start()
 		if panel.Visible then
 			UiFx.Close(panel)
 		else
-			odds.Visible = false
 			refresh()
 			UiFx.Open(panel)
 		end
@@ -965,12 +854,12 @@ function MascotController:Start()
 	local testRemote = remotes:FindFirstChild("TestEgg") :: RemoteEvent?
 	if testRemote then
 		local test = button(
-			eggCard,
+			panel,
 			"TestEgg",
 			"TEST: EGG",
 			Color3.fromRGB(60, 60, 80),
-			UDim2.fromScale(0.05, 0.01),
-			UDim2.new(0.9, 0, 0, 22)
+			UDim2.new(0, 12, 1, -30),
+			UDim2.fromOffset(120, 22)
 		)
 		test.TextColor3 = Color3.new(1, 1, 1)
 		test.ZIndex = 4
