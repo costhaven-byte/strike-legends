@@ -15,6 +15,7 @@ local Mascots = require(Shared.Modules.Mascots)
 local Zones = require(Shared.Modules.Zones)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local MascotView = require(Modules:WaitForChild("MascotView"))
+local PetIdle = require(Modules:WaitForChild("PetIdle"))
 local Sfx = require(Modules:WaitForChild("Sfx"))
 local UiFx = require(Modules:WaitForChild("UiFx"))
 
@@ -895,23 +896,19 @@ function MascotController:Start()
 
 	-- ===== The egg stand in the lobby =====
 	task.spawn(function()
+		-- The Neon stand (the owner's design, a Studio model): the egg sits in its cradle, at NeonStand.EggSpot
 		local hub = Workspace:WaitForChild("Hub", 30)
 		local pad = hub and hub:WaitForChild("EggPad", 30)
-		local plinth = pad and pad:WaitForChild("Plinth", 10) :: BasePart?
-		if not plinth then
-			warn("[MascotController] Workspace.Hub.EggPad.Plinth not found: no egg stand in the lobby")
+		local stand = pad and pad:WaitForChild("NeonStand", 10)
+		local spot = stand and stand:WaitForChild("EggSpot", 10) :: BasePart?
+		if not spot then
+			warn("[MascotController] Workspace.Hub.EggPad.NeonStand.EggSpot not found: no egg stand in the lobby")
 			return
 		end
-		local standEgg = MascotView.Egg(EGG.Id, 3.6)
+		local standEgg = MascotView.Egg(EGG.Id, spot.Size.Y)
 		standEgg.Name = "StandEgg"
-		-- The plinth is a cylinder lying on its side, so its height runs along whichever axis points up
-		local half, frame = plinth.Size / 2, plinth.CFrame
-		local top = frame.Position.Y
-			+ math.abs(frame.RightVector.Y) * half.X
-			+ math.abs(frame.UpVector.Y) * half.Y
-			+ math.abs(frame.LookVector.Y) * half.Z
-		local base = Vector3.new(plinth.Position.X, top + 2.4, plinth.Position.Z)
-		standEgg:PivotTo(CFrame.new(base))
+		standEgg:PivotTo(spot.CFrame)
+		local base = spot.Position
 		local shell = standEgg.PrimaryPart :: BasePart
 		local light = Instance.new("PointLight")
 		light.Color = EGG_LOOK.Color
@@ -931,17 +928,15 @@ function MascotController:Start()
 			task.spawn(doHatch)
 		end)
 
-		-- Price and lock above the egg
+		-- Price and lock just above the stand's NEON EGG sign (the sign itself shows the name)
 		local board = Instance.new("BillboardGui")
 		board.Name = "EggInfo"
-		board.Size = UDim2.fromOffset(220, 64)
-		board.StudsOffset = Vector3.new(0, 3.4, 0)
+		board.Size = UDim2.fromOffset(220, 32)
+		board.StudsOffset = Vector3.new(0, spot.Size.Y * 1.28, 0)
 		board.MaxDistance = 70
 		board.LightInfluence = 0
 		board.Parent = shell
-		local boardName = text(board, "Name", FONT, EGG_LOOK.Color, UDim2.new(), UDim2.new(1, 0, 0.5, 0))
-		boardName.Text = string.upper(EGG_LOOK.Name)
-		local boardPrice = text(board, "Price", FONT, GOLD, UDim2.fromScale(0, 0.5), UDim2.new(1, 0, 0.45, 0))
+		local boardPrice = text(board, "Price", FONT, GOLD, UDim2.new(), UDim2.fromScale(1, 1))
 
 		local function refreshStand()
 			local unlocked, why = eggState()
@@ -952,18 +947,15 @@ function MascotController:Start()
 		player:GetAttributeChangedSignal("RankLevel"):Connect(refreshStand)
 		refreshStand()
 
-		-- Hover and turn while the camera is near
-		RunService.RenderStepped:Connect(function()
-			local camera = Workspace.CurrentCamera
-			if camera and (camera.CFrame.Position - base).Magnitude > 90 then
-				return
-			end
-			local t = os.clock()
-			standEgg:PivotTo(
-				CFrame.new(base + Vector3.new(0, math.sin(t * 1.6) * 0.3, 0))
-					* CFrame.Angles(0, t * 0.6, math.sin(t * 2.3) * 0.06)
-			)
-		end)
+		-- Idle (hatch storyboard frame 1): the core pulses slowly while the camera is near
+		local rig = PetIdle.Rig(standEgg, "Egg_" .. EGG.Id, 1)
+		if rig then
+			RunService.RenderStepped:Connect(function()
+				local camera = Workspace.CurrentCamera
+				local near = camera ~= nil and (camera.CFrame.Position - base).Magnitude <= Config.PetIdle.ShowDistance
+				rig:Step(os.clock(), near)
+			end)
+		end
 	end)
 end
 

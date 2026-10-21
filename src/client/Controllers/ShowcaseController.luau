@@ -656,7 +656,7 @@ local function buildMascotShelf(shelf: BasePart, parent: Instance): (number) -> 
 	local spacing = shelf.Size.X / #list
 	local top = shelf.CFrame * CFrame.new(0, shelf.Size.Y / 2, 0)
 
-	type Spot = { Base: CFrame, Model: Model?, Id: string?, Phase: number, Mascot: any, Plate: Part }
+	type Spot = { Base: CFrame, Model: Model?, Id: string?, Half: number?, Phase: number, Mascot: any, Plate: Part }
 	local spots: { Spot } = {}
 	for i, mascot in list do
 		local base = top * CFrame.new(-shelf.Size.X / 2 + spacing * (i - 0.5), 0, 0)
@@ -726,6 +726,14 @@ local function buildMascotShelf(shelf: BasePart, parent: Instance): (number) -> 
 				end
 				local shown = Mascots.Get(id) or mascot
 				local model = MascotView.Mascot(shown, FX.ShelfSize)
+				-- Real pets come in their own sizes: the wide ones (wings, orbit rings) shrink to fit their spot
+				local _, box = model:GetBoundingBox()
+				local widest = math.max(box.X, box.Z)
+				if widest > FX.ShelfSize * 1.4 then
+					model:ScaleTo(model:GetScale() * FX.ShelfSize * 1.4 / widest)
+					box *= FX.ShelfSize * 1.4 / widest
+				end
+				spot.Half = math.max(box.Y / 2, FX.ShelfSize / 2)
 				if id == "" then
 					silhouette(model)
 				end
@@ -744,7 +752,7 @@ local function buildMascotShelf(shelf: BasePart, parent: Instance): (number) -> 
 		for _, spot in spots do
 			local model = spot.Model
 			if model then
-				local lift = FX.ShelfHover + FX.ShelfSize / 2 + math.sin((t + spot.Phase) * 2) * 0.2
+				local lift = FX.ShelfHover + (spot.Half or FX.ShelfSize / 2) + math.sin((t + spot.Phase) * 2) * 0.2
 				local sway = if spot.Id ~= "" then math.sin(t * 0.8 + spot.Phase) * 0.5 else 0
 				-- The model's front is its -Z; the shelf's front is its -Z too
 				model:PivotTo(spot.Base * CFrame.new(0, lift, 0) * CFrame.Angles(0, sway, 0))

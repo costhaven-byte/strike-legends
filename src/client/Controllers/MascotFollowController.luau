@@ -4,6 +4,8 @@
 -- Step 8b: when a player strikes, their mascots dash down to the gutter edges in front of the pins (where the
 -- thrower's camera is looking), celebrate one after another (Hop, Spin, Flip or Wiggle, from each mascot's
 -- Reaction in Config.Mascots; Shiny ones also burst gold sparkles), then fly back as the camera returns.
+-- Real pet models (2026-10-21) play their design's idle pose (Shared.Config.PetIdle, Modules.PetIdle): walkers stay on
+-- the ground, floaters (Floats) hover at Config.MascotFx.Hover.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -13,13 +15,23 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Mascots = require(Shared.Modules.Mascots)
 local MascotView = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("MascotView"))
+local PetIdle = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("PetIdle"))
 
 local FX = Config.MascotFx
+local IDLE = Config.PetIdle
 local PER_ROW = 3
 
 local MascotFollowController = {}
 
-type Pet = { Model: Model, Id: string, Position: Vector3?, Phase: number, ReactAt: number?, ReactsLeft: number? }
+type Pet = {
+	Model: Model,
+	Id: string,
+	Rig: PetIdle.Rig?,
+	Position: Vector3?,
+	Phase: number,
+	ReactAt: number?,
+	ReactsLeft: number?,
+}
 local pets: { [Player]: { Pet } } = {}
 -- A strike cheer in progress: where each mascot stands (by index) and when it starts and ends (os.clock)
 type Cheer = { From: number, Until: number, Spots: { CFrame } }
@@ -49,8 +61,9 @@ local function refresh(player: Player)
 			else
 				local model = MascotView.Mascot(mascot, FX.Size)
 				model.Name = player.Name .. "_" .. id
+				local rig = PetIdle.Rig(model, (mascot.Base or mascot).Id, 1)
 				model.Parent = folder
-				table.insert(list, { Model = model, Id = id, Position = nil, Phase = index * 1.7 })
+				table.insert(list, { Model = model, Id = id, Rig = rig, Position = nil, Phase = index * 1.7 })
 			end
 		end
 	end
@@ -170,12 +183,25 @@ local function step(dt: number)
 				local ground = rootPart.Position.Y - rootPart.Size.Y / 2 - (humanoid and humanoid.HipHeight or 2)
 				local offset = slotOffset(index, #list)
 				target = (basis * CFrame.new(offset)).Position
-				target = Vector3.new(target.X, ground + FX.Hover, target.Z)
+				-- Real pets: walkers stand on the ground, floaters hover (never low enough to touch it)
+				local rig = pet.Rig
+				local height = if not rig
+					then FX.Hover
+					elseif rig.Floats then math.max(FX.Hover, rig.HalfHeight + 0.3)
+					else rig.HalfHeight
+				target = Vector3.new(target.X, ground + height, target.Z)
 			end
 			local position = if pet.Position then pet.Position:Lerp(target, alpha) else target
 			pet.Position = position
-			local bob = math.sin((now + pet.Phase) * FX.BobSpeed * math.pi * 2) * FX.BobHeight
-			local turn = CFrame.identity
+			local bob, turn = 0, CFrame.identity
+			local rig = pet.Rig
+			if rig then
+				bob, turn = rig:Body(now)
+				local near = camera and (position - camera.CFrame.Position).Magnitude <= IDLE.ShowDistance
+				rig:Step(now, near == true)
+			else
+				bob = math.sin((now + pet.Phase) * FX.BobSpeed * math.pi * 2) * FX.BobHeight
+			end
 			local reactAt = pet.ReactAt
 			if reactAt and now >= reactAt then
 				local p = (now - reactAt) / FX.ReactTime
@@ -185,13 +211,19 @@ local function step(dt: number)
 					pet.ReactAt = if pet.ReactsLeft > 0 then now + 0.15 else nil
 				else
 					local mascot = Mascots.Get(pet.Id)
-					local lift
-					lift, turn = reactionPose(mascot and mascot.Reaction, p)
+					local lift, pose = reactionPose(mascot and mascot.Reaction, p)
 					bob += lift
+					turn *= pose
 				end
 			end
 			local at = position + Vector3.new(0, bob, 0)
-			pet.Model:PivotTo(CFrame.lookAt(at, at + look) * turn)
+			local placed = CFrame.lookAt(at, at + look) * turn
+			if rig then
+				-- The rest of the pet is welded to its Root
+				rig.Root.CFrame = placed
+			else
+				pet.Model:PivotTo(placed)
+			end
 			if not pet.Model.Parent then
 				pet.Model.Parent = folder
 			end

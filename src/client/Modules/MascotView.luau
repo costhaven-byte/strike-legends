@@ -1,5 +1,6 @@
--- Builds the placeholder looks for mascots and eggs (Addendum 2 section 9.7: a coloured ball with eyes per rarity).
--- Used by the mascots that follow players, the PETS panel and the hatching moment.
+-- Builds the looks for mascots and eggs: the real pet models (ReplicatedStorage.PetModels, from the owner's designs)
+-- when there is one, otherwise the placeholder (Addendum 2 section 9.7: a coloured ball with eyes per rarity).
+-- Used by the mascots that follow players, the PETS panel, the pet shelf and the hatching moment.
 -- Every part is anchored and never collides; the front of a mascot (its eyes) faces the model's -Z.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -11,6 +12,22 @@ local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 local SHINY_GOLD = Color3.fromRGB(255, 210, 60)
 
 local MascotView = {}
+
+local petModels = ReplicatedStorage:WaitForChild("PetModels", 10)
+
+-- A copy of a real model from ReplicatedStorage.PetModels, scaled by `scale`, or nil when there isn't one
+local function realModel(name: string, scale: number): Model?
+	local source = petModels and petModels:FindFirstChild(name)
+	if not source then
+		return nil
+	end
+	local model = source:Clone() :: Model
+	model:PivotTo(CFrame.new())
+	if math.abs(scale - 1) > 0.001 then
+		model:ScaleTo(model:GetScale() * scale) -- ScaleTo is absolute; stored models already carry their import scale
+	end
+	return model
+end
 
 local function part(model: Model, name: string, size: Vector3, color: Color3, offset: CFrame, root: BasePart?): Part
 	local p = Instance.new("Part")
@@ -35,6 +52,12 @@ end
 -- Rare and up glow in their rarity colour; Legendary and up also sparkle. effects = false skips glow and sparkles
 -- (for small UI views).
 function MascotView.Mascot(mascot, size: number, effects: boolean?): Model
+	local real = realModel((mascot.Base or mascot).Id, size / Config.MascotFx.Size)
+	if real then
+		real.Name = mascot.Id
+		MascotView.Dress(real, mascot, size, effects)
+		return real
+	end
 	local model = Instance.new("Model")
 	model.Name = mascot.Id
 	local body = part(model, "Body", Vector3.one * size, mascot.Color, CFrame.new())
@@ -137,8 +160,69 @@ function MascotView.Mascot(mascot, size: number, effects: boolean?): Model
 	return model
 end
 
--- An egg: a stretched ball with coloured spots. height = studs tall.
+-- Shiny crown and sparkles, and a glow in the rarity colour, on a real pet model (its own design has the rest)
+function MascotView.Dress(model: Model, mascot, size: number, effects: boolean?)
+	local root = model.PrimaryPart :: BasePart
+	local cf, box = model:GetBoundingBox()
+	if mascot.Shiny then
+		local s = size
+		local top = root.CFrame:PointToObjectSpace(cf.Position).Y + box.Y / 2
+		local band = part(
+			model,
+			"Crown",
+			Vector3.new(s * 0.14, s * 0.46, s * 0.46),
+			SHINY_GOLD,
+			CFrame.new(0, top + s * 0.05, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			root
+		)
+		band.Shape = Enum.PartType.Cylinder
+		band.Material = Enum.Material.Neon
+		for i = 0, 2 do
+			local angle = math.rad(i * 120)
+			local point = part(
+				model,
+				"CrownPoint",
+				Vector3.one * s * 0.13,
+				SHINY_GOLD,
+				CFrame.new(math.sin(angle) * s * 0.2, top + s * 0.19, math.cos(angle) * s * 0.2),
+				root
+			)
+			point.Material = Enum.Material.Neon
+		end
+		if effects ~= false then
+			local shimmer = Instance.new("ParticleEmitter")
+			shimmer.Name = "Shimmer"
+			shimmer.Texture = SPARKLE
+			shimmer.Color = ColorSequence.new(SHINY_GOLD, Color3.new(1, 1, 1))
+			shimmer.LightEmission = 1
+			shimmer.Size = NumberSequence.new(0.35, 0)
+			shimmer.Lifetime = NumberRange.new(0.5, 0.9)
+			shimmer.Speed = NumberRange.new(0.5, 1.5)
+			shimmer.SpreadAngle = Vector2.new(180, 180)
+			shimmer.Rate = 10
+			shimmer.Parent = root
+		end
+	end
+	local rarity = Mascots.RarityIndex(mascot.Rarity)
+	if effects ~= false and rarity >= Mascots.RarityIndex("Rare") then
+		local light = Instance.new("PointLight")
+		light.Color = if mascot.Shiny then SHINY_GOLD else Mascots.RarityColor(mascot.Rarity)
+		light.Range = 5 + rarity
+		light.Brightness = 1.2
+		light.Parent = root
+	end
+end
+
+-- An egg: the real model (PetModels.Egg_<id>) when there is one, otherwise a stretched ball with coloured spots.
+-- height = studs tall.
 function MascotView.Egg(eggId: string, height: number): Model
+	local source = petModels and petModels:FindFirstChild("Egg_" .. eggId)
+	if source then
+		local _, box = (source :: Model):GetBoundingBox()
+		local real = realModel("Egg_" .. eggId, height / box.Y) :: Model
+		real.Name = eggId .. "Egg"
+		return real
+	end
 	local look = Config.EggLooks[eggId] or Config.EggLooks.Alley
 	local model = Instance.new("Model")
 	model.Name = eggId .. "Egg"

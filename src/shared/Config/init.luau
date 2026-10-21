@@ -1893,7 +1893,7 @@ Config.AutoBowl = {
 
 -- Egg names and colours (prices, unlocks and odds: Config.Economy.Eggs / Config.Economy.Mascots)
 Config.EggLooks = {
-	Alley = { Name = "Neon Egg", Color = Color3.fromRGB(255, 225, 140), Spots = Color3.fromRGB(255, 90, 200) },
+	Alley = { Name = "Neon Egg", Color = Color3.fromRGB(255, 58, 208), Spots = Color3.fromRGB(63, 240, 255) }, -- design: #ff3ad0 / #3ff0ff
 	Neon = { Name = "Neon Egg", Color = Color3.fromRGB(80, 230, 255), Spots = Color3.fromRGB(255, 60, 210) },
 	Arcade = { Name = "Arcade Egg", Color = Color3.fromRGB(190, 120, 255), Spots = Color3.fromRGB(255, 240, 90) },
 	Skyline = { Name = "Skyline Egg", Color = Color3.fromRGB(150, 200, 255), Spots = Color3.fromRGB(255, 255, 255) },
@@ -1935,6 +1935,270 @@ Config.MascotFx = {
 	-- It sits along Workspace.Showcase.MascotShelf (a part you can move in Studio; the mascots face its front).
 	ShelfSize = 2.2, -- studs across each mascot on the shelf
 	ShelfHover = 1.6, -- studs above the shelf
+}
+
+-- Real pet models (the owner's Claude Design pets, 2026-10-21): ReplicatedStorage.PetModels.<mascot Id> (and Egg_<egg Id>),
+-- built in Studio from the imported .glb files and repainted from their colours. Sized for Config.MascotFx.Size; a
+-- mascot without a model falls back to the placeholder ball. Each pet's idle motion follows its design's idle pose.
+-- Body = the whole pet: Bob (studs) at BobSpeed (per second), Sway (degrees of side-to-side roll) at SwaySpeed,
+-- Hop = { Every = seconds, Height = studs, Time = seconds in the air }. Floats = hovers at Config.MascotFx.Hover;
+-- otherwise it walks on the ground.
+-- Moves = parts moving on their own (Parts = name patterns). Kinds:
+--   Swing (rock Angle degrees around Axis, Speed per second), Spin (Speed turns per second around Axis),
+--   Lift (feet stepping up Height studs), Slide (move Outward studs away from the middle and back), Blink (eyes shut
+--   every Every seconds), Pulse (glow dims to Min and back to Max), Twinkle (Pulse, each part out of step),
+--   Rainbow (colours cycle Speed times per second).
+--   Pivot: "Inner" (default) = the end nearest the pet's middle (wing roots, tail bases, necks), "Center", or "Root"
+--   (the pet's middle). Mirror = true: parts on the pet's left and right swing opposite ways (two wings).
+-- Hide = static sparkle shapes from the design files, replaced by real particles (Particles: At = a part name
+-- pattern, or "Root"; Colors; Rate per second; Size, Life, Speed; Up = how fast they rise; Back = drift backwards).
+local PET_CYAN = Color3.fromRGB(40, 230, 255)
+local PET_VIOLET = Color3.fromRGB(170, 60, 255)
+Config.PetIdle = {
+	ShowDistance = 60, -- studs: pets further from your camera than this keep still (saves phone battery)
+	Pinny = {
+		Body = { Bob = 0.08, BobSpeed = 1.4, Sway = 6, SwaySpeed = 0.7 },
+		Moves = {
+			{ Kind = "Lift", Parts = { "^foot_right" }, Height = 0.12, Speed = 1.4 },
+			{ Kind = "Lift", Parts = { "^foot_left" }, Height = 0.12, Speed = 1.4, Phase = 0.5 },
+			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.2 },
+			{ Kind = "Pulse", Parts = { "^neck_" }, Speed = 0.6, Min = 0.6, Max = 1 },
+		},
+	},
+	Gus = {
+		Body = { Bob = 0.05, BobSpeed = 0.5, Sway = 4, SwaySpeed = 0.4 },
+		Moves = {
+			{ Kind = "Swing", Parts = { "^arm_" }, Axis = Vector3.xAxis, Angle = 10, Speed = 0.8, Mirror = true },
+			{ Kind = "Blink", Parts = { "^eye_l_glow", "^eye_r_glow" }, Every = 4 },
+			{ Kind = "Pulse", Parts = { "^neon_" }, Speed = 0.5, Min = 0.6, Max = 1 },
+		},
+	},
+	LanePup = {
+		Body = { Bob = 0.04, BobSpeed = 0.6, Hop = { Every = 3, Height = 0.6, Time = 0.45 } },
+		Moves = {
+			{
+				Kind = "Swing",
+				Parts = {
+					"^skull",
+					"^snout",
+					"^nose",
+					"^eye_",
+					"^pupil_",
+					"^ear_",
+					"^cheeks",
+					"^tongue",
+					"^lane_arrow",
+				},
+				Axis = Vector3.zAxis,
+				Angle = 8,
+				Speed = 0.35,
+			},
+			{ Kind = "Swing", Parts = { "^ear_" }, Axis = Vector3.zAxis, Angle = 12, Speed = 1.5, Mirror = true },
+			{ Kind = "Swing", Parts = { "^tail_" }, Axis = Vector3.yAxis, Angle = 30, Speed = 4 },
+			{ Kind = "Blink", Parts = { "^eye_", "^pupil_" }, Every = 3.5 },
+		},
+	},
+	Bumper = {
+		Body = { Sway = 4, SwaySpeed = 0.5, Hop = { Every = 1.1, Height = 0.35, Time = 0.4 } },
+		Moves = {
+			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3 },
+			{ Kind = "Pulse", Parts = { "^stripe_", "^lane_arrow", "^end_" }, Speed = 0.8, Min = 0.7, Max = 1 },
+		},
+	},
+	Strikey = {
+		Body = { Bob = 0.1, BobSpeed = 0.8 },
+		Moves = {
+			{ Kind = "Blink", Parts = { "^eye_white", "^pupil", "^iris_ring", "^eye_highlight" }, Every = 3.4 },
+			{ Kind = "Swing", Parts = { "^tail_bolt" }, Axis = Vector3.yAxis, Angle = 20, Speed = 1 },
+			{ Kind = "Swing", Parts = { "^ear" }, Axis = Vector3.zAxis, Angle = 10, Speed = 0.4, Mirror = true },
+			{ Kind = "Pulse", Parts = { "^x_mark" }, Speed = 0.7, Min = 0.7, Max = 1 },
+		},
+	},
+	Splitz = {
+		Body = { Bob = 0.08, BobSpeed = 0.8, Sway = 5, SwaySpeed = 0.5 },
+		Moves = {
+			{ Kind = "Swing", Parts = { "^arm_" }, Axis = Vector3.xAxis, Angle = 20, Speed = 0.8, Mirror = true },
+			-- The two halves open and close (everything named _L / _R except the arms)
+			{
+				Kind = "Slide",
+				Parts = { "^shell_", "^stripe_", "^ear_", "^finger_", "^grin_", "^eye_", "^brow_" },
+				Outward = 0.06,
+				Speed = 0.5,
+			},
+			{ Kind = "Pulse", Parts = { "^split_" }, Speed = 1, Min = 0.5, Max = 1 },
+			{ Kind = "Blink", Parts = { "^eye_R_" }, Every = 3 },
+		},
+	},
+	Hambone = {
+		Body = { Bob = 0.04, BobSpeed = 0.6, Hop = { Every = 1.4, Height = 0.2, Time = 0.45 } },
+		Moves = {
+			{
+				Kind = "Swing",
+				Parts = { "^head", "^snout", "^nostril_", "^eye", "^pupil", "^cheek", "^brow", "^ear" },
+				Axis = Vector3.zAxis,
+				Angle = 7,
+				Speed = 0.4,
+			},
+			{ Kind = "Swing", Parts = { "^ear" }, Axis = Vector3.xAxis, Angle = 15, Speed = 0.9, Mirror = true },
+			{ Kind = "Swing", Parts = { "^tail" }, Axis = Vector3.yAxis, Angle = 25, Speed = 3 },
+			{ Kind = "Swing", Parts = { "^tag_loop", "^bone_" }, Axis = Vector3.xAxis, Angle = 15, Speed = 1.2 },
+		},
+		Hide = { "^sparkle" },
+		Particles = {
+			{
+				At = "^tail$",
+				Colors = { Color3.fromRGB(255, 80, 190), Color3.fromRGB(255, 150, 40) },
+				Rate = 8,
+				Size = 0.18,
+				Life = 1,
+				Speed = 0.5,
+				Up = 1.2,
+			},
+		},
+	},
+	NeonBat = {
+		Floats = true,
+		Body = { Bob = 0.25, BobSpeed = 0.6, Sway = 4, SwaySpeed = 0.4 },
+		Moves = {
+			{ Kind = "Swing", Parts = { "^wing_" }, Axis = Vector3.zAxis, Angle = 28, Speed = 2.2, Mirror = true },
+			{
+				Kind = "Swing",
+				Parts = { "^head", "^snout", "^eye_", "^fang_", "^ear_" },
+				Axis = Vector3.zAxis,
+				Angle = 6,
+				Speed = 0.3,
+			},
+		},
+		Hide = { "^spark" },
+		Particles = {
+			{
+				At = "^wing_edge_trail_4_L$",
+				Colors = { PET_VIOLET, PET_CYAN },
+				Rate = 10,
+				Size = 0.14,
+				Life = 0.8,
+				Speed = 0.3,
+				Back = 2,
+			},
+			{
+				At = "^wing_edge_trail_4_R$",
+				Colors = { PET_VIOLET, PET_CYAN },
+				Rate = 10,
+				Size = 0.14,
+				Life = 0.8,
+				Speed = 0.3,
+				Back = 2,
+			},
+		},
+	},
+	Kingpin = {
+		Body = { Bob = 0.05, BobSpeed = 0.5, Sway = 3, SwaySpeed = 0.35 },
+		Moves = {
+			{ Kind = "Spin", Parts = { "^halo" }, Axis = Vector3.zAxis, Speed = 0.12, Pivot = "Center" },
+			{ Kind = "Swing", Parts = { "^scepter_", "^ball_" }, Axis = Vector3.zAxis, Angle = 8, Speed = 0.4 },
+			{ Kind = "Pulse", Parts = { "^aura" }, Speed = 0.5, Min = 0.5, Max = 1 },
+			{ Kind = "Spin", Parts = { "^spark" }, Axis = Vector3.yAxis, Speed = 0.15, Pivot = "Root" },
+		},
+	},
+	Blaze = {
+		Floats = true,
+		Body = { Bob = 0.2, BobSpeed = 0.55 },
+		Moves = {
+			{ Kind = "Swing", Parts = { "^wing_" }, Axis = Vector3.zAxis, Angle = 22, Speed = 1.6, Mirror = true },
+			{ Kind = "Swing", Parts = { "^tail_" }, Axis = Vector3.yAxis, Angle = 15, Speed = 0.8 },
+			{
+				Kind = "Swing",
+				Parts = {
+					"^skull",
+					"^snout",
+					"^nose",
+					"^eye_",
+					"^pupil_",
+					"^ear_",
+					"^horn_",
+					"^cheek_",
+					"^brow_",
+					"^head_flame",
+				},
+				Axis = Vector3.yAxis,
+				Angle = 18,
+				Speed = 0.25,
+			},
+			{
+				Kind = "Twinkle",
+				Parts = { "^tail_flame", "^tail_lick", "^head_flame", "^crest_flame" },
+				Speed = 3,
+				Min = 0.7,
+				Max = 1,
+			},
+			{ Kind = "Pulse", Parts = { "^aura" }, Speed = 0.6, Min = 0.5, Max = 1 },
+		},
+		Hide = { "^ember" },
+		Particles = {
+			{
+				At = "Root",
+				Colors = { Color3.fromRGB(255, 120, 20), Color3.fromRGB(255, 220, 60) },
+				Rate = 10,
+				Size = 0.15,
+				Life = 1.3,
+				Speed = 0.45,
+				Up = 1,
+			},
+		},
+	},
+	Cosmo = {
+		Floats = true,
+		Body = { Bob = 0.2, BobSpeed = 0.5, Sway = 3, SwaySpeed = 0.35 },
+		Moves = {
+			-- The two tilted orbit rings (their tilt measured from the design file)
+			{
+				Kind = "Spin",
+				Parts = { "^planet_ringed", "^planet_violet" },
+				Axis = Vector3.new(0.18, 0.926, -0.331),
+				Speed = 0.12,
+				Pivot = "Root",
+			},
+			{
+				Kind = "Spin",
+				Parts = { "^planet_pink", "^pin_moon" },
+				Axis = Vector3.new(-0.311, 0.928, 0.207),
+				Speed = -0.08,
+				Pivot = "Root",
+			},
+			{ Kind = "Spin", Parts = { "^crown_star" }, Axis = Vector3.yAxis, Speed = 0.3, Pivot = "Center" },
+			{ Kind = "Swing", Parts = { "^tail_" }, Axis = Vector3.zAxis, Angle = 12, Speed = 0.6 },
+			{ Kind = "Twinkle", Parts = { "^surface_star" }, Speed = 1.5, Min = 0.2, Max = 1 },
+			{ Kind = "Spin", Parts = { "^mote" }, Axis = Vector3.yAxis, Speed = 0.05, Pivot = "Root" },
+		},
+	},
+	Perfecto = {
+		Floats = true,
+		Body = { Bob = 0.2, BobSpeed = 0.45, Sway = 3, SwaySpeed = 0.3 },
+		Moves = {
+			{
+				Kind = "Spin",
+				Parts = { "^halo_", "^perfect_gem" },
+				Axis = Vector3.new(-0.026, 0.976, -0.217),
+				Speed = 0.25,
+				Pivot = "Center",
+			},
+			{
+				Kind = "Rainbow",
+				Parts = { "^neon_line_", "^neck_stripe_", "^plinth_neon_", "^halo_ring_", "^hover_ring_" },
+				Speed = 0.1,
+			},
+			{ Kind = "Spin", Parts = { "^sparkle_" }, Axis = Vector3.yAxis, Speed = -0.2, Pivot = "Root" },
+			{ Kind = "Twinkle", Parts = { "^sparkle_" }, Speed = 1.2, Min = 0.2, Max = 1 },
+		},
+	},
+	-- The Neon Egg on its stand: the core pulses on a 1.6s beat (glow 60 to 100%), the lines breathe 15%
+	-- (hatch storyboard frame 1, Idle)
+	Egg_Alley = {
+		Moves = {
+			{ Kind = "Pulse", Parts = { "^core" }, Speed = 1 / 1.6, Min = 0.6, Max = 1 },
+			{ Kind = "Pulse", Parts = { "^circuit_" }, Speed = 1 / 1.6, Min = 0.85, Max = 1 },
+		},
+	},
 }
 
 -- Daily reward: a 7-day calendar. Claim once per day (days change at midnight UTC).
