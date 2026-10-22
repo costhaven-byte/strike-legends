@@ -413,6 +413,20 @@ Config.Ui = {
 	HidePlayerList = true,
 }
 
+-- Big numbers (Phase X Part 8A). Every number on screen goes through Shared.Modules.Currency.Format and all coin
+-- math through Currency (add, spend, boosts, compare, save/load), so the number type can change later.
+Config.Numbers = {
+	-- 1K = 1,000, 1M = 1,000,000 ... each suffix is 1,000 times the one before. Add more at the end for bigger numbers.
+	Suffixes = { "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc", "Ud", "Dd", "Td", "Qad", "Qid" },
+	ShortFrom = 1000, -- smaller numbers show whole, with commas ("950")
+	Decimals = 2, -- "12.34M"; numbers of 100 or more in a unit get one less ("123.4M"); trailing zeros are trimmed
+	Currencies = { "Coins", "Gems", "WeeklyCoins" }, -- saved values that are money: they go through Currency
+	-- Precision guard: plain Roblox numbers stop counting whole coins exactly at about 9 quadrillion (9e15).
+	-- Any coin value at WarnAt or above logs a warning (once per place in the code), long before that limit.
+	SafeMax = 9e15,
+	WarnAt = 1e15,
+}
+
 -- Sound effects: every sound slot and its asset ID lives in Shared.AssetSlots
 -- (tools/EconomySim requires a parentless copy of this module, hence the fallback)
 local shared = script.Parent or game:GetService("ReplicatedStorage"):WaitForChild("Shared")

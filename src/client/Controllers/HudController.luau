@@ -10,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Currency = require(Shared.Modules.Currency)
 local Progression = require(Shared.Modules.Progression)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
@@ -27,20 +28,8 @@ local BROKEN_COLOR = Color3.fromRGB(255, 60, 70)
 local HudController = {}
 
 -- 1234567 -> "1,234,567"; anything a million or more -> "1.23M"
-local function formatNumber(n: number): string
-	n = math.floor(n + 0.5)
-	if n >= 1e9 then
-		return ("%.2fB"):format(n / 1e9)
-	elseif n >= 1e6 then
-		return ("%.2fM"):format(n / 1e6)
-	end
-	local text = tostring(n)
-	repeat
-		local count
-		text, count = text:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
-	until count == 0
-	return text
-end
+-- Every number on screen uses the shared formatter (Config.Numbers)
+local formatNumber = Currency.Format
 
 local function bump(scale: UIScale)
 	scale.Scale = 1.15
@@ -258,7 +247,7 @@ function HudController:Start()
 			table.insert(parts, ('<font color="#3CE6FF">+%d %s</font>'):format(reward.Gems, gemWord))
 		end
 		if reward.XP > 0 then
-			table.insert(parts, ('<font color="#C85AFF">+%d XP</font>'):format(reward.XP))
+			table.insert(parts, ('<font color="#C85AFF">+%s XP</font>'):format(formatNumber(reward.XP)))
 		end
 		popup.Text = table.concat(parts, "   ")
 		popup.Visible = true

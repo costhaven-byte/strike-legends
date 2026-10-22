@@ -163,7 +163,7 @@ local function hatch(player: Player, eggId: any)
 	end
 	local freeEggs = getFreeEggs(player)
 	local free = (freeEggs[egg.Id] or 0) > 0 -- a free hatch from a playtime gift goes first
-	if not free and (PlayerDataService.Get(player, "Coins") or 0) < egg.Price then
+	if not free and not PlayerDataService.CanAfford(player, "Coins", egg.Price) then
 		return { Ok = false, Error = "Not enough coins" }
 	end
 	if not RateLimit.Allow(player, "HatchEgg") then
@@ -176,7 +176,7 @@ local function hatch(player: Player, eggId: any)
 			freeEggs[egg.Id] = nil
 		end
 	else
-		PlayerDataService.Add(player, "Coins", -egg.Price)
+		PlayerDataService.Spend(player, "Coins", egg.Price)
 	end
 	PlayerDataService.Add(player, "EggsHatched", 1)
 	local mascot = roll(egg.Id)

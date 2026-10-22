@@ -352,7 +352,7 @@ local function openCrate(player: Player, crateId: any)
 	local useFree = crate.Id == Config.FreeCrates.CrateId and (PlayerDataService.Get(player, "FreeCrates") or 0) > 0
 	local bought = PlayerDataService.Get(player, "CratesBought") or 0
 	local price = Balls.CratePrice(crate, bought)
-	if not useFree and (PlayerDataService.Get(player, "Coins") or 0) < price then
+	if not useFree and not PlayerDataService.CanAfford(player, "Coins", price) then
 		return { Ok = false, Error = "Not enough coins" }
 	end
 	if not RateLimit.Allow(player, "OpenCrate") then
@@ -363,7 +363,7 @@ local function openCrate(player: Player, crateId: any)
 		PlayerDataService.Add(player, "FreeCrates", -1)
 		return BallService.GiveCrate(player, crate)
 	end
-	PlayerDataService.Add(player, "Coins", -price)
+	PlayerDataService.Spend(player, "Coins", price)
 	PlayerDataService.Add(player, "CratesBought", 1)
 	Analytics.Currency(player, "Coins", -price, "Shop", crate.Id)
 	Analytics.Purchase(player, "Crate", crate.Id)

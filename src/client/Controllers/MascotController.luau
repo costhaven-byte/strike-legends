@@ -14,6 +14,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Currency = require(Shared.Modules.Currency)
 local Mascots = require(Shared.Modules.Mascots)
 local Zones = require(Shared.Modules.Zones)
 local PotionController = require(script.Parent.PotionController)
@@ -47,14 +48,8 @@ local BUTTON_COMPACT = UDim2.fromOffset(75, 76)
 
 local MascotController = {}
 
-local function formatNumber(n: number): string
-	local text = tostring(math.floor(n))
-	repeat
-		local count
-		text, count = text:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
-	until count == 0
-	return text
-end
+-- Every number on screen uses the shared formatter (Config.Numbers)
+local formatNumber = Currency.Format
 
 local function corner(parent: Instance, radius: number?)
 	local c = Instance.new("UICorner")

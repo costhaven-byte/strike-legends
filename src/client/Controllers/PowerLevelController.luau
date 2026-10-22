@@ -8,6 +8,7 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Currency = require(Shared.Modules.Currency)
 local PowerLevels = require(Shared.Modules.PowerLevels)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
@@ -28,18 +29,7 @@ local COMPACT = { Position = UDim2.fromOffset(12, 196), Size = UDim2.fromOffset(
 
 local PowerLevelController = {}
 
-local function short(n: number): string
-	if n >= 1e12 then
-		return ("%.3gT"):format(n / 1e12)
-	elseif n >= 1e9 then
-		return ("%.3gB"):format(n / 1e9)
-	elseif n >= 1e6 then
-		return ("%.3gM"):format(n / 1e6)
-	elseif n >= 1e4 then
-		return ("%.3gK"):format(n / 1e3)
-	end
-	return tostring(math.floor(n))
-end
+local short = Currency.Format -- Config.Numbers
 
 local function label(parent: Instance, name: string, position: UDim2, size: UDim2, color: Color3): TextLabel
 	local text = Instance.new("TextLabel")

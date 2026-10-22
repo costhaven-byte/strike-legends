@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Currency = require(Shared.Modules.Currency)
 
 local REWARDS = Config.Rewards
 
@@ -36,14 +37,14 @@ function RewardResolver.Calculate(
 		xpMultiplier *= value
 	end
 
-	local coins = count * REWARDS.BaseCoinsPerPin * multiplier
+	local coins = Currency.Scale(count * REWARDS.BaseCoinsPerPin, multiplier) -- whole coins only at the end
 	local xp = count * REWARDS.XpPerPin
 	local gems = 0
 	local gemHunter = false
 	local hunterShare = 0
 
 	if tier == "PerfectStrike" then
-		coins *= 1 + REWARDS.PerfectStrikeBonus
+		coins = Currency.Scale(coins, 1 + REWARDS.PerfectStrikeBonus)
 		xp = REWARDS.PerfectStrikeXp
 		if not Config.Gems.Enabled then
 			if (gemBonus or 0) > 0 and math.random() < (gemBonus :: number) then
@@ -58,13 +59,13 @@ function RewardResolver.Calculate(
 			gemHunter = true
 		end
 	elseif tier == "Strike" then
-		coins *= 1 + REWARDS.StrikeBonus
+		coins = Currency.Scale(coins, 1 + REWARDS.StrikeBonus)
 		xp = REWARDS.StrikeXp
 	end
 
-	local hunterCoins = math.floor(coins * hunterShare + 0.5)
+	local hunterCoins = Currency.Mul(coins, hunterShare)
 	return {
-		Coins = math.floor(coins + 0.5) + hunterCoins,
+		Coins = Currency.Add(Currency.Round(coins), hunterCoins, "ThrowReward"),
 		HunterCoins = hunterCoins,
 		XP = math.floor(xp * xpMultiplier + 0.5),
 		Gems = gems,

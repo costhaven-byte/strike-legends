@@ -11,6 +11,7 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Currency = require(Shared.Modules.Currency)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local UiFx = require(Modules:WaitForChild("UiFx"))
 
@@ -38,18 +39,7 @@ local SOURCES = {
 local MultiplierController = {}
 
 -- 2.345 -> "x2.35", 3 -> "x3", 1500 -> "x1,500"
-local function format(value: number): string
-	if value >= 100 then
-		local text = tostring(math.floor(value + 0.5))
-		repeat
-			local count
-			text, count = text:gsub("^(%d+)(%d%d%d)", "%1,%2")
-		until count == 0
-		return "x" .. text
-	end
-	local text = ("%.2f"):format(value):gsub("0+$", ""):gsub("%.$", "")
-	return "x" .. text
-end
+local format = Currency.FormatMultiplier
 
 local function decode(text: any): { [string]: number }
 	local values = {}

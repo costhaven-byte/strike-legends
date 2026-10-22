@@ -9,9 +9,16 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Progression = require(Shared.Modules.Progression)
+local Currency = require(Shared.Modules.Currency)
 local SaveStore = require(script.Parent.Parent.Modules.SaveStore)
 
 local PlayerDataService = {}
+
+-- Money keys (Config.Numbers.Currencies): their math goes through Shared.Modules.Currency
+local CURRENCY = {}
+for _, key in Config.Numbers.Currencies do
+	CURRENCY[key] = true
+end
 
 type Profile = {
 	Data: { [string]: any },
@@ -156,9 +163,27 @@ function PlayerDataService.Add(player: Player, key: string, amount: number): boo
 	if not profile or profile.Released or profile.Data[key] == nil then
 		return false
 	end
-	profile.Data[key] += amount
+	if CURRENCY[key] then
+		profile.Data[key] = Currency.Add(profile.Data[key], amount, key)
+	else
+		profile.Data[key] += amount
+	end
 	player:SetAttribute(key, profile.Data[key])
 	return true
+end
+
+-- Can the player pay this price in this currency right now?
+function PlayerDataService.CanAfford(player: Player, key: string, price: number): boolean
+	local profile = profiles[player]
+	return profile ~= nil and not profile.Released and Currency.CanAfford(profile.Data[key], price)
+end
+
+-- Takes the price if the player can pay it. Returns true if it was paid.
+function PlayerDataService.Spend(player: Player, key: string, price: number): boolean
+	if not PlayerDataService.CanAfford(player, key, price) then
+		return false
+	end
+	return PlayerDataService.Add(player, key, -price)
 end
 
 function PlayerDataService.Set(player: Player, key: string, value: number | string): boolean

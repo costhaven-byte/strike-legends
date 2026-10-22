@@ -10,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Currency = require(Shared.Modules.Currency)
 local Balls = require(Shared.Modules.Balls)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modifiers = require(Shared.Modules.Modifiers)
@@ -26,19 +27,7 @@ local GEM_COLOR = Color3.fromRGB(255, 90, 200)
 local LEVEL_GEM_COLOR = Color3.fromRGB(60, 230, 255) -- same blue as the "+N GEMS" after a throw (HudController)
 local POWER_COLOR = Color3.fromRGB(255, 43, 214)
 
--- 1234 -> "1.23K" (the bar is small)
-local function short(n: number): string
-	if n >= 1e12 then
-		return ("%.3gT"):format(n / 1e12)
-	elseif n >= 1e9 then
-		return ("%.3gB"):format(n / 1e9)
-	elseif n >= 1e6 then
-		return ("%.3gM"):format(n / 1e6)
-	elseif n >= 1e3 then
-		return ("%.3gK"):format(n / 1e3)
-	end
-	return tostring(math.floor(n))
-end
+local short = Currency.Format -- Config.Numbers
 
 local player = Players.LocalPlayer
 

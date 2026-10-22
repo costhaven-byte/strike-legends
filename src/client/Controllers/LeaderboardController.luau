@@ -9,6 +9,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Currency = require(Shared.Modules.Currency)
 local Calendar = require(Shared.Modules.Calendar)
 
 local player = Players.LocalPlayer
@@ -22,14 +23,8 @@ local LeaderboardController = {}
 local lastUpdate = 0 -- server time of the newest board refresh
 
 -- 1234567 -> "1,234,567"
-local function formatNumber(n: number): string
-	local text = tostring(math.floor(n))
-	repeat
-		local count
-		text, count = text:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
-	until count == 0
-	return text
-end
+-- Every number on screen uses the shared formatter (Config.Numbers)
+local formatNumber = Currency.Format
 
 local function headshot(userId: number): string
 	return ("rbxthumb://type=AvatarHeadShot&id=%d&w=150&h=150"):format(userId)

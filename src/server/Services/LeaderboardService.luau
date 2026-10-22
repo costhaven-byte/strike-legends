@@ -11,6 +11,7 @@ local UserService = game:GetService("UserService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Calendar = require(Shared.Modules.Calendar)
+local Currency = require(Shared.Modules.Currency)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
 local LB = Config.Leaderboards
@@ -55,7 +56,7 @@ function LeaderboardService.RecordThrow(player: Player, pins: number, coins: num
 	end
 	checkWeek(player)
 	PlayerDataService.Add(player, "LifetimePins", pins)
-	PlayerDataService.Add(player, "WeeklyCoins", math.floor(coins))
+	PlayerDataService.Add(player, "WeeklyCoins", Currency.Round(coins))
 end
 
 -- The scores to save right now (read straight away, before anything can yield)

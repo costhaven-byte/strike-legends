@@ -9,6 +9,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Currency = require(Shared.Modules.Currency)
 local Balls = require(Shared.Modules.Balls)
 local CrateController = require(script.Parent.CrateController)
 
@@ -21,14 +22,8 @@ local player = Players.LocalPlayer
 
 local RizzoController = {}
 
-local function formatNumber(n: number): string
-	local text = tostring(math.floor(n))
-	repeat
-		local count
-		text, count = text:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
-	until count == 0
-	return text
-end
+-- Every number on screen uses the shared formatter (Config.Numbers)
+local formatNumber = Currency.Format
 
 -- A speech bubble over his head that types each line out
 local function buildBubble(head: BasePart)

@@ -8,6 +8,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Currency = require(Shared.Modules.Currency)
 local Calendar = require(Shared.Modules.Calendar)
 local Balls = require(Shared.Modules.Balls)
 local Zones = require(Shared.Modules.Zones)
@@ -30,24 +31,11 @@ local LOCKED_STROKE = Color3.fromRGB(80, 70, 110)
 
 local DailyRewardController = {}
 
-local function formatNumber(n: number): string
-	local text = tostring(math.floor(n))
-	repeat
-		local count
-		text, count = text:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
-	until count == 0
-	return text
-end
+-- Every number on screen uses the shared formatter (Config.Numbers)
+local formatNumber = Currency.Format
 
 -- 15,000 / 4.1B / 500K: big numbers get a letter so they fit the tile
-local function shortNumber(n: number): string
-	for _, unit in { { 1e12, "T" }, { 1e9, "B" }, { 1e6, "M" } } do
-		if n >= unit[1] then
-			return ("%g%s"):format(math.floor(n / unit[1] * 10) / 10, unit[2])
-		end
-	end
-	return formatNumber(n)
-end
+local shortNumber = Currency.Format
 
 local function potionById(id: string)
 	for _, potion in Config.Potions.List do

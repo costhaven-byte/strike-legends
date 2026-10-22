@@ -1,6 +1,8 @@
 -- The owner's Strike Legends UI look (first design batch, 2026-10-22): colours, fonts and small builders
 -- for the layered, thick-outlined text the designs use. Roblox has no Rubik or Lilita One, so
 -- Montserrat Heavy Italic stands in for Rubik 900 italic, Fredoka One for Lilita One, Roboto Mono for JetBrains Mono.
+local Currency = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Modules.Currency)
+
 local SlUi = {}
 
 local function rgb(hex: string): Color3
@@ -101,18 +103,7 @@ function SlUi.Layered(parent: Instance, text: string, font: Font, size: number, 
 end
 
 function SlUi.Format(n: number): string
-	n = math.floor(n + 0.5)
-	if n >= 1e9 then
-		return ("%.2fB"):format(n / 1e9)
-	elseif n >= 1e6 then
-		return ("%.2fM"):format(n / 1e6)
-	end
-	local text = tostring(n)
-	repeat
-		local count
-		text, count = text:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
-	until count == 0
-	return text
+	return Currency.Format(n)
 end
 
 return SlUi

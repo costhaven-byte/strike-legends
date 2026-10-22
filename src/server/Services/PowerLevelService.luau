@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local PowerLevels = require(Shared.Modules.PowerLevels)
+local Currency = require(Shared.Modules.Currency)
 local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
@@ -27,10 +28,9 @@ local function onBuy(player: Player)
 	if not nextRow then
 		return { Ok = false, Error = "MAX LEVEL" }
 	end
-	if (PlayerDataService.Get(player, "Coins") or 0) < nextRow.Price then
+	if not PlayerDataService.Spend(player, "Coins", nextRow.Price) then
 		return { Ok = false, Error = "Not enough coins" }
 	end
-	PlayerDataService.Add(player, "Coins", -nextRow.Price)
 	PlayerDataService.Set(player, "PowerLevel", nextRow.Level)
 	Analytics.Currency(player, "Coins", -nextRow.Price, "Shop", "PowerLevel" .. nextRow.Level)
 	Analytics.Purchase(player, "PowerLevel", tostring(nextRow.Level))
@@ -46,8 +46,8 @@ local function onTestCoins(player: Player)
 	end
 	local nextRow = PowerLevels.Next(currentLevel(player))
 	local coins = PlayerDataService.Get(player, "Coins") or 0
-	if nextRow and coins < nextRow.Price then
-		PlayerDataService.Add(player, "Coins", nextRow.Price - coins)
+	if nextRow and not Currency.CanAfford(coins, nextRow.Price) then
+		PlayerDataService.Add(player, "Coins", Currency.Sub(nextRow.Price, coins))
 	end
 end
 

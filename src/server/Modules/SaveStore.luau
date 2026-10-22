@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Progression = require(Shared.Modules.Progression)
+local Currency = require(Shared.Modules.Currency)
 
 local DATA = Config.Data
 
@@ -123,6 +124,10 @@ local function migrate(saved: any): { [string]: any }
 		-- v14 added ZoneSeen, v15 Potions and Boosts, v16 FreeEggs, v17 SpinDay: same, they start at their starting value
 	end
 	data.Rank = math.clamp(math.floor(tonumber(data.Rank) or 1), 1, #Config.Ranks)
+	-- Money comes back through Currency, so a future number format can read old plain-number saves here
+	for _, key in Config.Numbers.Currencies do
+		data[key] = Currency.Decode(data[key])
+	end
 	return data
 end
 
@@ -169,6 +174,11 @@ function SaveStore.Save(userId: number, data: { [string]: any }, release: boolea
 		return false
 	end
 	local snapshot = deepCopy(data)
+	for _, key in Config.Numbers.Currencies do
+		if snapshot[key] ~= nil then
+			snapshot[key] = Currency.Encode(snapshot[key])
+		end
+	end
 	local lostLock = false
 	local ok = withRetries("Save " .. userId, function()
 		store:UpdateAsync(keyFor(userId), function(saved)

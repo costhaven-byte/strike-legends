@@ -12,6 +12,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Currency = require(Shared.Modules.Currency)
 local CrateController = require(script.Parent.CrateController)
 
 local SHOP = Config.CrateShop
@@ -25,14 +26,8 @@ local player = Players.LocalPlayer
 
 local KioskController = {}
 
-local function formatNumber(n: number): string
-	local text = tostring(math.floor(n))
-	repeat
-		local count
-		text, count = text:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
-	until count == 0
-	return text
-end
+-- Every number on screen uses the shared formatter (Config.Numbers)
+local formatNumber = Currency.Format
 
 -- The screens face the front of the kiosk, which is each part's Back face
 local function surface(screen: BasePart): SurfaceGui
