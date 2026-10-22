@@ -33,6 +33,7 @@ AssetSlots.Sounds = {
 	HatchCharge = { Id = nil, Volume = 0.6, StandIn = "Charge", StandInPitch = 1.3 }, -- stand flares, charge climbs
 	HatchCrack = { Id = nil, Volume = 0.8, StandIn = "PinHit", StandInPitch = 1.6 }, -- each crack snaps open
 	HatchBurst = { Id = nil, Volume = 0.9, StandIn = "StrikeCrash", StandInPitch = 1.3 }, -- the shell bursts
+	ElevatorDing = { Id = nil, Volume = 0.6, StandIn = "Coin", StandInPitch = 0.6 }, -- elevator doors open (zone 3 <-> roof)
 }
 
 return AssetSlots

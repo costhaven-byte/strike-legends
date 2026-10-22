@@ -283,6 +283,7 @@ Config.RateLimits = {
 	UsePotion = 0.3,
 	ClaimPlaytime = 0.5,
 	SpinWheel = 1,
+	RideElevator = 2,
 }
 
 -- Gems on/off switch. Addendum 1 keeps gems (earned only, a gem sink comes later); set Enabled = false to hide them.
@@ -2573,9 +2574,9 @@ Config.Analytics = {
 -- Look = the lighting your screen uses while your character is inside the zone's Area box
 -- (centre + size in studs); anywhere else (the lobby, Neon Lanes) keeps the normal Lighting.
 Config.Zones = {
-	LaneFolders = { "BackAlley", "NeonAlley", "MainStreetLanes" }, -- every Workspace model that holds lanes, in zone order
+	LaneFolders = { "BackAlley", "NeonAlley", "MainStreetLanes", "SkylineLanes" }, -- every Workspace model that holds lanes, in zone order
 	AssignFolder = "BackAlley", -- new lanes are handed out here
-	BuiltZones = 3, -- zones that exist in the world so far (crates of later zones stay locked)
+	BuiltZones = 4, -- zones that exist in the world so far (crates of later zones stay locked)
 	-- Zones you walk into and claim a lane in (zone 2+). Locked (rank level < Config.Economy.Zones Rank): a glowing
 	-- wall (Wall boxes, only on your screen) keeps you out, and the server walks you back out to KickTo.
 	-- Unlocked: step onto any OPEN lane in the Area to claim it; it's yours until you leave the Area for LeaveGrace
@@ -2609,6 +2610,22 @@ Config.Zones = {
 			WallColor = Color3.fromRGB(224, 165, 38),
 			KickTo = Vector3.new(52, 4, 12), -- back in the lobby, in front of the door
 			Arrival = Vector3.new(120, 4, 42.8), -- behind the bowler seats, facing the lanes
+			LeaveGrace = 2,
+		},
+		-- Zone 4 (2026-10-22): Skyline Lanes, the owner's rooftop design built big (x7 the design's meters) on top of a
+		-- tower far north of the lobby (Workspace.SkylineLanes, roof top at y 848). The only way up is the elevator at
+		-- the east end of Main Street Lanes' back walkway (Config.Elevators); the wall covers its doors while locked.
+		{
+			Zone = 4,
+			Folder = "SkylineLanes",
+			Area = { Center = Vector3.new(0, 870, -3500), Size = Vector3.new(220, 60, 236) }, -- the whole roof
+			Walls = { -- in front of the Main Street Lanes elevator doors
+				{ Center = Vector3.new(165, 7.5, 46), Size = Vector3.new(0.4, 13, 17) },
+			},
+			SignFace = Enum.NormalId.Left, -- the lock sign faces west, down the walkway
+			WallColor = Color3.fromRGB(255, 79, 139),
+			KickTo = Vector3.new(158, 4, 46), -- Main Street Lanes, in front of the elevator
+			Arrival = Vector3.new(81, 852, -3412), -- just out of the rooftop elevator, facing the pins
 			LeaveGrace = 2,
 		},
 	},
@@ -2657,6 +2674,59 @@ Config.Zones = {
 				Bloom = 0.12,
 			},
 		},
+		{
+			-- The design's mood: a night rooftop over a purple city, warm gold lights, light violet haze
+			Id = "SkylineLanes",
+			Folder = "SkylineLanes",
+			Area = { Center = Vector3.new(0, 870, -3500), Size = Vector3.new(220, 60, 236) },
+			Look = {
+				Ambient = Color3.fromRGB(100, 90, 135),
+				OutdoorAmbient = Color3.fromRGB(115, 105, 155),
+				Exposure = 0.35,
+				Saturation = 0.12,
+				Contrast = 0.08,
+				Tint = Color3.fromRGB(240, 232, 255),
+				HazeColor = Color3.fromHex("5B4A8A"),
+				HazeDecay = Color3.fromHex("FF9F6B"),
+				HazeDensity = 0.25,
+				Haze = 0.6,
+				Bloom = 0.25,
+			},
+		},
+	},
+}
+
+-- Elevators (owner 2026-10-22): Skyline Lanes is a rooftop, so you ride up to it. One car at the east end of
+-- Main Street Lanes' back walkway, one on the roof. Built in code on each screen (ElevatorController); the server
+-- (ElevatorService) checks you have zone 4 open and stand by the car, then moves you while the screen is black.
+-- Door = bottom middle of the doorway, looking out (the way you face when you step out).
+Config.Elevators = {
+	Zone = 4, -- you need this zone open to ride
+	UseRange = 16, -- studs (flat) from the doorway the server accepts a ride from
+	PromptRange = 10,
+	RideSeconds = 1.6, -- how long the screen stays dark (you move halfway through)
+	Cars = {
+		{
+			Id = "MainStreet",
+			Door = CFrame.lookAt(Vector3.new(166.5, 1, 46), Vector3.new(160, 1, 46)),
+			Arrive = Vector3.new(158, 4, 46),
+			To = "Roof",
+			Action = "RIDE UP",
+			Sign = "SKYLINE LANES",
+			Arrow = "▲",
+			RideText = "GOING UP...",
+		},
+		{
+			Id = "Roof",
+			Door = CFrame.lookAt(Vector3.new(81, 848, -3401.5), Vector3.new(81, 848, -3410)),
+			Arrive = Vector3.new(81, 852, -3412),
+			To = "MainStreet",
+			Action = "RIDE DOWN",
+			Sign = "MAIN STREET LANES",
+			Arrow = "▼",
+			RideText = "GOING DOWN...",
+			Housing = true, -- stands on the open roof: build the little elevator house around it
+		},
 	},
 }
 
@@ -2691,6 +2761,19 @@ Config.ZoneUnlock = {
 		Hint = "Step onto any OPEN lane to claim it.",
 		Color = Color3.fromRGB(224, 165, 38),
 		Accent = Color3.fromRGB(255, 120, 110),
+	},
+	-- Zone 4 has no crates, eggs or balls of its own yet (they come with the 4-zone economy pass)
+	[4] = {
+		Title = "ZONE 4 UNLOCKED!",
+		Name = "SKYLINE LANES",
+		Tagline = "The big time. Take the elevator at the end of Main Street Lanes' back walkway up to the rooftop lanes above the city.",
+		Crates = {},
+		Balls = {},
+		BallsLine = "%d NEW BALLS TO WIN",
+		Button = "TAKE ME THERE!",
+		Hint = "Step onto any OPEN lane to claim it.",
+		Color = Color3.fromRGB(255, 79, 139),
+		Accent = Color3.fromRGB(245, 184, 46),
 	},
 }
 
