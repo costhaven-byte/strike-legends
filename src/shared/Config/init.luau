@@ -211,12 +211,13 @@ Config.StartingData = {
 	Potions = {}, -- potions waiting to be drunk, by Id: { CoinSmall = 2 } (Config.Potions; v15)
 	Boosts = {}, -- seconds left on each drunk potion, by Id: { CoinSmall = 840 } (only ticks while playing; v15)
 	FreeEggs = {}, -- free hatches waiting at the egg stand, by egg Id: { Alley = 1 } (Config.Playtime; v16)
+	SpinDay = 0, -- the day number (see Calendar.Day) of the last free spin on the daily spin wheel (Config.Spin; v17)
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 16, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 17, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -277,6 +278,7 @@ Config.RateLimits = {
 	EquipMascot = 0.15,
 	UsePotion = 0.3,
 	ClaimPlaytime = 0.5,
+	SpinWheel = 1,
 }
 
 -- Gems on/off switch. Addendum 1 keeps gems (earned only, a gem sink comes later); set Enabled = false to hide them.
@@ -2441,6 +2443,38 @@ Config.Playtime = {
 	},
 }
 
+-- Daily spin wheel (owner 2026-10-22): a big wheel you walk up to in Neon Lanes (zone 2), at the far end of the east
+-- walkway beside the lanes (the back wall leaves no room behind the pins). One free spin a day (days change at
+-- midnight UTC, like the daily reward). Built in code on each player's screen (SpinController); the server
+-- (SpinService) checks you stand by it, rolls the slice and hands out the prize before the wheel even turns.
+-- Slices: Potion (a Config.Potions Id), Egg (a free hatch at the egg stand), Crate (opened right away; a crate from a
+-- zone you haven't reached comes as your zone's), Ball = a ball of that rarity from that crate (shown as SECRET
+-- BALL), Pet = a pet of that rarity from that egg (shown as SECRET PET). Chance = % (adds up to 100); the slices are
+-- drawn the same size whatever their chance, like every simulator wheel.
+Config.Spin = {
+	Enabled = true,
+	Zone = 2, -- you need this zone open to use it (it stands inside the zone 2 building anyway)
+	Center = Vector3.new(51, 10.5, -73.5), -- the middle of the wheel
+	Facing = Vector3.new(0, 0, 1), -- the wheel's face looks this way (south, back toward the lobby)
+	Radius = 6.5,
+	UseRange = 16, -- studs (flat) from the middle of the wheel the server accepts a spin from
+	PromptRange = 12,
+	SpinSeconds = 5.5,
+	Turns = 6, -- whole turns before it slows onto the prize
+	CheckInterval = 30, -- seconds between "is it a new day?" checks while playing
+	Slices = {
+		{ Label = "COIN POTION", Potion = "CoinSmall", Chance = 24, Color = Color3.fromRGB(255, 190, 40) },
+		{ Label = "NEON EGG", Egg = "Alley", Chance = 10, Color = Color3.fromRGB(255, 70, 200) },
+		{ Label = "XP POTION", Potion = "XpSmall", Chance = 22, Color = Color3.fromRGB(60, 220, 255) },
+		{ Label = "BRONZE CRATE", Crate = "Bronze", Chance = 16, Color = Color3.fromRGB(205, 125, 60) },
+		{ Label = "MEGA COIN", Potion = "CoinBig", Chance = 10, Color = Color3.fromRGB(255, 130, 20) },
+		{ Label = "SECRET BALL", Ball = "Legendary", Crate = "Gold", Chance = 0.5, Secret = true, Color = Color3.fromRGB(255, 215, 60) },
+		{ Label = "MEGA XP", Potion = "XpBig", Chance = 8, Color = Color3.fromRGB(170, 80, 255) },
+		{ Label = "SILVER CRATE", Crate = "Silver", Chance = 8.5, Color = Color3.fromRGB(190, 200, 225) },
+		{ Label = "SECRET PET", Pet = "Legendary", Egg = "Alley", Chance = 1, Secret = true, Color = Color3.fromRGB(255, 215, 60) },
+	},
+}
+
 -- Leaderboards (OrderedDataStores). Boards are read every RefreshInterval and
 -- each player's scores are written every WriteInterval and when they leave, never per throw.
 -- Stat = the saved player value the board ranks. Weekly boards start fresh every Monday 00:00 UTC.
@@ -2516,6 +2550,7 @@ Config.Analytics = {
 		"PolishLevel", -- value = new Polish level; labels = ball
 		"PotionUsed", -- value = minutes left on that potion after drinking; labels = potion
 		"PlaytimeClaimed", -- value = the gift's minute mark; labels = Potion/Egg/Crate, item
+		"SpinWheel", -- value = the slice number; labels = Potion/Egg/Crate/Ball/Pet, item
 		"Rebirth", -- later (Milestone 17)
 		"QuestCompleted", -- later (Milestone 18)
 	},

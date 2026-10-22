@@ -119,6 +119,21 @@ local function roll(eggId: string)
 	return inEgg[1]
 end
 
+-- Adds one mascot to the player's pets. A free slot gets it straight away, so the bonus shows on the very next throw.
+-- Returns whether it's new and whether it was equipped.
+local function addMascot(player: Player, mascot): (boolean, boolean)
+	local owned = getOwned(player)
+	local isNew = (owned[mascot.Id] or 0) == 0
+	owned[mascot.Id] = (owned[mascot.Id] or 0) + 1
+	local equipped = getEquipped(player)
+	local autoEquipped = #equipped < slots(player)
+	if autoEquipped then
+		table.insert(equipped, mascot.Id)
+	end
+	publish(player)
+	return isNew, autoEquipped
+end
+
 -- Eggs hatch only at the egg stand in the lobby (Workspace.Hub.EggPad): the player must be standing by it
 local function atEggStand(player: Player): boolean
 	local hub = Workspace:FindFirstChild("Hub")
@@ -165,17 +180,7 @@ local function hatch(player: Player, eggId: any)
 	end
 	PlayerDataService.Add(player, "EggsHatched", 1)
 	local mascot = roll(egg.Id)
-	local owned = getOwned(player)
-	local isNew = (owned[mascot.Id] or 0) == 0
-	owned[mascot.Id] = (owned[mascot.Id] or 0) + 1
-
-	-- A free slot gets the new mascot straight away, so the bonus shows on the very next throw
-	local equipped = getEquipped(player)
-	local autoEquipped = #equipped < slots(player)
-	if autoEquipped then
-		table.insert(equipped, mascot.Id)
-	end
-	publish(player)
+	local isNew, autoEquipped = addMascot(player, mascot)
 
 	local hatched = PlayerDataService.Get(player, "EggsHatched") or 0
 	if not free then
@@ -214,6 +219,27 @@ function MascotService.GiveFreeEgg(player: Player, eggId: string, count: number?
 	freeEggs[eggId] = (freeEggs[eggId] or 0) + (count or 1)
 	publish(player)
 	return true
+end
+
+-- Gives a pet of exactly this rarity from this egg, no hatching (the daily spin wheel's SECRET PET)
+function MascotService.GivePet(player: Player, eggId: string, rarity: string)
+	if not PlayerDataService.IsLoaded(player) then
+		return nil
+	end
+	local pool = {}
+	for _, mascot in Mascots.InEgg(eggId) do
+		if mascot.Rarity == rarity then
+			table.insert(pool, mascot)
+		end
+	end
+	local mascot = pool[math.random(math.max(1, #pool))] or Mascots.InEgg(eggId)[1]
+	if not mascot then
+		return nil
+	end
+	local isNew, autoEquipped = addMascot(player, mascot)
+	Analytics.Event(player, "MascotHatched", PlayerDataService.Get(player, "EggsHatched") or 0, { eggId, mascot.Rarity, mascot.Id })
+	SessionLog.Moment(player, ("Pet given: %s (%s, %s)"):format(mascot.Id, mascot.Rarity, if isNew then "new" else "duplicate"))
+	return { MascotId = mascot.Id, IsNew = isNew, Equipped = autoEquipped }
 end
 
 local function onHatch(player: Player, eggId: any)
