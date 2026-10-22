@@ -3,6 +3,8 @@
 -- Hatching happens only at the egg stand (owner's call, 2026-10-19): the panel shows your equipped slots with
 -- EQUIP BEST and only the pets you own, with EQUIP buttons (owner 2026-10-21: no egg card, no silhouettes). Step 8b: a MERGE button when you own
 -- Config.Economy.Mascots.ShinyMerge of one mascot, and gold Shiny cards once you own a Shiny.
+-- Owner 2026-10-22: the panel has two tabs, PETS and ITEMS (the potions, PotionController.BuildItems). The button is
+-- always open; before the pets' zone the PETS tab shows where pets unlock and the button opens on ITEMS.
 -- Built in code (not in Studio), so it lives in git. The server rolls every hatch (MascotService); this only shows it.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,6 +16,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Mascots = require(Shared.Modules.Mascots)
 local Zones = require(Shared.Modules.Zones)
+local PotionController = require(script.Parent.PotionController)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local HatchScene = require(Modules:WaitForChild("HatchScene"))
 local MascotView = require(Modules:WaitForChild("MascotView"))
@@ -38,9 +41,9 @@ local GOLD = Color3.fromRGB(255, 200, 40)
 local LIME = Color3.fromRGB(125, 255, 60)
 local GREY = Color3.fromRGB(120, 110, 150)
 
--- The PETS button sits right of BALLS and DAILY (and the same on short phone screens)
-local BUTTON_NORMAL = UDim2.fromOffset(142, 304)
-local BUTTON_COMPACT = UDim2.fromOffset(138, 76)
+-- The PETS button sits right of BALLS (and the same on short phone screens); DAILY moved to the top-right corner
+local BUTTON_NORMAL = UDim2.fromOffset(79, 304)
+local BUTTON_COMPACT = UDim2.fromOffset(75, 76)
 
 local MascotController = {}
 
@@ -209,37 +212,21 @@ function MascotController:Start()
 		pupil.Parent = eye
 		corner(pupil)
 	end
-	-- Red dot: an egg is ready to hatch
+	-- Red badge: potions waiting to be drunk (their number), or "!" when an egg is ready to hatch
 	local dot = Instance.new("Frame")
 	dot.Name = "Dot"
 	dot.AnchorPoint = Vector2.new(0.5, 0.5)
 	dot.Position = UDim2.new(1, -4, 0, 4)
-	dot.Size = UDim2.fromOffset(16, 16)
+	dot.Size = UDim2.fromOffset(20, 20)
 	dot.BackgroundColor3 = Color3.fromRGB(255, 50, 70)
 	dot.Visible = false
 	dot.ZIndex = 3
 	dot.Parent = petsButton
 	corner(dot)
 	stroke(dot, Color3.new(1, 1, 1), 2)
+	local dotLabel = text(dot, "Count", FONT, Color3.new(1, 1, 1), UDim2.fromScale(0.1, 0.1), UDim2.fromScale(0.8, 0.8))
+	dotLabel.ZIndex = 4
 	UiFx.Press(petsButton)
-
-	-- Locked until the pets' zone opens (owner 2026-10-21: pets come with Neon Lanes): grey, a padlock and the level
-	local lockShade = Instance.new("Frame")
-	lockShade.Name = "Lock"
-	lockShade.Size = UDim2.fromScale(1, 1)
-	lockShade.BackgroundColor3 = Color3.new(0, 0, 0)
-	lockShade.BackgroundTransparency = 0.45
-	lockShade.ZIndex = 5
-	lockShade.Visible = false
-	corner(lockShade, 12)
-	local lockIcon =
-		text(lockShade, "Icon", FONT, Color3.new(1, 1, 1), UDim2.fromScale(0.25, 0.15), UDim2.fromScale(0.5, 0.5))
-	lockIcon.Text = "🔒"
-	lockIcon.ZIndex = 6
-	lockShade.Parent = petsButton
-	local litColors = { [petsButton] = petsButton.BackgroundColor3, [face] = face.BackgroundColor3 }
-	local petsOutline = petsButton:FindFirstChildOfClass("UIStroke")
-	local litOutline = petsOutline and petsOutline.Color
 
 	-- The panel borrows the ball inventory's look (like the collection book does)
 	local panel = inventory:Clone()
@@ -261,6 +248,32 @@ function MascotController:Start()
 	local countLabel = panel:WaitForChild("Count") :: TextLabel
 	local close = panel:WaitForChild("Close") :: TextButton
 	panel.Parent = gui
+
+	-- Tabs: PETS and ITEMS (potions), top-right next to the close button
+	local tabs = {}
+	for index, info in { { "Pets", "PETS" }, { "Items", "ITEMS" } } do
+		local tab = button(
+			panel,
+			info[1] .. "Tab",
+			info[2],
+			CARD,
+			UDim2.new(1, -264 + (index - 1) * 102, 0, 10),
+			UDim2.fromOffset(96, 32)
+		)
+		tab.ZIndex = 3
+		tabs[info[1]] = tab
+	end
+	-- The ITEMS page (filled by PotionController.BuildItems once the toast exists)
+	local itemsPage = Instance.new("Frame")
+	itemsPage.Name = "Items"
+	itemsPage.BackgroundTransparency = 1
+	itemsPage.Position = UDim2.fromOffset(12, 66)
+	itemsPage.Size = UDim2.new(1, -24, 1, -78)
+	itemsPage.Visible = false
+	itemsPage.Parent = panel
+	-- PETS page before the pets' zone opens: where pets come from
+	local lockedNote = text(panel, "PetsLocked", FONT, GREY, UDim2.new(0, 20, 0.3, 0), UDim2.new(1, -40, 0, 70))
+	lockedNote.Visible = false
 
 	-- Right: equipped slots and EQUIP BEST
 	local right = Instance.new("Frame")
@@ -442,6 +455,7 @@ function MascotController:Start()
 		end
 	end
 
+	local refreshBadge: () -> () -- below, with the tabs
 	local function refresh()
 		local mine = owned()
 		local list = equipped()
@@ -501,39 +515,62 @@ function MascotController:Start()
 		end
 		noPets.Visible = kinds == 0
 
-		local unlocked, _, affordable = eggState()
-		dot.Visible = unlocked and affordable
+		refreshBadge()
 		refreshSlots()
 	end
 
-	-- The button is always there, locked (grey + padlock + "LEVEL 5") until the egg's zone opens; it pops when it unlocks
+	-- Which tab is showing; before the pets' zone the PETS tab shows the lock note and the button opens on ITEMS
+	local currentTab = "Pets"
 	local petsLocked: boolean? = nil
+	local testEgg: TextButton? = nil
+	local function showTab(name: string)
+		currentTab = name
+		local pets = name == "Pets"
+		for tabName, tab in tabs do
+			local on = tabName == name
+			tab.BackgroundColor3 = if on then PINK else CARD
+			tab.TextColor3 = if on then INK else Color3.new(1, 1, 1)
+		end
+		right.Visible = pets and not petsLocked
+		lockedNote.Visible = pets and petsLocked == true
+		itemsPage.Visible = not pets
+		if testEgg then
+			testEgg.Visible = pets
+		end
+		title.Text = if pets then "PETS" else "ITEMS"
+		if pets then
+			refresh()
+		else
+			local potions = PotionController.Count()
+			countLabel.Text = if potions == 1 then "1 POTION TO DRINK" else ("%d POTIONS TO DRINK"):format(potions)
+		end
+	end
+
+	-- Badge on the button: potions to drink (their number), else "!" when an egg can be hatched
+	function refreshBadge()
+		local potions = PotionController.Count()
+		local unlocked, _, affordable = eggState()
+		dot.Visible = potions > 0 or (unlocked and affordable)
+		dotLabel.Text = if potions > 0 then tostring(potions) else "!"
+	end
+
 	local function refreshButton()
 		local unlocked, why = eggState()
 		local locked = not unlocked
 		petsButton.Visible = true
+		lockedNote.Text = ("PETS UNLOCK IN %s (%s)\nHATCH THE NEON EGG AT THE EGG STAND"):format(
+			Zones.Name(EGG.Zone or 1):upper(),
+			tostring(why)
+		)
 		if locked == petsLocked then
 			return
 		end
 		local wasLocked = petsLocked
 		petsLocked = locked
-		lockShade.Visible = locked
-		caption.ZIndex = 7 -- the level sits above the shade
-		caption.Text = if locked then tostring(why) else "PETS"
-		for part, color in litColors do
-			local h, sat, v = color:ToHSV()
-			part.BackgroundColor3 = if locked then Color3.fromHSV(h, sat * 0.1, v * 0.6) else color
-		end
-		if petsOutline and litOutline then
-			petsOutline.Color = if locked then Color3.fromRGB(90, 85, 100) else litOutline
-		end
-		caption.TextColor3 = if locked then Color3.new(1, 1, 1) else PINK
 		if wasLocked and not locked then
 			UiFx.Pop(petsButton, 1.6, 0.4)
 		end
-		if locked and panel.Visible then
-			UiFx.Close(panel)
-		end
+		showTab(currentTab)
 	end
 
 	-- Toast for errors ("Not enough coins")
@@ -552,6 +589,13 @@ function MascotController:Start()
 			if toastToken == token then
 				toast.Visible = false
 			end
+		end)
+	end
+
+	PotionController.BuildItems(itemsPage, showToast)
+	for name, tab in tabs do
+		tab.Activated:Connect(function()
+			showTab(name)
 		end)
 	end
 
@@ -960,29 +1004,11 @@ function MascotController:Start()
 		bestRemote:FireServer()
 	end)
 
-	local shaking = false
 	petsButton.Activated:Connect(function()
-		if petsLocked then
-			-- A little "no" shake and where pets come from
-			local _, why = eggState()
-			showToast(("PETS UNLOCK IN %s (%s)"):format(Zones.Name(EGG.Zone or 1):upper(), tostring(why)))
-			if shaking then
-				return
-			end
-			shaking = true
-			local start = petsButton.Position
-			for _, dx in { -6, 6, -4, 4, 0 } do
-				petsButton.Position = start + UDim2.fromOffset(dx, 0)
-				task.wait(0.04)
-			end
-			petsButton.Position = start
-			shaking = false
-			return
-		end
 		if panel.Visible then
 			UiFx.Close(panel)
 		else
-			refresh()
+			showTab(if petsLocked then "Items" else currentTab)
 			UiFx.Open(panel)
 		end
 	end)
@@ -1006,6 +1032,7 @@ function MascotController:Start()
 		test.Activated:Connect(function()
 			testRemote:FireServer()
 		end)
+		testEgg = test
 	end
 
 	-- Compact layout on short screens (phones held sideways)
@@ -1024,13 +1051,19 @@ function MascotController:Start()
 			if panel.Visible or key ~= "Coins" then
 				refresh()
 			else
-				local unlocked, _, affordable = eggState()
-				dot.Visible = unlocked and affordable
+				refreshBadge()
 			end
 		end)
 	end
+	player:GetAttributeChangedSignal("Potions"):Connect(function()
+		refreshBadge()
+		if panel.Visible and currentTab == "Items" then
+			showTab("Items")
+		end
+	end)
 	refresh()
 	refreshButton()
+	showTab(currentTab)
 	gui.Parent = playerGui
 
 	-- ===== The egg stand in the lobby =====

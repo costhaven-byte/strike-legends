@@ -67,7 +67,7 @@ local POPUPS = {
 	{ "DailyUI", "Popup" },
 	{ "TrialUI", "Intro" },
 	{ "ZoneUnlockUI", "Window" },
-	{ "PotionUI", "Panel" },
+	{ "MascotUI", "Panel" }, -- pets + potions (ITEMS tab)
 }
 
 local ThrowController = {}

@@ -1,5 +1,6 @@
--- Potions on screen (owner 2026-10-22, Config.Potions): the POTIONS button (right of PETS), the potion panel with a
--- DRINK button per potion, and the running timers on the right under the lane event pill.
+-- Potions on screen (owner 2026-10-22, Config.Potions): the potion cards with a DRINK button each (the ITEMS tab of
+-- the PETS panel, built by MascotController through PotionController.BuildItems) and the running timers, bottom-left:
+-- one potion each with its time left under it (owner 2026-10-22: no POTIONS button, no icon chips).
 -- Built in code (not in Studio), so it lives in git. The server runs every timer (PotionService); this only shows it.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -24,13 +25,10 @@ local PURPLE = Color3.fromRGB(190, 90, 255)
 local LIME = Color3.fromRGB(125, 255, 60)
 local GREY = Color3.fromRGB(120, 110, 150)
 
--- The POTIONS button sits right of BALLS, DAILY and PETS (and the same on short phone screens)
-local BUTTON_NORMAL = UDim2.fromOffset(205, 304)
-local BUTTON_COMPACT = UDim2.fromOffset(201, 76)
--- Running timers: right side under the lane event pill and next-goal bar; on phones left, under the next-goal bar
-local TIMERS_NORMAL = { Anchor = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0.42, 130), Width = 220 }
-local TIMERS_COMPACT = { Anchor = Vector2.new(0, 0), Position = UDim2.fromOffset(12, 196), Width = 150 }
-local PANEL_SIZE = UDim2.fromOffset(560, 340)
+-- Running timers: bottom-left corner; on phones top-left under the menu buttons (the thumbstick owns the bottom-left)
+local TIMERS_NORMAL = { Anchor = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -16), Scale = 1 }
+local TIMERS_COMPACT = { Anchor = Vector2.new(0, 0), Position = UDim2.fromOffset(12, 140), Scale = 0.7 }
+local TIMER_SIZE = UDim2.fromOffset(62, 84)
 
 local PotionController = {}
 
@@ -182,83 +180,121 @@ local function boostText(potion): string
 	return ("x%d %s"):format(potion.Multiplier, if potion.Boost == "Coins" then "COINS" else "XP")
 end
 
-function PotionController:Start()
-	local remotes = ReplicatedStorage:WaitForChild("Remotes")
-	local useRemote = remotes:WaitForChild("UsePotion") :: RemoteFunction
-	local playerGui = player:WaitForChild("PlayerGui")
-	local hud = playerGui:WaitForChild("HUD") :: ScreenGui
-	local ballsUI = playerGui:WaitForChild("BallsUI") :: ScreenGui
+-- What each potion card needs; filled by BuildItems
+local cards = {}
+local chips = {}
+local showToast: (string) -> () = function(_message: string) end
+local useRemote: RemoteFunction
 
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "PotionUI"
-	gui.ResetOnSpawn = false
-	gui.DisplayOrder = ballsUI.DisplayOrder
-	gui.IgnoreGuiInset = ballsUI.IgnoreGuiInset
+-- The strongest potion of each kind with time left: the one whose timer runs (the server picks the same way)
+local function running(boosts: { [string]: number }): { [string]: boolean }
+	local best = {}
+	for _, potion in POTIONS.List do
+		if (boosts[potion.Id] or 0) > 0 then
+			local current = best[potion.Boost]
+			if not current or potion.Multiplier > current.Multiplier then
+				best[potion.Boost] = potion
+			end
+		end
+	end
+	local ids = {}
+	for _, potion in best do
+		ids[potion.Id] = true
+	end
+	return ids
+end
 
-	-- ===== POTIONS button (same look as BALLS, DAILY and PETS, in purple) =====
-	local openButton = Instance.new("TextButton")
-	openButton.Name = "PotionsButton"
-	openButton.Text = ""
-	openButton.AutoButtonColor = false
-	openButton.BackgroundColor3 = CARD
-	openButton.BackgroundTransparency = 0.1
-	openButton.Size = UDim2.fromOffset(55, 56)
-	openButton.Position = BUTTON_NORMAL
-	openButton.Parent = gui
-	corner(openButton, 12)
-	stroke(openButton, PURPLE, 3, true)
-	local caption = text(openButton, "Caption", CAPTION_FONT, PURPLE, UDim2.new(0, 3, 1, -17), UDim2.new(1, -6, 0, 13))
-	caption.Text = "POTIONS"
-	flask(openButton, PURPLE, false, UDim2.new(0.5, 0, 0, 21), 30)
-	-- How many potions are waiting to be drunk
-	local badge =
-		text(openButton, "Count", FONT, Color3.new(1, 1, 1), UDim2.new(1, -12, 0, -6), UDim2.fromOffset(20, 20))
-	badge.BackgroundTransparency = 0
-	badge.BackgroundColor3 = Color3.fromRGB(255, 50, 70)
-	badge.ZIndex = 3
-	corner(badge)
-	stroke(badge, Color3.new(1, 1, 1), 2, true)
-	UiFx.Press(openButton)
+-- Potions waiting to be drunk (the PETS button shows this number)
+function PotionController.Count(): number
+	local total = 0
+	for _, count in decode(player:GetAttribute("Potions")) do
+		total += count
+	end
+	return total
+end
 
-	-- ===== The panel =====
-	local panel = Instance.new("Frame")
-	panel.Name = "Panel"
-	panel.AnchorPoint = Vector2.new(0.5, 0.5)
-	panel.Position = UDim2.fromScale(0.5, 0.53)
-	panel.Size = PANEL_SIZE
-	panel.BackgroundColor3 = PANEL
-	panel.BackgroundTransparency = 0.05
-	panel.Visible = false
-	panel.Active = true -- taps on the panel don't fall through to the throw meter
-	panel.Parent = gui
-	corner(panel, 18)
-	stroke(panel, PURPLE, 4, true)
+local function refresh()
+	local owned = decode(player:GetAttribute("Potions"))
+	local boosts = decode(player:GetAttribute("Boosts"))
+	local active = running(boosts)
+	for _, potion in POTIONS.List do
+		local count = owned[potion.Id] or 0
+		local left = boosts[potion.Id] or 0
+		local card = cards[potion.Id]
+		if card then
+			card.Owned.Text = if left > 0
+				then ("YOU HAVE %d  ·  %s %s"):format(
+					count,
+					if active[potion.Id] then "ON" else "WAITING",
+					clock(left)
+				)
+				else ("YOU HAVE %d"):format(count)
+			card.Owned.TextColor3 = if left > 0 then LIME elseif count > 0 then Color3.new(1, 1, 1) else GREY
+			card.Drink.BackgroundColor3 = if count > 0 then LIME else Color3.fromRGB(70, 65, 90)
+			card.Drink.TextColor3 = if count > 0 then INK else GREY
+			card.Outline.Thickness = if left > 0 then 3 else 2
+		end
 
-	local title = text(panel, "Title", FONT, Color3.new(1, 1, 1), UDim2.new(0, 20, 0, 12), UDim2.new(1, -80, 0, 38))
-	title.Text = "POTIONS"
-	title.TextXAlignment = Enum.TextXAlignment.Left
+		local chip = chips[potion.Id]
+		if chip then
+			chip.Chip.Visible = left > 0
+			if left > 0 then
+				-- A weaker potion waits (paused, faded) while a stronger one of its kind runs
+				local on = active[potion.Id] == true
+				chip.Time.Text = if on then clock(left) else "WAIT"
+				chip.Time.TextColor3 = if on then Color3.new(1, 1, 1) else GREY
+				for _, part in chip.Flask:GetDescendants() do
+					if part:IsA("Frame") then
+						part.BackgroundTransparency = if part.Name == "Shine"
+							then (if on then 0.35 else 0.7)
+							else (if on then 0 else 0.5)
+					end
+				end
+			end
+		end
+	end
+end
+
+function PotionController.Use(potion)
+	local ok, result = pcall(useRemote.InvokeServer, useRemote, potion.Id)
+	if not ok or type(result) ~= "table" or not result.Ok then
+		showToast(if ok and type(result) == "table" and result.Error then result.Error else "Something went wrong")
+		return
+	end
+	Sfx.Play("PowerUp")
+	UiFx.Flash(potion.Color, 0.35, 0.4)
+	if cards[potion.Id] then
+		UiFx.Pop(cards[potion.Id].Card, 1.08, 0.3)
+	end
+	task.defer(function()
+		local chip = chips[potion.Id]
+		if chip and chip.Chip.Visible then
+			UiFx.Pop(chip.Chip, 1.4, 0.4)
+		end
+	end)
+end
+
+-- The ITEMS tab of the PETS panel: a hint, one card per potion with DRINK, and (Studio only) TEST: POTIONS.
+-- toast = the panel's own message line.
+function PotionController.BuildItems(page: Frame, toast: (string) -> ())
+	showToast = toast
 	local hint =
-		text(panel, "Hint", BODY_FONT, Color3.fromRGB(200, 190, 230), UDim2.new(0, 20, 0, 52), UDim2.new(1, -40, 0, 18))
-	hint.Text = "Drink one for 15 minutes of boost. Timers only run while you play."
+		text(page, "Hint", BODY_FONT, Color3.fromRGB(200, 190, 230), UDim2.fromOffset(4, 0), UDim2.new(1, -8, 0, 18))
+	hint.Text = "POTIONS: drink one for 15 minutes of boost. Timers only run while you play."
 	hint.TextXAlignment = Enum.TextXAlignment.Left
-
-	local close =
-		button(panel, "Close", "X", Color3.fromRGB(255, 70, 90), UDim2.new(1, -54, 0, 12), UDim2.fromOffset(42, 42))
-	close.TextColor3 = Color3.new(1, 1, 1)
 
 	local grid = Instance.new("Frame")
 	grid.Name = "Cards"
 	grid.BackgroundTransparency = 1
-	grid.Position = UDim2.new(0, 16, 0, 80)
-	grid.Size = UDim2.new(1, -32, 1, -120)
-	grid.Parent = panel
+	grid.Position = UDim2.fromOffset(0, 26)
+	grid.Size = UDim2.new(1, 0, 1, -60)
+	grid.Parent = page
 	local layout = Instance.new("UIGridLayout")
 	layout.CellSize = UDim2.new(0.5, -6, 0.5, -6)
 	layout.CellPadding = UDim2.fromOffset(12, 12)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = grid
 
-	local cards = {}
 	for index, potion in POTIONS.List do
 		local card = Instance.new("Frame")
 		card.Name = potion.Id
@@ -284,189 +320,81 @@ function PotionController:Start()
 		cards[potion.Id] = { Card = card, Outline = outline, Owned = owned, Drink = drink }
 	end
 
-	-- Toast for errors ("You don't have that potion")
-	local toast = text(gui, "Toast", FONT, Color3.new(1, 1, 1), UDim2.fromScale(0.5, 0.2), UDim2.new(0.6, 0, 0, 34))
-	toast.AnchorPoint = Vector2.new(0.5, 0.5)
-	toast.Visible = false
-	toast.ZIndex = 20
-	local toastToken = 0
-	local function showToast(message: string)
-		toastToken += 1
-		local token = toastToken
-		toast.Text = message
-		toast.Visible = true
-		UiFx.Pop(toast, 1.3, 0.25)
-		task.delay(1.6, function()
-			if toastToken == token then
-				toast.Visible = false
-			end
-		end)
-	end
-
-	-- ===== Running timers =====
-	local timers = Instance.new("Frame")
-	timers.Name = "Timers"
-	timers.BackgroundTransparency = 1
-	timers.AutomaticSize = Enum.AutomaticSize.Y
-	timers.Parent = gui
-	local list = Instance.new("UIListLayout")
-	list.Padding = UDim.new(0, 4)
-	list.SortOrder = Enum.SortOrder.LayoutOrder
-	list.Parent = timers
-
-	local chips = {}
-	for index, potion in POTIONS.List do
-		local chip = Instance.new("Frame")
-		chip.Name = potion.Id
-		chip.LayoutOrder = index
-		chip.Size = UDim2.new(1, 0, 0, 26)
-		chip.BackgroundColor3 = CARD
-		chip.BackgroundTransparency = 0.1
-		chip.Visible = false
-		chip.Parent = timers
-		corner(chip)
-		stroke(chip, potion.Color, 2, true)
-		flask(chip, potion.Color, potion.Big, UDim2.new(0, 15, 0.5, 0), 20)
-		local label = text(chip, "Boost", FONT, potion.Color, UDim2.new(0, 30, 0, 4), UDim2.new(0.55, -30, 1, -8))
-		label.Text = boostText(potion)
-		label.TextXAlignment = Enum.TextXAlignment.Left
-		local time =
-			text(chip, "Time", FONT, Color3.new(1, 1, 1), UDim2.new(0.55, 0, 0, 4), UDim2.new(0.45, -12, 1, -8))
-		time.TextXAlignment = Enum.TextXAlignment.Right
-		chips[potion.Id] = { Chip = chip, Label = label, Time = time }
-	end
-
-	-- The strongest potion of each kind with time left: the one whose timer runs (the server picks the same way)
-	local function running(boosts: { [string]: number }): { [string]: boolean }
-		local best = {}
-		for _, potion in POTIONS.List do
-			if (boosts[potion.Id] or 0) > 0 then
-				local current = best[potion.Boost]
-				if not current or potion.Multiplier > current.Multiplier then
-					best[potion.Boost] = potion
-				end
-			end
-		end
-		local ids = {}
-		for _, potion in best do
-			ids[potion.Id] = true
-		end
-		return ids
-	end
-
-	local function refresh()
-		local owned = decode(player:GetAttribute("Potions"))
-		local boosts = decode(player:GetAttribute("Boosts"))
-		local active = running(boosts)
-		local total = 0
-		for _, potion in POTIONS.List do
-			local count = owned[potion.Id] or 0
-			total += count
-			local left = boosts[potion.Id] or 0
-			local card = cards[potion.Id]
-			card.Owned.Text = if left > 0
-				then ("YOU HAVE %d  ·  %s %s"):format(
-					count,
-					if active[potion.Id] then "ON" else "WAITING",
-					clock(left)
-				)
-				else ("YOU HAVE %d"):format(count)
-			card.Owned.TextColor3 = if left > 0 then LIME elseif count > 0 then Color3.new(1, 1, 1) else GREY
-			card.Drink.BackgroundColor3 = if count > 0 then LIME else Color3.fromRGB(70, 65, 90)
-			card.Drink.TextColor3 = if count > 0 then INK else GREY
-			card.Outline.Thickness = if left > 0 then 3 else 2
-
-			local chip = chips[potion.Id]
-			chip.Chip.Visible = left > 0
-			if left > 0 then
-				-- A weaker potion waits (paused) while a stronger one of its kind runs
-				chip.Time.Text = if active[potion.Id] then clock(left) else "WAIT " .. clock(left)
-				chip.Chip.BackgroundTransparency = if active[potion.Id] then 0.1 else 0.5
-				chip.Label.TextTransparency = if active[potion.Id] then 0 else 0.4
-			end
-		end
-		badge.Text = tostring(total)
-		badge.Visible = total > 0
-	end
-
-	function PotionController.Use(potion)
-		local ok, result = pcall(useRemote.InvokeServer, useRemote, potion.Id)
-		if not ok or type(result) ~= "table" or not result.Ok then
-			showToast(if ok and type(result) == "table" and result.Error then result.Error else "Something went wrong")
-			return
-		end
-		Sfx.Play("PowerUp")
-		UiFx.Flash(potion.Color, 0.35, 0.4)
-		UiFx.Pop(cards[potion.Id].Card, 1.08, 0.3)
-		task.defer(function()
-			local chip = chips[potion.Id]
-			if chip.Chip.Visible then
-				UiFx.Pop(chip.Chip, 1.4, 0.4)
-			end
-		end)
-	end
-
-	openButton.Activated:Connect(function()
-		if panel.Visible then
-			UiFx.Close(panel)
-		else
-			refresh()
-			UiFx.Open(panel)
-		end
-	end)
-	close.Activated:Connect(function()
-		UiFx.Close(panel)
-	end)
-
 	-- Studio only: one of every potion
-	local testRemote = remotes:FindFirstChild("TestPotions") :: RemoteEvent?
+	local testRemote = ReplicatedStorage:WaitForChild("Remotes"):FindFirstChild("TestPotions") :: RemoteEvent?
 	if testRemote then
 		local test = button(
-			panel,
+			page,
 			"TestPotions",
 			"TEST: POTIONS",
 			Color3.fromRGB(60, 60, 80),
-			UDim2.new(0, 16, 1, -32),
+			UDim2.new(1, -140, 1, -24),
 			UDim2.fromOffset(140, 22)
 		)
 		test.TextColor3 = Color3.new(1, 1, 1)
+		test.ZIndex = 4
 		test.Activated:Connect(function()
 			testRemote:FireServer()
 		end)
 	end
+	refresh()
+end
 
-	-- Hide the button (and close the panel) while the book, crates or crate-opening screens are up
-	local covers = {
-		ballsUI:WaitForChild("Inventory"),
-		ballsUI:WaitForChild("Book"),
-		ballsUI:WaitForChild("Shop"),
-		ballsUI:WaitForChild("Opening"),
-	}
-	local function updateButton()
-		local covered = false
-		for _, screen in covers do
-			covered = covered or screen.Visible
-		end
-		openButton.Visible = not covered
-		if covered then
-			UiFx.Close(panel)
-		end
+function PotionController:Start()
+	useRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("UsePotion") :: RemoteFunction
+	local playerGui = player:WaitForChild("PlayerGui")
+	local hud = playerGui:WaitForChild("HUD") :: ScreenGui
+	local ballsUI = playerGui:WaitForChild("BallsUI") :: ScreenGui
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "PotionUI"
+	gui.ResetOnSpawn = false
+	gui.DisplayOrder = ballsUI.DisplayOrder
+	gui.IgnoreGuiInset = ballsUI.IgnoreGuiInset
+
+	-- ===== Running timers: a row of potions, each with its time left under it =====
+	local timers = Instance.new("Frame")
+	timers.Name = "Timers"
+	timers.BackgroundTransparency = 1
+	timers.AutomaticSize = Enum.AutomaticSize.X
+	timers.Size = UDim2.fromOffset(0, TIMER_SIZE.Y.Offset)
+	timers.Parent = gui
+	local list = Instance.new("UIListLayout")
+	list.FillDirection = Enum.FillDirection.Horizontal
+	list.VerticalAlignment = Enum.VerticalAlignment.Bottom
+	list.Padding = UDim.new(0, 6)
+	list.SortOrder = Enum.SortOrder.LayoutOrder
+	list.Parent = timers
+	local scale = Instance.new("UIScale")
+	scale.Parent = timers
+
+	for index, potion in POTIONS.List do
+		local chip = Instance.new("Frame")
+		chip.Name = potion.Id
+		chip.LayoutOrder = index
+		chip.Size = TIMER_SIZE
+		chip.BackgroundTransparency = 1
+		chip.Visible = false
+		chip.Parent = timers
+		local bottle = flask(chip, potion.Color, potion.Big, UDim2.new(0.5, 0, 0, 28), 54)
+		-- x2 / x4 on the bottle
+		local tag = text(chip, "Boost", FONT, Color3.new(1, 1, 1), UDim2.new(0.5, -15, 0, 30), UDim2.fromOffset(30, 20))
+		tag.Text = "x" .. potion.Multiplier
+		tag.ZIndex = 4
+		-- Time left, and what it boosts, under the bottle
+		local time = text(chip, "Time", FONT, Color3.new(1, 1, 1), UDim2.new(0, -6, 1, -29), UDim2.new(1, 12, 0, 20))
+		local kind = text(chip, "Kind", CAPTION_FONT, potion.Color, UDim2.new(0, -6, 1, -10), UDim2.new(1, 12, 0, 11))
+		kind.Text = if potion.Boost == "Coins" then "COINS" else "XP"
+		chips[potion.Id] = { Chip = chip, Time = time, Flask = bottle }
 	end
-	for _, screen in covers do
-		screen:GetPropertyChangedSignal("Visible"):Connect(updateButton)
-	end
-	updateButton()
 
 	-- Compact layout on short screens (phones held sideways)
 	local function placeAll()
 		local compact = hud.AbsoluteSize.Y > 0 and hud.AbsoluteSize.Y < Config.Ui.CompactHeight
-		openButton.Position = if compact then BUTTON_COMPACT else BUTTON_NORMAL
-		panel.Size = if compact then UDim2.fromScale(0.94, 0.94) else PANEL_SIZE
-		panel.Position = UDim2.fromScale(0.5, if compact then 0.5 else 0.53)
 		local spot = if compact then TIMERS_COMPACT else TIMERS_NORMAL
 		timers.AnchorPoint = spot.Anchor
 		timers.Position = spot.Position
-		timers.Size = UDim2.fromOffset(spot.Width, 0)
+		scale.Scale = spot.Scale
 	end
 	hud:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeAll)
 	placeAll()

@@ -1,4 +1,4 @@
--- Playtime gifts on screen (owner 2026-10-22, Config.Playtime): the GIFTS button (right of POTIONS) with the time
+-- Playtime gifts on screen (owner 2026-10-22, Config.Playtime): the GIFTS button (right of PETS) with the time
 -- to the next gift, and the gifts panel (12 gifts, one every 15 minutes) with a CLAIM button on each ready gift.
 -- Built in code (not in Studio), so it lives in git. The server runs the clock and hands out gifts (PlaytimeService).
 local Players = game:GetService("Players")
@@ -31,9 +31,9 @@ local LIME = Color3.fromRGB(125, 255, 60)
 local GOLD = Color3.fromRGB(255, 200, 40)
 local GREY = Color3.fromRGB(120, 110, 150)
 
--- The GIFTS button sits right of BALLS, DAILY, PETS and POTIONS (and the same on short phone screens)
-local BUTTON_NORMAL = UDim2.fromOffset(268, 304)
-local BUTTON_COMPACT = UDim2.fromOffset(264, 76)
+-- The GIFTS button sits right of BALLS and PETS (and the same on short phone screens)
+local BUTTON_NORMAL = UDim2.fromOffset(142, 304)
+local BUTTON_COMPACT = UDim2.fromOffset(138, 76)
 local PANEL_SIZE = UDim2.fromOffset(640, 380)
 
 local PlaytimeController = {}

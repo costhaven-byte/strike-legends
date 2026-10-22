@@ -401,6 +401,9 @@ Config.Ui = {
 	CountTime = 0.6, -- seconds for a HUD number to tick up to its new value
 	RankUpShowTime = 4, -- seconds before the rank-up screen closes by itself
 	RankUpConfetti = 40, -- confetti pieces on the rank-up screen
+	-- Roblox's own player list sits in the top-right corner on computers, where the DAILY button is now (owner 2026-10-22).
+	-- The game shows no stats in it (no leaderstats), so it is hidden; set false to bring it back.
+	HidePlayerList = true,
 }
 
 -- Sound effects: every sound slot and its asset ID lives in Shared.AssetSlots

@@ -56,6 +56,14 @@ end
 function DailyRewardController:Start()
 	local gui = player:WaitForChild("PlayerGui"):WaitForChild("DailyUI")
 	local openButton = gui:WaitForChild("DailyButton") :: TextButton
+	-- Top-right corner (owner 2026-10-22); ScreenLayout moves it on phones
+	openButton.AnchorPoint = Vector2.new(1, 0)
+	openButton.Position = UDim2.new(1, -16, 0, 10)
+	if Config.Ui.HidePlayerList then
+		pcall(function()
+			game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
+		end)
+	end
 	local dot = openButton:WaitForChild("Dot") :: Frame
 	local popup = gui:WaitForChild("Popup") :: Frame
 	local days = popup:WaitForChild("Days") :: Frame
