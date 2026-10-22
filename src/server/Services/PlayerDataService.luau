@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Progression = require(Shared.Modules.Progression)
 local SaveStore = require(script.Parent.Parent.Modules.SaveStore)
 
 local PlayerDataService = {}
@@ -17,6 +18,7 @@ type Profile = {
 	Saving: boolean, -- a save is in progress
 	Released: boolean, -- final save started; no more changes
 	NoSave: boolean?, -- Studio new-player test: never loaded or saved
+	Untouched: { [string]: any }?, -- Studio unlock-all test: the save as loaded, written back unchanged on leaving
 }
 
 local profiles: { [Player]: Profile } = {}
@@ -26,6 +28,13 @@ local pendingReleases = 0
 
 local function save(player: Player, profile: Profile, release: boolean)
 	if profile.NoSave then
+		return
+	end
+	if profile.Untouched then
+		-- Studio unlock-all test: only hand the lock back, with the save exactly as it was loaded
+		if release then
+			SaveStore.Save(player.UserId, profile.Untouched, true)
+		end
 		return
 	end
 	while profile.Saving do
@@ -83,7 +92,22 @@ local function onPlayerAdded(player: Player)
 		return
 	end
 
-	profiles[player] = { Data = data, Saving = false, Released = false, NoSave = noSave }
+	-- Studio test with your real save and every built zone open (Config.Onboarding.StudioUnlockAll)
+	local untouched = nil
+	if not noSave and RunService:IsStudio() and Config.Onboarding.StudioUnlockAll == true and SaveStore.Enabled then
+		untouched = SaveStore.DeepCopy(data)
+		local built = Config.Zones.BuiltZones
+		local level = Config.Economy.Zones[built].Rank
+		local tier = math.ceil(level / Config.Economy.Ranks.LevelsPerTier)
+		data.Rank = math.max(data.Rank or 1, tier)
+		data.RankLevel = math.max(data.RankLevel or 1, level)
+		data.XP = math.max(data.XP or 0, Progression.LevelXP(data.RankLevel))
+		data.ZoneSeen = math.max(data.ZoneSeen or 1, built)
+		data.Onboarding = math.max(data.Onboarding or 0, 3)
+		warn(("[PlayerDataService] Studio unlock-all test: your save, at level %d (zones 1-%d open). Nothing from this test is saved (Config.Onboarding.StudioUnlockAll)"):format(data.RankLevel, built))
+	end
+
+	profiles[player] = { Data = data, Saving = false, Released = false, NoSave = noSave, Untouched = untouched }
 	for key, value in data do
 		if type(value) ~= "table" then
 			player:SetAttribute(key, value)
@@ -107,6 +131,12 @@ end
 -- It must not wait: the save starts right after.
 function PlayerDataService.OnRelease(callback: (Player) -> ())
 	table.insert(releaseCallbacks, callback)
+end
+
+-- True for a Studio test session whose progress is never saved (new-player or unlock-all test)
+function PlayerDataService.IsTestSession(player: Player): boolean
+	local profile = profiles[player]
+	return profile ~= nil and (profile.NoSave == true or profile.Untouched ~= nil)
 end
 
 function PlayerDataService.IsLoaded(player: Player): boolean

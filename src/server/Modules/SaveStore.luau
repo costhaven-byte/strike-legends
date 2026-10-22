@@ -29,6 +29,7 @@ local function deepCopy<T>(value: T): T
 	end
 	return copy :: any
 end
+SaveStore.DeepCopy = deepCopy
 
 -- Fresh starting data for a new player
 function SaveStore.DefaultData(): { [string]: any }

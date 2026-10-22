@@ -61,6 +61,9 @@ end
 -- The scores to save right now (read straight away, before anything can yield)
 local function snapshot(player: Player): { { store: string, board: any, value: number } }
 	local list = {}
+	if PlayerDataService.IsTestSession(player) then
+		return list -- Studio test progress never reaches the real leaderboards
+	end
 	for _, board in LB.Boards do
 		local value = PlayerDataService.Get(player, board.Stat)
 		if board.Weekly and PlayerDataService.Get(player, "WeeklyCoinsWeek") ~= Calendar.Week() then

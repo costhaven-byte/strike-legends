@@ -249,7 +249,11 @@ Config.Onboarding = {
 	LegendsPanTime = 3.5, -- seconds the camera looks at the locked ball
 	-- Studio testing: every play test starts as a brand new player and nothing is saved (your real save is untouched).
 	-- Never affects the live game. Set to false to test with your saved progress.
-	StudioNewPlayer = true,
+	StudioNewPlayer = false,
+	-- Studio testing with your saved progress (StudioNewPlayer = false): every built zone is open (rank level raised
+	-- to the last built zone's level, its popups marked seen, first-3-minutes done) for the test only. Nothing from
+	-- the test is saved: your real save is handed back exactly as it was loaded. Never affects the live game.
+	StudioUnlockAll = true,
 }
 
 -- Session log: one line per play session (join, leave, throws, crates, level), printed in Output
