@@ -1,4 +1,4 @@
--- Playtime gifts on screen (owner 2026-10-22, Config.Playtime): the GIFTS button (right of PETS) with the time
+-- Playtime gifts on screen (owner 2026-10-22, Config.Playtime): the GIFTS button (top-right corner) with the time
 -- to the next gift, and the gifts panel (12 gifts, one every 15 minutes) with a CLAIM button on each ready gift.
 -- Built in code (not in Studio), so it lives in git. The server runs the clock and hands out gifts (PlaytimeService).
 local Players = game:GetService("Players")
@@ -31,9 +31,9 @@ local LIME = Color3.fromRGB(125, 255, 60)
 local GOLD = Color3.fromRGB(255, 200, 40)
 local GREY = Color3.fromRGB(120, 110, 150)
 
--- The GIFTS button sits right of BALLS and PETS (and the same on short phone screens)
-local BUTTON_NORMAL = UDim2.fromOffset(142, 304)
-local BUTTON_COMPACT = UDim2.fromOffset(138, 76)
+-- The GIFTS button sits in the top-right corner (owner 2026-10-22; Config.Ui.HidePlayerList frees it on computers)
+local BUTTON_NORMAL = UDim2.new(1, -16, 0, 10)
+local BUTTON_COMPACT = UDim2.new(1, -8, 0, 4)
 local PANEL_SIZE = UDim2.fromOffset(640, 380)
 
 local PlaytimeController = {}
@@ -263,7 +263,7 @@ function PlaytimeController:Start()
 	gui.DisplayOrder = ballsUI.DisplayOrder
 	gui.IgnoreGuiInset = ballsUI.IgnoreGuiInset
 
-	-- ===== GIFTS button (same look as BALLS, DAILY, PETS and POTIONS, in pink) =====
+	-- ===== GIFTS button (same look as BALLS, PETS and DAILY, in pink) =====
 	local openButton = Instance.new("TextButton")
 	openButton.Name = "GiftsButton"
 	openButton.Text = ""
@@ -271,6 +271,7 @@ function PlaytimeController:Start()
 	openButton.BackgroundColor3 = CARD
 	openButton.BackgroundTransparency = 0.1
 	openButton.Size = UDim2.fromOffset(55, 56)
+	openButton.AnchorPoint = Vector2.new(1, 0)
 	openButton.Position = BUTTON_NORMAL
 	openButton.Parent = gui
 	corner(openButton, 12)
@@ -587,5 +588,7 @@ function PlaytimeController:Start()
 		end
 	end)
 end
+
+PlaytimeController.EggIcon = eggIcon -- the daily calendar draws its egg day with it too
 
 return PlaytimeController

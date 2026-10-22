@@ -17,7 +17,7 @@ local COMPACT = {
 	["HUD.Bar.Coins"] = { Size = UDim2.new(1, 0, 0, 28) },
 	["HUD.Bar.Gems"] = { Size = UDim2.new(1, 0, 0, 28) },
 	["BallsUI.Menu"] = { Position = UDim2.fromOffset(12, 76) },
-	["DailyUI.DailyButton"] = { Position = UDim2.new(1, -8, 0, 4) }, -- top-right corner (owner 2026-10-22)
+	["DailyUI.DailyButton"] = { Position = UDim2.fromOffset(138, 76) }, -- right of BALLS and PETS
 	["HUD.Streak"] = { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -44, 0, 66) },
 
 	-- Throw meters: a shorter panel so the lane stays visible, power meter kept above the jump button
@@ -36,7 +36,7 @@ local COMPACT = {
 	["ThrowUI.TraitPopups"] = { Position = UDim2.new(0.5, 0, 0, 166) },
 
 	-- Rank Trial: on phones the ready button and a compact tracker (no goal line, smaller dots) share the
-	-- top-right corner, the only spot clear of the meters and result text (left of the DAILY button). On computers that corner holds
+	-- top-right corner, the only spot clear of the meters and result text (left of the GIFTS button). On computers that corner holds
 	-- Roblox's player list, so there the tracker sits top-left instead.
 	["TrialUI.TrialButton"] = {
 		AnchorPoint = Vector2.new(1, 0),

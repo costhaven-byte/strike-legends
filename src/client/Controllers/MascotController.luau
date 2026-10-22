@@ -41,7 +41,7 @@ local GOLD = Color3.fromRGB(255, 200, 40)
 local LIME = Color3.fromRGB(125, 255, 60)
 local GREY = Color3.fromRGB(120, 110, 150)
 
--- The PETS button sits right of BALLS (and the same on short phone screens); DAILY moved to the top-right corner
+-- The PETS button sits right of BALLS, then DAILY (and the same on short phone screens); GIFTS is top-right
 local BUTTON_NORMAL = UDim2.fromOffset(79, 304)
 local BUTTON_COMPACT = UDim2.fromOffset(75, 76)
 

@@ -11,8 +11,11 @@ local Config = require(Shared.Config)
 local Calendar = require(Shared.Modules.Calendar)
 local Balls = require(Shared.Modules.Balls)
 local Zones = require(Shared.Modules.Zones)
+local PowerLevels = require(Shared.Modules.PowerLevels)
 local CrateController = require(script.Parent.CrateController)
 local OnboardingController = require(script.Parent.OnboardingController)
+local PlaytimeController = require(script.Parent.PlaytimeController)
+local PotionController = require(script.Parent.PotionController)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
@@ -36,7 +39,26 @@ local function formatNumber(n: number): string
 	return text
 end
 
--- "1,000 coins" / "5 gems" / "Gold Crate + 15 gems"
+-- 15,000 / 4.1B / 500K: big numbers get a letter so they fit the tile
+local function shortNumber(n: number): string
+	for _, unit in { { 1e12, "T" }, { 1e9, "B" }, { 1e6, "M" } } do
+		if n >= unit[1] then
+			return ("%g%s"):format(math.floor(n / unit[1] * 10) / 10, unit[2])
+		end
+	end
+	return formatNumber(n)
+end
+
+local function potionById(id: string)
+	for _, potion in Config.Potions.List do
+		if potion.Id == id then
+			return potion
+		end
+	end
+	return nil
+end
+
+-- "15,000 COINS" / "3x COIN POTION" / "GOLD CRATE\n+2x MEGA COIN POTION\n+25 GEMS"
 local function rewardText(reward): string
 	local parts = {}
 	-- A crate from a zone you haven't unlocked yet comes as your zone's crate (same rule as the server)
@@ -44,11 +66,22 @@ local function rewardText(reward): string
 	if crate then
 		table.insert(parts, crate.Name:upper())
 	end
+	if reward.Egg then
+		local look = Config.EggLooks[reward.Egg]
+		table.insert(parts, "FREE " .. string.upper(if look then look.Name else "EGG"))
+	end
+	for _, item in reward.Potions or {} do
+		local potion = potionById(item.Id)
+		local name = if potion then potion.Name else item.Id
+		table.insert(parts, if item.Count > 1 then ("%dx %s"):format(item.Count, name) else name)
+	end
 	if reward.Coins then
-		table.insert(parts, formatNumber(reward.Coins))
+		-- Grows with your Power Level (same rule as the server)
+		local coins = PowerLevels.DailyCoins(reward, player:GetAttribute("PowerLevel"))
+		table.insert(parts, shortNumber(coins) .. " COINS")
 	end
 	if reward.Gems then
-		table.insert(parts, formatNumber(reward.Gems) .. (if crate then " GEMS" else ""))
+		table.insert(parts, formatNumber(reward.Gems) .. " GEMS")
 	end
 	return table.concat(parts, "\n+")
 end
@@ -56,9 +89,9 @@ end
 function DailyRewardController:Start()
 	local gui = player:WaitForChild("PlayerGui"):WaitForChild("DailyUI")
 	local openButton = gui:WaitForChild("DailyButton") :: TextButton
-	-- Top-right corner (owner 2026-10-22); ScreenLayout moves it on phones
-	openButton.AnchorPoint = Vector2.new(1, 0)
-	openButton.Position = UDim2.new(1, -16, 0, 10)
+	-- Right of BALLS and PETS (owner 2026-10-22: GIFTS took the top-right corner); ScreenLayout moves it on phones
+	openButton.AnchorPoint = Vector2.new(0, 0)
+	openButton.Position = UDim2.fromOffset(142, 304)
 	if Config.Ui.HidePlayerList then
 		pcall(function()
 			game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
@@ -144,9 +177,27 @@ function DailyRewardController:Start()
 		tile.LayoutOrder = day
 		tile.Visible = true
 		tile.DayLabel.Text = "DAY " .. day
-		tile.Icons.Coin.Visible = reward.Coins ~= nil and reward.Crate == nil
-		tile.Icons.Gem.Visible = reward.Gems ~= nil and reward.Crate == nil
+		-- One big icon per tile: crate, else egg, else potion, else coins, else gems
+		local firstPotion = reward.Potions and reward.Potions[1] and potionById(reward.Potions[1].Id)
+		local showEgg = reward.Egg ~= nil and reward.Crate == nil
+		local showPotion = firstPotion ~= nil and reward.Crate == nil and not showEgg
+		local plain = reward.Crate == nil and not showEgg and not showPotion
+		tile.Icons.Coin.Visible = reward.Coins ~= nil and plain
+		tile.Icons.Gem.Visible = reward.Gems ~= nil and reward.Coins == nil and plain
 		tile.Icons.Crate.Visible = reward.Crate ~= nil
+		if showEgg then
+			local look = Config.EggLooks[reward.Egg]
+			if look then
+				local egg = PlaytimeController.EggIcon(tile.Icons, look, UDim2.fromScale(0.5, 0.5), 10)
+				egg.Size = UDim2.fromScale(0.62, 0.9)
+				egg.SizeConstraint = Enum.SizeConstraint.RelativeYY
+			end
+		elseif showPotion and firstPotion then
+			local flask =
+				PotionController.Flask(tile.Icons, firstPotion.Color, firstPotion.Big, UDim2.fromScale(0.5, 0.5), 10)
+			flask.Size = UDim2.fromScale(1, 1)
+			flask.SizeConstraint = Enum.SizeConstraint.RelativeYY
+		end
 		local function paint()
 			tile.Amount.Text = rewardText(reward)
 			local crate = Balls.GetCrate(Zones.RewardCrateId(reward.Crate, player:GetAttribute("RankLevel")))
@@ -156,6 +207,7 @@ function DailyRewardController:Start()
 		end
 		paint()
 		player:GetAttributeChangedSignal("RankLevel"):Connect(paint)
+		player:GetAttributeChangedSignal("PowerLevel"):Connect(paint)
 		tile.Parent = days
 		tiles[day] = tile
 	end
@@ -242,6 +294,10 @@ function DailyRewardController:Start()
 			UiFx.Close(popup)
 			CrateController.PlayOpening(crate, result.Crate)
 		else
+			if result.Egg then
+				claimLabel.Text = "HATCH IT AT THE EGG STAND!"
+				task.wait(1.4)
+			end
 			task.wait(1.2)
 			UiFx.Close(popup)
 		end

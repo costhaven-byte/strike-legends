@@ -401,7 +401,7 @@ Config.Ui = {
 	CountTime = 0.6, -- seconds for a HUD number to tick up to its new value
 	RankUpShowTime = 4, -- seconds before the rank-up screen closes by itself
 	RankUpConfetti = 40, -- confetti pieces on the rank-up screen
-	-- Roblox's own player list sits in the top-right corner on computers, where the DAILY button is now (owner 2026-10-22).
+	-- Roblox's own player list sits in the top-right corner on computers, where the GIFTS button is now (owner 2026-10-22).
 	-- The game shows no stats in it (no leaderstats), so it is hidden; set false to bring it back.
 	HidePlayerList = true,
 }
@@ -2349,16 +2349,23 @@ Config.PetIdle = {
 
 -- Daily reward: a 7-day calendar. Claim once per day (days change at midnight UTC).
 -- Missing a whole day starts you back at day 1. After day 7 it loops back to day 1.
--- Each day can give Coins, Gems and/or a free Crate (a crate Id from Config.Crates).
+-- Each day can give Coins, Gems, Potions ({ Id, Count } from Config.Potions), a free Egg hatch (an egg Id, hatched at the
+-- egg stand) and/or a free Crate (a crate Id from Config.Crates).
+-- Owner 2026-10-22: make them very valuable (day 1 15K, day 2 three x2 potions, day 3 500K...). Coin income grows
+-- thousands of times over the first hour (sim: ~4K a minute at 4 min, ~100M at 40 min, ~2.5B at 60 min), so a fixed
+-- number stops mattering fast: Coins is the least you get, LevelShare = or that share of your next Power Level's
+-- price if it's more (PowerLevels.DailyCoins). Sim with ~30 min of play a day: day 1 = ~4 min of bowling, day 3 =
+-- ~11 min, day 6 = ~35 min.
 Config.Daily = {
 	Rewards = {
-		{ Coins = 250 },
-		{ Coins = 500 },
-		{ Gems = 5 },
-		{ Coins = 1000 },
-		{ Coins = 1500 },
-		{ Gems = 10 },
-		{ Crate = "Gold", Gems = 15 }, -- an Alley Crate until Neon Lanes opens (Zones.RewardCrateId)
+		{ Coins = 15000, LevelShare = 0.25 },
+		{ Potions = { { Id = "CoinSmall", Count = 3 } } },
+		{ Coins = 500000, LevelShare = 0.5, Gems = 5 },
+		{ Egg = "Alley", Gems = 10 }, -- a free Neon Egg hatch at the egg stand
+		{ Potions = { { Id = "CoinBig", Count = 1 }, { Id = "XpBig", Count = 1 } } },
+		{ Coins = 5000000, LevelShare = 0.5, Gems = 15 },
+		-- an Alley Crate until Neon Lanes opens (Zones.RewardCrateId)
+		{ Crate = "Gold", Potions = { { Id = "CoinBig", Count = 2 } }, Gems = 25 },
 	},
 	CheckInterval = 30, -- seconds between checks for a new day while playing
 }
@@ -2546,7 +2553,7 @@ Config.Zones = {
 			},
 			WallColor = Color3.fromRGB(255, 60, 210),
 			KickTo = Vector3.new(54, 4, 63), -- Back Alley, just outside the door
-			Arrival = Vector3.new(0, 4, 14), -- "TAKE ME THERE" puts you here: inside, behind the approaches, facing the pins
+			Arrival = Vector3.new(0, 5, 36), -- "TAKE ME THERE" puts you here: on the lobby spawn circle (Hub.SpawnPad), facing the lanes
 			LeaveGrace = 2,
 		},
 	},

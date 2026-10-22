@@ -1,4 +1,4 @@
--- The 7-day daily reward calendar. The server decides which day you're on and hands out the reward.
+-- The 7-day daily reward calendar (Config.Daily: coins, gems, potions, a free egg hatch, crates). The server decides which day you're on and hands out the reward.
 -- Clients see two Player attributes: DailyNext (the calendar day to claim, or just claimed today)
 -- and DailyClaimable (true if today's reward is waiting).
 local Players = game:GetService("Players")
@@ -9,9 +9,12 @@ local Config = require(Shared.Config)
 local Calendar = require(Shared.Modules.Calendar)
 local Balls = require(Shared.Modules.Balls)
 local Zones = require(Shared.Modules.Zones)
+local PowerLevels = require(Shared.Modules.PowerLevels)
 local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local BallService = require(script.Parent.BallService)
+local PotionService = require(script.Parent.PotionService)
+local MascotService = require(script.Parent.MascotService)
 local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
 local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
@@ -59,9 +62,18 @@ local function claim(player: Player)
 
 	PlayerDataService.Set(player, "DailyDay", day)
 	PlayerDataService.Set(player, "DailyLastClaim", Calendar.Day())
+	local coins = 0
 	if reward.Coins then
-		PlayerDataService.Add(player, "Coins", reward.Coins)
-		Analytics.Currency(player, "Coins", reward.Coins, "TimedReward", "Daily")
+		-- The day's coins, or a share of the next Power Level if that's more (Config.Daily)
+		coins = PowerLevels.DailyCoins(reward, PlayerDataService.Get(player, "PowerLevel"))
+		PlayerDataService.Add(player, "Coins", coins)
+		Analytics.Currency(player, "Coins", coins, "TimedReward", "Daily")
+	end
+	for _, potion in reward.Potions or {} do
+		PotionService.Give(player, potion.Id, potion.Count)
+	end
+	if reward.Egg then
+		MascotService.GiveFreeEgg(player, reward.Egg, 1) -- hatched for free at the egg stand
 	end
 	if reward.Gems and Config.Gems.Enabled then
 		PlayerDataService.Add(player, "Gems", reward.Gems)
@@ -77,7 +89,7 @@ local function claim(player: Player)
 	end
 	publish(player)
 
-	return { Ok = true, Day = day, CrateId = crate and crate.Id, Crate = crateResult }
+	return { Ok = true, Day = day, Coins = coins, Egg = reward.Egg, CrateId = crate and crate.Id, Crate = crateResult }
 end
 
 local function onClaim(player: Player)
