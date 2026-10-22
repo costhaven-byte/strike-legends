@@ -75,12 +75,13 @@ local function buildWall(gate): Folder
 		wall.CFrame = CFrame.new(box.Center)
 		wall.Parent = folder
 	end
-	-- The sign faces the Back Alley (the first wall's +Z side) and fills the wall's face, so it fits a narrow door too
+	-- The sign faces the way you walk up to the door (gate.SignFace, default the first wall's +Z side: the Back Alley)
+	-- and fills the wall's face, so it fits a narrow door too
 	local front = folder:FindFirstChild("Wall1") :: BasePart?
 	if front then
 		local sign = Instance.new("SurfaceGui")
 		sign.Name = "Sign"
-		sign.Face = Enum.NormalId.Back
+		sign.Face = gate.SignFace or Enum.NormalId.Back
 		sign.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
 		sign.PixelsPerStud = 20
 		sign.LightInfluence = 0

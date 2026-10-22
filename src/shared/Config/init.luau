@@ -2569,9 +2569,9 @@ Config.Analytics = {
 -- Look = the lighting your screen uses while your character is inside the zone's Area box
 -- (centre + size in studs); anywhere else (the lobby, Neon Lanes) keeps the normal Lighting.
 Config.Zones = {
-	LaneFolders = { "BackAlley", "NeonAlley" }, -- every Workspace model that holds lanes, in zone order
+	LaneFolders = { "BackAlley", "NeonAlley", "MainStreetLanes" }, -- every Workspace model that holds lanes, in zone order
 	AssignFolder = "BackAlley", -- new lanes are handed out here
-	BuiltZones = 2, -- zones that exist in the world so far (crates of later zones stay locked)
+	BuiltZones = 3, -- zones that exist in the world so far (crates of later zones stay locked)
 	-- Zones you walk into and claim a lane in (zone 2+). Locked (rank level < Config.Economy.Zones Rank): a glowing
 	-- wall (Wall boxes, only on your screen) keeps you out, and the server walks you back out to KickTo.
 	-- Unlocked: step onto any OPEN lane in the Area to claim it; it's yours until you leave the Area for LeaveGrace
@@ -2589,6 +2589,22 @@ Config.Zones = {
 			WallColor = Color3.fromRGB(255, 60, 210),
 			KickTo = Vector3.new(54, 4, 63), -- Back Alley, just outside the door
 			Arrival = Vector3.new(0, 5, 36), -- "TAKE ME THERE" puts you here: on the lobby spawn circle (Hub.SpawnPad), facing the lanes
+			LeaveGrace = 2,
+		},
+		-- Zone 3 (2026-10-22): Main Street Lanes, the owner's design built beside the lobby's east wall
+		-- (Workspace.MainStreetLanes, same length as the lobby). A door in the lobby's east wall (between the
+		-- leaderboards and the crate kiosk) leads down a short hallway into the bowler end.
+		{
+			Zone = 3,
+			Folder = "MainStreetLanes",
+			Area = { Center = Vector3.new(120, 12, -11.5), Size = Vector3.new(95, 30, 139) }, -- inside its walls
+			Walls = { -- the lobby's east door (just in front of the doorway, on the lobby side)
+				{ Center = Vector3.new(59.8, 7, 12), Size = Vector3.new(0.4, 12, 8) },
+			},
+			SignFace = Enum.NormalId.Left, -- the lock sign faces west, into the lobby
+			WallColor = Color3.fromRGB(224, 165, 38),
+			KickTo = Vector3.new(52, 4, 12), -- back in the lobby, in front of the door
+			Arrival = Vector3.new(120, 4, 42.8), -- behind the bowler seats, facing the lanes
 			LeaveGrace = 2,
 		},
 	},
@@ -2618,6 +2634,25 @@ Config.Zones = {
 				Dim = Color3.fromHex("7a3a5e"),
 			},
 		},
+		{
+			-- The design's mood: bright, warm and clean indoors, a light warm haze (#FFE9C7), no neon
+			Id = "MainStreetLanes",
+			Folder = "MainStreetLanes",
+			Area = { Center = Vector3.new(120, 12, -11.5), Size = Vector3.new(95, 30, 139) },
+			Look = {
+				Ambient = Color3.fromRGB(70, 58, 46),
+				OutdoorAmbient = Color3.fromRGB(60, 52, 44),
+				Exposure = -0.1,
+				Saturation = 0.1,
+				Contrast = 0.1,
+				Tint = Color3.fromRGB(255, 246, 232),
+				HazeColor = Color3.fromHex("FFE9C7"),
+				HazeDecay = Color3.fromHex("E8C9A0"),
+				HazeDensity = 0.03,
+				Haze = 0.1,
+				Bloom = 0.12,
+			},
+		},
 	},
 }
 
@@ -2639,6 +2674,19 @@ Config.ZoneUnlock = {
 		Hint = "Step onto any OPEN lane to claim it.",
 		Color = Color3.fromRGB(255, 60, 210),
 		Accent = Color3.fromRGB(70, 230, 255),
+	},
+	-- Zone 3 has no crates, eggs or balls of its own yet (they come with the 4-zone economy pass)
+	[3] = {
+		Title = "ZONE 3 UNLOCKED!",
+		Name = "MAIN STREET LANES",
+		Tagline = "You're a local name now. A real bowling centre with polished wood lanes is open to you, through the new door in the lobby.",
+		Crates = {},
+		Balls = {},
+		BallsLine = "%d NEW BALLS TO WIN",
+		Button = "TAKE ME THERE!",
+		Hint = "Step onto any OPEN lane to claim it.",
+		Color = Color3.fromRGB(224, 165, 38),
+		Accent = Color3.fromRGB(255, 120, 110),
 	},
 }
 
@@ -2664,7 +2712,7 @@ Config.Economy.Formula = {
 Config.Economy.Zones = {
 	{ Id = "StarterAlley", Name = "Back Alley", Pins = 10, PinValue = 10, XpPerPin = 1, Rank = 1 },
 	{ Id = "NeonLanes", Name = "Neon Lanes", Pins = 30, PinValue = 50, XpPerPin = 2, Rank = 5 },
-	{ Id = "ArcadeArena", Name = "Arcade Arena", Pins = 100, PinValue = 250, XpPerPin = 4, Rank = 12 },
+	{ Id = "MainStreetLanes", Name = "Main Street Lanes", Pins = 100, PinValue = 250, XpPerPin = 4, Rank = 12 }, -- was Arcade Arena (owner 2026-10-22)
 	{ Id = "SkylineLanes", Name = "Skyline Lanes", Pins = 300, PinValue = 1250, XpPerPin = 8, Rank = 22 },
 	{ Id = "VolcanoStrike", Name = "Volcano Strike", Pins = 1000, PinValue = 6000, XpPerPin = 16, Rank = 35 },
 	{ Id = "CosmicAlley", Name = "Cosmic Alley", Pins = 3000, PinValue = 30000, XpPerPin = 32, Rank = 50 },
