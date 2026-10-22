@@ -2391,6 +2391,36 @@ Config.Daily = {
 	CheckInterval = 30, -- seconds between checks for a new day while playing
 }
 
+-- Zone milestones (Phase X Part 1): beats between the zone 2 (level 5) and zone 3 (level 12) unlocks.
+-- LevelRewards: reaching Level pays its reward once, with a popup (players already past it get nothing back-dated).
+--   Coins is the least you get; LevelShare = or that share of your next Power Level's price if it's more (like the
+--   daily rewards). Potions = { { Id, Count } } (Config.Potions), Crate = a Config.Crates Id (opened right away).
+-- Challenges: repeatable goals shown in a small HUD tracker while you bowl in that Zone (nil Zone = any zone).
+--   Kind "StrikeStreak" = Goal strikes in a row (a miss starts it over). Cooldown = seconds before it can be done
+--   again after a win (0 = straight away). Reward = like LevelRewards. Add rows to add challenges.
+-- Preview: the tracker also shows the next level reward (Phase X Part 1.3).
+Config.Milestones = {
+	Enabled = true,
+	LevelRewards = {
+		{ Level = 7, Coins = 50000, LevelShare = 0.1, Crate = "Bronze" },
+		{ Level = 9, Coins = 150000, LevelShare = 0.15, Potions = { { Id = "CoinSmall", Count = 2 } } },
+	},
+	Challenges = {
+		{
+			Id = "NeonStreak3",
+			Zone = 2,
+			Kind = "StrikeStreak",
+			Goal = 3,
+			Text = "GET %d STRIKES IN A ROW", -- %d = Goal
+			Cooldown = 180,
+			Reward = { Crate = "Bronze" },
+			RewardText = "FREE BRONZE CRATE",
+		},
+	},
+	Preview = true, -- show "NEXT: LV 9 REWARD" under the challenge (false = hide it)
+	PopupTime = 3.5, -- seconds a level reward popup stays up
+}
+
 -- Potions (owner 2026-10-22): drink one for a 15 minute boost. Coin potions multiply coins, XP potions multiply XP.
 -- Small = x2 and common, Big (MEGA) = x4 and rarer (playtime rewards hand them out; Studio: TEST: POTIONS button).
 -- Timers only run while you play (they pause when you leave). Drinking another of the same potion adds its time.

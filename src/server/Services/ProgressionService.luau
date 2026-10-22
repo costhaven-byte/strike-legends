@@ -22,6 +22,7 @@ local lastSaved: { [Player]: number } = {} -- when Streak Saver last kept this p
 local rankUpEvent: RemoteEvent
 local levelUpEvent: RemoteEvent
 local LEVELS = Config.Economy.Ranks
+local levelCallbacks: { (Player, number) -> () } = {}
 
 -- Floating title above the player's head, e.g. "PRO"
 local function updateBadge(player: Player)
@@ -147,6 +148,16 @@ local function refreshLevel(player: Player)
 	for _ = 1, crates do
 		BallService.GiveFreeCrate(player)
 	end
+	for reached = done + 1, level do
+		for _, callback in levelCallbacks do
+			task.spawn(callback, player, reached)
+		end
+	end
+end
+
+-- Runs callback(player, level) once for every new rank level a player reaches (level rewards: MilestoneService)
+function ProgressionService.OnLevel(callback: (Player, number) -> ())
+	table.insert(levelCallbacks, callback)
 end
 
 -- Gives the next rank, its gem reward and the celebration. Called by TrialService when a trial is passed.

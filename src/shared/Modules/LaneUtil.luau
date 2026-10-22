@@ -51,6 +51,19 @@ function LaneUtil.IsInThrowZone(lane: Model, position: Vector3): boolean
 		and localPos.Y < 12
 end
 
+-- The zone number a lane belongs to (its model's place in Config.Zones.LaneFolders), 1 if unknown
+function LaneUtil.ZoneOf(lane: Instance): number
+	local node: Instance? = lane
+	while node do
+		local index = table.find(Config.Zones.LaneFolders, node.Name)
+		if index and node.Parent == Workspace then
+			return index
+		end
+		node = node.Parent
+	end
+	return 1
+end
+
 function LaneUtil.GetLaneAt(position: Vector3): Model?
 	for _, lane in LaneUtil.GetLanes() do
 		if LaneUtil.IsInThrowZone(lane, position) then
