@@ -96,7 +96,11 @@ local function buildWall(gate): Folder
 			{ Text = "🔒", Height = 0.3, Color = Color3.new(1, 1, 1) },
 			{ Text = Zones.Name(gate.Zone):upper(), Height = 0.22, Color = gate.WallColor },
 			{ Text = ("ZONE %d"):format(gate.Zone), Height = 0.14, Color = gate.WallColor },
-			{ Text = ("REACH LEVEL %d"):format(Zones.UnlockLevel(gate.Zone)), Height = 0.17, Color = Color3.new(1, 1, 1) },
+			{
+				Text = ("REACH LEVEL %d"):format(Zones.UnlockLevel(gate.Zone)),
+				Height = 0.17,
+				Color = Color3.new(1, 1, 1),
+			},
 			{ Text = "TO ENTER", Height = 0.13, Color = Color3.new(1, 1, 1) },
 		}
 		local y = 0
@@ -118,7 +122,9 @@ end
 -- A crate's model, turning slowly in its own little 3D window
 local function crateView(crateId: string): ViewportFrame?
 	local models = ReplicatedStorage:FindFirstChild("CrateModels")
-	local template = models and models:FindFirstChild(crateId)
+	local crate = Balls.GetCrate(crateId)
+	local template = models
+		and (models:FindFirstChild(crateId) or (crate and crate.Model and models:FindFirstChild(crate.Model)))
 	if not template then
 		return nil
 	end
@@ -411,7 +417,7 @@ function ZoneGateController:Start()
 		local owned = Balls.DecodeOwned(player:GetAttribute("OwnedBalls"))
 		local count = 0
 		for _, ball in Config.Balls do
-			if ball.InCrates ~= false and (ball.Zone or gate.Zone) >= gate.Zone and not owned[ball.Id] then
+			if ball.InCrates ~= false and not ball.Retired and ball.Zone == gate.Zone and not owned[ball.Id] then
 				count += 1
 			end
 		end

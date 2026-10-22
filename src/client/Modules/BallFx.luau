@@ -75,8 +75,31 @@ local function weldedPart(rig: BasePart, name: string, size: Vector3, offset: CF
 end
 
 -- The look for a ball: its Config.BallVfx row, or a plain trail in the ball's Trail colour
+-- Placeholder balls (Phase X) that borrow a model also borrow its effect, every colour moved toward their Tint
+local function recolor(value, tint: Color3)
+	if typeof(value) == "Color3" then
+		return value:Lerp(tint, 0.75)
+	elseif type(value) == "table" then
+		local copy = {}
+		for key, item in value do
+			copy[key] = recolor(item, tint)
+		end
+		return copy
+	end
+	return value
+end
+local borrowed = {}
+
 local function lookFor(ball)
-	return VFX.Balls[ball.Id] or {
+	local own = VFX.Balls[ball.Id]
+	if own then
+		return own
+	end
+	if ball.Model and ball.Tint and not ball.PlainModel and VFX.Balls[ball.Model] then
+		borrowed[ball.Id] = borrowed[ball.Id] or recolor(VFX.Balls[ball.Model], ball.Tint)
+		return borrowed[ball.Id]
+	end
+	return {
 		Trails = { { Colors = { ball.Trail }, Width = 0.7, Lifetime = 0.3 } },
 	}
 end

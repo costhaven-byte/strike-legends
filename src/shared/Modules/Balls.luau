@@ -31,6 +31,48 @@ for _, crate in Config.Crates do
 	cratesById[crate.Id] = crate
 end
 
+-- Phase X Part 4: a rarity a crate has no balls of gives its odds to the nearest rarity that has some (a tie goes
+-- to the commoner one), so every crate's odds only point at balls it can really give
+for _, crate in Config.Crates do
+	local has = {}
+	for _, ball in Config.Balls do
+		if Zones.BallInCrate(ball, crate) then
+			has[rarityIndex[ball.Rarity] or 1] = true
+		end
+	end
+	local odds = {}
+	for name, percent in crate.Odds do
+		local index = rarityIndex[name] or 1
+		local target = nil
+		for distance = 0, #Config.Rarities do
+			if has[index - distance] then
+				target = index - distance
+				break
+			elseif has[index + distance] then
+				target = index + distance
+				break
+			end
+		end
+		if target then
+			local targetName = Config.Rarities[target].Name
+			odds[targetName] = (odds[targetName] or 0) + percent
+		end
+	end
+	crate.Odds = odds
+end
+
+-- Every crate ball must sit inside its zone's rarity range (Config.ZoneRarity): say so in Output if one doesn't
+for _, ball in Config.Balls do
+	if
+		ball.Zone
+		and ball.InCrates ~= false
+		and not ball.Retired
+		and not Zones.RarityAllowed(ball.Zone, ball.Rarity)
+	then
+		warn(("[Balls] %s is %s, outside zone %d's range (Config.ZoneRarity)"):format(ball.Id, ball.Rarity, ball.Zone))
+	end
+end
+
 function Balls.Get(id: string?)
 	return id and ballsById[id]
 end

@@ -38,8 +38,8 @@ end
 -- Can this crate give this ball? ZoneBallsOnly crates (the Alley Crate) only give their own zone's balls
 -- (Config.Balls Zone); the other crates give any crate ball, as before.
 function Zones.BallInCrate(ball, crate): boolean
-	if ball.InCrates == false then
-		return false
+	if ball.InCrates == false or ball.Retired then
+		return false -- the starter ball, and balls Phase X took out of their zone (owners keep them)
 	end
 	if crate and crate.ZoneBallsOnly then
 		return ball.Zone == crate.Zone
@@ -62,6 +62,27 @@ function Zones.RewardCrateId(crateId: string?, rankLevel: number?): string?
 		end
 	end
 	return Config.Rizzo.CrateId
+end
+
+-- Is this rarity inside the zone's range (Config.ZoneRarity)? Zones without a range allow anything.
+function Zones.RarityAllowed(zone: number, rarityName: string): boolean
+	local range = Config.ZoneRarity[zone]
+	if not range then
+		return true
+	end
+	local index, low, high = 0, 0, 0
+	for i, rarity in Config.Rarities do
+		if rarity.Name == rarityName then
+			index = i
+		end
+		if rarity.Name == range.Min then
+			low = i
+		end
+		if rarity.Name == range.Max then
+			high = i
+		end
+	end
+	return index >= low and index <= high
 end
 
 -- True if the position is inside an Area box ({ Center, Size })

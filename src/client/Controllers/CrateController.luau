@@ -394,7 +394,8 @@ function CrateController:Start()
 	end
 
 	local function playIntro(crate)
-		local template = crateModels and crateModels:FindFirstChild(crate.Id)
+		local template = crateModels
+			and (crateModels:FindFirstChild(crate.Id) or (crate.Model and crateModels:FindFirstChild(crate.Model)))
 		if not template then
 			return
 		end

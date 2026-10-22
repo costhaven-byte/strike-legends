@@ -52,9 +52,21 @@ end
 -- Rare and up glow in their rarity colour; Legendary and up also sparkle. effects = false skips glow and sparkles
 -- (for small UI views).
 function MascotView.Mascot(mascot, size: number, effects: boolean?): Model
-	local real = realModel((mascot.Base or mascot).Id, size / Config.MascotFx.Size)
+	local base = mascot.Base or mascot
+	-- Phase X placeholder pets borrow another pet's model (Model) and repaint it (Tint)
+	local real = realModel(base.Model or base.Id, size / Config.MascotFx.Size)
 	if real then
 		real.Name = mascot.Id
+		if base.Tint then
+			for _, piece in real:GetDescendants() do
+				if piece:IsA("BasePart") then
+					local _, _, v = piece.Color:ToHSV()
+					if v > 0.15 and piece.Transparency < 0.9 then -- eyes and outlines stay dark
+						piece.Color = piece.Color:Lerp(base.Tint, 0.65)
+					end
+				end
+			end
+		end
 		MascotView.Dress(real, mascot, size, effects)
 		return real
 	end

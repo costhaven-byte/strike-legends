@@ -7,6 +7,8 @@ local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local BallLook = require(ReplicatedStorage:WaitForChild("Shared").Modules.BallLook)
+
 local SPIN_SPEED = 0.6 -- radians per second for views made with Spin = true
 local SILHOUETTE = Color3.fromRGB(28, 22, 48) -- tint for balls shown as locked
 
@@ -14,10 +16,10 @@ local BallView = {}
 
 -- The ball's 3D model, sitting at the origin (or a plain one-stud sphere if it has none)
 function BallView.Model(ball): Instance
-	local models = ReplicatedStorage:FindFirstChild("BallModels")
-	local source = models and models:FindFirstChild(ball.Id)
+	local source = BallLook.Template(ball.Id)
 	if source then
 		local model = source:Clone() :: Model
+		BallLook.Paint(model, ball.Id)
 		model:PivotTo(CFrame.new())
 		return model
 	end

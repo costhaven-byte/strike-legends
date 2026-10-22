@@ -29,8 +29,7 @@ local player = Players.LocalPlayer
 
 local FX = Config.MascotFx
 local ECONOMY = Config.Economy.Mascots
-local EGG = Config.Economy.Eggs[1] -- the Neon Egg (Id "Alley"): the only egg with mascots until zones 2 to 5 come
-local EGG_LOOK = Config.EggLooks[EGG.Id]
+local EGG = Config.Economy.Eggs[1] -- the Neon Egg (Id "Alley"); zone 3 and 4 eggs hatch at their own stands (Phase X)
 
 local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
 local BODY_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
@@ -112,14 +111,16 @@ local function button(
 end
 
 -- Free hatches of the egg waiting (playtime gifts); a hatch uses one before any coins
-local function freeEggs(): number
-	return player:GetAttribute("FreeEgg_" .. EGG.Id) or 0
+-- (egg = a Config.Economy.Eggs row; the Neon Egg when left out)
+local function freeEggs(egg: any?): number
+	return player:GetAttribute("FreeEgg_" .. (egg or EGG).Id) or 0
 end
 
-local function eggState(): (boolean, string?, boolean)
+local function eggState(egg: any?): (boolean, string?, boolean)
+	egg = egg or EGG
 	local level = player:GetAttribute("RankLevel") or 1
-	local unlocked, why = Mascots.EggUnlocked(EGG, level, Zones.Highest(level))
-	local affordable = (player:GetAttribute("Coins") or 0) >= EGG.Price or freeEggs() > 0
+	local unlocked, why = Mascots.EggUnlocked(egg, level, Zones.Highest(level))
+	local affordable = (player:GetAttribute("Coins") or 0) >= egg.Price or freeEggs(egg) > 0
 	return unlocked, why, affordable
 end
 
@@ -334,7 +335,7 @@ function MascotController:Start()
 	local doMerge: (mascot: any) -> ()
 	-- Each mascot's card, then its Shiny card right after it (each shown only once owned)
 	local cards = {}
-	for index, mascot in Mascots.InEgg(EGG.Id) do
+	for index, mascot in Config.Mascots do -- every egg's pets (Phase X: one egg per zone), shown once owned
 		local order = Mascots.RarityIndex(mascot.Rarity) * 100 + index * 2
 		table.insert(cards, { Mascot = mascot, Order = order })
 		table.insert(cards, { Mascot = Mascots.Get(Mascots.ShinyId(mascot.Id)), Order = order + 1 })
@@ -688,7 +689,10 @@ function MascotController:Start()
 	local hatching = false
 	local spinConnection: RBXScriptConnection? = nil
 	-- The lobby's egg stand, once it's built (the hatch plays on it); hatches this session (for auto-skip)
-	local stand: { Stand: Model, Spot: BasePart, Egg: Model, Prompt: ProximityPrompt }? = nil
+	-- Phase X: one stand per egg (Config.EggStands); currentEgg = the egg being hatched right now
+	type Site = { Stand: Model, Spot: BasePart, Egg: Model, Prompt: ProximityPrompt }
+	local stands: { [string]: Site } = {}
+	local currentEgg = EGG
 	local standBusy = false
 	local hatchesThisSession = 0
 	local sceneContext: any = nil
@@ -706,7 +710,7 @@ function MascotController:Start()
 		end
 	end
 
-	local doHatch: () -> ()
+	local doHatch: (egg: any?) -> ()
 
 	local function showCard(result, mascot)
 		local rarity = Mascots.RarityIndex(mascot.Rarity)
@@ -780,6 +784,7 @@ function MascotController:Start()
 		if not mascot then
 			return
 		end
+		local stand = stands[currentEgg.Id]
 		if stand and stand.Egg.Parent then
 			playOnStand(result, mascot, stand)
 			return
@@ -796,7 +801,7 @@ function MascotController:Start()
 		clearStage()
 
 		-- The egg pops in and shakes harder and harder; the glow climbs through the rarities up to the result
-		local egg = MascotView.Egg(EGG.Id, 4)
+		local egg = MascotView.Egg(currentEgg.Id, 4)
 		local view = MascotView.Viewport(stage, egg, 0.8)
 		view.ZIndex = 34
 		UiFx.Pop(stage, 0.4, 0.35)
@@ -860,21 +865,23 @@ function MascotController:Start()
 		UiFx.Pop(doneButton, 0.6, 0.3)
 	end
 
-	doHatch = function()
+	doHatch = function(egg)
 		if hatching or overlay.Visible then
 			return
 		end
-		local unlocked, why, affordable = eggState()
+		egg = egg or EGG
+		currentEgg = egg
+		local unlocked, why, affordable = eggState(egg)
 		if not unlocked then
 			showToast("Unlocks at " .. tostring(why))
 			return
 		end
 		if not affordable then
-			showToast(("Need %s coins"):format(formatNumber(EGG.Price)))
+			showToast(("Need %s coins"):format(formatNumber(egg.Price)))
 			return
 		end
 		hatching = true
-		local ok, result = pcall(hatchRemote.InvokeServer, hatchRemote, EGG.Id)
+		local ok, result = pcall(hatchRemote.InvokeServer, hatchRemote, egg.Id)
 		if ok and result and result.Ok then
 			play(result)
 		else
@@ -978,6 +985,7 @@ function MascotController:Start()
 			table.clear(hiddenGuis)
 			standBusy = false
 			refreshButton()
+			local stand = stands[currentEgg.Id]
 			if stand then
 				stand.Prompt.Enabled = true
 			end
@@ -1061,24 +1069,36 @@ function MascotController:Start()
 	showTab(currentTab)
 	gui.Parent = playerGui
 
-	-- ===== The egg stand in the lobby =====
-	task.spawn(function()
-		-- The Neon stand (the owner's design, a Studio model): the egg sits in its cradle, at NeonStand.EggSpot
-		local hub = Workspace:WaitForChild("Hub", 30)
-		local pad = hub and hub:WaitForChild("EggPad", 30)
-		local standModel = pad and pad:WaitForChild("NeonStand", 10) :: Model?
-		local spot = standModel and standModel:WaitForChild("EggSpot", 10) :: BasePart?
-		if not spot then
-			warn("[MascotController] Workspace.Hub.EggPad.NeonStand.EggSpot not found: no egg stand in the lobby")
+	-- ===== The egg stands (Config.EggStands: the lobby's Neon Egg, zone 3's and zone 4's) =====
+	local function buildStand(row)
+		local egg = Mascots.GetEgg(row.Egg)
+		local look = Config.EggLooks[row.Egg]
+		if not egg or not look or not Mascots.EggReady(egg.Id) then
 			return
 		end
-		local standEgg = MascotView.Egg(EGG.Id, spot.Size.Y)
+		-- The Neon stand (the owner's design, a Studio model): the egg sits in its cradle, at NeonStand.EggSpot
+		local pad: Instance? = Workspace
+		for _, name in row.Path do
+			pad = pad and pad:WaitForChild(name, 30)
+		end
+		local standModel = pad and pad:WaitForChild("NeonStand", 10) :: Model?
+		local spot = standModel and standModel:WaitForChild("EggSpot", 10) :: BasePart?
+		if not spot or not pad then
+			warn(
+				("[MascotController] %s.NeonStand.EggSpot not found: no %s stand"):format(
+					table.concat(row.Path, "."),
+					look.Name
+				)
+			)
+			return
+		end
+		local standEgg = MascotView.Egg(egg.Id, spot.Size.Y)
 		standEgg.Name = "StandEgg"
 		standEgg:PivotTo(spot.CFrame)
 		local base = spot.Position
 		local shell = standEgg.PrimaryPart :: BasePart
 		local light = Instance.new("PointLight")
-		light.Color = EGG_LOOK.Color
+		light.Color = look.Color
 		light.Range = 12
 		light.Brightness = 1.5
 		light.Parent = shell
@@ -1086,16 +1106,16 @@ function MascotController:Start()
 
 		local prompt = Instance.new("ProximityPrompt")
 		prompt.Name = "HatchPrompt"
-		prompt.ObjectText = EGG_LOOK.Name
+		prompt.ObjectText = look.Name
 		prompt.HoldDuration = FX.HoldDuration
 		prompt.MaxActivationDistance = FX.PromptDistance
 		prompt.RequiresLineOfSight = false
 		prompt.Parent = shell
 		prompt.Triggered:Connect(function()
-			task.spawn(doHatch)
+			task.spawn(doHatch, egg)
 		end)
 
-		-- Price and lock just above the stand's NEON EGG sign (the sign itself shows the name)
+		-- Price and lock just above the stand's sign (the sign itself shows the name)
 		local board = Instance.new("BillboardGui")
 		board.Name = "EggInfo"
 		board.Size = UDim2.fromOffset(220, 32)
@@ -1105,27 +1125,27 @@ function MascotController:Start()
 		board.Parent = shell
 		local boardPrice = text(board, "Price", FONT, GOLD, UDim2.new(), UDim2.fromScale(1, 1))
 
-		stand = { Stand = standModel :: Model, Spot = spot, Egg = standEgg, Prompt = prompt }
+		stands[egg.Id] = { Stand = standModel :: Model, Spot = spot, Egg = standEgg, Prompt = prompt }
 
 		local function refreshStand()
-			local unlocked, why = eggState()
-			local free = freeEggs()
+			local unlocked, why = eggState(egg)
+			local free = freeEggs(egg)
 			boardPrice.Text = if not unlocked
 				then "REACH " .. tostring(why)
 				elseif free > 0 then ("FREE EGG x%d"):format(free)
-				else formatNumber(EGG.Price) .. " COINS"
+				else formatNumber(egg.Price) .. " COINS"
 			boardPrice.TextColor3 = if not unlocked then GREY elseif free > 0 then LIME else GOLD
 			prompt.ActionText = if not unlocked
 				then "Locked"
 				elseif free > 0 then "Hatch (FREE)"
-				else ("Hatch (%s)"):format(formatNumber(EGG.Price))
+				else ("Hatch (%s)"):format(formatNumber(egg.Price))
 		end
 		player:GetAttributeChangedSignal("RankLevel"):Connect(refreshStand)
-		player:GetAttributeChangedSignal("FreeEgg_" .. EGG.Id):Connect(refreshStand)
+		player:GetAttributeChangedSignal("FreeEgg_" .. egg.Id):Connect(refreshStand)
 		refreshStand()
 
 		-- Idle (hatch storyboard frame 1): the core pulses slowly while the camera is near
-		local rig = PetIdle.Rig(standEgg, "Egg_" .. EGG.Id, 1)
+		local rig = PetIdle.Rig(standEgg, "Egg_" .. egg.Id, 1)
 		if rig then
 			RunService.RenderStepped:Connect(function()
 				local camera = Workspace.CurrentCamera
@@ -1133,7 +1153,10 @@ function MascotController:Start()
 				rig:Step(os.clock(), near and not standBusy) -- the hatch drives the egg itself
 			end)
 		end
-	end)
+	end
+	for _, row in Config.EggStands do
+		task.spawn(buildStand, row)
+	end
 end
 
 return MascotController

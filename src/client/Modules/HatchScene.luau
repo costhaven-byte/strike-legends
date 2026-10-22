@@ -48,7 +48,14 @@ local function ease(u: number, style: Enum.EasingStyle, direction: Enum.EasingDi
 	return TweenService:GetValue(math.clamp(u, 0, 1), style, direction or Enum.EasingDirection.Out)
 end
 
-local function newPart(folder: Instance, name: string, size: Vector3, color: Color3, cf: CFrame, shape: Enum.PartType?): Part
+local function newPart(
+	folder: Instance,
+	name: string,
+	size: Vector3,
+	color: Color3,
+	cf: CFrame,
+	shape: Enum.PartType?
+): Part
 	local p = Instance.new("Part")
 	p.Name = name
 	p.Shape = shape or Enum.PartType.Block
@@ -157,7 +164,10 @@ function HatchScene.Play(ctx: Context): () -> ()
 		if part:IsA("BasePart") then
 			eggLooks[part] = { Color = part.Color, Transparency = part.Transparency, Size = part.Size }
 			if part.Name:match("^circuit_") then
-				table.insert(circuits, { Part = part, Height = math.clamp((part.Position.Y - bottom.Y) / height, 0, 1) })
+				table.insert(
+					circuits,
+					{ Part = part, Height = math.clamp((part.Position.Y - bottom.Y) / height, 0, 1) }
+				)
 				if part.Name:match("^circuit_pad") then
 					table.insert(pads, part)
 				end
@@ -354,7 +364,8 @@ function HatchScene.Play(ctx: Context): () -> ()
 			beam.Width0 = 0.25
 			beam.Width1 = 1.4
 			beam.Color = colors(WHITE, rarityColor:Lerp(WHITE, 0.3))
-			beam.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.05), NumberSequenceKeypoint.new(1, 1) })
+			beam.Transparency =
+				NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.05), NumberSequenceKeypoint.new(1, 1) })
 			beam.Segments = 2
 			beam.Parent = folder
 			animate(0.12, function(u)
@@ -381,7 +392,8 @@ function HatchScene.Play(ctx: Context): () -> ()
 				local angle = (i - 0.5) / segments * math.pi * 2
 				local at = Vector3.new(center.X + math.cos(angle) * r, floorY, center.Z + math.sin(angle) * r)
 				piece.Size = Vector3.new(0.22 * (1 - u * 0.5), 0.12, chord)
-				piece.CFrame = CFrame.lookAt(at, Vector3.new(center.X, floorY, center.Z)) * CFrame.Angles(0, math.pi / 2, 0)
+				piece.CFrame = CFrame.lookAt(at, Vector3.new(center.X, floorY, center.Z))
+					* CFrame.Angles(0, math.pi / 2, 0)
 				piece.Transparency = ease(u, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 			end
 		end)
@@ -430,7 +442,8 @@ function HatchScene.Play(ctx: Context): () -> ()
 		place(rest - Vector3.yAxis * SETTINGS.PetRise)
 		model.Parent = folder
 		pet = model
-		petRig = PetIdle.Rig(model, (mascot.Base or mascot).Id, size / Config.MascotFx.Size)
+		petRig =
+			PetIdle.Rig(model, (mascot.Base or mascot).Model or (mascot.Base or mascot).Id, size / Config.MascotFx.Size)
 
 		-- The light it comes out of
 		local orb = newPart(folder, "Orb", Vector3.one * height * 1.1, WHITE, CFrame.new(center), Enum.PartType.Ball)
@@ -514,35 +527,37 @@ function HatchScene.Play(ctx: Context): () -> ()
 		-- 2 · Activation (0.40s): stand flares and the sign flickers at 0.08s; a white charge climbs the lines
 		Sfx.Play("HatchCharge", 1)
 		local flickered = false
-		if not hold(SETTINGS.Activation, function(_, elapsed)
-			if elapsed >= 0.08 then
-				-- Flare to "200%": jump bright, then hold a strong glow
-				standFlare = math.max(0.35, 0.75 - (elapsed - 0.08) * 1.5)
-				light.Brightness = 2.5
-				if not flickered then
-					flickered = true
-					if sign then
-						sign.Transparency = 0.75
-					end
-					if underglow then
-						underglow.Transparency = 1
-					end
-					task.delay(0.06, function()
+		if
+			not hold(SETTINGS.Activation, function(_, elapsed)
+				if elapsed >= 0.08 then
+					-- Flare to "200%": jump bright, then hold a strong glow
+					standFlare = math.max(0.35, 0.75 - (elapsed - 0.08) * 1.5)
+					light.Brightness = 2.5
+					if not flickered then
+						flickered = true
 						if sign then
-							sign.Transparency = 0
+							sign.Transparency = 0.75
 						end
 						if underglow then
-							underglow.Transparency = 0
+							underglow.Transparency = 1
 						end
-					end)
+						task.delay(0.06, function()
+							if sign then
+								sign.Transparency = 0
+							end
+							if underglow then
+								underglow.Transparency = 0
+							end
+						end)
+					end
 				end
-			end
-			paintStand()
-			local u = math.clamp((elapsed - 0.08) / 0.32, 0, 1)
-			charge = if elapsed >= 0.08 then u * u * 1.25 else -1
-			lit = if elapsed >= 0.08 then 0.25 else 0
-			paintCircuits()
-		end) then
+				paintStand()
+				local u = math.clamp((elapsed - 0.08) / 0.32, 0, 1)
+				charge = if elapsed >= 0.08 then u * u * 1.25 else -1
+				lit = if elapsed >= 0.08 then 0.25 else 0
+				paintCircuits()
+			end)
+		then
 			return false
 		end
 		charge = 2
@@ -558,12 +573,14 @@ function HatchScene.Play(ctx: Context): () -> ()
 			Sfx.Play("ReelTick", 0.85 + index * 0.15)
 			leakSparks(tier.SparksPerHit)
 			light.Brightness = 1.5 * wobble.Core
-			if not hold(wobble.Time, function(u)
-				local angle = math.rad(wobble.Angle) * math.sin(u * math.pi * 2) * (1 - u * 0.25)
-				egg:PivotTo(CFrame.new(base) * CFrame.fromAxisAngle(axis, angle) * CFrame.new(-base) * eggPivot)
-				paintCore(1 + (wobble.Core - 1) * (1 - u) + 0.15)
-				light.Brightness = 1.5 + 1.5 * wobble.Core * (1 - u)
-			end) then
+			if
+				not hold(wobble.Time, function(u)
+					local angle = math.rad(wobble.Angle) * math.sin(u * math.pi * 2) * (1 - u * 0.25)
+					egg:PivotTo(CFrame.new(base) * CFrame.fromAxisAngle(axis, angle) * CFrame.new(-base) * eggPivot)
+					paintCore(1 + (wobble.Core - 1) * (1 - u) + 0.15)
+					light.Brightness = 1.5 + 1.5 * wobble.Core * (1 - u)
+				end)
+			then
 				return false
 			end
 		end
@@ -587,52 +604,56 @@ function HatchScene.Play(ctx: Context): () -> ()
 		local flashed = 0
 		local pillarDone = false
 		local crackTime = SETTINGS.CrackTime + (tier.Extra or 0) - (tier.Hold or SETTINGS.Hold)
-		if not hold(crackTime, function(_, elapsed)
-			while done < steps and elapsed >= done * 0.12 do
-				done += 1
-				local c = crackPlan[done]
-				crack(c[1], c[2], c[3], c[4])
-			end
-			-- Overload: 3 white blinks over 0.30s
-			overload = if elapsed < 0.3 and math.floor(elapsed / 0.05) % 2 == 0 then 1 else 0.3
-			paintCircuits()
-			while flashed < #flashes and elapsed >= flashes[flashed + 1] do
-				flashed += 1
-				archExtra = 1
-				Sfx.Play("Tap", 1.6, 0.6)
-				task.delay(0.07, function()
-					archExtra = 0
-				end)
-			end
-			paintStand()
-			-- Legendary and Mythic: a light pillar from the top of the egg (and a short camera shake)
-			if tier.Pillar and not pillarDone and elapsed >= 0.24 then
-				pillarDone = true
-				local top = center + Vector3.yAxis * halfHeight
-				local tall = SETTINGS.PillarHeight
-				local pillar = newPart(
-					folder,
-					"Pillar",
-					Vector3.new(tall, 0.2, 0.2),
-					rarityColor:Lerp(WHITE, 0.4),
-					CFrame.new(top + Vector3.yAxis * tall / 2) * CFrame.Angles(0, 0, math.pi / 2),
-					Enum.PartType.Cylinder
-				)
-				animate(0.6, function(u)
-					local w = height * 0.55 * math.sin(math.min(u * 2, 1) * math.pi / 2)
-					pillar.Size = Vector3.new(tall, w, w)
-					pillar.Transparency = 0.15 + 0.85 * ease(math.max(0, u - 0.4) / 0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-				end)
-				Sfx.Play("StreakUp", 0.8, 0.8)
-				animate(tier.CamShake or 0.1, function(u)
-					local k = (1 - u) * 0.18
-					camera.CFrame = shot * CFrame.new((math.random() - 0.5) * k, (math.random() - 0.5) * k, 0)
-				end)
-				if tier.EdgePulse and ctx.EdgePulse then
-					ctx.EdgePulse(rarityColor)
+		if
+			not hold(crackTime, function(_, elapsed)
+				while done < steps and elapsed >= done * 0.12 do
+					done += 1
+					local c = crackPlan[done]
+					crack(c[1], c[2], c[3], c[4])
 				end
-			end
-		end) then
+				-- Overload: 3 white blinks over 0.30s
+				overload = if elapsed < 0.3 and math.floor(elapsed / 0.05) % 2 == 0 then 1 else 0.3
+				paintCircuits()
+				while flashed < #flashes and elapsed >= flashes[flashed + 1] do
+					flashed += 1
+					archExtra = 1
+					Sfx.Play("Tap", 1.6, 0.6)
+					task.delay(0.07, function()
+						archExtra = 0
+					end)
+				end
+				paintStand()
+				-- Legendary and Mythic: a light pillar from the top of the egg (and a short camera shake)
+				if tier.Pillar and not pillarDone and elapsed >= 0.24 then
+					pillarDone = true
+					local top = center + Vector3.yAxis * halfHeight
+					local tall = SETTINGS.PillarHeight
+					local pillar = newPart(
+						folder,
+						"Pillar",
+						Vector3.new(tall, 0.2, 0.2),
+						rarityColor:Lerp(WHITE, 0.4),
+						CFrame.new(top + Vector3.yAxis * tall / 2) * CFrame.Angles(0, 0, math.pi / 2),
+						Enum.PartType.Cylinder
+					)
+					animate(0.6, function(u)
+						local w = height * 0.55 * math.sin(math.min(u * 2, 1) * math.pi / 2)
+						pillar.Size = Vector3.new(tall, w, w)
+						pillar.Transparency = 0.15
+							+ 0.85
+								* ease(math.max(0, u - 0.4) / 0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+					end)
+					Sfx.Play("StreakUp", 0.8, 0.8)
+					animate(tier.CamShake or 0.1, function(u)
+						local k = (1 - u) * 0.18
+						camera.CFrame = shot * CFrame.new((math.random() - 0.5) * k, (math.random() - 0.5) * k, 0)
+					end)
+					if tier.EdgePulse and ctx.EdgePulse then
+						ctx.EdgePulse(rarityColor)
+					end
+				end
+			end)
+		then
 			return false
 		end
 		camera.CFrame = shot
@@ -669,8 +690,7 @@ function HatchScene.Play(ctx: Context): () -> ()
 			local from, normal = onShell(side, up, 1)
 			local color = if i % 3 == 0 then CYAN elseif i % 3 == 1 then SHELL else MAGENTA
 			local shard = Instance.new("WedgePart")
-			shard.Size = Vector3.new(0.08, 0.5 + math.random() * 0.5, 0.4 + math.random() * 0.4)
-				* (height / 3.5)
+			shard.Size = Vector3.new(0.08, 0.5 + math.random() * 0.5, 0.4 + math.random() * 0.4) * (height / 3.5)
 			shard.Color = color
 			shard.Material = Enum.Material.Neon
 			shard.Anchored = true
@@ -679,7 +699,8 @@ function HatchScene.Play(ctx: Context): () -> ()
 			shard.CanTouch = false
 			shard.CastShadow = false
 			shard.Parent = folder
-			local velocity = (normal + facing * 0.35 + Vector3.yAxis * 0.25).Unit * (SETTINGS.ShardDistance * (0.7 + math.random() * 0.6))
+			local velocity = (normal + facing * 0.35 + Vector3.yAxis * 0.25).Unit
+				* (SETTINGS.ShardDistance * (0.7 + math.random() * 0.6))
 			local spinAxis = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5)
 			spinAxis = if spinAxis.Magnitude > 0.01 then spinAxis.Unit else Vector3.xAxis
 			local spin = (math.random() * 2 + 2) * math.pi

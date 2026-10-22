@@ -80,15 +80,31 @@ function Mascots.InEgg(eggId: string): { any }
 	return list
 end
 
+-- Every pet in an egg must sit inside its egg's zone rarity range (Config.ZoneRarity): say so in Output if not
+for _, mascot in Config.Mascots do
+	local egg = mascot.Egg and eggById[mascot.Egg]
+	if egg and egg.Zone and not Zones.RarityAllowed(egg.Zone, mascot.Rarity) then
+		warn(
+			("[Mascots] %s is %s, outside zone %d's range (Config.ZoneRarity)"):format(
+				mascot.Id,
+				mascot.Rarity,
+				egg.Zone
+			)
+		)
+	end
+end
+
 -- An egg has mascots to hatch (eggs for zones 2 to 5 get theirs later)
 function Mascots.EggReady(eggId: string): boolean
 	return #Mascots.InEgg(eggId) > 0
 end
 
--- This mascot's bonus: its rarity's bonus x its egg's BonusScale (0.02 = +2% coins)
+-- This mascot's bonus: its rarity's bonus x its egg's BonusScale (0.02 = +2% coins).
+-- Phase X: BaseBonus replaces the rarity's bonus (a re-rated pet keeps its old power) and BonusEgg the egg whose
+-- BonusScale counts (pets cut from an egg keep that egg's).
 function Mascots.Bonus(mascot): number
-	local egg = eggById[mascot.Egg]
-	local bonus = (ECONOMY.Bonus[mascot.Rarity] or 0) * (egg and egg.BonusScale or 1)
+	local egg = eggById[mascot.BonusEgg or mascot.Egg]
+	local bonus = (mascot.BaseBonus or ECONOMY.Bonus[mascot.Rarity] or 0) * (egg and egg.BonusScale or 1)
 	return if mascot.Shiny then bonus * ECONOMY.ShinyMultiplier else bonus
 end
 

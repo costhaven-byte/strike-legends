@@ -191,10 +191,12 @@ function CollectionBookController:Start()
 	end
 	local tabButtons: { TextButton } = {}
 
+	-- Balls Phase X took out of the game (Retired) only show to players who own one
 	local function ballsOf(rarityName: string)
+		local owned = Balls.DecodeOwned(player:GetAttribute("OwnedBalls"))
 		local list = {}
 		for _, ball in Config.Balls do
-			if ball.Rarity == rarityName then
+			if ball.Rarity == rarityName and (not ball.Retired or owned[ball.Id]) then
 				table.insert(list, ball)
 			end
 		end

@@ -1419,7 +1419,10 @@ Config.BallVfx = {
 	},
 }
 
--- Ball rarities, lowest first. SellCoins = coins paid when a crate gives a ball you already own.
+-- THE RARITY LADDER (Phase X Part 2), lowest first: zone ranges, crate odds, case accents and pets all read it.
+-- SellCoins = coins paid when a crate gives a ball you already own.
+-- To add a tier above Mythic: add a row at the end (and a Config.Showcase.Styles accent, a Config.Economy.Polish
+-- GemPrice, a Config.Economy.Mascots Odds/Bonus and a Config.RarityPower row); nothing else needs code changes.
 Config.Rarities = {
 	{ Name = "Common", Color = Color3.fromRGB(200, 200, 210), SellCoins = 100 },
 	{ Name = "Uncommon", Color = Color3.fromRGB(90, 230, 110), SellCoins = 250 },
@@ -1427,6 +1430,18 @@ Config.Rarities = {
 	{ Name = "Epic", Color = Color3.fromRGB(180, 80, 255), SellCoins = 2500 },
 	{ Name = "Legendary", Color = Color3.fromRGB(255, 190, 40), SellCoins = 10000 },
 	{ Name = "Mythic", Color = Color3.fromRGB(255, 50, 120), SellCoins = 50000 },
+}
+-- Reserved names for future tiers above Mythic (Phase X Part 8B). Names only: no content, art or odds yet.
+-- Move one into Config.Rarities (with a colour and SellCoins) to switch it on.
+Config.ReservedRarities = { "Cosmic", "Celestial", "Eternal" }
+
+-- Which rarities each zone's balls and pets can be (Phase X Part 2). Zone crates and eggs only hold items in their
+-- zone's range; crate odds below are built from it (Config.CrateTiers). Zones 5+ are not built (launch = zones 1-4).
+Config.ZoneRarity = {
+	[1] = { Min = "Common", Max = "Rare" }, -- Back Alley: junk balls, low rarities
+	[2] = { Min = "Uncommon", Max = "Epic" }, -- Neon Lanes
+	[3] = { Min = "Rare", Max = "Legendary" }, -- Main Street Lanes
+	[4] = { Min = "Epic", Max = "Mythic" }, -- Skyline Lanes
 }
 
 -- Every ball in the game. Adding a ball = adding a row.
@@ -1460,7 +1475,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Bubblegum",
-		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
+		Zone = 1, -- moved from Neon Lanes to the Back Alley (Phase X: zone 2 starts at Uncommon), numbers unchanged
 		Name = "Bubblegum",
 		Rarity = "Common",
 		Multiplier = 1.05,
@@ -1472,7 +1487,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Lime",
-		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
+		Zone = 1, -- moved from Neon Lanes to the Back Alley (Phase X: zone 2 starts at Uncommon), numbers unchanged
 		Name = "Lime Twist",
 		Rarity = "Common",
 		Multiplier = 1.1,
@@ -1484,7 +1499,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Tangerine",
-		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
+		Zone = 1, -- moved from Neon Lanes to the Back Alley (Phase X: zone 2 starts at Uncommon), numbers unchanged
 		Name = "Tangerine",
 		Rarity = "Common",
 		Multiplier = 1.15,
@@ -1496,7 +1511,7 @@ Config.Balls = {
 	},
 	{
 		Id = "Ocean",
-		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
+		Zone = 1, -- moved from Neon Lanes to the Back Alley (Phase X: zone 2 starts at Uncommon), numbers unchanged
 		Name = "Deep Ocean",
 		Rarity = "Common",
 		Multiplier = 1.2,
@@ -1570,7 +1585,8 @@ Config.Balls = {
 	},
 	{
 		Id = "Frostbite",
-		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
+		Zone = 2,
+		Retired = true, -- Phase X: cut from Neon Lanes to bring it to 9 balls. Out of every crate; owners keep it
 		Name = "Frostbite",
 		Rarity = "Uncommon",
 		Multiplier = 1.6,
@@ -1632,7 +1648,8 @@ Config.Balls = {
 	},
 	{
 		Id = "Phantom",
-		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
+		Zone = 2,
+		Retired = true, -- Phase X: cut from Neon Lanes to bring it to 9 balls. Out of every crate; owners keep it
 		Name = "Phantom",
 		Rarity = "Rare",
 		Multiplier = 2.5,
@@ -1695,7 +1712,8 @@ Config.Balls = {
 	-- Legendary
 	{
 		Id = "Golden",
-		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
+		Zone = 2,
+		Retired = true, -- Phase X: too rare for Neon Lanes; zone 4's Sunburst reuses its model. Out of every crate; owners keep it
 		Name = "Golden Strike",
 		Rarity = "Legendary",
 		Multiplier = 7.0,
@@ -1707,7 +1725,8 @@ Config.Balls = {
 	},
 	{
 		Id = "Dragon",
-		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
+		Zone = 2,
+		Retired = true, -- Phase X: too rare for Neon Lanes; zone 4's Solid Gold reuses its model. Out of every crate; owners keep it
 		Name = "Dragon's Eye",
 		Rarity = "Legendary",
 		Multiplier = 10.0,
@@ -1720,7 +1739,8 @@ Config.Balls = {
 	-- Mythic
 	{
 		Id = "Void",
-		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
+		Zone = 2,
+		Retired = true, -- Phase X: too rare for Neon Lanes; zone 4's Lightning reuses its model. Out of every crate; owners keep it
 		Name = "The Void",
 		Rarity = "Mythic",
 		Multiplier = 20.0,
@@ -1732,7 +1752,8 @@ Config.Balls = {
 	},
 	{
 		Id = "Supernova",
-		Zone = 2, -- a Neon Lanes ball: the zone 2 crates only give these
+		Zone = 2,
+		Retired = true, -- Phase X: too rare for Neon Lanes; zone 4's Daybreak reuses its model. Out of every crate; owners keep it
 		Name = "Supernova",
 		Rarity = "Mythic",
 		Multiplier = 25.0,
@@ -1741,6 +1762,199 @@ Config.Balls = {
 		Material = Enum.Material.Neon,
 		Trail = Color3.fromRGB(255, 220, 120),
 		Traits = { Blast = 1, Heavy = 0.8 },
+	},
+	-- Main Street Lanes (zone 3, Phase X): classic league balls (marble, swirl, league). Placeholders: they reuse other
+	-- balls' models painted one plain colour until real art exists. Numbers follow the Neon Lanes ladder.
+	{
+		Id = "LeagueBlack",
+		Zone = 3,
+		Name = "League Black",
+		Rarity = "Rare",
+		Multiplier = 2.0,
+		Forgiveness = 0.02,
+		Color = Color3.fromRGB(35, 35, 42),
+		Material = Enum.Material.SmoothPlastic,
+		Trail = Color3.fromRGB(35, 35, 42),
+		Traits = { Curve = 0.25 },
+		Model = "Rookie", -- PLACEHOLDER look: reuses Rookie's model, plain paint
+		Tint = Color3.fromRGB(35, 35, 42),
+		PlainModel = true, -- one plain colour and material, no glow
+	},
+	{
+		Id = "CherrySwirl",
+		Zone = 3,
+		Name = "Cherry Swirl",
+		Rarity = "Rare",
+		Multiplier = 2.2,
+		Forgiveness = 0.02,
+		Color = Color3.fromRGB(190, 30, 55),
+		Material = Enum.Material.SmoothPlastic,
+		Trail = Color3.fromRGB(190, 30, 55),
+		Traits = { Lucky = 0.75 },
+		Model = "Bubblegum", -- PLACEHOLDER look: reuses Bubblegum's model, plain paint
+		Tint = Color3.fromRGB(190, 30, 55),
+		PlainModel = true, -- one plain colour and material, no glow
+	},
+	{
+		Id = "BlueMarble",
+		Zone = 3,
+		Name = "Blue Marble",
+		Rarity = "Rare",
+		Multiplier = 2.4,
+		Forgiveness = 0.025,
+		Color = Color3.fromRGB(40, 95, 205),
+		Material = Enum.Material.SmoothPlastic,
+		Trail = Color3.fromRGB(40, 95, 205),
+		Traits = { Blast = 0.35 },
+		Model = "Ocean", -- PLACEHOLDER look: reuses Ocean's model, plain paint
+		Tint = Color3.fromRGB(40, 95, 205),
+		PlainModel = true, -- one plain colour and material, no glow
+	},
+	{
+		Id = "PearlPro",
+		Zone = 3,
+		Name = "Pearl Pro",
+		Rarity = "Epic",
+		Multiplier = 3.5,
+		Forgiveness = 0.03,
+		Color = Color3.fromRGB(235, 228, 215),
+		Material = Enum.Material.SmoothPlastic,
+		Trail = Color3.fromRGB(235, 228, 215),
+		Traits = { Curve = 0.35, GemHunter = 0.06 },
+		Model = "Frostbite", -- PLACEHOLDER look: reuses Frostbite's model, plain paint
+		Tint = Color3.fromRGB(235, 228, 215),
+		PlainModel = true, -- one plain colour and material, no glow
+	},
+	{
+		Id = "TigerSwirl",
+		Zone = 3,
+		Name = "Tiger Swirl",
+		Rarity = "Epic",
+		Multiplier = 4.5,
+		Forgiveness = 0.035,
+		Color = Color3.fromRGB(230, 120, 30),
+		Material = Enum.Material.SmoothPlastic,
+		Trail = Color3.fromRGB(230, 120, 30),
+		Traits = { Blast = 0.5, Lucky = 1.25 },
+		Model = "Tangerine", -- PLACEHOLDER look: reuses Tangerine's model, plain paint
+		Tint = Color3.fromRGB(230, 120, 30),
+		PlainModel = true, -- one plain colour and material, no glow
+	},
+	{
+		Id = "Championship",
+		Zone = 3,
+		Name = "Championship",
+		Rarity = "Legendary",
+		Multiplier = 8.0,
+		Forgiveness = 0.04,
+		Color = Color3.fromRGB(200, 160, 60),
+		Material = Enum.Material.SmoothPlastic,
+		Trail = Color3.fromRGB(200, 160, 60),
+		Traits = { Lucky = 2, GemHunter = 0.15 },
+		Model = "Golden", -- PLACEHOLDER look: reuses Golden's model, plain paint
+		Tint = Color3.fromRGB(200, 160, 60),
+		PlainModel = true, -- one plain colour and material, no glow
+	},
+	{
+		Id = "Perfect300",
+		Zone = 3,
+		Name = "Perfect 300",
+		Rarity = "Legendary",
+		Multiplier = 9.0,
+		Forgiveness = 0.045,
+		Color = Color3.fromRGB(150, 20, 35),
+		Material = Enum.Material.SmoothPlastic,
+		Trail = Color3.fromRGB(150, 20, 35),
+		Traits = { Blast = 0.75, StreakSaver = 45 },
+		Model = "Dragon", -- PLACEHOLDER look: reuses Dragon's model, plain paint
+		Tint = Color3.fromRGB(150, 20, 35),
+		PlainModel = true, -- one plain colour and material, no glow
+	},
+	-- Skyline Lanes (zone 4, Phase X): the moved top Neon balls as new zone 4 entries (same numbers as the ball whose
+	-- model they reuse), plus two Epics from the Neon Epic models. Placeholder colour + effect until Claude Design re-skins.
+	{
+		Id = "CloudSwirl",
+		Zone = 4,
+		Name = "Cloud Swirl",
+		Rarity = "Epic",
+		Multiplier = 4.0,
+		Forgiveness = 0.035,
+		Color = Color3.fromRGB(225, 240, 255),
+		Material = Enum.Material.Neon,
+		Trail = Color3.fromRGB(225, 240, 255),
+		Traits = { Lucky = 1.25, GemHunter = 0.08 },
+		Model = "Nebula", -- PLACEHOLDER look: reuses Nebula's model and effect, recoloured
+		Tint = Color3.fromRGB(225, 240, 255),
+	},
+	{
+		Id = "Crystal",
+		Zone = 4,
+		Name = "Crystal",
+		Rarity = "Epic",
+		Multiplier = 3.0,
+		Forgiveness = 0.03,
+		Color = Color3.fromRGB(120, 230, 255),
+		Material = Enum.Material.Neon,
+		Trail = Color3.fromRGB(120, 230, 255),
+		Traits = { Heavy = 0.4, GemHunter = 0.06 },
+		Model = "Plasma", -- PLACEHOLDER look: reuses Plasma's model and effect, recoloured
+		Tint = Color3.fromRGB(120, 230, 255),
+	},
+	{
+		Id = "Sunburst",
+		Zone = 4,
+		Name = "Sunburst",
+		Rarity = "Legendary",
+		Multiplier = 7.0,
+		Forgiveness = 0.04,
+		Color = Color3.fromRGB(255, 170, 40),
+		Material = Enum.Material.Neon,
+		Trail = Color3.fromRGB(255, 170, 40),
+		Traits = { Lucky = 2, GemHunter = 0.15 },
+		Model = "Golden", -- PLACEHOLDER look: reuses Golden's model and effect, recoloured
+		Tint = Color3.fromRGB(255, 170, 40),
+	},
+	{
+		Id = "SolidGold",
+		Zone = 4,
+		Name = "Solid Gold",
+		Rarity = "Legendary",
+		Multiplier = 10.0,
+		Forgiveness = 0.045,
+		Color = Color3.fromRGB(255, 205, 60),
+		Material = Enum.Material.Neon,
+		Trail = Color3.fromRGB(255, 205, 60),
+		Traits = { Blast = 0.75, StreakSaver = 45 },
+		Model = "Dragon", -- PLACEHOLDER look: reuses Dragon's model and effect, recoloured
+		Tint = Color3.fromRGB(255, 205, 60),
+	},
+	{
+		Id = "Lightning",
+		Zone = 4,
+		Name = "Lightning",
+		Rarity = "Mythic",
+		Multiplier = 20.0,
+		Forgiveness = 0.05,
+		Color = Color3.fromRGB(255, 245, 90),
+		Material = Enum.Material.Neon,
+		Trail = Color3.fromRGB(255, 245, 90),
+		Traits = { Curve = 0.6, StreakSaver = 30 },
+		Model = "Void", -- PLACEHOLDER look: reuses Void's model and effect, recoloured
+		Tint = Color3.fromRGB(255, 245, 90),
+	},
+	{
+		Id = "Daybreak",
+		Zone = 4,
+		Name = "Daybreak",
+		Rarity = "Mythic",
+		Multiplier = 25.0,
+		Forgiveness = 0.05,
+		Color = Color3.fromRGB(255, 150, 120),
+		Material = Enum.Material.Neon,
+		Trail = Color3.fromRGB(255, 150, 120),
+		Traits = { Blast = 1, Heavy = 0.8 },
+		Model = "Supernova", -- PLACEHOLDER look: reuses Supernova's model and effect, recoloured
+		Tint = Color3.fromRGB(255, 150, 120),
 	},
 }
 
@@ -1752,11 +1966,85 @@ Config.Balls = {
 -- the Back Alley balls only; the zone 2 crates (Bronze, Silver, Gold) give only the Neon Lanes balls.
 Config.Crates = {
 	{ Id = "Basic", Name = "Alley Crate", Color = Color3.fromRGB(60, 200, 255), Zone = 1, ZoneBallsOnly = true },
-	{ Id = "Bronze", Name = "Bronze Crate", Color = Color3.fromRGB(215, 135, 70), Zone = 2, ZoneBallsOnly = true },
-	{ Id = "Silver", Name = "Silver Crate", Color = Color3.fromRGB(200, 215, 235), Zone = 2, ZoneBallsOnly = true },
-	{ Id = "Gold", Name = "Gold Crate", Color = Color3.fromRGB(255, 200, 40), Zone = 2, ZoneBallsOnly = true },
+	{
+		Id = "Bronze",
+		Name = "Bronze Crate",
+		Color = Color3.fromRGB(215, 135, 70),
+		Zone = 2,
+		ZoneBallsOnly = true,
+		Tier = "Bronze",
+	},
+	{
+		Id = "Silver",
+		Name = "Silver Crate",
+		Color = Color3.fromRGB(200, 215, 235),
+		Zone = 2,
+		ZoneBallsOnly = true,
+		Tier = "Silver",
+	},
+	{
+		Id = "Gold",
+		Name = "Gold Crate",
+		Color = Color3.fromRGB(255, 200, 40),
+		Zone = 2,
+		ZoneBallsOnly = true,
+		Tier = "Gold",
+	},
+	-- Phase X: zone 3 has 2 crates, zone 4 has 3. Model = the CrateModels look they borrow until real art exists.
+	{
+		Id = "League",
+		Name = "League Crate",
+		Color = Color3.fromRGB(176, 112, 60),
+		Zone = 3,
+		ZoneBallsOnly = true,
+		Tier = "Bronze",
+		Model = "Bronze",
+	},
+	{
+		Id = "Champion",
+		Name = "Champion Crate",
+		Color = Color3.fromRGB(224, 165, 38),
+		Zone = 3,
+		ZoneBallsOnly = true,
+		Tier = "Gold",
+		Model = "Gold",
+	},
+	{
+		Id = "SkyBronze",
+		Name = "Sky Bronze Crate",
+		Color = Color3.fromRGB(240, 160, 110),
+		Zone = 4,
+		ZoneBallsOnly = true,
+		Tier = "Bronze",
+		Model = "Bronze",
+	},
+	{
+		Id = "SkySilver",
+		Name = "Sky Silver Crate",
+		Color = Color3.fromRGB(190, 220, 255),
+		Zone = 4,
+		ZoneBallsOnly = true,
+		Tier = "Silver",
+		Model = "Silver",
+	},
+	{
+		Id = "SkyGold",
+		Name = "Sky Gold Crate",
+		Color = Color3.fromRGB(255, 79, 139),
+		Zone = 4,
+		ZoneBallsOnly = true,
+		Tier = "Gold",
+		Model = "Gold",
+	},
 	-- The Neon Crate (5.9B) is out of the game for now (owner 2026-10-21): it gets a new name and a later zone once
 	-- the new economy is in. Its Config.Economy.Crates row stays for the simulator; old saves keep its pity.
+}
+
+-- Crate counters in zones 3 and 4 (Phase X; placeholder booths built in Studio): walk up and the prompt opens the crate
+-- shop screen, which lists every crate (each zone's crates unlock with the zone). Path = the booth under Workspace.
+Config.ZoneShops = {
+	{ Path = { "MainStreetLanes", "CrateShop" }, Zone = 3 },
+	{ Path = { "SkylineLanes", "CrateShop" }, Zone = 4 },
 }
 
 -- Rizzo, the Back Alley crate dealer (owner's "Rizzo's Crate Cart" design), at Workspace.BackAlley.RizzoStand.
@@ -1869,7 +2157,8 @@ Config.Mascots = {
 		Id = "Pinny",
 		Name = "Pinny",
 		Egg = "Alley",
-		Rarity = "Common",
+		Rarity = "Uncommon", -- Phase X: was Common (zone 2 starts at Uncommon); BaseBonus keeps its old +2%
+		BaseBonus = 0.2,
 		Color = Color3.fromRGB(245, 245, 250),
 		Accent = Color3.fromRGB(230, 50, 60),
 		Reaction = "Hop",
@@ -1877,7 +2166,8 @@ Config.Mascots = {
 	{
 		Id = "Gus",
 		Name = "Gutter Gus",
-		Egg = "Alley",
+		Egg = nil, -- Phase X holding list: cut from the Neon Egg (6 pets now); owners keep it. Was Egg = "Alley"
+		BonusEgg = "Alley", -- its bonus stays the Neon Egg's (owners' pets don't change)
 		Rarity = "Common",
 		Color = Color3.fromRGB(140, 140, 155),
 		Accent = Color3.fromRGB(90, 200, 255),
@@ -1895,7 +2185,8 @@ Config.Mascots = {
 	{
 		Id = "Bumper",
 		Name = "Bumper",
-		Egg = "Alley",
+		Egg = nil, -- Phase X holding list: cut from the Neon Egg (6 pets now); owners keep it. Was Egg = "Alley"
+		BonusEgg = "Alley", -- its bonus stays the Neon Egg's (owners' pets don't change)
 		Rarity = "Uncommon",
 		Color = Color3.fromRGB(190, 255, 70),
 		Accent = Color3.fromRGB(255, 90, 200),
@@ -1940,7 +2231,7 @@ Config.Mascots = {
 	{
 		Id = "Kingpin",
 		Name = "Kingpin",
-		Egg = "Alley",
+		Egg = "Arcade", -- Phase X: moved from the Neon Egg to zone 3's Main Street Egg
 		Rarity = "Legendary",
 		Color = Color3.fromRGB(255, 195, 40),
 		Accent = Color3.fromRGB(255, 255, 255),
@@ -1949,7 +2240,7 @@ Config.Mascots = {
 	{
 		Id = "Blaze",
 		Name = "Blaze",
-		Egg = "Alley",
+		Egg = "Arcade", -- Phase X: moved from the Neon Egg to zone 3's Main Street Egg
 		Rarity = "Legendary",
 		Color = Color3.fromRGB(255, 110, 30),
 		Accent = Color3.fromRGB(255, 230, 60),
@@ -1958,7 +2249,7 @@ Config.Mascots = {
 	{
 		Id = "Cosmo",
 		Name = "Cosmo",
-		Egg = "Alley",
+		Egg = "Skyline", -- Phase X: moved from the Neon Egg to zone 4's Skyline Egg
 		Rarity = "Mythic",
 		Color = Color3.fromRGB(255, 60, 150),
 		Accent = Color3.fromRGB(120, 220, 255),
@@ -1967,11 +2258,56 @@ Config.Mascots = {
 	{
 		Id = "Perfecto",
 		Name = "Perfecto",
-		Egg = "Alley",
+		Egg = "Skyline", -- Phase X: moved from the Neon Egg to zone 4's Skyline Egg
 		Rarity = "Mythic",
 		Color = Color3.fromRGB(255, 245, 200),
 		Accent = Color3.fromRGB(255, 60, 210),
 		Reaction = "Flip",
+	},
+	-- Phase X placeholders: zone 3 (Main Street Egg) and zone 4 (Skyline Egg) pets that borrow a model
+	{
+		Id = "WoodPup",
+		Name = "Wood Pup",
+		Egg = "Arcade",
+		Rarity = "Rare",
+		Color = Color3.fromRGB(170, 112, 64),
+		Accent = Color3.fromRGB(255, 230, 190),
+		Reaction = "Hop",
+		Model = "LanePup", -- PLACEHOLDER look: LanePup's model repainted (Tint) until real art exists
+		Tint = Color3.fromRGB(170, 112, 64),
+	},
+	{
+		Id = "ChromeBat",
+		Name = "Chrome Bat",
+		Egg = "Arcade",
+		Rarity = "Epic",
+		Color = Color3.fromRGB(200, 206, 218),
+		Accent = Color3.fromRGB(224, 165, 38),
+		Reaction = "Flip",
+		Model = "NeonBat", -- PLACEHOLDER look: NeonBat's model repainted (Tint) until real art exists
+		Tint = Color3.fromRGB(200, 206, 218),
+	},
+	{
+		Id = "CloudBumper",
+		Name = "Cloud Bumper",
+		Egg = "Skyline",
+		Rarity = "Epic",
+		Color = Color3.fromRGB(225, 238, 255),
+		Accent = Color3.fromRGB(120, 190, 255),
+		Reaction = "Spin",
+		Model = "Bumper", -- PLACEHOLDER look: Bumper's model repainted (Tint) until real art exists
+		Tint = Color3.fromRGB(225, 238, 255),
+	},
+	{
+		Id = "SunnyHam",
+		Name = "Sunny",
+		Egg = "Skyline",
+		Rarity = "Legendary",
+		Color = Color3.fromRGB(255, 180, 60),
+		Accent = Color3.fromRGB(255, 79, 139),
+		Reaction = "Hop",
+		Model = "Hambone", -- PLACEHOLDER look: Hambone's model repainted (Tint) until real art exists
+		Tint = Color3.fromRGB(255, 180, 60),
 	},
 }
 
@@ -1990,9 +2326,18 @@ Config.AutoBowl = {
 Config.EggLooks = {
 	Alley = { Name = "Neon Egg", Color = Color3.fromRGB(255, 58, 208), Spots = Color3.fromRGB(63, 240, 255) }, -- design: #ff3ad0 / #3ff0ff
 	Neon = { Name = "Neon Egg", Color = Color3.fromRGB(80, 230, 255), Spots = Color3.fromRGB(255, 60, 210) },
-	Arcade = { Name = "Arcade Egg", Color = Color3.fromRGB(190, 120, 255), Spots = Color3.fromRGB(255, 240, 90) },
-	Skyline = { Name = "Skyline Egg", Color = Color3.fromRGB(150, 200, 255), Spots = Color3.fromRGB(255, 255, 255) },
+	Arcade = { Name = "Main Street Egg", Color = Color3.fromRGB(224, 165, 38), Spots = Color3.fromRGB(150, 30, 40) }, -- Phase X: zone 3's egg (Id kept)
+	Skyline = { Name = "Skyline Egg", Color = Color3.fromRGB(255, 79, 139), Spots = Color3.fromRGB(245, 184, 46) }, -- zone 4's egg
 	Volcano = { Name = "Volcano Egg", Color = Color3.fromRGB(255, 100, 40), Spots = Color3.fromRGB(60, 20, 20) },
+}
+
+-- Where each egg is hatched (Phase X: one stand per zone). Path = the stand's folder under Workspace; it holds a
+-- NeonStand model with an EggSpot part (the lobby's stand is the owner's design; zone 3 and 4 stands are copies of
+-- it, repainted, until their own designs exist). You hatch an egg only within Config.MascotFx.HatchRange of its stand.
+Config.EggStands = {
+	{ Egg = "Alley", Path = { "Hub", "EggPad" } },
+	{ Egg = "Arcade", Path = { "MainStreetLanes", "EggPad" } },
+	{ Egg = "Skyline", Path = { "SkylineLanes", "EggPad" } },
 }
 
 -- How mascots look and move, and the hatching moment
@@ -2500,6 +2845,7 @@ Config.Playtime = {
 -- zone you haven't reached comes as your zone's), Ball = a ball of that rarity from that crate (shown as SECRET
 -- BALL), Pet = a pet of that rarity from that egg (shown as SECRET PET). Chance = % (adds up to 100); the slices are
 -- drawn the same size whatever their chance, like every simulator wheel.
+-- Phase X: SECRET BALL and SECRET PET give an Epic now (was Legendary), the best rarity zone 2 has (Config.ZoneRarity).
 Config.Spin = {
 	Enabled = true,
 	Zone = 2, -- you need this zone open to use it (it stands inside the zone 2 building anyway)
@@ -2517,10 +2863,24 @@ Config.Spin = {
 		{ Label = "XP POTION", Potion = "XpSmall", Chance = 22, Color = Color3.fromRGB(60, 220, 255) },
 		{ Label = "BRONZE CRATE", Crate = "Bronze", Chance = 16, Color = Color3.fromRGB(205, 125, 60) },
 		{ Label = "MEGA COIN", Potion = "CoinBig", Chance = 10, Color = Color3.fromRGB(255, 130, 20) },
-		{ Label = "SECRET BALL", Ball = "Legendary", Crate = "Gold", Chance = 0.5, Secret = true, Color = Color3.fromRGB(255, 215, 60) },
+		{
+			Label = "SECRET BALL",
+			Ball = "Epic",
+			Crate = "Gold",
+			Chance = 0.5,
+			Secret = true,
+			Color = Color3.fromRGB(255, 215, 60),
+		},
 		{ Label = "MEGA XP", Potion = "XpBig", Chance = 8, Color = Color3.fromRGB(170, 80, 255) },
 		{ Label = "SILVER CRATE", Crate = "Silver", Chance = 8.5, Color = Color3.fromRGB(190, 200, 225) },
-		{ Label = "SECRET PET", Pet = "Legendary", Egg = "Alley", Chance = 1, Secret = true, Color = Color3.fromRGB(255, 215, 60) },
+		{
+			Label = "SECRET PET",
+			Pet = "Epic",
+			Egg = "Alley",
+			Chance = 1,
+			Secret = true,
+			Color = Color3.fromRGB(255, 215, 60),
+		},
 	},
 }
 
@@ -2786,33 +3146,39 @@ Config.ZoneUnlock = {
 		MysteryPets = 3, -- "?" cards beside the egg (its pets stay a surprise)
 		Crates = { "Bronze", "Silver", "Gold" },
 		CratesLine = "3 NEW CRATES",
-		Balls = { "Supernova", "Void", "Dragon", "Golden", "Galaxy", "Electric" },
+		Balls = { "Inferno", "Nebula", "Plasma", "Galaxy", "Magma", "Electric" }, -- Phase X: zone 2 tops out at Epic
 		BallsLine = "%d NEW BALLS TO WIN", -- %d = how many balls those crates can give that you don't own
 		Button = "TAKE ME THERE!",
 		Hint = "Step onto any OPEN lane to claim it.",
 		Color = Color3.fromRGB(255, 60, 210),
 		Accent = Color3.fromRGB(70, 230, 255),
 	},
-	-- Zone 3 has no crates, eggs or balls of its own yet (they come with the 4-zone economy pass)
 	[3] = {
 		Title = "ZONE 3 UNLOCKED!",
 		Name = "MAIN STREET LANES",
 		Tagline = "You're a local name now. A real bowling centre with polished wood lanes is open to you, through the new door in the lobby.",
-		Crates = {},
-		Balls = {},
+		Eggs = { "Arcade" }, -- Phase X: the Main Street Egg
+		PetsLine = "NEW EGG: HATCH IT IN MAIN STREET LANES",
+		MysteryPets = 3,
+		Crates = { "League", "Champion" },
+		CratesLine = "2 NEW CRATES",
+		Balls = { "Perfect300", "Championship", "TigerSwirl", "PearlPro", "BlueMarble", "LeagueBlack" },
 		BallsLine = "%d NEW BALLS TO WIN",
 		Button = "TAKE ME THERE!",
 		Hint = "Step onto any OPEN lane to claim it.",
 		Color = Color3.fromRGB(224, 165, 38),
 		Accent = Color3.fromRGB(255, 120, 110),
 	},
-	-- Zone 4 has no crates, eggs or balls of its own yet (they come with the 4-zone economy pass)
 	[4] = {
 		Title = "ZONE 4 UNLOCKED!",
 		Name = "SKYLINE LANES",
 		Tagline = "The big time. Take the elevator at the end of Main Street Lanes' back walkway up to the rooftop lanes above the city.",
-		Crates = {},
-		Balls = {},
+		Eggs = { "Skyline" }, -- Phase X: the Skyline Egg
+		PetsLine = "NEW EGG: HATCH IT ON THE ROOF",
+		MysteryPets = 3,
+		Crates = { "SkyBronze", "SkySilver", "SkyGold" },
+		CratesLine = "3 NEW CRATES",
+		Balls = { "Daybreak", "Lightning", "SolidGold", "Sunburst", "CloudSwirl", "Crystal" },
 		BallsLine = "%d NEW BALLS TO WIN",
 		Button = "TAKE ME THERE!",
 		Hint = "Step onto any OPEN lane to claim it.",
@@ -2880,16 +3246,41 @@ Config.Economy.PowerLevels = {
 -- still costs Config.Onboarding.FirstCratePrice.
 Config.Economy.Crates = {
 	{ Id = "Basic", Price = 15000, Odds = { Common = 70, Uncommon = 25, Rare = 5 } },
-	{ Id = "Bronze", Price = 75000, Odds = { Common = 45, Uncommon = 35, Rare = 17, Epic = 3 } },
-	{ Id = "Silver", Price = 750000, Odds = { Common = 20, Uncommon = 35, Rare = 32, Epic = 11, Legendary = 2 } },
-	{ Id = "Gold", Price = 65000000, Odds = { Uncommon = 20, Rare = 45, Epic = 28, Legendary = 6.5, Mythic = 0.5 } },
+	-- Zone 2 odds come from Config.CrateTiers since Phase X (were: Bronze C45 U35 R17 E3, Silver C20 U35 R32 E11
+	-- L2, Gold U20 R45 E28 L6.5 M0.5)
+	{ Id = "Bronze", Price = 75000 },
+	{ Id = "Silver", Price = 750000 },
+	{ Id = "Gold", Price = 65000000 },
+	-- Phase X: zone 3 and 4 crates. PLACEHOLDER prices (about a quarter of the Power Level players are saving for
+	-- when they reach that zone) until the 4-zone economy pass. Odds come from Config.CrateTiers.
+	{ Id = "League", Price = 25000000 },
+	{ Id = "Champion", Price = 1000000000 },
+	{ Id = "SkyBronze", Price = 5000000000 },
+	{ Id = "SkySilver", Price = 50000000000 },
+	{ Id = "SkyGold", Price = 500000000000 },
 	{ Id = "Neon", Price = 5900000000, Odds = { Rare = 40, Epic = 38, Legendary = 18, Mythic = 4 } }, -- simulator only (not in Config.Crates)
+}
+-- Crate tiers (Phase X Part 4): a crate with a Tier gets its odds from its zone's rarity range (Config.ZoneRarity).
+-- Keys are steps up from the zone's lowest rarity (0 = lowest), values = percent. Zone 2 (Uncommon to Epic):
+-- Bronze = Uncommon 75 / Rare 25, Silver = Uncommon 35 / Rare 55 / Epic 10, Gold = Rare 70 / Epic 30.
+-- Zones 3 and 4 shift the same shape up one rarity per zone. A rarity a crate's zone has no balls of gives its
+-- share to the nearest rarity that has some (Shared.Modules.Balls).
+Config.CrateTiers = {
+	Bronze = { [0] = 75, [1] = 25 },
+	Silver = { [0] = 35, [1] = 55, [2] = 10 },
+	Gold = { [1] = 70, [2] = 30 },
 }
 -- Pity: a pull of one of these Crates is at least Rarity once that many pulls in a row (of that crate) missed it
 Config.Economy.CratePity = {
 	{ Crates = { Basic = true, Bronze = true }, Rarity = "Rare", After = 10 },
 	{ Crates = { Silver = true, Gold = true }, Rarity = "Epic", After = 20 },
-	{ Crates = { Gold = true, Neon = true }, Rarity = "Legendary", After = 80 },
+	{ Crates = { Neon = true }, Rarity = "Legendary", After = 80 }, -- Gold left this row in Phase X (no Legendary in zone 2)
+	-- Phase X zone 3 and 4 crates: the same idea one and two rarities up
+	{ Crates = { League = true }, Rarity = "Epic", After = 10 },
+	{ Crates = { Champion = true }, Rarity = "Legendary", After = 20 },
+	{ Crates = { SkyBronze = true }, Rarity = "Legendary", After = 10 },
+	{ Crates = { SkySilver = true }, Rarity = "Mythic", After = 40 },
+	{ Crates = { SkyGold = true }, Rarity = "Mythic", After = 20 },
 }
 Config.Economy.FirstCrateMin = "Uncommon" -- the very first crate a player opens gives at least this (unless it's the
 -- first bought crate or the gift crate, which use Config.Onboarding.FirstBoughtRarity / GiftRarity)
@@ -2907,14 +3298,35 @@ Config.Economy.Polish = {
 }
 
 -- LIVE since Addendum 2 Phase 2 step 6: the shop crates (Config.Crates) take their price and odds from Economy.Crates
+-- (a crate with a Tier and no Odds of its own gets them from Config.CrateTiers + its zone's Config.ZoneRarity)
+local function tierOdds(tier: string, zone: number)
+	local range = Config.ZoneRarity[zone]
+	local shape = Config.CrateTiers[tier]
+	if not range or not shape then
+		return nil
+	end
+	local low = 1
+	for index, rarity in Config.Rarities do
+		if rarity.Name == range.Min then
+			low = index
+		end
+	end
+	local odds = {}
+	for step, percent in shape do
+		local rarity = Config.Rarities[math.min(low + step, #Config.Rarities)]
+		odds[rarity.Name] = (odds[rarity.Name] or 0) + percent
+	end
+	return odds
+end
 for _, crate in Config.Crates do
 	for _, row in Config.Economy.Crates do
 		if row.Id == crate.Id then
 			crate.Price = row.Price
-			crate.Odds = row.Odds
+			crate.Odds = row.Odds or (crate.Tier and tierOdds(crate.Tier, crate.Zone or 1))
+			row.Odds = crate.Odds -- the simulator reads Economy.Crates
 		end
 	end
-	assert(crate.Odds, "Config.Crates." .. crate.Id .. " has no row in Config.Economy.Crates")
+	assert(crate.Odds, "Config.Crates." .. crate.Id .. " has no row (or odds) in Config.Economy.Crates")
 end
 
 -- Mascots (Milestone 14). Unlock: Rank = rank needed, or Zone = zone number that must be unlocked.
@@ -2923,8 +3335,8 @@ end
 Config.Economy.Eggs = {
 	{ Id = "Alley", Price = 50000, Zone = 2, BonusScale = 0.1 }, -- owner 2026-10-21: pets open with Neon Lanes; 3,700 -> 50K (owner 2026-10-22)
 	{ Id = "Neon", Price = 420000, Zone = 2, BonusScale = 0.2 },
-	{ Id = "Arcade", Price = 6300000, Zone = 3, BonusScale = 0.4 },
-	{ Id = "Skyline", Price = 1500000000, Zone = 4, BonusScale = 0.7 },
+	{ Id = "Arcade", Price = 6300000, Zone = 3, BonusScale = 0.4 }, -- Main Street Egg (Phase X). PLACEHOLDER price
+	{ Id = "Skyline", Price = 1500000000, Zone = 4, BonusScale = 0.7 }, -- Skyline Egg (Phase X). PLACEHOLDER price
 	{ Id = "Volcano", Price = 35000000000, Zone = 5, BonusScale = 1 },
 }
 Config.Economy.Mascots = {

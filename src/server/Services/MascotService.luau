@@ -88,14 +88,19 @@ end
 -- Rolls a rarity with the plan's odds, then a mascot of that rarity from this egg (all equally likely).
 -- If the egg has no mascot of the rolled rarity, the closest commoner one it has is used.
 local function roll(eggId: string)
+	-- Phase X: only the rarities this egg has pets of count (zone 3 and 4 eggs start at Rare and Epic)
+	local present = {}
+	for _, mascot in Mascots.InEgg(eggId) do
+		present[mascot.Rarity] = true
+	end
 	local total = 0
 	for _, name in Mascots.Rarities do
-		total += ODDS[name] or 0
+		total += if present[name] then ODDS[name] or 0 else 0
 	end
 	local pick = math.random() * total
 	local rarity = Mascots.Rarities[1]
 	for _, name in Mascots.Rarities do
-		local odds = ODDS[name] or 0
+		local odds = if present[name] then ODDS[name] or 0 else 0
 		if odds > 0 then
 			pick -= odds
 			if pick <= 0 then
@@ -134,10 +139,23 @@ local function addMascot(player: Player, mascot): (boolean, boolean)
 	return isNew, autoEquipped
 end
 
--- Eggs hatch only at the egg stand in the lobby (Workspace.Hub.EggPad): the player must be standing by it
-local function atEggStand(player: Player): boolean
-	local hub = Workspace:FindFirstChild("Hub")
-	local pad = hub and hub:FindFirstChild("EggPad")
+-- Eggs hatch only at their own egg stand (Config.EggStands; the Neon Egg's is Workspace.Hub.EggPad in the lobby):
+-- the player must be standing by it
+local function standFor(eggId: string): Instance?
+	for _, row in Config.EggStands do
+		if row.Egg == eggId then
+			local node: Instance? = Workspace
+			for _, name in row.Path do
+				node = node and node:FindFirstChild(name)
+			end
+			return node
+		end
+	end
+	return nil
+end
+
+local function atEggStand(player: Player, eggId: string): boolean
+	local pad = standFor(eggId) :: any
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not pad or not root then
 		return false
@@ -154,7 +172,7 @@ local function hatch(player: Player, eggId: any)
 	if not PlayerDataService.IsLoaded(player) then
 		return { Ok = false, Error = "Still loading" }
 	end
-	if not atEggStand(player) then
+	if not atEggStand(player, egg.Id) then
 		return { Ok = false, Error = "Hatch it at the egg stand" }
 	end
 	local unlocked, why = Mascots.EggUnlocked(egg, PlayerDataService.Get(player, "RankLevel") or 1, zone(player))
@@ -232,13 +250,29 @@ function MascotService.GivePet(player: Player, eggId: string, rarity: string)
 			table.insert(pool, mascot)
 		end
 	end
-	local mascot = pool[math.random(math.max(1, #pool))] or Mascots.InEgg(eggId)[1]
+	if #pool == 0 then
+		-- No pet of that rarity in this egg: its rarest one instead
+		for _, other in Mascots.InEgg(eggId) do
+			if #pool == 0 or Mascots.RarityIndex(other.Rarity) > Mascots.RarityIndex(pool[1].Rarity) then
+				pool = { other }
+			end
+		end
+	end
+	local mascot = pool[math.random(math.max(1, #pool))]
 	if not mascot then
 		return nil
 	end
 	local isNew, autoEquipped = addMascot(player, mascot)
-	Analytics.Event(player, "MascotHatched", PlayerDataService.Get(player, "EggsHatched") or 0, { eggId, mascot.Rarity, mascot.Id })
-	SessionLog.Moment(player, ("Pet given: %s (%s, %s)"):format(mascot.Id, mascot.Rarity, if isNew then "new" else "duplicate"))
+	Analytics.Event(
+		player,
+		"MascotHatched",
+		PlayerDataService.Get(player, "EggsHatched") or 0,
+		{ eggId, mascot.Rarity, mascot.Id }
+	)
+	SessionLog.Moment(
+		player,
+		("Pet given: %s (%s, %s)"):format(mascot.Id, mascot.Rarity, if isNew then "new" else "duplicate")
+	)
 	return { MascotId = mascot.Id, IsNew = isNew, Equipped = autoEquipped }
 end
 
