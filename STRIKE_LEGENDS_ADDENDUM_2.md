@@ -94,8 +94,17 @@ Onboarding: the first throw is assisted, a guaranteed Perfect and Strike, with a
 
 **Phase 3: The long loop.**
 8. Mascots (pets) as multipliers.
-9. Zones 2 to 6 as `ZoneTheme` configs, then boss pins.
+9. Zones 2 to 4 as `ZoneTheme` configs, then boss pins. (Changed 2026-10-22, see "Launch with 4 zones" below.)
 10. Rebirth.
+
+**Launch with 4 zones (Selim, 2026-10-22). This overrides every "zones 2 to 6" / "6 zones" in this file and the master plan.**
+- The game publishes with zones 1 to 4 only: Back Alley (1), Neon Lanes (2), Main Street Lanes (3, a regular real-life bowling alley; replaces Arcade Arena, Selim 2026-10-22), Skyline Lanes (4). Zones 5 (Volcano Strike) and 6 (Cosmic Alley) are not built for launch; they can come later as an update if Selim asks.
+- Step 9 order: 9a zones 3 and 4 (Selim's designs, then build), 9b boss pins in zones 1 to 4.
+- Then an economy pass (part of step 9, before rebirth) so the game ends cleanly at zone 4 (and rebirth's coin cost fits a zone 3 player): rank levels up to 60 must be reachable without zone 5 and 6 XP; the Volcano Egg (zone 5) is hidden or moved; the removed Neon crate and the Gold crate get a home in zones 3 or 4; prices checked with the simulator.
+- Step 10 rebirth: available once the player reaches zone 3 (Selim 2026-10-22). Zone 3 and 4 entry levels stay 12 and 22 (Selim 2026-10-22, after the simulator showed 15/25 = zone 4 at about 5 hours).
+- Nothing about zones 5 and 6 is deleted from the data tables; they just stay locked and hidden (Config.Zones.BuiltZones).
+- Boss change (Selim 2026-10-22, NOT started, wait for go): bosses are not on every zone's lane. The boss unlocks at zone 4 and lives in its own separate area, reached by helicopter from zone 4 (zone 4 already has a helicopter; needs a flight animation). The boss appears every 45 minutes. This replaces "9b boss pins in zones 1 to 4" and master plan M15's "every 15 throws".
+- Pet fusing (Selim 2026-10-22): a walk-up station in the world like the daily spin wheel, unlocking at zone 3. Not started.
 
 **Phase 4: Return loops and social.**
 11. Daily reward (7 days with a grace day), "while you were away" coins (capped at 8 hours), friend coin bonus (10 percent per friend, capped at 50 percent), weekly featured ball in crates (odds shown), server banner on Legendary or Mythic pulls, rarity glow on the equipped ball visible to others.
@@ -213,7 +222,7 @@ The 20 ball files are about 21,000 to 134,000 triangles each (Dragon's Eye about
 |---|---|---|
 | 10 Foundation | None | Build now (small version) |
 | 11 Throw feel | Sounds only | Effects in code. List the sounds needed (name, feel, length). Selim picks them in Studio's Toolbox. Do not pick sound IDs yourself. |
-| 12 Zones and Power Levels | Zones 2 to 6 | Zone 1 is the existing Neon Alley. Others are `ZoneTheme` configs later. |
+| 12 Zones and Power Levels | Zones 2 to 4 (launch; 5 and 6 later) | Zone 1 is the existing Neon Alley. Others are `ZoneTheme` configs later. |
 | 13 Streaks | UI look | Plain frames |
 | 14 Mascots | About 12 plus an egg | Colored sphere with eyes per rarity (later phase) |
 | 15 Boss pins | Boss models | Scaled StandardPin with a health bar (later phase) |

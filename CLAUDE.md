@@ -2,7 +2,7 @@
 
 Full design is in GAME_DESIGN.md. MASTER_PLAN.md is the simulator roadmap. STRIKE_LEGENDS_ADDENDUM_2.md (2026-10-18) replaces Addendum 1 and sets the build order (phases 1 to 5, importance first), the new throw spec, verification rules and monetization behind an off switch. Order of authority: Addendum 2, then MASTER_PLAN.md, then GAME_DESIGN.md. Read PROJECT_STATE.md at the start of every session and update it at the end (max 40 lines).
 
-**Current focus (2026-10-18):** Addendum 2 replaces master plan milestones 11 to 20 with its phases. Do not start a phase step until the owner says so. The Throw Lab (`throwlab/`, `rojo build throwlab.project.json -o ThrowLab.rbxl`) stays as a test place.
+**Current focus (2026-10-18):** Addendum 2 replaces master plan milestones 11 to 20 with its phases. Do not start a phase step until the owner says so. **Launch = zones 1 to 4 only (2026-10-22, Addendum 2 step 9 note); zones 5-6 are not built for launch.** The Throw Lab (`throwlab/`, `rojo build throwlab.project.json -o ThrowLab.rbxl`) stays as a test place.
 
 Quick rules:
 - Build one small milestone at a time. Before each: tell the owner how to save a named restore point. After each: a plain-English test of 2 minutes or less (expected result + common silent failures) and a "Placeholders still in use" list; wait for the owner to say it passed.

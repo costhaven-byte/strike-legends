@@ -38,18 +38,18 @@ No prompt needed: the alley in the game today becomes zone 2.
 
 ---
 
-### Zone 3: Arcade Arena (unlocks at rank level 12, 100 pins)
+### Zone 3: Main Street Lanes (100 pins; changed 2026-10-22 from Arcade Arena, too close to Neon Lanes)
 
 ```
-Design a zone for a Roblox bowling simulator called Strike Legends. Players are kids and teens. Style: bright arcade, chunky and readable, simple shapes that can be rebuilt from Roblox parts (no tiny detail, no real brands, no text other than the zone name).
+Design a zone for a Roblox bowling simulator called Strike Legends. Players are kids and teens. Style: chunky and readable, simple shapes that can be rebuilt from Roblox parts (no tiny detail, no real brands, no text other than the zone name).
 
-Zone 3 of 6: "ARCADE ARENA". The player is a local name now and bowls inside a giant retro arcade. Must feel bigger and louder than Neon Lanes (zone 2: dark city alley with pink and cyan neon).
+Zone 3 of 4: "MAIN STREET LANES". The player is a local name now and bowls at a real, regular bowling alley, just like the ones in real life. Must feel clearly different from Neon Lanes (zone 2: dark city alley with pink and cyan neon): bright, warm, clean and indoors, lit by ceiling lights, not neon.
 
-Mood: a huge game hall. Pixel-art patterns, giant arcade cabinets along the side walls, a scoreboard made of chunky pixel blocks, carpet with a loud 90s cosmic pattern. Colours: lime green, sunny yellow, bright orange and royal blue on dark navy.
+Mood: a classic real-life bowling centre. Polished light-wood lanes with arrow markings, ball returns between the lanes with racks of house balls, overhead score screens above each lane, plastic bench seats and little tables at the bowler end, a shoe rental counter and a small snack bar at the back, patterned carpet, a big wall sign with the zone name above the pins. Colours: warm wood, cream walls, deep red and royal blue accents, a touch of gold.
 
-Layout (keep exactly): 6 bowling lanes side by side in one room, the bowler stands at the near end of each lane, pins at the far end, gutters on both sides, a back wall behind the pins, a ceiling.
+Layout (keep exactly): 6 bowling lanes side by side in one room, the bowler stands at the near end of each lane, pins at the far end, gutters on both sides, a back wall behind the pins with the pin machines, a ceiling.
 
-Pins: 100 pins per lane. The game shows about 30 pins that each stand for a bundle, in a wide triangle. Pin look for this zone: blocky, pixel-style pins (as if made of cubes), yellow with a blue band.
+Pins: 100 pins per lane. The game shows about 30 pins that each stand for a bundle, in a wide triangle. Pin look for this zone: classic real bowling pins, glossy white with two red stripes at the neck.
 
 Please give me:
 1. A hero render from behind the bowler, looking down one lane at the pins.
@@ -61,12 +61,12 @@ Please give me:
 
 ---
 
-### Zone 4: Skyline Lanes (unlocks at rank level 22, 300 pins)
+### Zone 4: Skyline Lanes (300 pins, the last zone at launch)
 
 ```
 Design a zone for a Roblox bowling simulator called Strike Legends. Players are kids and teens. Style: bright arcade, chunky and readable, simple shapes that can be rebuilt from Roblox parts (no tiny detail, no real brands, no text other than the zone name).
 
-Zone 4 of 6: "SKYLINE LANES". The player has made it to the big time: lanes on top of a skyscraper at sunset. Must feel open, high up and expensive after Arcade Arena (zone 3: an indoor retro arcade hall).
+Zone 4 of 4: "SKYLINE LANES". The player has made it to the big time: lanes on top of a skyscraper at sunset. Must feel open, high up and expensive after Main Street Lanes (zone 3: a classic indoor bowling centre).
 
 Mood: an open-air rooftop. Glass railings, the city skyline far below and around, golden-hour sky fading from orange to purple, a few big floodlights on poles, a helicopter pad off to one side. Clean white and gold trim. No ceiling: the sky is the ceiling.
 
