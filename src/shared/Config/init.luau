@@ -2652,13 +2652,13 @@ Config.Economy.PowerLevels = {
 -- Crate tiers (Addendum 1). Crates drop only the balls in Config.Balls: roll a rarity with these odds, then every
 -- ball of that rarity is equally likely. Every row adds up to 100.
 -- Prices move with the Power Level they sit next to (plan: 100, 1K, 15K, 250K, 5M).
--- Owner 2026-10-22: Alley Crate 1.6K -> 15K and Bronze 9.2K -> 100K (too easy to get). The very first Alley Crate
+-- Owner 2026-10-22: Alley Crate 1.6K -> 15K, Bronze 9.2K -> 75K, Silver 1M -> 750K, Gold 87M -> 65M. The very first Alley Crate
 -- still costs Config.Onboarding.FirstCratePrice.
 Config.Economy.Crates = {
 	{ Id = "Basic", Price = 15000, Odds = { Common = 70, Uncommon = 25, Rare = 5 } },
-	{ Id = "Bronze", Price = 100000, Odds = { Common = 45, Uncommon = 35, Rare = 17, Epic = 3 } },
-	{ Id = "Silver", Price = 1000000, Odds = { Common = 20, Uncommon = 35, Rare = 32, Epic = 11, Legendary = 2 } },
-	{ Id = "Gold", Price = 87000000, Odds = { Uncommon = 20, Rare = 45, Epic = 28, Legendary = 6.5, Mythic = 0.5 } },
+	{ Id = "Bronze", Price = 75000, Odds = { Common = 45, Uncommon = 35, Rare = 17, Epic = 3 } },
+	{ Id = "Silver", Price = 750000, Odds = { Common = 20, Uncommon = 35, Rare = 32, Epic = 11, Legendary = 2 } },
+	{ Id = "Gold", Price = 65000000, Odds = { Uncommon = 20, Rare = 45, Epic = 28, Legendary = 6.5, Mythic = 0.5 } },
 	{ Id = "Neon", Price = 5900000000, Odds = { Rare = 40, Epic = 38, Legendary = 18, Mythic = 4 } }, -- simulator only (not in Config.Crates)
 }
 -- Pity: a pull of one of these Crates is at least Rarity once that many pulls in a row (of that crate) missed it
@@ -2697,7 +2697,7 @@ end
 -- BonusScale: this egg's mascots get Mascots.Bonus times this (not in the plan, where every egg gave the same
 -- bonuses: cheap eggs made coins explode and expensive eggs were pointless). Plan prices: 400, 6K, 90K, 1.5M, 30M.
 Config.Economy.Eggs = {
-	{ Id = "Alley", Price = 75000, Zone = 2, BonusScale = 0.1 }, -- owner 2026-10-21: pets open with Neon Lanes; 3,700 -> 75K (owner 2026-10-22: too easy)
+	{ Id = "Alley", Price = 50000, Zone = 2, BonusScale = 0.1 }, -- owner 2026-10-21: pets open with Neon Lanes; 3,700 -> 50K (owner 2026-10-22)
 	{ Id = "Neon", Price = 420000, Zone = 2, BonusScale = 0.2 },
 	{ Id = "Arcade", Price = 6300000, Zone = 3, BonusScale = 0.4 },
 	{ Id = "Skyline", Price = 1500000000, Zone = 4, BonusScale = 0.7 },
