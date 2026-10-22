@@ -1500,6 +1500,33 @@ Config.Rarities = {
 -- Move one into Config.Rarities (with a colour and SellCoins) to switch it on.
 Config.ReservedRarities = { "Cosmic", "Celestial", "Eternal" }
 
+-- Power per rarity (Phase X Part 8B), the one table to tune rarity strength:
+--   Ball = a typical ball's coin multiplier at that rarity (the zone 2 averages from the audit). Balls keep their own
+--          Multiplier (small differences inside a rarity); a new ball row can leave Multiplier out to get this one.
+--   Pet  = a pet's coin AND XP bonus before its egg's BonusScale (Config.Economy.Mascots.Bonus fills from this).
+-- Step = how much stronger each rarity is than the one below, measured from Common to Mythic (balls x1.82, pets
+-- x2.37 per tier); reserved tiers (Config.ReservedRarities) get Mythic x Step, x Step^2 ... automatically.
+Config.RarityPower = {
+	Step = { Ball = 1.82, Pet = 2.37 },
+	Common = { Ball = 1.13, Pet = 0.2 },
+	Uncommon = { Ball = 1.45, Pet = 0.5 },
+	Rare = { Ball = 2.13, Pet = 1.0 },
+	Epic = { Ball = 4.0, Pet = 2.5 },
+	Legendary = { Ball = 8.5, Pet = 6 },
+	Mythic = { Ball = 22.5, Pet = 15 },
+}
+do
+	-- Reserved tiers above the last real one: the previous tier x Step (Cosmic 41 / 35.6, Celestial 74.6 / 84.4,
+	-- Eternal 135.8 / 200)
+	local last = Config.RarityPower[Config.Rarities[#Config.Rarities].Name]
+	for _, name in Config.ReservedRarities do
+		if not Config.RarityPower[name] then
+			last = { Ball = last.Ball * Config.RarityPower.Step.Ball, Pet = last.Pet * Config.RarityPower.Step.Pet }
+			Config.RarityPower[name] = last
+		end
+	end
+end
+
 -- Which rarities each zone's balls and pets can be (Phase X Part 2). Zone crates and eggs only hold items in their
 -- zone's range; crate odds below are built from it (Config.CrateTiers). Zones 5+ are not built (launch = zones 1-4).
 Config.ZoneRarity = {
@@ -3419,6 +3446,13 @@ for _, crate in Config.Crates do
 	end
 	assert(crate.Odds, "Config.Crates." .. crate.Id .. " has no row (or odds) in Config.Economy.Crates")
 end
+-- Phase X 8B: a ball row without its own Multiplier uses its rarity's (Config.RarityPower)
+for _, ball in Config.Balls do
+	if ball.Multiplier == nil then
+		local power = Config.RarityPower[ball.Rarity]
+		ball.Multiplier = if power then power.Ball else 1
+	end
+end
 
 -- Mascots (Milestone 14). Unlock: Rank = rank needed, or Zone = zone number that must be unlocked.
 -- BonusScale: this egg's mascots get Mascots.Bonus times this (not in the plan, where every egg gave the same
@@ -3432,7 +3466,7 @@ Config.Economy.Eggs = {
 }
 Config.Economy.Mascots = {
 	Odds = { Common = 60, Uncommon = 25, Rare = 10, Epic = 4, Legendary = 0.9, Mythic = 0.1 },
-	Bonus = { Common = 0.2, Uncommon = 0.5, Rare = 1.0, Epic = 2.5, Legendary = 6, Mythic = 15 }, -- added together
+	Bonus = {}, -- per rarity, from Config.RarityPower Pet (Common 0.2 ... Mythic 15); added together
 	ShinyMerge = 3, -- this many of the same mascot make a Shiny...
 	ShinyMultiplier = 2, -- ...with this much more bonus
 	StartSlots = 3,
@@ -3440,6 +3474,11 @@ Config.Economy.Mascots = {
 	SlotRanks = { 15, 30 }, -- each of these ranks adds a slot
 	SlotRebirths = { 1 }, -- each of these rebirth counts adds a slot
 }
+for name, power in Config.RarityPower do
+	if name ~= "Step" then
+		Config.Economy.Mascots.Bonus[name] = power.Pet
+	end
+end
 
 -- Ranks: XP to go from rank r to r+1 = Base * Growth^(r-1) up to rank LateFrom,
 -- then it grows by LateGrowth per rank so ranks LateFrom..MaxRank feel steady.

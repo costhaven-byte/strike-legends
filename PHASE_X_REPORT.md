@@ -84,3 +84,41 @@ AUDIT_PHASE_X.md. Surprises: zone 2 has 19 balls (not about 13); no fusion and n
 - Swap-in for the final art: replace the base pieces' colours/materials in Themes (or the case shape in ShowcaseController's PIECES) without touching item or ownership logic.
 - Zone 3 booths moved to make room: fusion station x 100, crates x 112 (was 140 / 104).
 - Safety net: every Phase X placeholder world piece (zone 3/4 stands, booths, case slots, shelves, helipad, boss arena) is also built from code (`server/Modules/PlaceholderWorld`) when it's missing from the place, because Studio closed the place once during my tests tonight. Pieces saved in the place win.
+
+## Part 8B: rarity power curve
+`Config.RarityPower` (tune here). Ball = a typical ball's coin multiplier; Pet = a pet's coin AND XP bonus before its egg's scale (the Neon Egg x0.1, Main Street x0.4, Skyline x0.7). Step = the measured growth per tier from Common to Mythic, used for the reserved tiers.
+
+| Rarity | Ball | Pet (coins + XP) |
+|---|---|---|
+| Common | x1.13 | +20% |
+| Uncommon | x1.45 | +50% |
+| Rare | x2.13 | +100% |
+| Epic | x4.0 | +250% |
+| Legendary | x8.5 | +600% |
+| Mythic | x22.5 | +1,500% |
+| Cosmic (reserved) | x41.0 | +3,555% |
+| Celestial (reserved) | x74.5 | +8,425% |
+| Eternal (reserved) | x135.6 | +19,968% |
+| Step per tier | x1.82 | x2.37 |
+
+- Pet bonuses now come from this table (same numbers as before). Every existing ball keeps its own Multiplier (variation inside a rarity); a new ball row may leave Multiplier out to get the table's value.
+- Real steps between tiers are uneven (balls x1.29, x1.47, x1.88, x2.13, x2.65): the top tiers jump much more. Worth a look in the economy pass.
+
+## Placeholders still needing art or a decision
+- Art: 13 placeholder balls (7 zone 3, 6 zone 4, borrowed models), 4 placeholder pets (Wood Pup, Chrome Bat, Cloud Bumper, Sunny), Main Street and Skyline egg models (drawn as spotted eggs), 5 new crate models (borrow Bronze/Silver/Gold), zone 3 and 4 egg stands (repainted Neon stand), crate counters, fusion station, rebirth station, helicopter, boss arena and boss, zone 3 and 4 case themes (one hero case per zone; Legendary/Mythic variant with gold posts + roof diamonds).
+- Decisions: boss gameplay (BossStub), boss reward, fusion rules (station = Shiny merge for now), rebirth numbers and whether it unlocks at zone 3 (Addendum 2 note) or zone 4 (Phase X; I used zone 4, `Config.Economy.Rebirth.Zone`), zone 3/4 crate and egg prices, challenge cooldown (3 min), level 7/9 rewards, SECRET BALL/PET now Epic, the pet bonus jump for moved pets, zone 4 daylight (plan) vs night (built).
+- Shop screen lists all 10 crates in one scrolling row; the zone 3/4 counters open the same screen (no per-zone filter yet).
+
+## Restore and test
+- Code restore point: git tag `restore-phaseX-before`. Studio: File > Save to Roblox As first if you want a copy, then Save to Roblox once you're happy (the zone 3/4 booths, cases, helipad and arena are in the place, and also rebuilt from code if missing).
+- Commits: 3c14d77 (8A), 8f97b24 (Part 1), 79bb451 (Parts 2-5), 7200a0b (Part 6), ee554e1 (Part 7), 8B in the last commit.
+
+## What is left of the original milestones (9b onward) and how Phase X changes each
+| Milestone (Addendum 2) | Status now | How Phase X changes it |
+|---|---|---|
+| 9b boss (already changed 2026-10-22 to: zone 4 only, helicopter, every 45 min) | Loop scaffolding built with a stub fight | Left: the real fight in BossStub, a flight animation, arena and boss art, reward numbers. |
+| 9 economy pass (end cleanly at zone 4) | Not done | Bigger now: price the 5 new zone 3/4 crates and 2 eggs, re-check zone 2 crates (no Commons, no Legendaries any more), balance the moved pets (+240% to +1,050%), add level rewards, the challenge and boss rewards to the simulator, make the simulator buy only zone crates/eggs, keep level 60 reachable without zones 5-6. The Neon crate and Gold crate "homes" are partly answered: each zone now has its own crates. |
+| 10 rebirth | Stub built, OFF | Left: final cost/level/bonus, zone 3 or 4 unlock, the cheap-Power-Level discount, a celebration screen, simulator check. |
+| Pet fusing (2026-10-22 note) | Station built (Shiny merge placeholder) | Left: the real fusion rules, if they should be more than Shiny merge. |
+| 11 return loops: daily (exists), "while you were away" coins, friend bonus, weekly featured ball, server banner on Legendary/Mythic pulls, rarity glow on equipped balls | Daily done; rest not built | Featured ball must come from a zone's own pool. Legendary/Mythic only exist in zones 3-4 now, so zone 2 players would never trigger the banner (suggest Epic+ in zone 2). Away coins and the friend bonus go through Currency and MultiplierService (the Rebirth slot shows the pattern). |
+| 12 monetization (behind MonetizationEnabled = false), final sounds, full models, thumbnail | Not built | 2x Coins / More Mascot Slots plug into MultiplierService and Mascots.Slots. Starter Pack "a Rare ball" needs a zone choice (Rare exists in zones 1-3). Prices use the K/M/B format. The art list grew by everything in "Placeholders" above. |
