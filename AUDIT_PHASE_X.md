@@ -57,7 +57,7 @@ Shiny merge: 3 copies = Shiny (x2 bonus). Slots: 3, +1 at levels 15 and 30 (max 
 Data-only eggs (no pets, not in the game): Neon 420K, Arcade 6.3M (zone 3), Skyline 1.5B (zone 4), Volcano 35B (zone 5).
 SECRET PET on the spin = a random Legendary from the Neon Egg.
 
-**Pets give coins only, not XP.** The plan says pets already give XP boosts; the code has no pet XP bonus (only potions boost XP). Nothing to keep working there; reported, not invented.
+**Pets boost coins and XP by the same amount** (MultiplierService coins; ThrowService getXpMultipliers "Pets"). Kept working as is.
 
 ## Crates (Config.Crates + Config.Economy.Crates)
 
@@ -88,14 +88,14 @@ If a rolled rarity has no ball in the pool, CrateRoller (`src/server/Modules/Cra
 
 ## Power by rarity (for Part 8B)
 
-| Rarity | Ball Mult (avg, zone 2) | Pet coin bonus (Economy.Mascots.Bonus, before egg scale) | Pet XP |
-|---|---|---|---|
-| Common | 1.13 | 0.2 | none |
-| Uncommon | 1.45 | 0.5 | none |
-| Rare | 2.13 | 1.0 | none |
-| Epic | 4.0 | 2.5 | none |
-| Legendary | 8.5 | 6 | none |
-| Mythic | 22.5 | 15 | none |
+| Rarity | Ball Mult (avg, zone 2) | Pet coin + XP bonus (Economy.Mascots.Bonus, before egg scale) |
+|---|---|---|
+| Common | 1.13 | 0.2 |
+| Uncommon | 1.45 | 0.5 |
+| Rare | 2.13 | 1.0 |
+| Epic | 4.0 | 2.5 |
+| Legendary | 8.5 | 6 |
+| Mythic | 22.5 | 15 |
 
 Step ratios: ball about x1.3, x1.5, x1.9, x2.1, x2.6 (average about x1.85); pet x2.5, x2, x2.5, x2.4, x2.5 (average about x2.4).
 

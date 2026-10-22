@@ -26,6 +26,7 @@ local rewardEvent: RemoteEvent
 local progress: { [Player]: { [string]: number } } = {}
 
 -- Gives one reward row ({ Coins, LevelShare, Potions, Crate }) and returns what the client needs to show it
+-- (also used by BossService for the boss reward)
 local function give(player: Player, reward, source: string)
 	local shown = { Coins = 0, Potions = reward.Potions }
 	if reward.Coins then
@@ -107,6 +108,14 @@ function MilestoneService.OnThrow(player: Player, zone: number, isStrike: boolea
 		end
 		player:SetAttribute(challengeKey(challenge), mine[challenge.Id] or 0)
 	end
+end
+
+-- Gives a reward row and shows it with the reward popup (MilestoneController). kind: "Level", "Challenge", "Boss"
+function MilestoneService.Reward(player: Player, reward, kind: string, source: string)
+	local shown = give(player, reward, source)
+	shown.Kind = kind
+	rewardEvent:FireClient(player, shown)
+	return shown
 end
 
 function MilestoneService:Start()

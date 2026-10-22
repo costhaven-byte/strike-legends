@@ -12,6 +12,7 @@ local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modifiers = require(Shared.Modules.Modifiers)
 local PowerLevels = require(Shared.Modules.PowerLevels)
 local Progression = require(Shared.Modules.Progression)
+local Rebirth = require(Shared.Modules.Rebirth)
 local ThrowRules = require(Shared.Modules.ThrowRules)
 local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
@@ -66,6 +67,7 @@ local function getXpMultipliers(player: Player, streak: number): { [string]: num
 		Streak = Progression.GetStreakXpMultiplier(streak),
 		Pets = MascotService.GetMultiplier(player),
 		Potion = PotionService.Multiplier(player, "XP"), -- XP Potion x2 / Mega XP Potion x4 (Config.Potions)
+		Rebirth = Rebirth.XpMultiplier(PlayerDataService.Get(player, "Rebirths")), -- Phase X rebirth stub
 	}
 end
 

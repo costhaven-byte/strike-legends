@@ -32,6 +32,7 @@ local SOURCES = {
 	{ Key = "Mascots", Name = "PETS" },
 	{ Key = "Potion", Name = "COIN POTION" },
 	{ Key = "Rank", Name = "RANK" },
+	{ Key = "Rebirth", Name = "REBIRTH" },
 	{ Key = "Streak", Name = "STREAK" },
 	{ Key = "Modifier", Name = "LANE EVENT" },
 }

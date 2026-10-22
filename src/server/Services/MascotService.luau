@@ -36,7 +36,7 @@ local function getEquipped(player: Player): { string }
 end
 
 local function slots(player: Player): number
-	return Mascots.Slots(PlayerDataService.Get(player, "RankLevel") or 1, 0) -- rebirths come in step 10
+	return Mascots.Slots(PlayerDataService.Get(player, "RankLevel") or 1, PlayerDataService.Get(player, "Rebirths") or 0)
 end
 
 -- The highest zone the player's rank level has opened (eggs with a Zone unlock there)

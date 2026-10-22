@@ -3,7 +3,7 @@
 Built 2026-10-22 overnight, in the plan's order: audit, 8A, parts 1 to 7, then 8B. Restore point: git tag `restore-phaseX-before` (code). The world changes are only in the Studio place: save it (File > Save to Roblox) after checking.
 
 ## Audit (Step 0)
-AUDIT_PHASE_X.md. Surprises: zone 2 has 19 balls (not about 13); pets give coins only, no XP boost (nothing to keep working there); no fusion and no rebirth code exist yet.
+AUDIT_PHASE_X.md. Surprises: zone 2 has 19 balls (not about 13); no fusion and no rebirth code exist yet. Pets boost coins and XP by the same amount (kept working).
 
 ## Part 8A: big numbers
 - `Shared.Modules.Currency`: the one place for coin math (Add, Sub, Scale, Mul, Round, Compare, CanAfford), save/load (Encode/Decode) and display (Format, FormatFull, FormatMultiplier).
@@ -63,6 +63,14 @@ AUDIT_PHASE_X.md. Surprises: zone 2 has 19 balls (not about 13); pets give coins
 | Skyline Egg | 4 | Cloud Bumper* (E), Sunny* (L), Cosmo, Perfecto (M) |
 - * = placeholder pet that borrows another pet's model, repainted. Holding list (in no egg, owners keep them): Gutter Gus, Bumper.
 - Each egg hatches at its own stand (`Config.EggStands`): lobby (Neon), Main Street Lanes back walkway (west end), Skyline roof east of the lanes. The zone 3/4 stands are repainted copies of the Neon stand. Eggs only roll the rarities they hold.
-- Pet bonus follows the egg it's in now, so Kingpin/Blaze (+60% to +240%) and Cosmo/Perfecto (+150% to +1050%) got stronger for anyone who already owns them. Shiny merge works for every egg. Pets still give coins only (no XP boost exists).
+- Pet bonus follows the egg it's in now, so Kingpin/Blaze (+60% to +240%) and Cosmo/Perfecto (+150% to +1050%) got stronger for anyone who already owns them. Shiny merge works for every egg. Pet coin and XP boosts work as before.
 - Egg prices (Main Street 6.3M, Skyline 1.5B) were already in the data; placeholders for the economy pass.
 - Tested in Studio: zone 3 hatch at its stand (Chrome Bat), hatching away from a stand refused, League Crate opened (Pearl Pro), Champion refused without coins.
+
+## Part 6: zone 3 and 4 scaffolding (one new system per zone)
+- Zone 3 Main Street Lanes (back walkway, west to east): Main Street Egg stand, CRATES counter (League + Champion), PET FUSION station. Fusion is a PLACEHOLDER: no fusion design exists, so the station opens the PETS panel where the existing Shiny merge (3 copies = Shiny) lives (`Config.Fusion`). The level 12 popup now lists the Main Street Egg, both crates and the best zone 3 balls.
+- Zone 4 Skyline roof (east of the lanes): Skyline Egg stand, SKY CRATES counter, REBIRTH station, and a helipad with a placeholder helicopter. Level 22 popup lists the egg, 3 crates and the zone 4 balls.
+- Boss loop (`Config.Boss`, BossService): hold the helicopter prompt, fly to the stub arena (Workspace.BossArena, a floating platform with a giant placeholder pin), stay on it for 20 s = win, reward popup "BOSS DEFEATED!" (PLACEHOLDER reward: 1B coins or 25% of your next Power Level, + a Sky Bronze Crate), then the helicopter brings you back. Every 45 minutes per player, saved (save v18 `BossNextAt`); the helipad sign counts down. The fight lives alone in `server/Modules/BossStub` so the real boss can replace it.
+- Rebirth stub (`Config.Economy.Rebirth`, RebirthService): **OFF** (`Enabled = false`, you flip it). Needs level 22 (zone 4's level) +3 per rebirth after, and 4B coins (x1.6 each time). Rebirth = level 1, Power Level 1, 0 coins; balls, pets, gems, potions stay. Gives x1.5 coins (+50% each) and +100% XP per rebirth, shown as REBIRTH in the multiplier panel; rebirth 1 adds a pet slot (`SlotRebirths`). Save v18 `Rebirths`. The station says COMING SOON while it's off. Not built: the "cheap Power Levels after a rebirth" discount from the old plan.
+- Tested in Studio: helicopter ride, fight, reward and return, cooldown refusal; rebirth (switched on for the test only); fusion prompt.
+- Watch: the pet panel showed x27 coins from pets on your test save, because your Cosmo/Perfecto/Kingpin/Blaze moved to stronger eggs (Part 5).

@@ -1018,6 +1018,11 @@ function MascotController:Start()
 	close.Activated:Connect(function()
 		UiFx.Close(panel)
 	end)
+	-- The zone 3 fusion station opens the panel on the pets (where MERGE is)
+	MascotController.OpenPets = function()
+		showTab(if petsLocked then "Items" else "Pets")
+		UiFx.Open(panel)
+	end
 
 	-- Studio only: get to the egg's level and its price in coins (the server ignores this in the live game)
 	local testRemote = remotes:FindFirstChild("TestEgg") :: RemoteEvent?

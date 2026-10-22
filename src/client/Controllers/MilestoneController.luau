@@ -265,7 +265,10 @@ function MilestoneController:Start()
 		end
 		showing = true
 		local data = table.remove(queue, 1)
-		popupTitle.Text = if data.Kind == "Level" then ("LEVEL %d REWARD!"):format(data.Level) else "CHALLENGE DONE!"
+		popupTitle.Text = if data.Kind == "Level"
+			then ("LEVEL %d REWARD!"):format(data.Level)
+			elseif data.Kind == "Boss" then "BOSS DEFEATED!"
+			else "CHALLENGE DONE!"
 		popupLines.Text = table.concat(rewardLines(data, data.Coins), "\n")
 		Sfx.Play("Reveal")
 		UiFx.Open(popup)

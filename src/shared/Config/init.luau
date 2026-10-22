@@ -212,12 +212,14 @@ Config.StartingData = {
 	Boosts = {}, -- seconds left on each drunk potion, by Id: { CoinSmall = 840 } (only ticks while playing; v15)
 	FreeEggs = {}, -- free hatches waiting at the egg stand, by egg Id: { Alley = 1 } (Config.Playtime; v16)
 	SpinDay = 0, -- the day number (see Calendar.Day) of the last free spin on the daily spin wheel (Config.Spin; v17)
+	BossNextAt = 0, -- os.time() when the zone 4 helicopter can fly you to the boss again (Config.Boss; v18)
+	Rebirths = 0, -- rebirths done (Config.Economy.Rebirth; v18)
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 17, -- v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 18, -- v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -284,6 +286,8 @@ Config.RateLimits = {
 	ClaimPlaytime = 0.5,
 	SpinWheel = 1,
 	RideElevator = 2,
+	RideHelicopter = 2,
+	Rebirth = 3,
 }
 
 -- Gems on/off switch. Addendum 1 keeps gems (earned only, a gem sink comes later); set Enabled = false to hide them.
@@ -2040,6 +2044,32 @@ Config.Crates = {
 	-- the new economy is in. Its Config.Economy.Crates row stays for the simulator; old saves keep its pity.
 }
 
+-- Pet fusion station in zone 3 (Phase X Part 6). PLACEHOLDER: no fusion design exists yet, so the station is the
+-- walk-up home of the existing Shiny merge (3 copies of a pet = its Shiny). Its prompt opens the PETS panel, where
+-- MERGE works as before. Swap in the real fusion rules here when they are decided.
+Config.Fusion = {
+	Enabled = true,
+	Zone = 3,
+	Path = { "MainStreetLanes", "FusionStation" }, -- placeholder booth built in Studio
+}
+
+-- Zone 4 boss loop (Phase X Part 6). The helicopter on the Skyline roof flies you to the boss arena once every
+-- CooldownMinutes (per player, saved as BossNextAt). PLACEHOLDER fight: the boss logic is not designed yet
+-- (server/Modules/BossStub: stay in the arena FightSeconds = win). Replace BossStub to change the fight; the
+-- helicopter, cooldown, arena trip and reward stay. Reward = like Config.Milestones rewards.
+Config.Boss = {
+	Enabled = true,
+	Zone = 4,
+	CooldownMinutes = 45,
+	Helipad = { "SkylineLanes", "Helipad" }, -- the pad (with its placeholder helicopter) on the roof
+	Arena = { "BossArena" }, -- the stub arena, far above the city (Workspace.BossArena: Floor, Spawn, Boss)
+	UseRange = 18, -- studs from the helipad the server accepts a ride from
+	FightSeconds = 20, -- PLACEHOLDER fight length
+	ReturnDelay = 3, -- seconds after the fight before the helicopter brings you back
+	Reward = { Coins = 1000000000, LevelShare = 0.25, Crate = "SkyBronze" }, -- PLACEHOLDER reward
+	RewardText = "BOSS REWARD",
+}
+
 -- Crate counters in zones 3 and 4 (Phase X; placeholder booths built in Studio): walk up and the prompt opens the crate
 -- shop screen, which lists every crate (each zone's crates unlock with the zone). Path = the booth under Workspace.
 Config.ZoneShops = {
@@ -3365,8 +3395,14 @@ Config.Economy.Ranks = {
 }
 
 -- Rebirth ("Go Pro Tour", Milestone 17)
+-- Phase X Part 6: a minimal rebirth stub at the REBIRTH station on the Skyline roof. Rebirth = back to level 1,
+-- Power Level 1 and 0 coins (balls, pets, gems and potions stay) for a permanent coin and XP boost. OFF until the
+-- owner turns Enabled on; final numbers are a placeholder for the economy pass.
 Config.Economy.Rebirth = {
-	FirstRank = 20, -- rank needed for the first rebirth...
+	Enabled = false, -- the owner flips this
+	Zone = 4, -- the first rebirth needs this zone's level (Config.Economy.Zones Rank, 22)...
+	Station = { "SkylineLanes", "RebirthStation" },
+	FirstRank = 20, -- (simulator only: the live game uses Zone above)
 	RankStep = 3, -- ...and this many more ranks for each one after
 	FirstCost = 4000000000, -- coins needed for the first rebirth... (plan: none given)
 	CostGrowth = 1.6, -- ...times this for each one after
