@@ -707,10 +707,70 @@ Config.LaneModifiers = {
 	},
 }
 
--- Lobby showcase: display cases for the best balls, built from Config.Balls on the slots in Workspace.Showcase.Slots.
--- Every ball of MinRarity or better gets a case (best balls on the first slots). More balls than slots = add slots in Studio.
+-- Display cases (Phase X Part 7): one data-driven case set per zone. Each set shows every ball that drops in its zone
+-- (Config.Balls Zone, not Retired) on its Slots (parts under Workspace, ordered by their Order attribute, best ball
+-- first) and its egg's pets on its Shelf. Not owned = dark silhouette, no glow; owned = lit up.
+-- A case = three layers: Base structure (Themes: the zone's look, colours + materials), rarity Accent (Styles
+-- Accent: bands, padlock, sign border) and rarity FX (Styles: rings, halo, dots, beam, aura, motes). Styles are
+-- shared by every zone and keyed by rarity, so a new zone or a new rarity only needs a Themes or Styles row.
+-- Legendary and Mythic also change the structure a little (gold posts and diamonds on the roof: Posts, Gems).
+-- Zone 3 and 4 themes are PLACEHOLDERS (the zone 2 base recoloured) until their hero case designs arrive.
 Config.Showcase = {
-	MinRarity = "Rare", -- 12 balls on 12 slots (Rare, Epic, Legendary, Mythic)
+	Sets = {
+		{ Zone = 2, Slots = { "Showcase", "Slots" }, Shelf = { "Showcase", "MascotShelf" }, Egg = "Alley", Theme = "Neon" },
+		{
+			Zone = 3,
+			Slots = { "MainStreetLanes", "Showcase", "Slots" },
+			Shelf = { "MainStreetLanes", "Showcase", "MascotShelf" },
+			Egg = "Arcade",
+			Theme = "MainStreet",
+		},
+		{
+			Zone = 4,
+			Slots = { "SkylineLanes", "Showcase", "Slots" },
+			Shelf = { "SkylineLanes", "Showcase", "MascotShelf" },
+			Egg = "Skyline",
+			Theme = "Skyline",
+		},
+	},
+	-- Base structure colours per zone (Navy = the case body, NavyTop = roof, BlueCap = base top, Pedestal = the
+	-- ball's stand, SignBg = the sign, CaseLight = the light inside). Materials: optional, per colour name.
+	Themes = {
+		Neon = { -- the owner's display_case design
+			Ink = Color3.fromRGB(14, 13, 26),
+			Navy = Color3.fromRGB(26, 28, 82),
+			NavyTop = Color3.fromRGB(30, 34, 118),
+			BlueCap = Color3.fromRGB(58, 48, 176),
+			Pedestal = Color3.fromRGB(24, 24, 66),
+			Glass = Color3.fromRGB(191, 232, 255),
+			SignBg = Color3.fromRGB(22, 20, 62),
+			SignTop = Color3.fromRGB(58, 48, 128),
+			CaseLight = Color3.fromRGB(190, 205, 255),
+		},
+		MainStreet = { -- PLACEHOLDER: wood, chrome, warm light
+			Ink = Color3.fromRGB(34, 22, 14),
+			Navy = Color3.fromRGB(110, 70, 40),
+			NavyTop = Color3.fromRGB(84, 52, 30),
+			BlueCap = Color3.fromRGB(196, 198, 206),
+			Pedestal = Color3.fromRGB(150, 152, 160),
+			Glass = Color3.fromRGB(255, 240, 220),
+			SignBg = Color3.fromRGB(46, 30, 20),
+			SignTop = Color3.fromRGB(120, 80, 46),
+			CaseLight = Color3.fromRGB(255, 220, 170),
+			Materials = { Navy = Enum.Material.Wood, NavyTop = Enum.Material.Wood, BlueCap = Enum.Material.Metal, Pedestal = Enum.Material.Metal },
+		},
+		Skyline = { -- PLACEHOLDER: clean, bright, sky tones
+			Ink = Color3.fromRGB(40, 50, 84),
+			Navy = Color3.fromRGB(232, 240, 255),
+			NavyTop = Color3.fromRGB(205, 222, 250),
+			BlueCap = Color3.fromRGB(120, 182, 255),
+			Pedestal = Color3.fromRGB(196, 212, 240),
+			Glass = Color3.fromRGB(220, 240, 255),
+			SignBg = Color3.fromRGB(34, 46, 90),
+			SignTop = Color3.fromRGB(90, 140, 220),
+			CaseLight = Color3.fromRGB(235, 242, 255),
+		},
+	},
 	SparkleRate = 4, -- trait sparkles per second, per trait
 	AnimateDistance = 110, -- only animate while your camera is this close (saves phone battery)
 
@@ -728,7 +788,8 @@ Config.Showcase = {
 		GlowTexture = "rbxassetid://123280301429602", -- soft round glow dot (sl_glow_dot.png)
 	},
 
-	-- The look of each rarity's case, from the owner's renders. Leave a line out to turn that effect off.
+	-- Rarity accent + FX layers, from the owner's renders (shared by every zone). Leave a line out to turn that effect off.
+	-- A new rarity tier needs a row here (missing rows fall back to Common).
 	-- Accent: glowing bands, padlock, sign border. Posts: "Gold" or "Black". Gems: diamonds on top (colour).
 	-- Beam: light from above (colour). Light: how bright the case lights are (1 = normal, lower = moodier).
 	-- Rings: rings orbiting the ball. Halo: soft glow sphere around the ball. InnerGlow: light behind the ball.

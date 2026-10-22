@@ -1,12 +1,13 @@
--- The ball showcase in the lobby ("The Vault"): a display case for every ball of Config.Showcase.MinRarity
--- or better, built from Config.Balls on the slots in Workspace.Showcase.Slots.
+-- Display cases, one set per zone (Phase X Part 7, Config.Showcase.Sets): the lobby "Vault" shows the Neon Lanes
+-- balls (Workspace.Showcase.Slots), Main Street Lanes and Skyline Lanes have their own sets. Each case = the zone's
+-- base structure (Config.Showcase.Themes) + the rarity's accent and FX (Config.Showcase.Styles).
 -- Every case uses the owner's display_case design (navy case, glass, pedestal, sign). Its look comes from
 -- Config.Showcase.Styles for the ball's rarity: coloured bands, gold or black posts, diamonds, a light beam,
 -- rings around the ball, glow dots, circling specks and a faint aura, building up from Common to Mythic.
 -- Locked = dark silhouette, padlock and "???". Owned = the real ball, its name and stats.
 -- Built on each player's own screen, so the animation costs the server nothing.
--- Step 8b: the mascot shelf (Workspace.Showcase.MascotShelf): every mascot on a glowing stand, yours in colour
--- (your Shiny if you made one), missing ones as dark silhouettes, with a "MASCOTS n / 12" sign.
+-- Step 8b: the pet shelf (Workspace.Showcase.MascotShelf; one per set): the zone egg's pets on glowing stands, yours in
+-- colour (your Shiny if you made one), missing ones as dark silhouettes, with a "PETS n / N" sign.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -108,19 +109,13 @@ end
 -- The case design, from the owner's display_case render
 --------------------------------------------------------------------------------------------------
 -- Colours picked from the renders
-local INK = Color3.fromRGB(14, 13, 26)
-local NAVY = Color3.fromRGB(26, 28, 82)
-local NAVY_TOP = Color3.fromRGB(30, 34, 118)
-local BLUE_CAP = Color3.fromRGB(58, 48, 176)
-local PEDESTAL = Color3.fromRGB(24, 24, 66)
+-- The zone theme (base structure colours, Config.Showcase.Themes) of the case being built; buildCase sets it
+local T = SHOW.Themes.Neon
 local GOLD = Color3.fromRGB(214, 164, 52)
-local GLASS = Color3.fromRGB(191, 232, 255)
-local SIGN_BG = Color3.fromRGB(22, 20, 62)
 local PINK = Color3.fromRGB(255, 70, 190)
 local CYAN = Color3.fromRGB(70, 230, 255)
 local SILHOUETTE = Color3.fromRGB(44, 44, 78)
 local BLACKOUT = Color3.new(0, 0, 0) -- locked balls: solid black, like a fighter you haven't unlocked yet
-local CASE_LIGHT = Color3.fromRGB(190, 205, 255)
 
 local S = CASE.CaseScale -- the design is 1.24 x 2.47 units; this turns it into studs
 local BALL_SIZE = 0.512 * S
@@ -132,22 +127,22 @@ local POST = "Post" -- gold or black, from the style
 -- Every box and disc of the case in design units: { name, centre, size, colour, round }.
 -- The design's front is +Z; at() turns it to face out of the slot.
 local PIECES = {
-	{ "Plinth", Vector3.new(0, 0.05, 0), Vector3.new(1.24, 0.1, 1.24), INK },
-	{ "Base", Vector3.new(0, 0.36, 0), Vector3.new(1.1, 0.52, 1.1), NAVY },
+	{ "Plinth", Vector3.new(0, 0.05, 0), Vector3.new(1.24, 0.1, 1.24), "Ink" },
+	{ "Base", Vector3.new(0, 0.36, 0), Vector3.new(1.1, 0.52, 1.1), "Navy" },
 	{ "BaseBand", Vector3.new(0, 0.64, 0), Vector3.new(1.13, 0.04, 1.13), ACCENT },
-	{ "BaseTop", Vector3.new(0, 0.695, 0), Vector3.new(1.16, 0.07, 1.16), BLUE_CAP },
-	{ "SignFrame", Vector3.new(0, 0.37, 0.565), Vector3.new(1.0, 0.46, 0.04), INK },
+	{ "BaseTop", Vector3.new(0, 0.695, 0), Vector3.new(1.16, 0.07, 1.16), "BlueCap" },
+	{ "SignFrame", Vector3.new(0, 0.37, 0.565), Vector3.new(1.0, 0.46, 0.04), "Ink" },
 	{ "Post", Vector3.new(0.47, 1.33, 0.47), Vector3.new(0.045, 1.2, 0.045), POST },
 	{ "Post", Vector3.new(0.47, 1.33, -0.47), Vector3.new(0.045, 1.2, 0.045), POST },
 	{ "Post", Vector3.new(-0.47, 1.33, 0.47), Vector3.new(0.045, 1.2, 0.045), POST },
 	{ "Post", Vector3.new(-0.47, 1.33, -0.47), Vector3.new(0.045, 1.2, 0.045), POST },
 	{ "TopBand", Vector3.new(0, 1.95, 0), Vector3.new(1.04, 0.04, 1.04), ACCENT },
-	{ "Ceiling", Vector3.new(0, 1.928, 0), Vector3.new(1.0, 0.004, 1.0), NAVY_TOP }, -- so only the band's edge glows
-	{ "TopCap", Vector3.new(0, 2.03, 0), Vector3.new(1.12, 0.12, 1.12), NAVY_TOP },
-	{ "TopTrim", Vector3.new(0, 2.105, 0), Vector3.new(0.9, 0.03, 0.9), INK },
-	{ "PedestalDisc", Vector3.new(0, 0.765, 0), Vector3.new(0.697, 0.07, 0.697), PEDESTAL, true },
-	{ "PedestalColumn", Vector3.new(0, 0.94, 0), Vector3.new(0.25, 0.28, 0.25), PEDESTAL, true },
-	{ "PedestalDish", Vector3.new(0, 1.115, 0), Vector3.new(0.465, 0.07, 0.465), PEDESTAL, true },
+	{ "Ceiling", Vector3.new(0, 1.928, 0), Vector3.new(1.0, 0.004, 1.0), "NavyTop" }, -- so only the band's edge glows
+	{ "TopCap", Vector3.new(0, 2.03, 0), Vector3.new(1.12, 0.12, 1.12), "NavyTop" },
+	{ "TopTrim", Vector3.new(0, 2.105, 0), Vector3.new(0.9, 0.03, 0.9), "Ink" },
+	{ "PedestalDisc", Vector3.new(0, 0.765, 0), Vector3.new(0.697, 0.07, 0.697), "Pedestal", true },
+	{ "PedestalColumn", Vector3.new(0, 0.94, 0), Vector3.new(0.25, 0.28, 0.25), "Pedestal", true },
+	{ "PedestalDish", Vector3.new(0, 1.115, 0), Vector3.new(0.465, 0.07, 0.465), "Pedestal", true },
 	{ "PedestalRim", Vector3.new(0, 1.153, 0), Vector3.new(0.43, 0.012, 0.43), ACCENT, true },
 }
 -- Diamonds on the corners and their gold stand on the roof: centres in design units
@@ -188,10 +183,15 @@ local function piece(base: CFrame, row, parent: Instance, style, glowBands: bool
 		cf *= CFrame.Angles(0, 0, math.pi / 2)
 	end
 	local gold = color == GOLD or (color == POST and style.Posts == "Gold")
+	local material = Enum.Material.SmoothPlastic
 	if color == ACCENT then
 		color = style.Accent
 	elseif color == POST then
-		color = if gold then GOLD else INK
+		color = if gold then GOLD else T.Ink
+	elseif type(color) == "string" then
+		-- A base structure colour from the zone theme (and its material, if the theme gives one)
+		material = T.Materials and T.Materials[color] or material
+		color = T[color]
 	end
 	-- Shade darkens the whole case for a moodier look (Mythic)
 	color = color:Lerp(Color3.new(), 1 - (style.Shade or 1))
@@ -201,7 +201,7 @@ local function piece(base: CFrame, row, parent: Instance, style, glowBands: bool
 		Size = size * S,
 		CFrame = cf,
 		Color = color,
-		Material = if glowBands and row[4] == ACCENT then Enum.Material.Neon else Enum.Material.SmoothPlastic,
+		Material = if glowBands and row[4] == ACCENT then Enum.Material.Neon else material,
 		Reflectance = if gold then 0.25 else 0,
 	}, parent)
 end
@@ -227,7 +227,7 @@ local function addLights(base: CFrame, model: Model, plinth: BasePart, style)
 	inner.Angle = 90
 	inner.Range = 1.3 * S
 	inner.Brightness = 2 * power * (if style.Beam then 1 else 0.5)
-	inner.Color = style.Beam or CASE_LIGHT
+	inner.Color = style.Beam or T.CaseLight
 	inner.Parent = model:FindFirstChild("Ceiling")
 
 	if style.Beam then
@@ -361,7 +361,8 @@ local function addGlowFx(base: CFrame, model: Model, style)
 	return motes
 end
 
-local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate: BasePart?)
+local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate: BasePart?, theme: string?)
+	T = SHOW.Themes[theme or "Neon"] or SHOW.Themes.Neon
 	local rarity = Balls.GetRarity(ball.Rarity)
 	local style = SHOW.Styles[ball.Rarity] or SHOW.Styles.Common
 	local power = style.Light or 1
@@ -378,7 +379,7 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 		Name = "Glass",
 		Size = Vector3.new(0.94, 1.2, 0.94) * S,
 		CFrame = at(base, Vector3.new(0, 1.33, 0)),
-		Color = GLASS,
+		Color = T.Glass,
 		Reflectance = 0.1,
 		Transparency = 0.9, -- SmoothPlastic, not Glass: Glass hides the rings and sparkles behind it
 		CastShadow = false,
@@ -419,7 +420,7 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 			Name = "FingerHole",
 			Shape = Enum.PartType.Ball,
 			Size = Vector3.one * 0.07 * S,
-			Color = INK,
+			Color = T.Ink,
 		}, display)
 		table.insert(holes, { Part = hole, Offset = CFrame.new(-offset.X * S, offset.Y * S, -offset.Z * S) })
 	end
@@ -499,7 +500,7 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 		Name = "Sign",
 		Size = Vector3.new(0.94, 0.41, 0.01) * S,
 		CFrame = at(base, Vector3.new(0, 0.37, 0.59)),
-		Color = INK,
+		Color = T.Ink,
 	}, model)
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = Enum.NormalId.Front
@@ -514,7 +515,7 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 	panel.Size = UDim2.new(1, -10, 1, -10)
 	panel.BackgroundColor3 = Color3.new(1, 1, 1)
 	panel.Parent = gui
-	gradient(panel, Color3.fromRGB(58, 48, 128), SIGN_BG).Rotation = 90 -- lighter at the top, like the renders
+	gradient(panel, T.SignTop, T.SignBg).Rotation = 90 -- lighter at the top, like the renders
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 12)
 	corner.Parent = panel
@@ -545,7 +546,7 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 		Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromScale(0.85, 0.75),
 		Text = ball.Rarity:upper(),
-		TextColor3 = if style.SignGradient then Color3.new(1, 1, 1) else INK,
+		TextColor3 = if style.SignGradient then Color3.new(1, 1, 1) else T.Ink,
 		FontFace = Font.new(FONT, Enum.FontWeight.Heavy),
 	})
 	local name = label(panel, {
@@ -647,12 +648,11 @@ end
 
 -- The mascot shelf: mascots spread along the shelf part's length (its X side), facing its front, on stands.
 -- Returns a function that animates them (bob and a slow sway).
-local function buildMascotShelf(shelf: BasePart, parent: Instance): (number) -> ()
+local function buildMascotShelf(shelf: BasePart, parent: Instance, list: { any }): (number) -> ()
 	local FX = Config.MascotFx
 	local folder = Instance.new("Folder")
 	folder.Name = "MascotShelf"
 	folder.Parent = parent
-	local list = Config.Mascots
 	local spacing = shelf.Size.X / #list
 	local top = shelf.CFrame * CFrame.new(0, shelf.Size.Y / 2, 0)
 
@@ -764,50 +764,59 @@ end
 -- The slot each shown ball sits on, best balls first ({ Ball, Slot }), for the first-3-minutes camera moment
 ShowcaseController.Shown = {}
 
-function ShowcaseController:Start()
-	local showcase = Workspace:WaitForChild("Showcase", 30)
-	local slotFolder = showcase and showcase:WaitForChild("Slots", 10)
+-- One zone's case set (a Config.Showcase.Sets row). Returns its animate function, or nil when its slots aren't there.
+local function buildSet(set, diamondTemplate: BasePart?): ((number) -> ())?
+	local function find(path: { string }): Instance?
+		local node: Instance? = Workspace
+		for _, name in path do
+			node = node and node:WaitForChild(name, 30)
+		end
+		return node
+	end
+	local slotFolder = find(set.Slots)
 	if not slotFolder then
-		warn("[ShowcaseController] Workspace.Showcase.Slots is missing, so the lobby showcase is off")
-		return
+		warn(
+			("[ShowcaseController] %s is missing, so zone %d's cases are off"):format(
+				table.concat(set.Slots, "."),
+				set.Zone
+			)
+		)
+		return nil
 	end
-	local models = ReplicatedStorage:WaitForChild("ShowcaseModels", 10)
-	local diamondTemplate = models and models:FindFirstChild("Diamond")
-	if not diamondTemplate then
-		warn("[ShowcaseController] ReplicatedStorage.ShowcaseModels.Diamond is missing, so the gems are blocks")
-	end
-
 	local slots = slotFolder:GetChildren()
 	table.sort(slots, function(a, b)
 		return (a:GetAttribute("Order") or 0) < (b:GetAttribute("Order") or 0)
 	end)
 
-	-- Best balls first, so Mythics get the first slots
-	local minRarity = Balls.RarityIndex(SHOW.MinRarity)
+	-- Every ball that drops in this zone, best first
 	local shown = {}
 	for _, ball in Balls.Sorted() do
-		if Balls.RarityIndex(ball.Rarity) >= minRarity then
+		if ball.Zone == set.Zone and not ball.Retired and ball.InCrates ~= false then
 			table.insert(shown, ball)
 		end
 	end
 	if #shown > #slots then
 		warn(
-			("[ShowcaseController] %d balls to show but only %d slots: add slots in Workspace.Showcase.Slots"):format(
+			("[ShowcaseController] zone %d: %d balls to show but only %d slots: add slots in %s"):format(
+				set.Zone,
 				#shown,
-				#slots
+				#slots,
+				table.concat(set.Slots, ".")
 			)
 		)
 	end
 
 	local cases = Instance.new("Folder")
 	cases.Name = "Cases"
-	cases.Parent = showcase
+	cases.Parent = slotFolder.Parent
 	local built = {}
 	for i, ball in shown do
 		local slot = slots[i]
 		if slot and slot:IsA("BasePart") then
-			table.insert(built, buildCase(slot, ball, cases, diamondTemplate))
-			table.insert(ShowcaseController.Shown, { Ball = ball, Slot = slot })
+			table.insert(built, buildCase(slot, ball, cases, diamondTemplate, set.Theme))
+			if set.Zone == 2 then
+				table.insert(ShowcaseController.Shown, { Ball = ball, Slot = slot })
+			end
 		end
 	end
 
@@ -821,29 +830,53 @@ function ShowcaseController:Start()
 	player:GetAttributeChangedSignal("OwnedBalls"):Connect(refreshOwned)
 	refreshOwned()
 
-	-- The mascot shelf (step 8b)
-	local shelf = showcase:FindFirstChild("MascotShelf")
-	local animateShelf = if shelf and shelf:IsA("BasePart") then buildMascotShelf(shelf, cases) else nil
-	if not animateShelf then
-		warn("[ShowcaseController] Workspace.Showcase.MascotShelf is missing, so the mascot shelf is off")
-	end
+	-- The pet shelf: this zone egg's pets
+	local shelf = set.Shelf and find(set.Shelf)
+	local animateShelf = if shelf and shelf:IsA("BasePart")
+		then buildMascotShelf(shelf, cases, Mascots.InEgg(set.Egg))
+		else nil
 
 	-- Animate only while you're close enough to see it
 	local middle = Vector3.zero
 	for _, case in built do
 		middle += case.Center.Position / math.max(#built, 1)
 	end
-	RunService.Heartbeat:Connect(function()
+	if #built == 0 and shelf and shelf:IsA("BasePart") then
+		middle = shelf.Position
+	end
+	return function(t: number)
 		local camera = Workspace.CurrentCamera
-		if #built == 0 or not camera or (camera.CFrame.Position - middle).Magnitude > SHOW.AnimateDistance then
+		if not camera or (camera.CFrame.Position - middle).Magnitude > SHOW.AnimateDistance then
 			return
 		end
-		local t = os.clock()
 		for _, case in built do
 			case.Animate(t)
 		end
 		if animateShelf then
 			animateShelf(t)
+		end
+	end
+end
+
+function ShowcaseController:Start()
+	local models = ReplicatedStorage:WaitForChild("ShowcaseModels", 10)
+	local diamondTemplate = models and models:FindFirstChild("Diamond")
+	if not diamondTemplate then
+		warn("[ShowcaseController] ReplicatedStorage.ShowcaseModels.Diamond is missing, so the gems are blocks")
+	end
+	local animators = {}
+	for _, set in SHOW.Sets do
+		task.spawn(function()
+			local animate = buildSet(set, diamondTemplate)
+			if animate then
+				table.insert(animators, animate)
+			end
+		end)
+	end
+	RunService.Heartbeat:Connect(function()
+		local t = os.clock()
+		for _, animate in animators do
+			animate(t)
 		end
 	end)
 end
