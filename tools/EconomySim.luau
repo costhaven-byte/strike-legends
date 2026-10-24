@@ -821,7 +821,9 @@ function EconomySim.Run(config: any?): string
 		local minutes = seconds and seconds / 60
 		local tolerance = E.Sim.ToleranceShare
 		local check
-		if not minutes then
+		if row.Rebirth and not E.Rebirth.Enabled then
+			check = "rebirth is off"
+		elseif not minutes then
 			check = "MISMATCH (never)"
 		elseif minutes >= row.From and minutes <= row.To then
 			check = "OK"

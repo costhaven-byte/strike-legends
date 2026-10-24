@@ -3333,15 +3333,15 @@ Config.Economy.Formula = {
 }
 
 -- Zones. Rank = rank level needed to enter (Shared.Modules.Zones).
--- CoinPay / XpPay = how much more a throw in this zone pays than the same throw in zone 1 (coins / XP). Economy pass
--- E1 (2026-10-25): the live game pays the same in every zone, so these are all 1 and the simulator copies that.
--- E2 sets them (owner 2026-10-25: later zones pay more per pin) and wires them into the live game.
+-- CoinPay / XpPay = how much more a throw in this zone pays than the same throw in zone 1 (coins / XP), shown as
+-- ZONE in the multiplier panel. Economy pass E2 (owner 2026-10-25: later zones pay more per pin): tuned with the
+-- simulator so zone 3 opens at about 40 min and zone 4 at about 2.5 hours (were 46 min and ~10 hours at x1).
 -- Pins / PinValue / XpPerPin are the old simulator's numbers (10-3,000 pin racks); nothing reads them since E1.
 Config.Economy.Zones = {
 	{ Id = "StarterAlley", Name = "Back Alley", Pins = 10, PinValue = 10, XpPerPin = 1, Rank = 1, CoinPay = 1, XpPay = 1 },
-	{ Id = "NeonLanes", Name = "Neon Lanes", Pins = 30, PinValue = 50, XpPerPin = 2, Rank = 5, CoinPay = 1, XpPay = 1 },
-	{ Id = "MainStreetLanes", Name = "Main Street Lanes", Pins = 100, PinValue = 250, XpPerPin = 4, Rank = 12, CoinPay = 1, XpPay = 1 }, -- was Arcade Arena (owner 2026-10-22)
-	{ Id = "SkylineLanes", Name = "Skyline Lanes", Pins = 300, PinValue = 1250, XpPerPin = 8, Rank = 22, CoinPay = 1, XpPay = 1 },
+	{ Id = "NeonLanes", Name = "Neon Lanes", Pins = 30, PinValue = 50, XpPerPin = 2, Rank = 5, CoinPay = 4, XpPay = 1.2 },
+	{ Id = "MainStreetLanes", Name = "Main Street Lanes", Pins = 100, PinValue = 250, XpPerPin = 4, Rank = 12, CoinPay = 16, XpPay = 2.5 }, -- was Arcade Arena (owner 2026-10-22)
+	{ Id = "SkylineLanes", Name = "Skyline Lanes", Pins = 300, PinValue = 1250, XpPerPin = 8, Rank = 22, CoinPay = 64, XpPay = 6 },
 	{ Id = "VolcanoStrike", Name = "Volcano Strike", Pins = 1000, PinValue = 6000, XpPerPin = 16, Rank = 35, CoinPay = 1, XpPay = 1 },
 	{ Id = "CosmicAlley", Name = "Cosmic Alley", Pins = 3000, PinValue = 30000, XpPerPin = 32, Rank = 50, CoinPay = 1, XpPay = 1 },
 }
@@ -3527,12 +3527,13 @@ Config.Economy.Rebirth = {
 -- The timeline the simulator checks (MASTER_PLAN.md section 2), in minutes from a brand new player's first join
 Config.Economy.Timeline = {
 	{ Goal = "Level2", Text = "Buy Power Level 2", From = 0.3, To = 1 }, -- Addendum 2: about 6 throws
-	{ Goal = "FirstCrate", Text = "Afford first crate", From = 1.5, To = 2 },
+	{ Goal = "FirstCrateOpened", Text = "Open first crate (1,000 sale)", From = 0.5, To = 1.5 }, -- E2: was "afford" at 15K
 	{ Goal = "Rank3", Text = "Reach rank 3", From = 4, To = 5 },
-	{ Goal = "FirstEgg", Text = "Afford first pet egg", From = 4, To = 5 },
+	{ Goal = "FirstEgg", Text = "Afford first pet egg", From = 9, To = 14 }, -- E2: pets open with zone 2 (was 4-5)
 	{ Goal = "Zone2", Text = "Unlock Zone 2 (rank 5)", From = 8, To = 10 },
 	{ Goal = "Zone3", Text = "Unlock Zone 3", From = 30, To = 45 },
-	{ Goal = "RebirthReady", Text = "First rebirth available", From = 60, To = 90 },
+	{ Goal = "Zone4", Text = "Unlock Zone 4", From = 120, To = 180 }, -- E2 (2-3 hours, owner to confirm)
+	{ Goal = "RebirthReady", Text = "First rebirth available", From = 60, To = 90, Rebirth = true }, -- skipped while rebirth is off
 }
 
 -- The pretend player the simulator plays as (MASTER_PLAN.md Milestone 10 step 4)

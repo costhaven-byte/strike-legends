@@ -10,6 +10,17 @@ function Zones.UnlockLevel(zone: number): number
 	return if row then row.Rank else math.huge
 end
 
+-- How much more a throw pays in this zone than in zone 1 (Config.Economy.Zones CoinPay / XpPay, economy pass E2)
+function Zones.CoinPay(zone: number): number
+	local row = Config.Economy.Zones[zone]
+	return row and row.CoinPay or 1
+end
+
+function Zones.XpPay(zone: number): number
+	local row = Config.Economy.Zones[zone]
+	return row and row.XpPay or 1
+end
+
 function Zones.Name(zone: number): string
 	local row = Config.Economy.Zones[zone]
 	return if row then row.Name else ("Zone %d"):format(zone)

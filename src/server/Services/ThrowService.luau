@@ -14,6 +14,7 @@ local PowerLevels = require(Shared.Modules.PowerLevels)
 local Progression = require(Shared.Modules.Progression)
 local Rebirth = require(Shared.Modules.Rebirth)
 local ThrowRules = require(Shared.Modules.ThrowRules)
+local Zones = require(Shared.Modules.Zones)
 local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
 local GoldenPinService = require(script.Parent.GoldenPinService)
@@ -62,8 +63,9 @@ end
 
 -- Every XP multiplier for this player. Future boosts (like a 2x XP gamepass) get added here.
 -- Pets boost XP by the same amount they boost coins (owner 2026-10-22).
-local function getXpMultipliers(player: Player, streak: number): { [string]: number }
+local function getXpMultipliers(player: Player, streak: number, zone: number): { [string]: number }
 	return {
+		Zone = Zones.XpPay(zone), -- later zones pay more XP (Config.Economy.Zones XpPay, economy pass E2)
 		Streak = Progression.GetStreakXpMultiplier(streak),
 		Pets = MascotService.GetMultiplier(player),
 		Potion = PotionService.Multiplier(player, "XP"), -- XP Potion x2 / Mega XP Potion x4 (Config.Potions)
@@ -150,7 +152,8 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 	local streak, saved = ProgressionService.NextStreak(player, isStrike, saverCooldown)
 	local goldenPin = GoldenPinService.Get(lane)
 	local goldenHit = goldenPin > 0 and table.find(result.Pins, goldenPin) ~= nil
-	local multipliers = MultiplierService.Coins(player, ball, level, streak, modifier, goldenHit)
+	local zone = LaneUtil.ZoneOf(lane)
+	local multipliers = MultiplierService.Coins(player, ball, level, streak, modifier, goldenHit, zone)
 	if result.Overcharge == "Blast" then
 		multipliers.Overcharge = THROW.Overcharge.CoinMultiplier
 	end
@@ -158,7 +161,7 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 		result.Count,
 		result.Tier,
 		multipliers,
-		getXpMultipliers(player, streak),
+		getXpMultipliers(player, streak, zone),
 		Balls.TraitValue(ball, "GemHunter")
 	)
 

@@ -27,6 +27,7 @@ local LIME = Color3.fromRGB(125, 255, 60)
 
 -- Each source in the panel, in order: attribute key -> name on screen
 local SOURCES = {
+	{ Key = "Zone", Name = "ZONE" },
 	{ Key = "PowerLevel", Name = "POWER LEVEL" },
 	{ Key = "Ball", Name = "BALL + POLISH" },
 	{ Key = "Mascots", Name = "PETS" },
@@ -128,7 +129,7 @@ function MultiplierController:Start()
 	panel.AutoButtonColor = false
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.fromOffset(300, 340)
+	panel.Size = UDim2.fromOffset(300, 360) -- 20 taller for the ZONE row (economy pass E2)
 	panel.BackgroundColor3 = CARD
 	panel.Visible = false
 	panel.Parent = gui

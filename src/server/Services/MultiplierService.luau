@@ -8,11 +8,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modifiers = require(Shared.Modules.Modifiers)
 local PowerLevels = require(Shared.Modules.PowerLevels)
 local Progression = require(Shared.Modules.Progression)
 local Rebirth = require(Shared.Modules.Rebirth)
 local ThrowRules = require(Shared.Modules.ThrowRules)
+local Zones = require(Shared.Modules.Zones)
 local BallService = require(script.Parent.BallService)
 local MascotService = require(script.Parent.MascotService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
@@ -22,14 +24,16 @@ local ProgressionService = require(script.Parent.ProgressionService)
 local REFRESH = 0.5 -- seconds between checks for a changed multiplier
 
 -- The order the panel lists them in
-local ORDER = { "PowerLevel", "Ball", "Mascots", "Potion", "Rank", "Rebirth", "Streak", "Modifier" }
+local ORDER = { "Zone", "PowerLevel", "Ball", "Mascots", "Potion", "Rank", "Rebirth", "Streak", "Modifier" }
 
 local MultiplierService = {}
 
 -- Every coin multiplier for a throw. Future gamepasses, boosts and rebirth get added here as new entries
 -- (and to ORDER, and to the panel's names in HudController).
-function MultiplierService.Coins(player: Player, ball, level, streak: number, modifier, goldenHit: boolean)
+-- zone: the zone of the lane the throw was on (Zone = that zone's CoinPay, economy pass E2)
+function MultiplierService.Coins(player: Player, ball, level, streak: number, modifier, goldenHit: boolean, zone: number)
 	return {
+		Zone = Zones.CoinPay(zone),
 		PowerLevel = level.Value,
 		Ball = BallService.GetMultiplier(player, ball), -- Polish included
 		Mascots = MascotService.GetMultiplier(player), -- 1 + equipped mascots' bonuses (Shiny x2)
@@ -48,8 +52,17 @@ local function publish(player: Player)
 		return
 	end
 	local level = PowerLevels.Get(ThrowRules.Level(PlayerDataService.Get(player, "PowerLevel")))
-	local all =
-		MultiplierService.Coins(player, ball, level, player:GetAttribute("Streak") or 0, Modifiers.Current(), false)
+	local lane = LaneUtil.GetOwnedLane(player.UserId)
+	local zone = if lane then LaneUtil.ZoneOf(lane) else 1
+	local all = MultiplierService.Coins(
+		player,
+		ball,
+		level,
+		player:GetAttribute("Streak") or 0,
+		Modifiers.Current(),
+		false,
+		zone
+	)
 	local parts = {}
 	for _, name in ORDER do
 		table.insert(parts, ("%s=%s"):format(name, tostring(math.floor((all[name] or 1) * 1000 + 0.5) / 1000)))

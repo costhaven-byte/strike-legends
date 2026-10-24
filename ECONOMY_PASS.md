@@ -31,13 +31,22 @@ Studio command bar: `require(game.ServerStorage.Tools.EconomySim).Run()` (about 
 | 1/5/25/125 | 1/2/4/8 | 25m | 1h39 | 10h | 2h24 | 36 |
 Level 60 is never reached in 20 h with any of them: that needs the XP curve (E3), not just zone XP.
 
-## E2 plan: zone pay in the live game
-1. MultiplierService: a ZONE coin multiplier (the zone of the lane you threw on, LaneUtil.ZoneOf) and the same for
-   XP in ThrowService's XP multipliers. Multiplier panel shows "ZONE x20". Back Alley stays x1.
-2. Numbers: start from coins 1/4/20/100, XP 1/2/5/15, then tune so zone 3 opens at 30-45 min (zone 2 XP probably
-   x1.5 instead of x2) and zone 4 at about 2-3 hours (target to confirm with the owner).
-3. Simulator report + Sheet updated; 2-minute test: same throw in zone 1 and zone 3, zone 3 pays x20.
-No save change. Prices stay as they are until E3.
+## E2 (built, test pending): zone pay in the live game
+- MultiplierService: ZONE coin multiplier = the CoinPay of the zone of the lane you throw on (LaneUtil.ZoneOf);
+  ThrowService XP multipliers get ZONE = XpPay. Multiplier panel: new ZONE row (panel 20 px taller). Back Alley x1.
+- Numbers: coins x1 / x4 / x16 / x64, XP x1 / x1.2 / x2.5 / x6 (zones 1-4).
+- Timeline rows: first crate = the 1,000 sale crate (0:30-1:30), first pet egg 9-14 min (pets open with zone 2),
+  new Zone 4 row 2-3 h (owner to confirm), rebirth row skipped while rebirth is off.
+- Studio check: a PERFECT on a Main Street lane paid 37,393,920 = every multiplier x ZONE 16, XP 2,029 = 30 x 2.5 x pets.
+
+| 10 h simulated | E1 (x1) | E2 |
+|---|---|---|
+| Zone 3 / zone 4 | 46 min / 9h46 (35%) | 40 min / 2h29 |
+| Power Level 8 / 10 / 12 | 9h21 (5%) / never / never | 2h40 / 7h01 / 9h58 (2%) |
+| Main Street Egg / Skyline Egg | 4h / never | 47 min / 3h16 |
+| Sky Silver / Sky Gold crate | never / never | 7h31 / never |
+| Rank level after 10 h | 21 | 30 (level 60 still never) |
+Still off (E3): zone 2 at 4 min (plan 8-10), Gold Crate 65M now comes after the zone 3 crates (1h58 vs League 1h01).
 
 ## E3 (after E2 passes)
 Zone 3/4 crate and egg prices, Power Levels 8-12, moved-pet bonuses, XP curve so level 60 is reachable with zones
