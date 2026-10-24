@@ -1,7 +1,7 @@
 -- Zone 3 and 4 stations (Phase X Part 6), all placeholder booths built in Studio:
 --   Fusion station (Main Street Lanes, Config.Fusion): opens the PETS panel, where MERGE makes Shinies.
 --   Helicopter (Skyline roof, Config.Boss): flies you to the boss arena; its sign counts down the 45 minutes.
---   Rebirth station (Skyline roof, Config.Economy.Rebirth): shows what the next rebirth needs; COMING SOON while off.
+--   Rebirth station (Main Street back walkway, Config.Economy.Rebirth): shows what the next rebirth needs; COMING SOON while off.
 -- The server decides everything (BossService, RebirthService).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

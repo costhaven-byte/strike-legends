@@ -1,7 +1,7 @@
--- Rebirth stub (Phase X Part 6, Config.Economy.Rebirth; OFF until the owner sets Enabled = true). At the REBIRTH
--- station on the Skyline roof: once your level and coins are high enough, start over at level 1, Power Level 1 and
+-- Rebirth (Phase X Part 6, numbers from economy pass E3a; Config.Economy.Rebirth, OFF until the owner sets
+-- Enabled = true). At the REBIRTH station on Main Street's back walkway (zone 3): once your level and coins are high enough, start over at level 1, Power Level 1 and
 -- 0 coins (balls, pets, gems, potions and seen zones stay) for a permanent coin and XP boost (Shared.Modules.Rebirth).
--- Saved: Rebirths. Final rules are a placeholder for the economy pass.
+-- Zones lock again after a rebirth (owner 2026-10-25). Saved: Rebirths.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 

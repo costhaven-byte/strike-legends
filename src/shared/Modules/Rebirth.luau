@@ -1,5 +1,5 @@
 -- Rebirth rules both server and client use (Phase X Part 6 stub, Config.Economy.Rebirth): what the next rebirth
--- needs and what rebirths give. The live game unlocks the first rebirth at zone 4's level.
+-- needs and what rebirths give. The first rebirth unlocks at zone 3's level (economy pass E3a).
 local Config = require(script.Parent.Parent.Config)
 local Zones = require(script.Parent.Zones)
 

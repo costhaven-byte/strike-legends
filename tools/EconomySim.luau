@@ -224,10 +224,15 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 	local playtimeNext = 1
 	local giftGiven, dailyGiven, spinGiven = false, false, false
 
+	-- Each goal is timed per run ("Zone4", "Zone4@R1"...) and once over the whole session, rebirths and all
+	-- ("EverZone4" = total play time until the first time it happened)
 	local function mark(goal: string)
 		local key = if s.Rebirths > 0 then goal .. "@R" .. s.Rebirths else goal
 		if not reached[key] then
 			reached[key] = time - s.RunStart
+		end
+		if not reached["Ever" .. goal] then
+			reached["Ever" .. goal] = time
 		end
 	end
 
@@ -817,11 +822,11 @@ function EconomySim.Run(config: any?): string
 	add("PLAN TIMELINE                     target        simulated   check")
 	local mismatches = 0
 	for _, row in E.Timeline do
-		local seconds = get(row.Goal)
+		local seconds = get(if row.Ever then "Ever" .. row.Goal else row.Goal)
 		local minutes = seconds and seconds / 60
 		local tolerance = E.Sim.ToleranceShare
 		local check
-		if row.Rebirth and not E.Rebirth.Enabled then
+		if row.Rebirth and E.Sim.Rebirths == 0 then
 			check = "rebirth is off"
 		elseif not minutes then
 			check = "MISMATCH (never)"
@@ -912,6 +917,20 @@ function EconomySim.Run(config: any?): string
 			clock(get("RebirthReady"))
 		)
 	)
+	add("TOTAL PLAY TIME TO THE FIRST (rebirths included)")
+	local ever = {}
+	for _, goal in {
+		{ "Zone4", "zone 4" },
+		{ "Boss", "boss" },
+		{ "EggSkyline", "Skyline Egg" },
+		{ "CrateSkyGold", "Sky Gold crate" },
+		{ "Level12", "Power Level 12" },
+		{ "Rank30", "level 30" },
+		{ "Rank60", "level 60" },
+	} do
+		table.insert(ever, ("%s %s"):format(goal[2], clock(get("Ever" .. goal[1]))))
+	end
+	add("  " .. table.concat(ever, " | "))
 	for n = 1, E.Sim.Rebirths do
 		local tag = "@R" .. n
 		if results["Start" .. tag] then

@@ -48,6 +48,25 @@ Level 60 is never reached in 20 h with any of them: that needs the XP curve (E3)
 | Rank level after 10 h | 21 | 30 (level 60 still never) |
 Still off (E3): zone 2 at 4 min (plan 8-10), Gold Crate 65M now comes after the zone 3 crates (1h58 vs League 1h01).
 
-## E3 (after E2 passes)
-Zone 3/4 crate and egg prices, Power Levels 8-12, moved-pet bonuses, XP curve so level 60 is reachable with zones
-1-4, zone 2 at 4 min vs the plan's 8-10, rebirth cost, boss reward.
+## E3a (built, test pending): rebirth numbers
+Owner 2026-10-25: rebirth should be fast (not a long prestige grind), open at zone 3, and zones lock again after it.
+- Config.Economy.Rebirth: Zone 3 (level 12), FirstCost 20M, CostGrowth x2, +1 level per rebirth; boosts unchanged
+  (+50% coins, +100% XP per rebirth); still Enabled = false (owner flips it). Unused FirstRank removed.
+- REBIRTH station moved from the Skyline roof to the east end of Main Street's back walkway (164, 1, 44), facing
+  west (moved in Studio, attr Moved_20261025; PlaceholderWorld builds it there if missing).
+- Simulator: goals also timed over the whole session ("Ever..."), TOTAL PLAY TIME line, Sim.Rebirths = 10.
+- Studio check (rebirth switched on for the test only): 3 zone 3 throws = 125M, rebirth at the new station ->
+  coins 0, level 1, Power Level 1, REBIRTH x1.5.
+
+| Simulated (rebirth as soon as possible) | |
+|---|---|
+| First rebirth | 1h00 (zone 3 at 40 min + 20M) |
+| Rebirths 2-15 | every 10-50 min (zone 3 back in 4.5 min after rebirth 1, under 30 s by rebirth 9) |
+| Zone 4 / boss / Skyline Egg (total play) | 3h24 / 3h25 / 3h53 (run 4, then every run from about run 7) |
+| Rebirths 17+ | 1.5-3 hours each: the level each rebirth needs outgrows the XP curve (fix in E3b) |
+| Level 60 | never in 25 h |
+Tried and dropped: +2 levels per rebirth (zone 4 3h03 but rebirths slow down sooner), cost x1.6 (little change).
+
+## E3b (after E3a passes)
+XP curve (zone 2 at 4 min vs the plan's 8-10, late rebirths, level 60), Gold Crate 65M and zone 3/4 crate and egg
+prices, Power Levels 8-12, moved-pet bonuses, boss reward.

@@ -3508,18 +3508,20 @@ Config.Economy.Ranks = {
 }
 
 -- Rebirth ("Go Pro Tour", Milestone 17)
--- Phase X Part 6: a minimal rebirth stub at the REBIRTH station on the Skyline roof. Rebirth = back to level 1,
--- Power Level 1 and 0 coins (balls, pets, gems and potions stay) for a permanent coin and XP boost. OFF until the
--- owner turns Enabled on; final numbers are a placeholder for the economy pass.
+-- Rebirth = back to level 1, Power Level 1 and 0 coins (balls, pets, gems and potions stay; zones lock again, owner
+-- 2026-10-25) for a permanent coin and XP boost, at the REBIRTH station on Main Street's back walkway. OFF until
+-- the owner turns Enabled on.
+-- Economy pass E3a (owner 2026-10-25: rebirth should be fast, not a long grind, and open at zone 3). Simulated: first
+-- rebirth about 1 hour in, then one every 10-35 minutes (zone 3 is back 4 min after rebirth 1, 30 s by rebirth 10),
+-- about 20 rebirths in 20 hours. Was: zone 4, 4B coins x1.6, +3 levels each.
 Config.Economy.Rebirth = {
 	Enabled = false, -- the owner flips this
-	Zone = 4, -- the first rebirth needs this zone's level (Config.Economy.Zones Rank, 22)...
-	Station = { "SkylineLanes", "RebirthStation" },
-	FirstRank = 20, -- (simulator only: the live game uses Zone above)
-	RankStep = 3, -- ...and this many more ranks for each one after
-	FirstCost = 4000000000, -- coins needed for the first rebirth... (plan: none given)
-	CostGrowth = 1.6, -- ...times this for each one after
-	DiscountLevels = 5, -- after a rebirth, Power Levels up to this one...
+	Zone = 3, -- the first rebirth needs this zone's level (Config.Economy.Zones Rank, 12)...
+	Station = { "MainStreetLanes", "RebirthStation" },
+	RankStep = 1, -- ...and this many more levels for each one after
+	FirstCost = 20000000, -- coins needed for the first rebirth (20M, about 20 min of zone 3 coins)...
+	CostGrowth = 2, -- ...times this for each one after
+	DiscountLevels = 5, -- NOT BUILT (old plan, nothing reads it): after a rebirth, Power Levels up to this one...
 	DiscountPrice = 0.1, -- ...cost this share of their price
 	XpBonus = 1, -- +100% XP per rebirth (owner approved). Not in the plan's formula: without it a second run is barely faster
 }
@@ -3532,7 +3534,7 @@ Config.Economy.Timeline = {
 	{ Goal = "FirstEgg", Text = "Afford first pet egg", From = 9, To = 14 }, -- E2: pets open with zone 2 (was 4-5)
 	{ Goal = "Zone2", Text = "Unlock Zone 2 (rank 5)", From = 8, To = 10 },
 	{ Goal = "Zone3", Text = "Unlock Zone 3", From = 30, To = 45 },
-	{ Goal = "Zone4", Text = "Unlock Zone 4", From = 120, To = 180 }, -- E2 (2-3 hours, owner to confirm)
+	{ Goal = "Zone4", Text = "Unlock Zone 4 (total play)", From = 120, To = 180, Ever = true }, -- E2; Ever = rebirths included (E3a)
 	{ Goal = "RebirthReady", Text = "First rebirth available", From = 60, To = 90, Rebirth = true }, -- skipped while rebirth is off
 }
 
@@ -3550,7 +3552,7 @@ Config.Economy.Sim = {
 	MaxEggs = 8, -- stops hatching an egg type after this many
 	MaxCrates = 10, -- stops buying a crate type after this many
 	Minutes = 600, -- how long each pretend player plays (one long session: playtime gifts restart each visit)
-	Rebirths = 0, -- rebirths as soon as it can, up to this many times (0 while Config.Economy.Rebirth is off)
+	Rebirths = 10, -- rebirths as soon as it can, up to this many times (the report shows each run)
 	-- Economy pass E1: the simulator plays the live rules (10 pins everywhere, Config.Rewards pay, rank tier
 	-- multipliers, zone-only crates and eggs, level rewards, challenge, boss, playtime gifts, free crates)
 	BossTripSeconds = 40, -- a boss trip (helicopter, fight, ride back) costs this much throwing time

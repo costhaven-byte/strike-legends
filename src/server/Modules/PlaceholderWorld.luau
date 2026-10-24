@@ -2,8 +2,8 @@
 -- test before they were saved). PlaceholderWorldService builds each one at server start ONLY if it isn't already in
 -- the place, so a real design saved in Studio under the same name always wins.
 --   Zone 3 (Workspace.MainStreetLanes): EggPad (Main Street Egg stand), FusionStation, CrateShop, Showcase (7 case
---   slots + pet shelf). Zone 4 (Workspace.SkylineLanes): EggPad (Skyline Egg stand), CrateShop, RebirthStation,
---   Helipad (+ helicopter), Showcase (6 slots + pet shelf). Workspace.BossArena (stub arena + giant pin).
+--   slots + pet shelf), RebirthStation (moved from zone 4 in economy pass E3a). Zone 4 (Workspace.SkylineLanes):
+--   EggPad (Skyline Egg stand), CrateShop, Helipad (+ helicopter), Showcase (6 slots + pet shelf). Workspace.BossArena (stub arena + giant pin).
 local Workspace = game:GetService("Workspace")
 
 local PlaceholderWorld = {}
@@ -64,11 +64,12 @@ local function booth(
 	color: Color3,
 	accent: Color3,
 	title: string,
-	crates: boolean?
+	crates: boolean?,
+	yaw: number? -- degrees to turn it (0 = customers stand on its -Z side)
 ): Model
 	local m = Instance.new("Model")
 	m.Name = name
-	local base = CFrame.new(pos)
+	local base = CFrame.new(pos) * CFrame.Angles(0, math.rad(yaw or 0), 0)
 	local counter = part(m, "Counter", Vector3.new(width, 4, 3), base * CFrame.new(0, 2, 0), color, Enum.Material.Wood)
 	part(m, "Top", Vector3.new(width + 0.6, 0.4, 3.6), base * CFrame.new(0, 4.2, 0), accent, Enum.Material.Metal)
 	for _, x in { -(width / 2 - 0.4), width / 2 - 0.4 } do
@@ -397,6 +398,20 @@ function PlaceholderWorld.Build(): { string }
 			true
 		)
 	end)
+	need(street, "RebirthStation", function()
+		-- East end of the walkway, against the side wall, facing back down the walkway (west)
+		booth(
+			street :: Instance,
+			"RebirthStation",
+			Vector3.new(164, 1, 44),
+			8,
+			Color3.fromRGB(40, 30, 60),
+			Color3.fromRGB(245, 184, 46),
+			"REBIRTH",
+			false,
+			90
+		)
+	end)
 	need(street, "Showcase", function()
 		local slots = {}
 		for i = 1, 7 do
@@ -426,17 +441,6 @@ function PlaceholderWorld.Build(): { string }
 			Color3.fromRGB(255, 79, 139),
 			"SKY CRATES",
 			true
-		)
-	end)
-	need(skyline, "RebirthStation", function()
-		booth(
-			skyline :: Instance,
-			"RebirthStation",
-			Vector3.new(20, 848, -3440),
-			8,
-			Color3.fromRGB(40, 30, 60),
-			Color3.fromRGB(245, 184, 46),
-			"REBIRTH"
 		)
 	end)
 	need(skyline, "Helipad", function()
