@@ -48,7 +48,7 @@ Level 60 is never reached in 20 h with any of them: that needs the XP curve (E3)
 | Rank level after 10 h | 21 | 30 (level 60 still never) |
 Still off (E3): zone 2 at 4 min (plan 8-10), Gold Crate 65M now comes after the zone 3 crates (1h58 vs League 1h01).
 
-## E3a (test pending): rebirth numbers + HUD buttons
+## E3a (PASSED 2026-10-25): rebirth numbers + HUD buttons
 Owner 2026-10-25: rebirth should be fast (not a long prestige grind), open at zone 3, and zones lock again after it.
 - Config.Economy.Rebirth: Zone 3 (level 12), FirstCost 20M, CostGrowth x2, +1 level per rebirth; boosts unchanged
   (+50% coins, +100% XP per rebirth); still Enabled = false (owner flips it). Unused FirstRank removed.
