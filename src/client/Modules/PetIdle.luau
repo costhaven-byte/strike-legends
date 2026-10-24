@@ -1,8 +1,10 @@
--- Brings a real pet model to life (Config.PetIdle): welds its parts to its Root so the whole pet moves as one, then
--- each frame moves its parts the way its design's idle pose does (wings flap, tails wag, eyes blink, halos turn,
--- planets orbit, glows pulse) and gives back the whole-body bob, sway and hop for whoever is placing it.
--- Only for models in the world: ViewportFrames don't run welds, so pets in the UI stay in their still pose.
+-- Brings a real pet model to life (Config.PetIdle): each frame moves its parts the way its design's idle pose does
+-- (wings flap, tails wag, eyes blink, halos turn, planets orbit, glows pulse) and gives back the whole-body bob, sway
+-- and hop for whoever is placing it. Only for models in the world (pets in the UI stay in their still pose).
+-- Parts stay anchored and are placed from the Root in one BulkMoveTo (2026-10-25: changing weld C0s every frame
+-- cost ~1ms per pet, the input delay with 5 pets out).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared").Config)
 
@@ -14,7 +16,8 @@ export type Rig = {
 	Root: BasePart,
 	Floats: boolean,
 	HalfHeight: number, -- studs from the Root down to the pet's feet
-	Step: (self: Rig, now: number, animate: boolean) -> (),
+	-- Moves the parts for this frame; `at` (optional) moves the whole pet there first, even when not animating
+	Step: (self: Rig, now: number, animate: boolean, at: CFrame?) -> (),
 	Body: (self: Rig, now: number) -> (number, CFrame), -- lift in studs, and a tilt
 }
 
@@ -101,7 +104,6 @@ function PetIdle.Rig(model: Model, id: string, scale: number): Rig?
 	local data = Config.PetIdle[id] or {}
 	local body = data.Body or {}
 	local parts: { BasePart } = {}
-	local welds: { [BasePart]: Weld } = {}
 	local baseC0: { [BasePart]: CFrame } = {}
 	local baseTransparency: { [BasePart]: number } = {}
 	local baseSize: { [BasePart]: Vector3 } = {}
@@ -115,15 +117,8 @@ function PetIdle.Rig(model: Model, id: string, scale: number): Rig?
 			end
 			local offset = root.CFrame:ToObjectSpace(part.CFrame)
 			bottom = math.min(bottom, offset.Position.Y - part.Size.Y / 2)
-			local weld = Instance.new("Weld")
-			weld.Part0 = root
-			weld.Part1 = part
-			weld.C0 = offset
-			weld.Parent = part
-			part.Anchored = false
-			part.Massless = true
+			part.Anchored = true
 			table.insert(parts, part)
-			welds[part] = weld
 			baseC0[part] = offset
 			baseTransparency[part] = part.Transparency
 			baseSize[part] = part.Size
@@ -189,8 +184,26 @@ function PetIdle.Rig(model: Model, id: string, scale: number): Rig?
 		HalfHeight = -bottom,
 	}
 
-	function rig:Step(now: number, animate: boolean)
+	-- Each animated part's offset from its rest spot (in Root space), kept between frames
+	local transforms: { [BasePart]: CFrame } = {}
+	local cframes: { CFrame } = table.create(#parts)
+	local function place()
+		local rootCFrame = root.CFrame
+		for index, part in parts do
+			local transform = transforms[part]
+			cframes[index] = if transform then rootCFrame * transform * baseC0[part] else rootCFrame * baseC0[part]
+		end
+		Workspace:BulkMoveTo(parts, cframes, Enum.BulkMoveMode.FireCFrameChanged)
+	end
+
+	function rig:Step(now: number, animate: boolean, at: CFrame?)
+		if at then
+			root.CFrame = at
+		end
 		if not animate then
+			if at then
+				place()
+			end
 			return
 		end
 		now += seed
@@ -240,11 +253,12 @@ function PetIdle.Rig(model: Model, id: string, scale: number): Rig?
 					part.Color = Color3.fromHSV((h + now * move.Speed) % 1, s, v)
 				end
 			end
-			welds[part].C0 = transform * baseC0[part]
+			transforms[part] = transform
 			if hasFade and baseTransparency[part] < 1 then
 				part.Transparency = 1 - (1 - baseTransparency[part]) * fade
 			end
 		end
+		place()
 	end
 
 	function rig:Body(now: number): (number, CFrame)

@@ -198,8 +198,6 @@ local function step(dt: number)
 			local rig = pet.Rig
 			if rig then
 				bob, turn = rig:Body(now)
-				local near = camera and (position - camera.CFrame.Position).Magnitude <= IDLE.ShowDistance
-				rig:Step(now, near == true)
 			else
 				bob = math.sin((now + pet.Phase) * FX.BobSpeed * math.pi * 2) * FX.BobHeight
 			end
@@ -220,8 +218,9 @@ local function step(dt: number)
 			local at = position + Vector3.new(0, bob, 0)
 			local placed = CFrame.lookAt(at, at + look) * turn
 			if rig then
-				-- The rest of the pet is welded to its Root
-				rig.Root.CFrame = placed
+				-- Moves the whole pet and plays its idle pose (only near your camera)
+				local near = camera and (position - camera.CFrame.Position).Magnitude <= IDLE.ShowDistance
+				rig:Step(now, near == true, placed)
 			else
 				pet.Model:PivotTo(placed)
 			end
