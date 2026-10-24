@@ -1,16 +1,13 @@
 -- Zone 3 and 4 stations (Phase X Part 6), all placeholder booths built in Studio:
 --   Fusion station (Main Street Lanes, Config.Fusion): opens the PETS panel, where MERGE makes Shinies.
 --   Helicopter (Skyline roof, Config.Boss): flies you to the boss arena; its sign counts down the 45 minutes.
---   Rebirth station (Main Street back walkway, Config.Economy.Rebirth): shows what the next rebirth needs; COMING SOON while off.
--- The server decides everything (BossService, RebirthService).
+-- The server decides everything (BossService). Rebirth is a HUD button now (RebirthController).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
-local Currency = require(Shared.Modules.Currency)
-local Rebirth = require(Shared.Modules.Rebirth)
 local Zones = require(Shared.Modules.Zones)
 local MascotController = require(script.Parent.MascotController)
 
@@ -190,51 +187,9 @@ local function helicopter()
 	end
 end
 
-local function rebirthStation()
-	local REBIRTH = Config.Economy.Rebirth
-	local station = find(REBIRTH.Station)
-	local part = station and anchorOf(station)
-	if not part then
-		return
-	end
-	local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Rebirth") :: RemoteFunction
-	local p = prompt(part, "REBIRTH", 2)
-	p.ActionText = "Rebirth (back to level 1)"
-	local label = sign(part, 14)
-	local function refresh()
-		if not REBIRTH.Enabled then
-			label.Text = "REBIRTH: COMING SOON"
-			label.TextColor3 = GREY
-			p.Enabled = false
-			return
-		end
-		local done = player:GetAttribute("Rebirths") or 0
-		local level, cost = Rebirth.Level(done), Rebirth.Cost(done)
-		local ready = (player:GetAttribute("RankLevel") or 1) >= level
-			and Currency.CanAfford(player:GetAttribute("Coins"), cost)
-		label.Text = ("REBIRTH %d: LV %d + %s COINS = %s COINS FOREVER"):format(
-			done + 1,
-			level,
-			Currency.Format(cost),
-			Currency.FormatMultiplier(Rebirth.CoinMultiplier(done + 1))
-		)
-		label.TextColor3 = if ready then GOLD else GREY
-		p.Enabled = ready
-	end
-	for _, key in { "RankLevel", "Coins", "Rebirths" } do
-		player:GetAttributeChangedSignal(key):Connect(refresh)
-	end
-	refresh()
-	p.Triggered:Connect(function()
-		local ok, result = pcall(remote.InvokeServer, remote)
-		toast(if ok and result and result.Ok then "REBIRTH!" elseif ok and result then result.Error else "Try again")
-	end)
-end
-
 function StationController:Start()
 	task.spawn(fusion)
 	task.spawn(helicopter)
-	task.spawn(rebirthStation)
 end
 
 return StationController

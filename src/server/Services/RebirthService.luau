@@ -1,9 +1,8 @@
 -- Rebirth (Phase X Part 6, numbers from economy pass E3a; Config.Economy.Rebirth, OFF until the owner sets
--- Enabled = true). At the REBIRTH station on Main Street's back walkway (zone 3): once your level and coins are high enough, start over at level 1, Power Level 1 and
+-- Enabled = true). From the REBIRTH button on the HUD (owner 2026-10-25: no station), once your level and coins are high enough, start over at level 1, Power Level 1 and
 -- 0 coins (balls, pets, gems, potions and seen zones stay) for a permanent coin and XP boost (Shared.Modules.Rebirth).
 -- Zones lock again after a rebirth (owner 2026-10-25). Saved: Rebirths.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -16,22 +15,8 @@ local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
 local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
 local REBIRTH = Config.Economy.Rebirth
-local STATION_RANGE = 16
 
 local RebirthService = {}
-
-local function nearStation(player: Player): boolean
-	local node: Instance? = Workspace
-	for _, name in REBIRTH.Station do
-		node = node and node:FindFirstChild(name)
-	end
-	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if not node or not root then
-		return false
-	end
-	local spot = if node:IsA("Model") then node:GetPivot().Position else (node :: BasePart).Position
-	return ((root.Position - spot) * Vector3.new(1, 0, 1)).Magnitude <= STATION_RANGE
-end
 
 local function rebirth(player: Player)
 	if not REBIRTH.Enabled then
@@ -39,9 +24,6 @@ local function rebirth(player: Player)
 	end
 	if not PlayerDataService.IsLoaded(player) or not RateLimit.Allow(player, "Rebirth") then
 		return { Ok = false, Error = "Try again" }
-	end
-	if not nearStation(player) then
-		return { Ok = false, Error = "Walk up to the rebirth station" }
 	end
 	local done = PlayerDataService.Get(player, "Rebirths") or 0
 	if (PlayerDataService.Get(player, "RankLevel") or 1) < Rebirth.Level(done) then

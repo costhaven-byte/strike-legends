@@ -3509,15 +3509,14 @@ Config.Economy.Ranks = {
 
 -- Rebirth ("Go Pro Tour", Milestone 17)
 -- Rebirth = back to level 1, Power Level 1 and 0 coins (balls, pets, gems and potions stay; zones lock again, owner
--- 2026-10-25) for a permanent coin and XP boost, at the REBIRTH station on Main Street's back walkway. OFF until
--- the owner turns Enabled on.
+-- 2026-10-25) for a permanent coin and XP boost, from the REBIRTH button on the HUD (owner 2026-10-25: no station;
+-- RebirthController). OFF until the owner turns Enabled on.
 -- Economy pass E3a (owner 2026-10-25: rebirth should be fast, not a long grind, and open at zone 3). Simulated: first
 -- rebirth about 1 hour in, then one every 10-35 minutes (zone 3 is back 4 min after rebirth 1, 30 s by rebirth 10),
 -- about 20 rebirths in 20 hours. Was: zone 4, 4B coins x1.6, +3 levels each.
 Config.Economy.Rebirth = {
 	Enabled = false, -- the owner flips this
 	Zone = 3, -- the first rebirth needs this zone's level (Config.Economy.Zones Rank, 12)...
-	Station = { "MainStreetLanes", "RebirthStation" },
 	RankStep = 1, -- ...and this many more levels for each one after
 	FirstCost = 20000000, -- coins needed for the first rebirth (20M, about 20 min of zone 3 coins)...
 	CostGrowth = 2, -- ...times this for each one after

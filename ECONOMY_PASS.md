@@ -48,12 +48,15 @@ Level 60 is never reached in 20 h with any of them: that needs the XP curve (E3)
 | Rank level after 10 h | 21 | 30 (level 60 still never) |
 Still off (E3): zone 2 at 4 min (plan 8-10), Gold Crate 65M now comes after the zone 3 crates (1h58 vs League 1h01).
 
-## E3a (built, test pending): rebirth numbers
+## E3a (test pending): rebirth numbers + HUD buttons
 Owner 2026-10-25: rebirth should be fast (not a long prestige grind), open at zone 3, and zones lock again after it.
 - Config.Economy.Rebirth: Zone 3 (level 12), FirstCost 20M, CostGrowth x2, +1 level per rebirth; boosts unchanged
   (+50% coins, +100% XP per rebirth); still Enabled = false (owner flips it). Unused FirstRank removed.
-- REBIRTH station moved from the Skyline roof to the east end of Main Street's back walkway (164, 1, 44), facing
-  west (moved in Studio, attr Moved_20261025; PlaceholderWorld builds it there if missing).
+- No rebirth station (owner 2026-10-25): a REBIRTH button on the HUD, right of the level bar (RebirthController):
+  shows from zone 2, grey "ZONE 3" until Main Street Lanes, window with back-to / keep / forever / needs, two taps to
+  confirm. Station model deleted from Studio and from PlaceholderWorld; RebirthService no longer checks distance.
+- TELEPORT button (TeleportController): bottom-left on computers, left of the level bar on phones (kept apart from
+  the other buttons); a card per zone, GO when unlocked. Back Alley = your own lane, zones 2-4 = Gated Arrival.
 - Simulator: goals also timed over the whole session ("Ever..."), TOTAL PLAY TIME line, Sim.Rebirths = 10.
 - Studio check (rebirth switched on for the test only): 3 zone 3 throws = 125M, rebirth at the new station ->
   coins 0, level 1, Power Level 1, REBIRTH x1.5.
