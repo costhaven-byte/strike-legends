@@ -31,7 +31,7 @@ Studio command bar: `require(game.ServerStorage.Tools.EconomySim).Run()` (about 
 | 1/5/25/125 | 1/2/4/8 | 25m | 1h39 | 10h | 2h24 | 36 |
 Level 60 is never reached in 20 h with any of them: that needs the XP curve (E3), not just zone XP.
 
-## E2 (built, test pending): zone pay in the live game
+## E2 (PASSED 2026-10-25): zone pay in the live game
 - MultiplierService: ZONE coin multiplier = the CoinPay of the zone of the lane you throw on (LaneUtil.ZoneOf);
   ThrowService XP multipliers get ZONE = XpPay. Multiplier panel: new ZONE row (panel 20 px taller). Back Alley x1.
 - Numbers: coins x1 / x4 / x16 / x64, XP x1 / x1.2 / x2.5 / x6 (zones 1-4).
