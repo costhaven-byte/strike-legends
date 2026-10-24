@@ -3332,14 +3332,18 @@ Config.Economy.Formula = {
 	-- Config.LaneModifiers, Config.GoldenPin); the plan's StreakPerStrike/StreakMax and Lucky Throw were replaced (step 7c).
 }
 
--- Zones: you need Power >= Pins to strike a zone's lane. Rank = rank needed to enter.
+-- Zones. Rank = rank level needed to enter (Shared.Modules.Zones).
+-- CoinPay / XpPay = how much more a throw in this zone pays than the same throw in zone 1 (coins / XP). Economy pass
+-- E1 (2026-10-25): the live game pays the same in every zone, so these are all 1 and the simulator copies that.
+-- E2 sets them (owner 2026-10-25: later zones pay more per pin) and wires them into the live game.
+-- Pins / PinValue / XpPerPin are the old simulator's numbers (10-3,000 pin racks); nothing reads them since E1.
 Config.Economy.Zones = {
-	{ Id = "StarterAlley", Name = "Back Alley", Pins = 10, PinValue = 10, XpPerPin = 1, Rank = 1 },
-	{ Id = "NeonLanes", Name = "Neon Lanes", Pins = 30, PinValue = 50, XpPerPin = 2, Rank = 5 },
-	{ Id = "MainStreetLanes", Name = "Main Street Lanes", Pins = 100, PinValue = 250, XpPerPin = 4, Rank = 12 }, -- was Arcade Arena (owner 2026-10-22)
-	{ Id = "SkylineLanes", Name = "Skyline Lanes", Pins = 300, PinValue = 1250, XpPerPin = 8, Rank = 22 },
-	{ Id = "VolcanoStrike", Name = "Volcano Strike", Pins = 1000, PinValue = 6000, XpPerPin = 16, Rank = 35 },
-	{ Id = "CosmicAlley", Name = "Cosmic Alley", Pins = 3000, PinValue = 30000, XpPerPin = 32, Rank = 50 },
+	{ Id = "StarterAlley", Name = "Back Alley", Pins = 10, PinValue = 10, XpPerPin = 1, Rank = 1, CoinPay = 1, XpPay = 1 },
+	{ Id = "NeonLanes", Name = "Neon Lanes", Pins = 30, PinValue = 50, XpPerPin = 2, Rank = 5, CoinPay = 1, XpPay = 1 },
+	{ Id = "MainStreetLanes", Name = "Main Street Lanes", Pins = 100, PinValue = 250, XpPerPin = 4, Rank = 12, CoinPay = 1, XpPay = 1 }, -- was Arcade Arena (owner 2026-10-22)
+	{ Id = "SkylineLanes", Name = "Skyline Lanes", Pins = 300, PinValue = 1250, XpPerPin = 8, Rank = 22, CoinPay = 1, XpPay = 1 },
+	{ Id = "VolcanoStrike", Name = "Volcano Strike", Pins = 1000, PinValue = 6000, XpPerPin = 16, Rank = 35, CoinPay = 1, XpPay = 1 },
+	{ Id = "CosmicAlley", Name = "Cosmic Alley", Pins = 3000, PinValue = 30000, XpPerPin = 32, Rank = 50, CoinPay = 1, XpPay = 1 },
 }
 
 -- Power Levels (LIVE since Addendum 2 Phase 1 step 3; the plan's "Ball Shop"): upgrades bought with coins, in order.
@@ -3544,8 +3548,12 @@ Config.Economy.Sim = {
 	SpendShare = 0.25, -- buys an egg or crate only when it costs at most this share of the next Power Level
 	MaxEggs = 8, -- stops hatching an egg type after this many
 	MaxCrates = 10, -- stops buying a crate type after this many
-	Minutes = 150, -- how long each pretend player plays
-	Rebirths = 2, -- rebirths as soon as it can, up to this many times
+	Minutes = 600, -- how long each pretend player plays (one long session: playtime gifts restart each visit)
+	Rebirths = 0, -- rebirths as soon as it can, up to this many times (0 while Config.Economy.Rebirth is off)
+	-- Economy pass E1: the simulator plays the live rules (10 pins everywhere, Config.Rewards pay, rank tier
+	-- multipliers, zone-only crates and eggs, level rewards, challenge, boss, playtime gifts, free crates)
+	BossTripSeconds = 40, -- a boss trip (helicopter, fight, ride back) costs this much throwing time
+	SpinAtZone = 2, -- the one daily spin of the session happens when this zone opens
 	ToleranceShare = 0.2, -- a result more than 20% outside a timeline window counts as a mismatch
 }
 

@@ -1,75 +1,142 @@
--- Economy simulator (MASTER_PLAN.md Milestone 10, with Addendum 1). Plays pretend players on the numbers in
--- Config.Economy (plus the ball roster in Config.Balls) and prints when they reach each Power Level, rank, zone and
--- rebirth, checked against Config.Economy.Timeline.
+-- Economy simulator. Plays pretend players on the numbers in Config and prints when they reach each Power Level,
+-- rank level, zone, crate, egg and rebirth, checked against Config.Economy.Timeline.
 -- Never runs in the game. To use it, paste this in Studio's command bar (edit mode, not play mode):
 --   require(game.ServerStorage.Tools.EconomySim).Run()
--- Simulated like the live game: PERFECT-only strikes, streak tiers, lane modifiers, Golden Pins (coins only).
--- Not simulated yet: boss pins, daily rewards and quests, gems, Golden Pin free crates, Streak Saver.
+-- Economy pass E1 (2026-10-25): plays the LIVE rules, not the old plan's formula:
+--   pins     a PERFECT knocks all 10; any other throw knocks fewer, never more than the Power Level's Power
+--   coins    pins x Config.Rewards.BaseCoinsPerPin x zone CoinPay x every MultiplierService multiplier
+--            (Power Level, ball + Polish, pets, potion, rank tier, rebirth, streak, lane modifier, Golden Pin),
+--            PERFECT x2 (Rewards.PerfectStrikeBonus)
+--   xp       pins x Rewards.XpPerPin (a PERFECT: Rewards.PerfectStrikeXp) x zone XpPay x streak x pets x potion x rebirth
+--   ranks    rank levels 1-60 (Config.Economy.Ranks); the rank tier (Config.Ranks, 6 levels each) sets the coin
+--            multiplier; rank trials are assumed passed straight away
+--   zones    open at their rank level (Config.Economy.Zones Rank, built zones only); the player always bowls in
+--            the newest zone
+--   crates   only the crates of open zones (Config.Crates), each gives only its zone's balls (Zones.BallInCrate),
+--            odds moved like Shared.Modules.Balls does, pity, first bought crate 1,000 + Uncommon, gift crate
+--   eggs     only eggs with pets, in open zones; hatch odds like MascotService (only rarities the egg has);
+--            pet bonus like Mascots.Bonus; equip best; 3 copies merge into a Shiny
+--   extras   level rewards + the 3-strike challenge (Config.Milestones), the zone 4 boss (Config.Boss), playtime
+--            gifts (Config.Playtime, potions drunk at once), a free crate every Config.FreeCrates throws, day 1's
+--            daily reward, one daily spin
+-- Not simulated: overcharge gambles, Blast/Curve/Heavy/Lucky traits, gems and gem Polish, the gold zone shrinking
+-- with the streak (PERFECTs are a flat Sim.PerfectShare), walking between zones and shops.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local EconomySim = {}
-
-type State = {
-	Coins: number,
-	XP: number,
-	Rank: number,
-	Level: number, -- Power Level
-	Zone: number,
-	Rebirths: number,
-	Streak: number,
-	Owned: { [string]: number }, -- ball Id -> Polish level
-	Mascots: { number },
-	EggCount: { [string]: number },
-	CrateCount: { [string]: number },
-	Pity: { [string]: number }, -- "<crate>:<rarity>" -> pulls since that rarity or better
-	OpenedCrate: boolean,
-	RunStart: number, -- seconds when the current run (after the last rebirth) started
-}
-
-local RARITIES = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic" }
-local RARITY_INDEX = {}
-for i, name in RARITIES do
-	RARITY_INDEX[name] = i
-end
 
 local function loadConfig()
 	-- A fresh copy every run, so edits to Config are always picked up
 	return require(ReplicatedStorage.Shared.Config:Clone() :: any)
 end
 
--- XP to go from rank r to r + 1
-local function xpToNext(E, rank: number): number
-	local R = E.Ranks
-	if rank <= R.LateFrom then
-		return math.floor(R.Base * R.Growth ^ (rank - 1))
+-- Everything the rules need, worked out once per run from a config copy
+local function prepare(config)
+	local E = config.Economy
+	local P = {}
+	P.Rarities = {}
+	P.RarityIndex = {}
+	for index, rarity in config.Rarities do
+		P.Rarities[index] = rarity.Name
+		P.RarityIndex[rarity.Name] = index
 	end
-	return math.floor(R.Base * R.Growth ^ (R.LateFrom - 1) * R.LateGrowth ^ (rank - R.LateFrom))
-end
 
-local function rollRarity(rng: Random, odds: { [string]: number }, minIndex: number): string
-	local total = 0
-	for name, weight in odds do
-		if RARITY_INDEX[name] >= minIndex then
-			total += weight
+	-- XP needed for each rank level (same curve as Shared.Modules.Progression)
+	local R = E.Ranks
+	P.LevelXp = { 0 }
+	for level = 1, R.MaxRank - 1 do
+		local step = if level <= R.LateFrom
+			then math.floor(R.Base * R.Growth ^ (level - 1))
+			else math.floor(R.Base * R.Growth ^ (R.LateFrom - 1) * R.LateGrowth ^ (level - R.LateFrom))
+		P.LevelXp[level + 1] = P.LevelXp[level] + step
+	end
+
+	P.BuiltZones = math.min(config.Zones.BuiltZones, #E.Zones)
+
+	-- Crates: price + odds from Config.Crates, ball pools like Zones.BallInCrate, odds moved to rarities the crate has
+	local function ballInCrate(ball, crate): boolean
+		if ball.InCrates == false or ball.Retired then
+			return false
 		end
+		if crate.ZoneBallsOnly then
+			return ball.Zone == crate.Zone
+		end
+		return true
 	end
-	if total <= 0 then
-		return RARITIES[minIndex]
-	end
-	local roll = rng:NextNumber() * total
-	for _, name in RARITIES do
-		local weight = odds[name]
-		if weight and RARITY_INDEX[name] >= minIndex then
-			roll -= weight
-			if roll <= 0 then
-				return name
+	P.Crates = {}
+	P.CrateById = {}
+	for _, crate in config.Crates do
+		local pools = {}
+		for _, ball in config.Balls do
+			if ballInCrate(ball, crate) then
+				local index = P.RarityIndex[ball.Rarity] or 1
+				pools[index] = pools[index] or {}
+				table.insert(pools[index], ball)
 			end
 		end
+		local odds = {}
+		for name, percent in crate.Odds do
+			local index = P.RarityIndex[name] or 1
+			for distance = 0, #P.Rarities do
+				local target = if pools[index - distance]
+					then index - distance
+					elseif pools[index + distance] then index + distance
+					else nil
+				if target then
+					odds[target] = (odds[target] or 0) + percent
+					break
+				end
+			end
+		end
+		local row = { Id = crate.Id, Name = crate.Name, Zone = crate.Zone or 1, Price = crate.Price, Odds = odds, Pools = pools }
+		table.insert(P.Crates, row)
+		P.CrateById[crate.Id] = row
 	end
-	return RARITIES[minIndex]
+	-- Pity rows per crate
+	P.Pity = {}
+	for _, pity in E.CratePity do
+		for crateId in pity.Crates do
+			P.Pity[crateId] = P.Pity[crateId] or {}
+			table.insert(P.Pity[crateId], { Rarity = P.RarityIndex[pity.Rarity], After = pity.After })
+		end
+	end
+
+	-- Eggs: only those with pets (Mascots.EggReady); each pet's bonus like Mascots.Bonus
+	local eggById = {}
+	for _, egg in E.Eggs do
+		eggById[egg.Id] = egg
+	end
+	P.Eggs = {}
+	P.EggById = {}
+	P.PetBonus = {}
+	for _, pet in config.Mascots do
+		local egg = eggById[pet.BonusEgg or pet.Egg]
+		P.PetBonus[pet.Id] = (pet.BaseBonus or E.Mascots.Bonus[pet.Rarity] or 0) * (egg and egg.BonusScale or 1)
+	end
+	for _, egg in E.Eggs do
+		local pools = {}
+		for _, pet in config.Mascots do
+			if pet.Egg == egg.Id then
+				local index = P.RarityIndex[pet.Rarity] or 1
+				pools[index] = pools[index] or {}
+				table.insert(pools[index], pet.Id)
+			end
+		end
+		if next(pools) and (egg.Zone or 1) <= P.BuiltZones then
+			local row = { Id = egg.Id, Zone = egg.Zone or 1, Price = egg.Price, Pools = pools }
+			table.insert(P.Eggs, row)
+			P.EggById[egg.Id] = row
+		end
+	end
+
+	P.Potions = {}
+	for _, potion in config.Potions.List do
+		P.Potions[potion.Id] = potion
+	end
+	return P
 end
 
-local function slots(E, s: State): number
+local function slots(E, s): number
 	local M = E.Mascots
 	local count = M.StartSlots
 	for _, rank in M.SlotRanks do
@@ -77,286 +144,12 @@ local function slots(E, s: State): number
 			count += 1
 		end
 	end
-	for _, rebirths in M.SlotRebirths do
-		if s.Rebirths >= rebirths then
+	for _, needed in M.SlotRebirths do
+		if s.Rebirths >= needed then
 			count += 1
 		end
 	end
 	return math.min(count, M.MaxSlots)
-end
-
--- 1 + the best equipped mascots' bonuses
-local function mascotMultiplier(E, s: State): number
-	table.sort(s.Mascots, function(a, b)
-		return a > b
-	end)
-	local bonus = 0
-	for i = 1, math.min(slots(E, s), #s.Mascots) do
-		bonus += s.Mascots[i]
-	end
-	return 1 + bonus
-end
-
--- The equipped ball: the owned ball with the best Multiplier after Polish
-local function ballMultiplier(config, s: State): number
-	local best = 1
-	for _, ball in config.Balls do
-		local polish = s.Owned[ball.Id]
-		if polish then
-			best = math.max(best, ball.Multiplier * (1 + config.Economy.Polish.ValuePerLevel * polish))
-		end
-	end
-	return best
-end
-
-local function levelPrice(E, s: State, level: number): number
-	local price = E.PowerLevels[level].Price
-	if s.Rebirths > 0 and level <= E.Rebirth.DiscountLevels then
-		price *= E.Rebirth.DiscountPrice
-	end
-	return price
-end
-
-local function rebirthNeeds(E, s: State): (number, number)
-	local R = E.Rebirth
-	return R.FirstRank + R.RankStep * s.Rebirths, R.FirstCost * R.CostGrowth ^ s.Rebirths
-end
-
-local function eggUnlocked(egg, s: State): boolean
-	return (egg.Rank == nil or s.Rank >= egg.Rank) and (egg.Zone == nil or s.Zone >= egg.Zone)
-end
-
--- Balls in crates, by rarity
-local function crateBallsByRarity(config): { [string]: { any } }
-	local byRarity = {}
-	for _, ball in config.Balls do
-		if ball.InCrates ~= false then
-			byRarity[ball.Rarity] = byRarity[ball.Rarity] or {}
-			table.insert(byRarity[ball.Rarity], ball)
-		end
-	end
-	return byRarity
-end
-
-local function openCrate(config, s: State, rng: Random, crate, byRarity)
-	local E = config.Economy
-	local minIndex = 1
-	if not s.OpenedCrate then
-		minIndex = RARITY_INDEX[E.FirstCrateMin]
-	end
-	for _, pity in E.CratePity do
-		local key = crate.Id .. ":" .. pity.Rarity
-		if pity.Crates[crate.Id] and (s.Pity[key] or 0) + 1 >= pity.After then
-			minIndex = math.max(minIndex, RARITY_INDEX[pity.Rarity])
-		end
-	end
-	local rarity = rollRarity(rng, crate.Odds, minIndex)
-	for _, pity in E.CratePity do
-		if pity.Crates[crate.Id] then
-			local key = crate.Id .. ":" .. pity.Rarity
-			s.Pity[key] = if RARITY_INDEX[rarity] >= RARITY_INDEX[pity.Rarity] then 0 else (s.Pity[key] or 0) + 1
-		end
-	end
-	s.OpenedCrate = true
-
-	local pool = byRarity[rarity]
-	local ball = pool[rng:NextInteger(1, #pool)]
-	local polish = s.Owned[ball.Id]
-	if polish == nil then
-		s.Owned[ball.Id] = 0
-	elseif polish < E.Polish.MaxLevel then
-		-- Duplicate: Polish Points straight onto that ball (coins once it's maxed are not counted)
-		s.Owned[ball.Id] = math.min(E.Polish.MaxLevel, polish + E.Polish.PointsPerDuplicate / E.Polish.PointsPerLevel)
-	end
-end
-
--- Coin multiplier of the streak tier reached (Config.Streaks), like Progression.GetStreakMultiplier
-local function streakMultiplier(config, streak: number): number
-	local multiplier = 1
-	for _, tier in config.Streaks do
-		if streak >= tier.Streak then
-			multiplier = tier.Multiplier
-		end
-	end
-	return multiplier
-end
-
--- A lane modifier by Weight, like Modifiers.PickNext (Bonus Gems sits out while gems are off)
-local function pickModifier(config, rng: Random)
-	local pool, total = {}, 0
-	for _, modifier in config.LaneModifiers.List do
-		if config.Gems.Enabled or not modifier.NeedsGems then
-			table.insert(pool, modifier)
-			total += modifier.Weight or 1
-		end
-	end
-	local roll = rng:NextNumber() * total
-	for _, modifier in pool do
-		roll -= modifier.Weight or 1
-		if roll <= 0 then
-			return modifier
-		end
-	end
-	return pool[#pool]
-end
-
--- Plays one pretend player. Returns { [goal] = seconds } for every goal reached.
-function EconomySim.RunOne(config, seed: number): { [string]: number }
-	local E = config.Economy
-	local F, S = E.Formula, E.Sim
-	local rng = Random.new(seed)
-	local byRarity = crateBallsByRarity(config)
-	local reached: { [string]: number } = {}
-	local s: State = {
-		Coins = 0,
-		XP = 0,
-		Rank = 1,
-		Level = 1,
-		Zone = 1,
-		Rebirths = 0,
-		Streak = 0,
-		Owned = {},
-		Mascots = {},
-		EggCount = {},
-		CrateCount = {},
-		Pity = {},
-		OpenedCrate = false,
-		RunStart = 0,
-	}
-	for _, ball in config.Balls do
-		if ball.InCrates == false then
-			s.Owned[ball.Id] = 0 -- the starter ball
-		end
-	end
-	local time = 0
-	local modifier, modifierEnds = {}, 0
-
-	-- Goals after a rebirth get "@R1", "@R2"... so each run is timed on its own (from the rebirth)
-	local function mark(goal: string)
-		local key = if s.Rebirths > 0 then goal .. "@R" .. s.Rebirths else goal
-		if not reached[key] then
-			reached[key] = time - s.RunStart
-		end
-	end
-
-	local function buy()
-		-- 1. Next Power Level, as soon as it's affordable
-		while s.Level < #E.PowerLevels and s.Coins >= levelPrice(E, s, s.Level + 1) do
-			s.Coins -= levelPrice(E, s, s.Level + 1)
-			s.Level += 1
-			mark("Level" .. s.Level)
-		end
-		local nextPrice = if s.Level < #E.PowerLevels then levelPrice(E, s, s.Level + 1) else math.huge
-		local budget = nextPrice * S.SpendShare
-		-- 2. Eggs and crates that are cheap next to the next Power Level, best first
-		for i = #E.Eggs, 1, -1 do
-			local egg = E.Eggs[i]
-			while
-				eggUnlocked(egg, s)
-				and egg.Price <= budget
-				and s.Coins >= egg.Price
-				and (s.EggCount[egg.Id] or 0) < S.MaxEggs
-			do
-				s.Coins -= egg.Price
-				s.EggCount[egg.Id] = (s.EggCount[egg.Id] or 0) + 1
-				local rarity = rollRarity(rng, E.Mascots.Odds, 1)
-				table.insert(s.Mascots, E.Mascots.Bonus[rarity] * (egg.BonusScale or 1))
-				mark("FirstMascot")
-			end
-		end
-		for i = #E.Crates, 1, -1 do
-			local crate = E.Crates[i]
-			while crate.Price <= budget and s.Coins >= crate.Price and (s.CrateCount[crate.Id] or 0) < S.MaxCrates do
-				s.Coins -= crate.Price
-				s.CrateCount[crate.Id] = (s.CrateCount[crate.Id] or 0) + 1
-				openCrate(config, s, rng, crate, byRarity)
-				mark("FirstCrateOpened")
-			end
-		end
-	end
-
-	local function zoneUnlocks()
-		for index, zone in E.Zones do
-			if s.Rank >= zone.Rank and index > s.Zone then
-				s.Zone = index
-				mark("Zone" .. index)
-			end
-		end
-	end
-
-	while time < S.Minutes * 60 do
-		time += S.ThrowSeconds
-		local zone = E.Zones[s.Zone]
-		local level = E.PowerLevels[s.Level]
-		local ball = ballMultiplier(config, s)
-
-		local roll = rng:NextNumber()
-		local perfect = roll < S.PerfectShare
-		local quality
-		if perfect then
-			quality = F.QualityMax
-		elseif roll < S.GoodShare then
-			quality = S.GoodQuality[1] + rng:NextNumber() * (S.GoodQuality[2] - S.GoodQuality[1])
-		else
-			quality = S.BadQuality[1] + rng:NextNumber() * (S.BadQuality[2] - S.BadQuality[1])
-		end
-		quality = math.clamp(quality, F.QualityMin, F.QualityMax)
-
-		local pinsHit = math.min(zone.Pins, math.floor(level.Power * quality))
-		-- Live rules: only a PERFECT strikes, the streak tier sets the multiplier (Config.Streaks), the lane modifier
-		-- changes every Config.LaneModifiers.Interval seconds, and a Golden Pin pays when one of the pins hit is golden
-		local strike = perfect and pinsHit >= zone.Pins
-		s.Streak = if strike then s.Streak + 1 else 0
-		if time >= modifierEnds then
-			modifier = pickModifier(config, rng)
-			modifierEnds = time + config.LaneModifiers.Interval
-		end
-		local golden = rng:NextNumber() < config.GoldenPin.Chance and rng:NextInteger(1, 10) <= pinsHit
-		local multiplier = level.Value
-			* ball
-			* mascotMultiplier(E, s)
-			* (1 + F.RankBonus * s.Rank)
-			* (1 + F.RebirthBonus * s.Rebirths)
-			* streakMultiplier(config, s.Streak)
-			* (if perfect then F.PerfectCrit else 1)
-			* (modifier.CoinMultiplier or 1)
-			* (if golden then config.GoldenPin.CoinMultiplier else 1)
-		s.Coins += math.floor(pinsHit * zone.PinValue * multiplier)
-		-- Pets boost XP by the same amount they boost coins (owner 2026-10-22)
-		s.XP +=
-			math.floor(pinsHit * zone.XpPerPin * mascotMultiplier(E, s) * (1 + (E.Rebirth.XpBonus or 0) * s.Rebirths))
-		if S.Trace then -- tuning scripts can watch every throw
-			S.Trace(time, s, { Ball = ball, Mascots = mascotMultiplier(E, s), Pins = pinsHit, Multiplier = multiplier })
-		end
-
-		while s.Rank < E.Ranks.MaxRank and s.XP >= xpToNext(E, s.Rank) do
-			s.XP -= xpToNext(E, s.Rank)
-			s.Rank += 1
-			mark("Rank" .. s.Rank)
-		end
-		zoneUnlocks()
-
-		if s.Coins >= E.Crates[1].Price then
-			mark("FirstCrate")
-		end
-		if eggUnlocked(E.Eggs[1], s) and s.Coins >= E.Eggs[1].Price then
-			mark("FirstEgg")
-		end
-
-		local needRank, needCoins = rebirthNeeds(E, s)
-		if s.Rank >= needRank and s.Coins >= needCoins then
-			mark("RebirthReady")
-			if s.Rebirths < S.Rebirths then
-				s.Rebirths += 1
-				s.RunStart = time
-				s.Coins, s.XP, s.Rank, s.Level, s.Zone, s.Streak = 0, 0, 1, 1, 1, 0
-				mark("Start") -- marks 0 for the new run
-				continue
-			end
-		end
-		buy()
-	end
-	return reached
 end
 
 local function median(values: { number }): number?
@@ -380,60 +173,600 @@ local function clock(seconds: number?): string
 end
 
 local function short(n: number): string
-	for _, unit in { { 1e12, "T" }, { 1e9, "B" }, { 1e6, "M" }, { 1e3, "K" } } do
+	for _, unit in { { 1e15, "Qa" }, { 1e12, "T" }, { 1e9, "B" }, { 1e6, "M" }, { 1e3, "K" } } do
 		if n >= unit[1] then
 			return ("%g%s"):format(math.floor(n / unit[1] * 10 + 0.5) / 10, unit[2])
 		end
 	end
-	return tostring(n)
+	return tostring(math.floor(n))
 end
 
--- Runs Config.Economy.Sim.Runs players and returns { [goal] = { Median = seconds?, Share = 0..1 } }.
--- config: leave out to use the current Config (tuning scripts pass an edited copy).
+-- Plays one pretend player. Returns { [goal] = seconds } for every goal reached, and { [goal] = number } extras
+-- (coins per minute when each zone opens).
+function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [string]: number })
+	local E = config.Economy
+	local S = E.Sim
+	local REWARDS = config.Rewards
+	local rng = Random.new(seed)
+	local reached: { [string]: number } = {}
+	local extras: { [string]: number } = {}
+	local s = {
+		Coins = 0,
+		XP = 0,
+		Rank = 1,
+		Level = 1, -- Power Level
+		Zone = 1,
+		Rebirths = 0,
+		Streak = 0,
+		Throws = 0,
+		Owned = {}, -- ball Id -> Polish level
+		Pets = {}, -- pet Id (or Id_Shiny) -> count
+		EggCount = {},
+		CrateCount = {},
+		CratesBought = 0,
+		CratesOpened = 0,
+		Pity = {},
+		Potions = { Coins = { [2] = 0, [4] = 0 }, XP = { [2] = 0, [4] = 0 } }, -- seconds left per kind and multiplier
+		FreeEggs = {},
+		RunStart = 0,
+	}
+	for _, ball in config.Balls do
+		if ball.InCrates == false then
+			s.Owned[ball.Id] = 0 -- the starter ball
+		end
+	end
+	local time = 0
+	local modifier, modifierEnds = {}, 0
+	local ballMult, petMult = 1, 1
+	local levelPaid = {}
+	local challengeReady, challengeStreak = 0, 0
+	local bossAt = math.huge
+	local playtimeNext = 1
+	local giftGiven, dailyGiven, spinGiven = false, false, false
+
+	local function mark(goal: string)
+		local key = if s.Rebirths > 0 then goal .. "@R" .. s.Rebirths else goal
+		if not reached[key] then
+			reached[key] = time - s.RunStart
+		end
+	end
+
+	local function refreshBall()
+		local best = 1
+		for _, ball in config.Balls do
+			local polish = s.Owned[ball.Id]
+			if polish then
+				best = math.max(best, ball.Multiplier * (1 + E.Polish.ValuePerLevel * polish))
+			end
+		end
+		ballMult = best
+	end
+
+	local function refreshPets()
+		local list = {}
+		for id, count in s.Pets do
+			local base = id:gsub("_Shiny$", "")
+			local bonus = (P.PetBonus[base] or 0) * (if id ~= base then E.Mascots.ShinyMultiplier else 1)
+			for _ = 1, count do
+				table.insert(list, bonus)
+			end
+		end
+		table.sort(list, function(a, b)
+			return a > b
+		end)
+		local total = 0
+		for i = 1, math.min(slots(E, s), #list) do
+			total += list[i]
+		end
+		petMult = 1 + total
+	end
+
+	local function nextLevelPrice(): number
+		local row = E.PowerLevels[s.Level + 1] or E.PowerLevels[#E.PowerLevels]
+		return row.Price
+	end
+
+	-- Coins + LevelShare like PowerLevels.DailyCoins
+	local function shareCoins(reward): number
+		local coins = reward.Coins or 0
+		if reward.LevelShare then
+			local share = nextLevelPrice() * reward.LevelShare
+			if share > coins then
+				local unit = 10 ^ math.max(math.floor(math.log10(share)) - 1, 0)
+				coins = math.floor(share / unit) * unit
+			end
+		end
+		return coins
+	end
+
+	local function rollIndex(odds: { [number]: number }, minIndex: number): number
+		local total = 0
+		for index, weight in odds do
+			if index >= minIndex then
+				total += weight
+			end
+		end
+		if total <= 0 then
+			return minIndex
+		end
+		local roll = rng:NextNumber() * total
+		for index = 1, #P.Rarities do
+			local weight = odds[index]
+			if weight and index >= minIndex then
+				roll -= weight
+				if roll <= 0 then
+					return index
+				end
+			end
+		end
+		return minIndex
+	end
+
+	local function giveBall(ball)
+		local polish = s.Owned[ball.Id]
+		if polish == nil then
+			s.Owned[ball.Id] = 0
+		elseif polish < E.Polish.MaxLevel then
+			s.Owned[ball.Id] = math.min(E.Polish.MaxLevel, polish + E.Polish.PointsPerDuplicate / E.Polish.PointsPerLevel)
+		end
+		refreshBall()
+	end
+
+	-- exactRarity: the first bought crate / spin's secret ball give exactly this rarity
+	local function openCrate(crateId: string, exactRarity: string?)
+		local crate = P.CrateById[crateId]
+		if not crate then
+			return
+		end
+		local index
+		if exactRarity then
+			index = P.RarityIndex[exactRarity]
+		else
+			local minIndex = 1
+			if s.CratesOpened == 0 then
+				minIndex = P.RarityIndex[E.FirstCrateMin] or 1
+			end
+			for _, pity in P.Pity[crateId] or {} do
+				if (s.Pity[crateId .. pity.Rarity] or 0) + 1 >= pity.After then
+					minIndex = math.max(minIndex, pity.Rarity)
+				end
+			end
+			index = rollIndex(crate.Odds, minIndex)
+		end
+		for _, pity in P.Pity[crateId] or {} do
+			local key = crateId .. pity.Rarity
+			s.Pity[key] = if index >= pity.Rarity then 0 else (s.Pity[key] or 0) + 1
+		end
+		s.CratesOpened += 1
+		local pool = crate.Pools[index]
+		if pool then
+			giveBall(pool[rng:NextInteger(1, #pool)])
+		end
+		mark("Crate" .. crateId)
+	end
+
+	-- A reward crate from a zone not open yet comes as the Alley Crate (Zones.RewardCrateId)
+	local function rewardCrate(crateId: string?, exact: boolean?)
+		if not crateId then
+			return
+		end
+		local crate = P.CrateById[crateId]
+		if not exact and crate and crate.Zone > s.Zone then
+			crateId = config.Rizzo.CrateId
+		end
+		openCrate(crateId)
+	end
+
+	-- exactRarity: the spin's secret pet
+	local function hatch(eggId: string, exactRarity: string?)
+		local egg = P.EggById[eggId]
+		if not egg then
+			return
+		end
+		local index
+		if exactRarity then
+			index = P.RarityIndex[exactRarity]
+		else
+			local odds = {}
+			for rarityIndex in egg.Pools do
+				odds[rarityIndex] = E.Mascots.Odds[P.Rarities[rarityIndex]] or 0
+			end
+			index = rollIndex(odds, 1)
+		end
+		while index > 1 and not egg.Pools[index] do
+			index -= 1
+		end
+		local pool = egg.Pools[index]
+		if not pool then
+			return
+		end
+		local id = pool[rng:NextInteger(1, #pool)]
+		s.Pets[id] = (s.Pets[id] or 0) + 1
+		-- Merge 3 copies into a Shiny (players press MERGE)
+		if s.Pets[id] >= E.Mascots.ShinyMerge then
+			s.Pets[id] -= E.Mascots.ShinyMerge
+			local shiny = id .. "_Shiny"
+			s.Pets[shiny] = (s.Pets[shiny] or 0) + 1
+		end
+		refreshPets()
+		mark("Egg" .. eggId)
+		mark("FirstMascot")
+	end
+
+	local function givePotion(id: string, count: number?)
+		local potion = P.Potions[id]
+		if potion then
+			local timers = s.Potions[potion.Boost]
+			timers[potion.Multiplier] = (timers[potion.Multiplier] or 0) + potion.Minutes * 60 * (count or 1)
+		end
+	end
+
+	-- Like MilestoneService.Reward: coins (with LevelShare), potions, a crate
+	local function giveReward(reward)
+		s.Coins += shareCoins(reward)
+		for _, potion in reward.Potions or {} do
+			givePotion(potion.Id, potion.Count)
+		end
+		if reward.Egg then
+			s.FreeEggs[reward.Egg] = (s.FreeEggs[reward.Egg] or 0) + 1
+		end
+		rewardCrate(reward.Crate, reward.Exact)
+	end
+
+	local function spin()
+		local total = 0
+		for _, slice in config.Spin.Slices do
+			total += slice.Chance
+		end
+		local roll = rng:NextNumber() * total
+		for _, slice in config.Spin.Slices do
+			roll -= slice.Chance
+			if roll <= 0 then
+				if slice.Potion then
+					givePotion(slice.Potion)
+				elseif slice.Ball then
+					openCrate(slice.Crate, slice.Ball)
+				elseif slice.Pet then
+					hatch(slice.Egg, slice.Pet)
+				elseif slice.Egg then
+					s.FreeEggs[slice.Egg] = (s.FreeEggs[slice.Egg] or 0) + 1
+				elseif slice.Crate then
+					rewardCrate(slice.Crate)
+				end
+				return
+			end
+		end
+	end
+
+	-- The strongest running potion of a kind counts; it ticks down, the weaker one waits (PotionService)
+	local function potionMultiplier(kind: string, seconds: number): number
+		local timers = s.Potions[kind]
+		for _, multiplier in { 4, 2 } do
+			if (timers[multiplier] or 0) > 0 then
+				timers[multiplier] = math.max(0, timers[multiplier] - seconds)
+				return multiplier
+			end
+		end
+		return 1
+	end
+
+	local function eggOpen(egg): boolean
+		return egg.Zone <= s.Zone
+	end
+
+	local function buy()
+		-- 1. Next Power Level, as soon as it's affordable
+		while s.Level < #E.PowerLevels and s.Coins >= E.PowerLevels[s.Level + 1].Price do
+			s.Coins -= E.PowerLevels[s.Level + 1].Price
+			s.Level += 1
+			mark("Level" .. s.Level)
+		end
+		local budget = if s.Level < #E.PowerLevels then nextLevelPrice() * S.SpendShare else math.huge
+		-- 2. Free hatches first, then eggs and crates that are cheap next to the next Power Level, best first
+		for eggId, count in s.FreeEggs do
+			local egg = P.EggById[eggId]
+			if egg and eggOpen(egg) and count > 0 then
+				for _ = 1, count do
+					hatch(eggId)
+				end
+				s.FreeEggs[eggId] = 0
+			end
+		end
+		for i = #P.Eggs, 1, -1 do
+			local egg = P.Eggs[i]
+			while
+				eggOpen(egg)
+				and egg.Price <= budget
+				and s.Coins >= egg.Price
+				and (s.EggCount[egg.Id] or 0) < S.MaxEggs
+			do
+				s.Coins -= egg.Price
+				s.EggCount[egg.Id] = (s.EggCount[egg.Id] or 0) + 1
+				hatch(egg.Id)
+			end
+		end
+		for i = #P.Crates, 1, -1 do
+			local crate = P.Crates[i]
+			local function price(): number
+				if s.CratesBought == 0 and crate.Id == config.Onboarding.FirstCrateGoal and config.Onboarding.FirstCratePrice then
+					return math.min(config.Onboarding.FirstCratePrice, crate.Price)
+				end
+				return crate.Price
+			end
+			while
+				crate.Zone <= s.Zone
+				and (price() <= budget or price() < crate.Price) -- the cut-price first crate is always worth it
+				and s.Coins >= price()
+				and (s.CrateCount[crate.Id] or 0) < S.MaxCrates
+			do
+				local first = s.CratesBought == 0
+				s.Coins -= price()
+				s.CratesBought += 1
+				s.CrateCount[crate.Id] = (s.CrateCount[crate.Id] or 0) + 1
+				openCrate(crate.Id, if first then config.Onboarding.FirstBoughtRarity else nil)
+				mark("FirstCrateOpened")
+			end
+		end
+	end
+
+	local function pickModifier()
+		local pool, total = {}, 0
+		for _, row in config.LaneModifiers.List do
+			if config.Gems.Enabled or not row.NeedsGems then
+				table.insert(pool, row)
+				total += row.Weight or 1
+			end
+		end
+		local roll = rng:NextNumber() * total
+		for _, row in pool do
+			roll -= row.Weight or 1
+			if roll <= 0 then
+				return row
+			end
+		end
+		return pool[#pool]
+	end
+
+	local function onRank()
+		mark("Rank" .. s.Rank)
+		for _, reward in config.Milestones.LevelRewards do
+			if s.Rank >= reward.Level and not levelPaid[reward.Level] then
+				levelPaid[reward.Level] = true
+				giveReward(reward)
+			end
+		end
+		for zone = s.Zone + 1, P.BuiltZones do
+			if s.Rank >= E.Zones[zone].Rank then
+				s.Zone = zone
+				mark("Zone" .. zone)
+				if config.Boss.Enabled and zone == config.Boss.Zone then
+					bossAt = time -- the helicopter is ready the first time you get there
+				end
+				if not spinGiven and config.Spin.Enabled and zone == S.SpinAtZone then
+					spinGiven = true
+					spin()
+				end
+			end
+		end
+		refreshPets() -- more slots at some ranks
+	end
+
+	-- Coins per minute in a zone: its first 100 throws
+	local recent, recentIndex = table.create(100, 0), 0
+	local zoneOpenedAt = -math.huge
+
+	refreshBall()
+	local throwSeconds = S.ThrowSeconds
+	while time < S.Minutes * 60 do
+		time += throwSeconds
+		s.Throws += 1
+		local zone = E.Zones[s.Zone]
+		local level = E.PowerLevels[s.Level]
+
+		-- The throw (ThrowResolver): PERFECT = all 10 pins; otherwise fewer, capped by Power
+		local perfect = rng:NextNumber() < S.PerfectShare
+		local pins = config.Lane.PinCount
+		if not perfect then
+			local charge
+			if rng:NextNumber() < S.GoodShare then
+				charge = S.GoodQuality[1] + rng:NextNumber() * (S.GoodQuality[2] - S.GoodQuality[1])
+			else
+				charge = S.BadQuality[1] + rng:NextNumber() * (S.BadQuality[2] - S.BadQuality[1])
+			end
+			local most = math.clamp(math.floor(level.Power), 2, pins - 1)
+			local fewest = math.min(config.Throw.FewestPinsKnocked, most)
+			local wanted = fewest + (most - fewest) * charge + (rng:NextNumber() * 2 - 1)
+			pins = math.clamp(math.floor(wanted + 0.5), math.min(math.max(fewest, 2), most), most)
+		end
+		s.Streak = if perfect then s.Streak + 1 else 0
+
+		if time >= modifierEnds then
+			modifier = pickModifier()
+			modifierEnds = time + config.LaneModifiers.Interval
+		end
+		local golden = rng:NextNumber() < config.GoldenPin.Chance and rng:NextInteger(1, config.Lane.PinCount) <= pins
+		local streakCoins, streakXp = 1, 1
+		for _, tier in config.Streaks do
+			if s.Streak >= tier.Streak then
+				streakCoins, streakXp = tier.Multiplier, tier.XpMultiplier
+			end
+		end
+		local tier = config.Ranks[math.clamp(math.ceil(s.Rank / E.Ranks.LevelsPerTier), 1, #config.Ranks)]
+		local coinPotion = potionMultiplier("Coins", throwSeconds)
+		local xpPotion = potionMultiplier("XP", throwSeconds)
+		local rebirthCoins = 1 + E.Formula.RebirthBonus * s.Rebirths
+		local rebirthXp = 1 + (E.Rebirth.XpBonus or 0) * s.Rebirths
+
+		local multiplier = level.Value
+			* ballMult
+			* petMult
+			* coinPotion
+			* tier.Multiplier
+			* rebirthCoins
+			* streakCoins
+			* (modifier.CoinMultiplier or 1)
+			* (if golden then config.GoldenPin.CoinMultiplier else 1)
+			* (if perfect then 1 + REWARDS.PerfectStrikeBonus else 1)
+			* (zone.CoinPay or 1)
+		local coins = math.floor(pins * REWARDS.BaseCoinsPerPin * multiplier + 0.5)
+		s.Coins += coins
+		recentIndex = recentIndex % 100 + 1
+		recent[recentIndex] = coins
+		local xp = if perfect then REWARDS.PerfectStrikeXp else pins * REWARDS.XpPerPin
+		s.XP += math.floor(xp * streakXp * petMult * xpPotion * rebirthXp * (zone.XpPay or 1) + 0.5)
+		if S.Trace then -- tuning scripts can watch every throw
+			S.Trace(time, s, { Ball = ballMult, Mascots = petMult, Pins = pins, Coins = coins })
+		end
+
+		while s.Rank < E.Ranks.MaxRank and s.XP >= P.LevelXp[s.Rank + 1] do
+			s.Rank += 1
+			local before = s.Zone
+			onRank()
+			if s.Zone ~= before then
+				zoneOpenedAt = s.Throws
+			end
+		end
+		if s.Throws - zoneOpenedAt == #recent and not extras["CoinsPerMin" .. s.Zone] and s.Zone > 1 then
+			local sum = 0
+			for _, value in recent do
+				sum += value
+			end
+			extras["CoinsPerMin" .. s.Zone] = sum / #recent * 60 / throwSeconds
+		end
+
+		if s.Coins >= P.Crates[1].Price then
+			mark("FirstCrate")
+		end
+		if P.Eggs[1] and eggOpen(P.Eggs[1]) and s.Coins >= P.Eggs[1].Price then
+			mark("FirstEgg")
+		end
+
+		-- The 3-strike challenge (Config.Milestones.Challenges), while bowling in its zone
+		for _, challenge in config.Milestones.Challenges do
+			if (challenge.Zone == nil or challenge.Zone == s.Zone) and time >= challengeReady then
+				challengeStreak = if perfect then challengeStreak + 1 else 0
+				if challengeStreak >= challenge.Goal then
+					challengeStreak = 0
+					challengeReady = time + (challenge.Cooldown or 0)
+					mark("Challenge")
+					giveReward(challenge.Reward)
+				end
+			end
+		end
+
+		-- Free crate every Config.FreeCrates.ThrowsPerCrate throws, the onboarding gift crate, day 1's daily reward
+		if s.Throws % config.FreeCrates.ThrowsPerCrate == 0 then
+			openCrate(config.FreeCrates.CrateId)
+		end
+		if config.Onboarding.Enabled and not giftGiven and s.Throws >= config.Onboarding.GiftAfterThrows then
+			giftGiven = true
+			openCrate(config.Onboarding.GiftCrateId, config.Onboarding.GiftRarity)
+		end
+		if
+			not dailyGiven
+			and s.Throws >= config.Onboarding.GiftAfterThrows + config.Onboarding.LegendsAfterThrows
+		then
+			dailyGiven = true
+			giveReward(config.Daily.Rewards[1])
+		end
+
+		-- Playtime gifts
+		local gift = config.Playtime.Enabled and config.Playtime.Rewards[playtimeNext]
+		if gift and time - s.RunStart >= gift.Minutes * 60 then
+			playtimeNext += 1
+			if gift.Potion then
+				givePotion(gift.Potion)
+			end
+			giveReward({ Egg = gift.Egg, Crate = gift.Crate, Exact = gift.Exact })
+		end
+
+		-- The zone 4 boss: a trip every CooldownMinutes once that zone is open
+		if time >= bossAt then
+			time += S.BossTripSeconds
+			bossAt = time + config.Boss.CooldownMinutes * 60
+			mark("Boss")
+			giveReward(config.Boss.Reward)
+		end
+
+		-- Rebirth (only while the simulator is told to: Sim.Rebirths)
+		local needRank = E.Zones[E.Rebirth.Zone].Rank + E.Rebirth.RankStep * s.Rebirths
+		local needCoins = E.Rebirth.FirstCost * E.Rebirth.CostGrowth ^ s.Rebirths
+		if s.Rank >= needRank and s.Coins >= needCoins then
+			mark("RebirthReady")
+			if s.Rebirths < S.Rebirths then
+				s.Rebirths += 1
+				s.RunStart = time
+				s.Coins, s.XP, s.Rank, s.Level, s.Zone, s.Streak = 0, 0, 1, 1, 1, 0
+				bossAt, playtimeNext = math.huge, 1
+				refreshPets()
+				mark("Start")
+				continue
+			end
+		end
+		buy()
+	end
+	extras.FinalCoins = s.Coins
+	extras.FinalRank = s.Rank
+	extras.FinalLevel = s.Level
+	extras.FinalPets = petMult
+	extras.FinalBall = ballMult
+	return reached, extras
+end
+
+-- Runs Config.Economy.Sim.Runs players and returns { [goal] = { Median = seconds?, Share = 0..1 } } and the
+-- medians of the extras. config: leave out to use the current Config (tuning scripts pass an edited copy).
 function EconomySim.Simulate(config: any?)
 	config = config or loadConfig()
 	local S = config.Economy.Sim
+	local P = prepare(config)
 	local all: { [string]: { number } } = {}
+	local allExtras: { [string]: { number } } = {}
 	for run = 1, S.Runs do
-		for goal, seconds in EconomySim.RunOne(config, run) do
+		local reached, extras = EconomySim.RunOne(config, run, P)
+		for goal, seconds in reached do
 			all[goal] = all[goal] or {}
 			table.insert(all[goal], seconds)
+		end
+		for name, value in extras do
+			allExtras[name] = allExtras[name] or {}
+			table.insert(allExtras[name], value)
 		end
 	end
 	local results = {}
 	for goal, list in all do
 		results[goal] = { Median = median(list), Share = #list / S.Runs }
 	end
-	return results, config
+	local extras = {}
+	for name, list in allExtras do
+		extras[name] = median(list)
+	end
+	return results, config, extras, P
 end
 
 -- Checks the content rules that don't need a simulation. Returns a list of problems (empty = fine).
-function EconomySim.CheckRules(config): { string }
+function EconomySim.CheckRules(config, P): { string }
 	local problems = {}
-	local E = config.Economy
-	local byRarity = crateBallsByRarity(config)
-	for _, crate in E.Crates do
+	for _, crate in P.Crates do
 		local total = 0
-		for rarity, weight in crate.Odds do
+		for _, weight in crate.Odds do
 			total += weight
-			if weight > 0 and not byRarity[rarity] then
-				table.insert(
-					problems,
-					("%s crate can roll %s, but no ball of that rarity is in crates"):format(crate.Id, rarity)
-				)
-			end
 		end
 		if math.abs(total - 100) > 1e-6 then
 			table.insert(problems, ("%s crate odds add up to %g, not 100"):format(crate.Id, total))
 		end
+		if not next(crate.Pools) then
+			table.insert(problems, crate.Id .. " crate has no balls")
+		end
 	end
-	-- Every crate ball must be reachable from at least one crate (Addendum 1)
+	-- Every crate ball must be reachable from at least one crate
 	for _, ball in config.Balls do
-		if ball.InCrates ~= false then
+		if ball.InCrates ~= false and not ball.Retired then
 			local found = false
-			for _, crate in E.Crates do
-				if (crate.Odds[ball.Rarity] or 0) > 0 then
-					found = true
+			for _, crate in P.Crates do
+				for _, pool in crate.Pools do
+					if table.find(pool, ball) then
+						found = true
+					end
 				end
 			end
 			if not found then
@@ -444,10 +777,10 @@ function EconomySim.CheckRules(config): { string }
 	return problems
 end
 
--- Prints (and returns) the report: the plan's timeline first, then every Power Level, rank, zone and rebirth.
+-- Prints (and returns) the report: the plan's timeline first, then zones, Power Levels, ranks, crates, eggs.
 function EconomySim.Run(config: any?): string
-	local results
-	results, config = EconomySim.Simulate(config)
+	local results, extras, P
+	results, config, extras, P = EconomySim.Simulate(config)
 	local E = config.Economy
 	local lines = {}
 	local function add(text: string)
@@ -456,15 +789,28 @@ function EconomySim.Run(config: any?): string
 	local function get(goal: string): number?
 		return results[goal] and results[goal].Median
 	end
+	local function share(goal: string): string
+		local row = results[goal]
+		if row and row.Share < 1 then
+			return (" (%d%% of players)"):format(row.Share * 100)
+		end
+		return ""
+	end
 
+	local pay = {}
+	for zone = 1, P.BuiltZones do
+		table.insert(pay, ("z%d x%g/x%g"):format(zone, E.Zones[zone].CoinPay or 1, E.Zones[zone].XpPay or 1))
+	end
 	add(
-		("ECONOMY SIMULATOR - %d players, 1 throw every %ds, %d%% good timing"):format(
+		("ECONOMY SIMULATOR - %d players, %g hours each, 1 throw every %gs, PERFECT %d%%; zone pay coins/XP: %s"):format(
 			E.Sim.Runs,
+			E.Sim.Minutes / 60,
 			E.Sim.ThrowSeconds,
-			E.Sim.GoodShare * 100
+			E.Sim.PerfectShare * 100,
+			table.concat(pay, ", ")
 		)
 	)
-	for _, problem in EconomySim.CheckRules(config) do
+	for _, problem in EconomySim.CheckRules(config, P) do
 		add("RULE PROBLEM: " .. problem)
 	end
 	add("")
@@ -488,54 +834,90 @@ function EconomySim.Run(config: any?): string
 			mismatches += 1
 		end
 		add(
-			("%-32s  %5s-%-6s  %9s   %s"):format(
-				row.Text,
-				clock(row.From * 60),
-				clock(row.To * 60),
-				clock(seconds),
-				check
-			)
+			("%-32s  %5s-%-6s  %9s   %s"):format(row.Text, clock(row.From * 60), clock(row.To * 60), clock(seconds), check)
 		)
 	end
 	add(("%d mismatch(es)"):format(mismatches))
 
 	add("")
-	add("POWER LEVELS (first run)")
-	for level = 2, #E.PowerLevels do
-		local share = results["Level" .. level] and results["Level" .. level].Share or 0
+	add("ZONES")
+	for zone = 2, P.BuiltZones do
 		add(
-			("  Level %-2d  %-9s  price %-6s%s"):format(
-				level,
-				clock(get("Level" .. level)),
-				short(E.PowerLevels[level].Price),
-				if share > 0 and share < 1 then ("  (%d%% of players)"):format(share * 100) else ""
+			("  Zone %d %-18s opens %-8s%s   coins/min (first 5 min there) %s"):format(
+				zone,
+				E.Zones[zone].Name,
+				clock(get("Zone" .. zone)),
+				share("Zone" .. zone),
+				if extras["CoinsPerMin" .. zone] then short(extras["CoinsPerMin" .. zone]) else "-"
 			)
 		)
 	end
-	add("RANKS (first run)")
+	add("POWER LEVELS")
+	for level = 2, #E.PowerLevels do
+		add(
+			("  Level %-2d  price %-7s %-8s%s"):format(
+				level,
+				short(E.PowerLevels[level].Price),
+				clock(get("Level" .. level)),
+				share("Level" .. level)
+			)
+		)
+	end
+	add("RANK LEVELS (a new tier every 6)")
 	local rankLine = {}
-	for _, rank in { 2, 3, 5, 8, 10, 12, 15, 20, 22, 25, 30, 35, 40, 50, 60 } do
-		table.insert(rankLine, ("r%d %s"):format(rank, clock(get("Rank" .. rank))))
+	for _, rank in { 5, 7, 12, 13, 19, 22, 25, 31, 37, 43, 49, 55, 60 } do
+		table.insert(rankLine, ("L%d %s"):format(rank, clock(get("Rank" .. rank))))
 	end
 	add("  " .. table.concat(rankLine, " | "))
-	add("ZONES (first run)")
-	for index = 2, #E.Zones do
-		add(("  Zone %d %-15s %s"):format(index, E.Zones[index].Name, clock(get("Zone" .. index))))
+	add("FIRST OF EACH CRATE (price)")
+	for _, crate in P.Crates do
+		add(
+			("  z%d %-17s %-7s %-8s%s"):format(
+				crate.Zone,
+				crate.Name,
+				short(crate.Price),
+				clock(get("Crate" .. crate.Id)),
+				share("Crate" .. crate.Id)
+			)
+		)
 	end
-	add(("FIRST MASCOT %s   FIRST CRATE OPENED %s"):format(clock(get("FirstMascot")), clock(get("FirstCrateOpened"))))
-	add("REBIRTHS")
-	add(("  First rebirth ready  %s"):format(clock(get("RebirthReady"))))
+	add("FIRST OF EACH EGG (price)")
+	for _, egg in P.Eggs do
+		add(
+			("  z%d %-17s %-7s %-8s%s"):format(
+				egg.Zone,
+				(config.EggLooks[egg.Id] or {}).Name or egg.Id,
+				short(egg.Price),
+				clock(get("Egg" .. egg.Id)),
+				share("Egg" .. egg.Id)
+			)
+		)
+	end
+	add(
+		("AFTER %g HOURS: rank level %d, Power Level %d, ball x%.2f, pets x%.2f, %s coins in the bank"):format(
+			E.Sim.Minutes / 60,
+			extras.FinalRank or 0,
+			extras.FinalLevel or 0,
+			extras.FinalBall or 1,
+			extras.FinalPets or 1,
+			short(extras.FinalCoins or 0)
+		)
+	)
+	add(
+		("First boss %s, first challenge win %s, first rebirth ready %s"):format(
+			clock(get("Boss")),
+			clock(get("Challenge")),
+			clock(get("RebirthReady"))
+		)
+	)
 	for n = 1, E.Sim.Rebirths do
 		local tag = "@R" .. n
 		if results["Start" .. tag] then
-			local zone3 = get("Zone3" .. tag)
-			local firstZone3 = get("Zone3")
 			add(
-				("  Run %d: Zone 2 %s, Zone 3 %s (%s of the first run; plan wants about 40%%), next rebirth %s"):format(
+				("  Run %d: Zone 3 %s, Zone 4 %s, next rebirth %s"):format(
 					n + 1,
-					clock(get("Zone2" .. tag)),
-					clock(zone3),
-					if zone3 and firstZone3 then ("%d%%"):format(zone3 / firstZone3 * 100) else "?",
+					clock(get("Zone3" .. tag)),
+					clock(get("Zone4" .. tag)),
 					clock(get("RebirthReady" .. tag))
 				)
 			)
@@ -589,13 +971,13 @@ function EconomySim.Sheet(config: any?): string
 			)
 		)
 	end
-	row("First crate (Basic)", E.Crates[1].Price, "FirstCrate")
+	row("First crate (Alley)", config.Onboarding.FirstCratePrice or E.Crates[1].Price, "FirstCrateOpened")
 	previous = 0 -- the crate is a side purchase; Power Level waits count from the start
 	for level = 2, #E.PowerLevels do
 		row("Power Level " .. level, E.PowerLevels[level].Price, "Level" .. level)
 	end
 	local zones = {}
-	for index = 2, #E.Zones do
+	for index = 2, math.min(config.Zones.BuiltZones, #E.Zones) do
 		table.insert(zones, ("%d at %s"):format(index, clock(at("Zone" .. index))))
 	end
 	add("Zones open: " .. table.concat(zones, ", "))
