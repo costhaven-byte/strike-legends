@@ -433,6 +433,7 @@ function HatchScene.Play(ctx: Context): () -> ()
 
 		local size = height * SETTINGS.PetSize
 		local model = MascotView.Mascot(mascot, size)
+		MascotView.Soften(model)
 		local rest = center + Vector3.yAxis * SETTINGS.PetLift
 		local toCamera = (shot.Position - rest) * Vector3.new(1, 0, 1)
 		local face = if toCamera.Magnitude > 0.01 then toCamera.Unit else facing

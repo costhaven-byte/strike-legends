@@ -60,6 +60,7 @@ local function refresh(player: Player)
 				table.insert(list, reuse)
 			else
 				local model = MascotView.Mascot(mascot, FX.Size)
+				MascotView.Soften(model)
 				model.Name = player.Name .. "_" .. id
 				local rig = PetIdle.Rig(model, (mascot.Base or mascot).Model or (mascot.Base or mascot).Id, 1)
 				model.Parent = folder

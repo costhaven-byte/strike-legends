@@ -225,6 +225,19 @@ function MascotView.Dress(model: Model, mascot, size: number, effects: boolean?)
 	end
 end
 
+-- Tones a pet's glow down for the world (Config.MascotFx NeonDim, LightDim); UI views keep full colour
+function MascotView.Soften(model: Instance)
+	local fx = Config.MascotFx
+	for _, piece in model:GetDescendants() do
+		if piece:IsA("BasePart") and piece.Material == Enum.Material.Neon then
+			local h, s, v = piece.Color:ToHSV()
+			piece.Color = Color3.fromHSV(h, s, v * fx.NeonDim)
+		elseif piece:IsA("Light") then
+			piece.Brightness *= fx.LightDim
+		end
+	end
+end
+
 -- An egg: the real model (PetModels.Egg_<id>) when there is one, otherwise a stretched ball with coloured spots.
 -- height = studs tall.
 function MascotView.Egg(eggId: string, height: number): Model

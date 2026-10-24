@@ -32,7 +32,7 @@ function BallFx.Dim(root: Instance)
 			or item:IsA("BillboardGui")
 			or item:IsA("SurfaceGui")
 		then
-			item.Brightness *= VFX.Dim
+			item.Brightness *= VFX.Dim * (if item:IsA("Light") then VFX.LightDim else 1)
 		end
 	end
 end

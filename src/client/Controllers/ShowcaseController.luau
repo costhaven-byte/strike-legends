@@ -726,6 +726,7 @@ local function buildMascotShelf(shelf: BasePart, parent: Instance, list: { any }
 				end
 				local shown = Mascots.Get(id) or mascot
 				local model = MascotView.Mascot(shown, FX.ShelfSize)
+				MascotView.Soften(model)
 				-- Real pets come in their own sizes: the wide ones (wings, orbit rings) shrink to fit their spot
 				local _, box = model:GetBoundingBox()
 				local widest = math.max(box.X, box.Z)

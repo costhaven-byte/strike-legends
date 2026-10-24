@@ -103,10 +103,11 @@ Config.Throw = {
 	},
 	-- How loud the level effects are (owner 2026-10-18: "exaggerate them a bit more"). Bigger = stronger.
 	LevelFx = {
+		-- 2026-10-25 owner: ball light too bright (was range 8 + 2/level, brightness 1 + 0.45/level = 6.4 at level 12)
 		GlowRange = 8, -- the ball's light: range in studs...
-		GlowRangePerLevel = 2,
-		GlowBrightness = 1, -- ...and brightness
-		GlowBrightnessPerLevel = 0.45,
+		GlowRangePerLevel = 1.5,
+		GlowBrightness = 0.7, -- ...and brightness
+		GlowBrightnessPerLevel = 0.2,
 		TrailWidth = 0.5, -- power trail: half its width, as a share of the ball (+ per level)...
 		TrailWidthPerLevel = 0.05,
 		TrailMaxWidth = 3.2, -- studs, half width; never wider than the lane (Config.Lane.LaneHalfWidth = 4)
@@ -116,7 +117,7 @@ Config.Throw = {
 		SparkRatePerLevel = 25,
 		SparkSize = 0.5, -- spark size in studs, plus this share of the ball
 		FireSize = 1.5, -- flames, times the ball size
-		AuraFill = 0.45, -- 0 = solid glow, 1 = no glow
+		AuraFill = 0.6, -- 0 = solid glow, 1 = no glow (was 0.45 before 2026-10-25)
 		ReleaseBurst = 12, -- burst of the level's colour from the hand on release: sparks per level...
 		ReleaseRingFromLevel = 4, -- ...plus a shockwave ring from this level
 		LevelSoundDrop = 0.05, -- every level the ball sounds this much deeper...
@@ -870,6 +871,7 @@ Config.BallFx = {
 local WHITE = Color3.fromRGB(255, 255, 255)
 Config.BallVfx = {
 	Dim = 0.8, -- every ball effect's glow (lights, trails, sparkles) is this bright; lower = dimmer (owner 2026-10-22: a tad too bright)
+	LightDim = 0.6, -- the ball's own lights on top of Dim (owner 2026-10-25: light from the ball too bright)
 	HeldRate = 0.5, -- the ball in your hand uses this share of the sparkles (no trail, floor rings or badge)
 	Images = {
 		Ring = "rbxassetid://132592068787018",
@@ -2461,6 +2463,10 @@ Config.EggStands = {
 -- How mascots look and move, and the hatching moment
 Config.MascotFx = {
 	Size = 1.6, -- studs across
+	-- Pets out in the world (following you, on the shelf, hatching) glow less (owner 2026-10-25: too bright):
+	-- their Neon parts' colour times NeonDim (Neon glows as bright as its colour), their lights times LightDim
+	NeonDim = 0.7,
+	LightDim = 0.5,
 	FollowDistance = 4.5, -- studs behind the player (the first row; more mascots fan out to the sides)
 	Spacing = 2.6, -- studs between mascots side by side
 	FollowSpeed = 8, -- how fast they catch up (higher = snappier)

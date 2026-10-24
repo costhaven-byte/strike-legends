@@ -96,7 +96,7 @@ local function attach(body: BasePart, part: BasePart)
 end
 
 -- Zone pin sets: ReplicatedStorage.PinModels.<zone folder> holds StandardPin and GoldenPin models (several
--- coloured MeshParts, bottom centre at the pivot, PrimaryPart "Body"). Back Alley's beat-up pins come from the
+-- coloured MeshParts, PrimaryPart "Body"; stood on their bottom, any pivot). Back Alley's beat-up pins come from the
 -- owner's design; the Golden Pin bonus uses the design's Golden Star pin.
 local function buildZonePin(set: Instance, baseCFrame: CFrame, scale: number, golden: boolean): Model?
 	local template = set:FindFirstChild(if golden then "GoldenPin" else "StandardPin")
@@ -107,7 +107,10 @@ local function buildZonePin(set: Instance, baseCFrame: CFrame, scale: number, go
 	local pin = template:Clone()
 	local _, size = pin:GetBoundingBox()
 	pin:ScaleTo(h / size.Y)
-	pin:PivotTo(baseCFrame)
+	-- Stand it on its bottom whatever the template's pivot is (the designed pins pivot at their middle)
+	local box = pin:GetBoundingBox()
+	local lift = pin:GetPivot().Position.Y - (box.Position.Y - h / 2)
+	pin:PivotTo(baseCFrame * CFrame.new(0, lift, 0))
 	local body = pin.PrimaryPart :: BasePart
 	body.CustomPhysicalProperties = PhysicalProperties.new(LANE.PinDensity, 0.4, 0.3)
 	for _, part in pin:GetDescendants() do
