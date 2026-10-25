@@ -34,6 +34,6 @@ Restore point: git tag restore-step8b-before. Real game = cloud place 9425460960
 ## Off-git (saved only in the Studio place file)
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
 ## Last session
-- 2026-10-25 (26): HUD quick-buy pills for the COIN/XP ladders (right of the multiplier badge, b3d91f7, test PENDING); store UI design prompt in ASSET_PROMPTS.md (Store UI section) for the owner to run in Claude Design.
+- 2026-10-25 (26): HUD quick-buy pills for the COIN/XP ladders (right of the multiplier badge, b3d91f7, PASSED); store UI design prompt in ASSET_PROMPTS.md (Store UI section) for the owner to run in Claude Design.
 - 2026-10-25 (25): owner: boosts double each buy up to x16 -> two ladders (coins, XP), store shows next step / MAXED. Studio-tested (out-of-order buy refused, x16 max, XP x4). Test PENDING.
 - 2026-10-25 (24): 12a rework per owner (test PENDING, tag restore-12a-before still the restore point): cheap COIN BOOST ladder, Auto Bowl strikes, new pass lineup (above). Studio-tested: passes, boost x3.45, VIP gems, triple crate + egg, luck x3 odds, auto = Strike.
