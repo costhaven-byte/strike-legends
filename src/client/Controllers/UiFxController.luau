@@ -14,7 +14,8 @@ local SILENT_BUTTONS = {
 local UiFxController = {}
 
 local function setup(object: Instance)
-	if object:IsA("GuiButton") then
+	-- OwnPress: the button animates and clicks by itself (the store's chunky buttons)
+	if object:IsA("GuiButton") and not object:GetAttribute("OwnPress") then
 		UiFx.Press(object, SILENT_BUTTONS[object.Name] == true)
 	end
 end

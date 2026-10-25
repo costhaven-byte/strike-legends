@@ -36,4 +36,37 @@ AssetSlots.Sounds = {
 	ElevatorDing = { Id = nil, Volume = 0.6, StandIn = "Coin", StandInPitch = 0.6 }, -- elevator doors open (zone 3 <-> roof)
 }
 
+-- Images: the owner's store kit icons (claude.ai/design 'Strike Legends Store', 2026-10-25; files in
+-- assets/store_icons). Robux is the one R$ price mark: swap it here to change every price.
+AssetSlots.Images = {
+	Robux = 80208245592445,
+	StoreBag = 119226308483229,
+	Coin = 92524999373079,
+	Gem = 103711559718524,
+	XpStar = 107396472935904,
+	BoostCoin = 90447434891553,
+	BoostXp = 95906571584466,
+	Boost15 = 115844450036931,
+	Pass2x = 121415610421171,
+	PassVip = 118878841892191,
+	PassAuto = 114442555890368,
+	PassLucky = 85937808730956,
+	PassSuperLucky = 87885062897128,
+	PassTriple = 130744482024430,
+	PassPets = 70856062563570,
+	Gems60 = 73610984970518,
+	Gems300 = 81381495615677,
+	Gems1500 = 106361366840877,
+	BallDumpster = 95552734682799,
+	Gift = 123387103603228,
+	Shine = 132724742675090, -- the idle shine stripe on the STORE button and boost pills
+	Halftone = 77494663967744, -- one dot, tiled for the halftone texture on cards and pills
+}
+
+-- "rbxassetid://..." for an Images slot
+function AssetSlots.Image(name: string): string
+	local id = AssetSlots.Images[name]
+	return if id then "rbxassetid://" .. id else ""
+end
+
 return AssetSlots
