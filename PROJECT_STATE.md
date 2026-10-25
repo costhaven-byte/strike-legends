@@ -34,6 +34,7 @@ Restore point: git tag restore-step8b-before. Real game = cloud place 9425460960
 ## Off-git (saved only in the Studio place file)
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
 ## Last session
-- 2026-10-25 (27): owner's Store Kit design built (StoreController rewritten: STORE button, boost pills now side by side ABOVE the coin counter per owner, window with BOOSTS/PASSES/GEMS tabs, cards, Starter popup, THANK YOU toast). Restore tag restore-store-ui-before. Studio-tested. Test PENDING.
+- 2026-10-26 (28): Store UI PASSED. HUD moves (owner): GIFTS tucked into the top-right corner, TELEPORT right under it, DAILY under POWER LV, STORE where DAILY was (right of PETS); Studio TEST buttons right of POWER LV; phones: streak shifted left of TELEPORT. Studio-tested on computer. Test PENDING. ASSET_PROMPTS.md: "UI placeholders still in use" list + 7 Claude Design prompts.
+- 2026-10-25 (27, PASSED): owner's Store Kit design built (StoreController rewritten: STORE button, boost pills now side by side ABOVE the coin counter per owner, window with BOOSTS/PASSES/GEMS tabs, cards, Starter popup, THANK YOU toast). Restore tag restore-store-ui-before.
 - 2026-10-25 (26): HUD quick-buy pills for the COIN/XP ladders (right of the multiplier badge, b3d91f7, PASSED); store UI design prompt in ASSET_PROMPTS.md (Store UI section) for the owner to run in Claude Design.
 - 2026-10-25 (25): owner: boosts double each buy up to x16 -> two ladders (coins, XP), store shows next step / MAXED. Studio-tested (out-of-order buy refused, x16 max, XP x4). Test PENDING.

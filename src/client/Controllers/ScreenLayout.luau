@@ -17,8 +17,9 @@ local COMPACT = {
 	["HUD.Bar.Coins"] = { Size = UDim2.new(1, 0, 0, 28) },
 	["HUD.Bar.Gems"] = { Size = UDim2.new(1, 0, 0, 28) },
 	["BallsUI.Menu"] = { Position = UDim2.fromOffset(12, 76) },
-	["DailyUI.DailyButton"] = { Position = UDim2.fromOffset(138, 76) }, -- right of BALLS and PETS
-	["HUD.Streak"] = { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -44, 0, 66) },
+	["DailyUI.DailyButton"] = { Position = UDim2.fromOffset(12, 196 + 50 + 8) }, -- under the POWER LV button (STORE is right of PETS)
+	-- Left of the TELEPORT button (under GIFTS in the top-right corner)
+	["HUD.Streak"] = { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -60, 0, 66) },
 
 	-- Throw meters: a shorter panel so the lane stays visible, power meter kept above the jump button
 	["ThrowUI.Panel"] = { Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(0.5, 0, 0, 118) },

@@ -244,3 +244,104 @@ Please give me:
 4. Simple animation notes (open/close, button press, buy success, the boost pills' idle shine) that a game engine can do with scale, position, rotation and transparency tweens only.
 5. The icons as separate flat images (transparent PNG) so I can upload them: store button icon, each pass icon, gem packs, boost arrows, the R$ price mark.
 ```
+
+---
+
+## UI placeholders still in use (2026-10-26)
+
+Already the owner's own design (keep as is): the power meter + charge zones, the result text (STRIKE!, PERFECT...), the payout pop + floating numbers (UI batch 1), and the whole Store Kit (STORE button, boost pills, store window, Starter Pack popup, thank-you toast). Everything else on screen is still Claude's placeholder look. The fonts are stand-ins too (Montserrat Heavy Italic for Rubik, Fredoka One for Lilita One).
+
+Placeholders, grouped the same way as the prompts below:
+1. HUD: coin + gem counters, multiplier badge (gold "x9.7K"), level bar, streak panel, BALLS / PETS / DAILY / GIFTS / TELEPORT / REBIRTH buttons, POWER LV button, HOLD! button + hint line, lane modifier pill with timer, "FREE CRATE IN N THROWS" goal bar, potion timers, "+XP +GEMS" line after a throw, coin/gem fly-in icons.
+2. Collection book (BALLS window) and the multiplier breakdown card.
+3. Crate shop screen, ODDS view, crate opening reel, new-ball reveal, Legendary/Mythic pull banner.
+4. Pets panel (slots, EQUIP BEST, MERGE, ITEMS tab with potion cards) and the egg hatch card.
+5. Daily reward calendar, playtime GIFTS panel, daily spin prize card.
+6. Big moments: level-up popup, rank-up celebration, rank trial (READY button, intro, tracker, PASSED/FAILED), zone unlocked window, milestone tracker + payout popup, Golden Pin / LUCKY! / bonus gems / free crate popups, lane modifier banner, first-3-minutes callouts and arrows.
+7. Windows: TELEPORT window, REBIRTH window, boss and elevator toasts, Rizzo's speech bubble.
+
+How to use: in Claude Design, paste the Shared style block first, then one prompt (one per design project). Bring the result back to Claude Code, which rebuilds it in Roblox. Every piece already works in the game; these designs replace only the look.
+
+### Shared style block (paste this first, every time)
+
+```
+Game: "Strike Legends", a Roblox bowling simulator for kids and teens (ages 9 to 15). Match my existing Store Kit design exactly: dark navy panels (#070B1E, cards #1E143C), thick dark ink outlines (#04061A) around every text and button, chunky rounded corners with a darker bottom lip so buttons look pressable, bright neon accents: gold #FFC93A, cyan #2BE4FF, hot pink #FF4FB0, lime #7DFF3C, red #FF2D4A. Big bold cartoon headings, short punchy words, all caps. Rarity colours: Common grey, Uncommon green, Rare blue, Epic purple, Legendary gold, Mythic red-pink. Only fonts Roblox has: Luckiest Guy (headings and buttons), Fredoka One (numbers), Gotham Bold / Black (small text). Exciting and generous, never pushy: no fake timers, every popup has an obvious way to close it.
+
+Design for a computer (1920x1080) and a phone held sideways (844x390; the top 36 px are Roblox's own bar and the bottom-left corner has the movement thumbstick, keep tappable things out of it). Every tappable thing is at least 44x44 px on the phone.
+
+Please give me: full-screen mockups on both screens; each piece on its own with sizes in px, corner radius, outline thickness, font, font size and hex code for every colour; every state (normal, pressed, locked, ready, done); simple animation notes using only scale, position, rotation and transparency tweens; and every icon as a separate transparent PNG so I can upload it. Where a 3D ball or pet will spin, leave an empty slot and label it "3D SLOT".
+```
+
+### Prompt 1: the HUD
+
+```
+Design the always-on HUD (the screen while bowling). Keep my Store Kit pieces exactly as they are: the gold STORE button and the two small boost pills ("x2 COINS / R$ 3" and "x2 XP / R$ 15") side by side above the coin counter.
+
+Computer layout, left side top to bottom: the two boost pills; the coin counter (coin icon + "9.55M") with a small gold multiplier badge to its right ("x9.7K", tapping it opens a breakdown); the gem counter (gem icon + "61"); a row of three square 56x56 buttons with a caption under the icon: BALLS (shows the equipped ball, cyan), PETS (pink), STORE (gold, already designed); under them the wide POWER LV button (176x66): "POWER LV 12" and a second line that is the next upgrade's price with a bar that fills as coins come in, a glowing "BUY!" state when affordable, or "MAX POWER!"; right under it the DAILY button (56x56, gift icon, red dot when a reward is waiting; locked state = grey with a lock and "12 THROWS").
+Top centre: the level bar, a wide pill "LV 36 PRO · 253K XP TO LV 37" with an XP fill. Right of it the REBIRTH button (56x56; locked state grey with "ZONE 3").
+Top-right corner: the GIFTS button (56x56, pink gift box, caption = time to the next gift "14:44", or "GIFTS" when one is ready, with a red count badge) and right under it the TELEPORT button (56x56, cyan portal icon).
+Right side, middle: the STREAK panel (about 120x120: "STREAK", a big number, the tier name e.g. "HEATING UP", and "x1 COINS & XP"). Under it the lane modifier pill ("MOVING GOLD 1:12"; others are DOUBLE COINS, GIANT PINS, LUCKY LANE) and the goal bar ("FREE CRATE IN 148 THROWS" with a fill).
+Bottom-left: running potion timers, one small card per potion (potion icon + "COIN POTION" + "4:59").
+Bottom centre: the HOLD! button (160x50, pink) with the hint line above it "HOLD - LET GO IN THE GOLD, OR GAMBLE ON RED". The power meter arc and the result text are already designed; leave room for them in the middle.
+After a throw: a short line under the level bar "+1.2K XP  +2 GEMS", and small coin and gem icons that fly from the lane into the counters.
+Phone: the same pieces, smaller (buttons 44x46), compact: counters and menu buttons top-left above the thumbstick, level bar alone at the top, GIFTS and TELEPORT top-right, streak left of TELEPORT. Show where each one goes.
+```
+
+### Prompt 2: collection book and multiplier card
+
+```
+Design two windows.
+1. THE COLLECTION BOOK, opened by the BALLS button. A big book-like panel (about 900x600 on a computer, nearly full screen on a phone) with one page per rarity: tabs COMMON, UNCOMMON, RARE, EPIC, LEGENDARY, MYTHIC in their rarity colours, and a counter "12 / 31 FOUND". Each page is a grid of ball cards. Owned card: a 3D SLOT, the ball name, trait chips (CURVE 20%, HEAVY, FORGIVENESS, LUCKY, BOUNCY, MAGNET), "POLISH 3/10" with a small bar, an EQUIP button (EQUIPPED state = lime with a tick) and a small gem button "POLISH  12 gems". Missing card: a dark silhouette of the ball, the name greyed out, the traits still shown, and "FIND IN: SILVER CRATE". Close X top-right.
+2. THE MULTIPLIER CARD, opened by tapping the gold multiplier badge next to the coins. About 360x420: title "COIN MULTIPLIER", the big total "x9.7K", one row per source with icon + name + value: POWER LEVEL x40, BALL x3.2, PETS +120%, RANK x2, STREAK x1, ZONE x16, LANE EVENT x2, STORE BOOSTS x4; then a section "ON SPECIAL THROWS": PERFECT x2, OVERCHARGE x2, GOLDEN PIN x5. Close X.
+```
+
+### Prompt 3: crates
+
+```
+Design the crate screens.
+1. THE CRATE SHOP SCREEN (opens from the lobby kiosk, Rizzo and the crate counters). About 900x560 with one card per crate side by side; show 3: BRONZE CRATE 75K, SILVER CRATE 750K, GOLD CRATE 65M (later zones use the same card for LEAGUE, CHAMPION, SKY BRONZE, SKY SILVER, SKY GOLD). Each card: crate picture, name in its metal colour, price with a coin icon, a lime BUY button (grey "NEED 12.3M MORE" when you can't afford it), an ODDS button, and a pity line "EPIC GUARANTEED IN 23 OPENS". Special first-crate state: a "93% OFF" tag and a crossed-out price ("15K" crossed out, "1,000").
+2. THE ODDS VIEW: the card turned into a list of every ball in that crate with its rarity colour and chance ("THE VOID  MYTHIC  0.05%"), plus a "LUCKY x1.5" note when the player owns the LUCKY pass.
+3. THE OPENING REEL: dark full-screen overlay, a horizontal strip of ball tiles with rarity-coloured frames that spins fast and slows onto the prize under a centre marker.
+4. THE REVEAL: the ball big in the middle (3D SLOT), rarity name in its colour with rays behind it, the ball name, its traits, "NEW!" or "DUPLICATE: POLISH 4/10", buttons EQUIP and OK. Bigger rays and confetti for Legendary and Mythic.
+5. THE PULL BANNER: a thin banner under the level bar shown to everyone in the server, about 520x44: "SAM PULLED THE VOID (MYTHIC)!" in the rarity's colour with a shine sweep.
+```
+
+### Prompt 4: pets
+
+```
+Design the pet screens (players always see "PETS").
+1. THE PETS PANEL, opened by the PETS button. About 820x560, tabs PETS and ITEMS. PETS tab: a row of equipped slots at the top (3 open slots, then locked slots "LV 15" and "LV 30", plus 2 more with the +2 PET SLOTS pass), an EQUIP BEST button, the total bonus "+186% COINS", then a grid of owned pet cards: 3D SLOT, name, rarity colour frame, bonus "+12%", count "x3", EQUIP / UNEQUIP, and a MERGE button when you own 3 ("MERGE 3 > SHINY"). Shiny pets get a gold crown and a sparkle frame. Empty state: "NO PETS YET - HATCH THE NEON EGG IN THE LOBBY". ITEMS tab: potion cards (COIN POTION, MEGA COIN POTION, XP POTION) with an icon, "x2 COINS FOR 5:00", how many you own "x4" and a DRINK button.
+2. THE HATCH CARD (after the egg cracks): the pet big in the middle (3D SLOT) with rays in its rarity colour, rarity name, pet name, "+12% COINS", "NEW!" and OK; a triple-hatch version with 3 cards side by side.
+```
+
+### Prompt 5: daily rewards, gifts, spin prize
+
+```
+Design three reward windows.
+1. DAILY REWARDS calendar (opens on join when a reward is waiting, and from the DAILY button). About 760x460. Title "DAILY REWARDS", "DAY 3", a row of 7 day tiles: "DAY 1".."DAY 7", a reward icon and text ("25K COINS", "10 GEMS", "COIN POTION", "BRONZE CRATE"). States: CLAIMED (dimmed, tick), TODAY (glowing, bigger), LOCKED (dark). Day 7 is a big gold tile (GOLD CRATE). A big lime CLAIM button, which becomes "COME BACK IN 18:22:05" after claiming, and a small line "MISS A DAY? YOU GET 1 GRACE DAY". Close X.
+2. PLAYTIME GIFTS panel (from the GIFTS button). About 760x500. Title "FREE GIFTS", line "A NEW GIFT EVERY 15 MINUTES YOU PLAY", a 4x3 grid of 12 gift boxes. States: READY (bouncing, lime CLAIM button), COUNTING ("12:34" under a closed box), CLAIMED (open box, tick, what it gave e.g. "50K COINS"), LOCKED (later ones). Boxes grow from small pink to big gold toward gift 12.
+3. SPIN PRIZE CARD (after the daily spin wheel stops): about 360x240, "YOU WON!", the prize icon and text ("XP POTION", "NEON EGG", "2,500 GEMS"), OK button.
+```
+
+### Prompt 6: big moments and popups
+
+```
+Design the celebration popups. They show over the game for 2-4 seconds unless they have a button.
+1. LEVEL UP: a centre burst "LEVEL UP!" with "LV 37" and the rewards under it ("+2 GEMS", and every 3rd level "+ FREE BASIC CRATE").
+2. RANK UP (full screen): "RANK UP!" with the new tier badge and name. Give each tier its own badge shape and colour: Rookie, Amateur, Regular, Pro, League Star, All-Star, Champion, Legend, Icon, Hall of Famer. Confetti and a CONTINUE button.
+3. RANK TRIAL: a pulsing "RANK TRIAL READY" button (140x40); the intro popup "PRO TRIAL - GET 3 STRIKES IN 10 THROWS" with START and LATER; a small live tracker (title, one dot per strike needed, "6 THROWS LEFT"); a big "PASSED!" banner (lime) and "FAILED" banner (red, "TRY AGAIN IN 2:00").
+4. ZONE UNLOCKED window: "ZONE UNLOCKED!", the zone name ("MAIN STREET LANES"), "x16 COINS · 100 PINS", a row of 3D SLOTs for what's new there (balls, crate, egg), a "TAKE ME THERE" button and CLOSE.
+5. MILESTONES: a small tracker on the left under the POWER LV button ("CHALLENGE: 3 STRIKES IN A ROW  1/3"), a "NEXT LEVEL REWARD: LV 9 - SILVER CRATE" preview card under it, and the payout popup "CHALLENGE DONE!" with the reward.
+6. LANE POPUPS, short punchy bursts near the top centre: "GOLDEN PIN!" (gold, x5), "LUCKY!" (lime clover), "+5 BONUS GEMS" (cyan), "FREE CRATE!" (pink); and the lane modifier start banner "DOUBLE COINS FOR 2 MINUTES!".
+7. FIRST-3-MINUTES CALLOUTS: a big "HOLD... THEN LET GO!" callout over the meter on the very first throw, a bouncing "BUY POWER LV 2!" bubble with an arrow at the POWER LV button, a "TRY YOUR NEW BALL!" arrow at an EQUIP button, and a floating "GO HERE" marker over the crate kiosk.
+```
+
+### Prompt 7: teleport, rebirth and small toasts
+
+```
+Design these windows.
+1. TELEPORT window (from the TELEPORT button). About 640x460. Title "TELEPORT", one card per zone: BACK ALLEY, NEON LANES, MAIN STREET LANES, SKYLINE LANES. Each card: a small zone picture, the zone name in the zone's colour, "x4 COINS", and a GO button; a locked card has a lock and "REACH LV 25"; the zone you are in says "YOU ARE HERE". Close X.
+2. REBIRTH window (from the REBIRTH button). About 560x480. Title "REBIRTH", three blocks: "YOU GO BACK TO" (Back Alley, Power Level 1, 0 coins), "YOU KEEP" (balls, pets, gems, rank level), "YOU GET FOREVER" ("x2 COINS" big, "+1 LEVEL"), then "NEXT REBIRTH NEEDS 32M COINS". A big REBIRTH button whose second state says "TAP AGAIN TO REBIRTH", a NOT YET button, and a short "REBIRTH!" celebration after.
+3. SMALL TOASTS (about 340x56, top centre, 3 seconds): "NEXT BOSS FLIGHT IN 12:30", "FLY TO THE BOSS!", "GOING UP...", "COMING SOON", "DONE! AGAIN IN 4:59".
+4. RIZZO'S SPEECH BUBBLE: a comic speech bubble over the crate dealer's head (about 260x80, white with an ink outline and a tail), lines like "YO! FIRST CRATE'S 93% OFF!" and "NICE PULL!!".
+```

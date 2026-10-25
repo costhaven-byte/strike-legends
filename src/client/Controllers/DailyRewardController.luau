@@ -77,9 +77,9 @@ end
 function DailyRewardController:Start()
 	local gui = player:WaitForChild("PlayerGui"):WaitForChild("DailyUI")
 	local openButton = gui:WaitForChild("DailyButton") :: TextButton
-	-- Right of BALLS and PETS (owner 2026-10-22: GIFTS took the top-right corner); ScreenLayout moves it on phones
+	-- Right under the POWER LV button (owner 2026-10-25; STORE took its old spot right of PETS); ScreenLayout moves it on phones
 	openButton.AnchorPoint = Vector2.new(0, 0)
-	openButton.Position = UDim2.fromOffset(142, 304)
+	openButton.Position = UDim2.fromOffset(16, 372 + 66 + 8)
 	if Config.Ui.HidePlayerList then
 		pcall(function()
 			game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)

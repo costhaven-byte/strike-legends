@@ -216,8 +216,9 @@ function PowerLevelController:Start()
 		test.TextColor3 = Color3.new(1, 1, 1)
 		test.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
 		test.AnchorPoint = Vector2.new(0, 0)
-		test.Position = UDim2.new(0, 0, 1, 4)
-		test.Size = UDim2.new(1, 0, 0, 20)
+		-- Right of the button (DAILY sits right under it)
+		test.Position = UDim2.new(1, 8, 0, 0)
+		test.Size = UDim2.fromOffset(120, 20)
 		test.Parent = button
 		local testCorner = Instance.new("UICorner")
 		testCorner.Parent = test
@@ -235,8 +236,8 @@ function PowerLevelController:Start()
 		report.TextScaled = true
 		report.TextColor3 = Color3.new(1, 1, 1)
 		report.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-		report.Position = UDim2.new(0, 0, 1, 28)
-		report.Size = UDim2.new(1, 0, 0, 20)
+		report.Position = UDim2.new(1, 8, 0, 24)
+		report.Size = UDim2.fromOffset(120, 20)
 		report.Parent = button
 		local reportCorner = Instance.new("UICorner")
 		reportCorner.Parent = report

@@ -32,7 +32,7 @@ local GOLD = Color3.fromRGB(255, 200, 40)
 local GREY = Color3.fromRGB(120, 110, 150)
 
 -- The GIFTS button sits in the top-right corner (owner 2026-10-22; Config.Ui.HidePlayerList frees it on computers)
-local BUTTON_NORMAL = UDim2.new(1, -16, 0, 10)
+local BUTTON_NORMAL = UDim2.new(1, -10, 0, 6) -- tucked into the top-right corner (owner 2026-10-25); TELEPORT sits under it
 local BUTTON_COMPACT = UDim2.new(1, -8, 0, 4)
 local PANEL_SIZE = UDim2.fromOffset(640, 380)
 

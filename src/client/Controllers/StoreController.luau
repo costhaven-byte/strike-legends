@@ -1,7 +1,7 @@
 -- STORE (Addendum 2 section 7, step 12a): only while the store is on (Config.Monetization.Enabled, or Studio's free
 -- preview). Looks: the owner's Store Kit (claude.ai/design 'Strike Legends Store', 2026-10-25), sizes and colours as
 -- specced there (sizes include the outline, like the design); icons are AssetSlots.Images.
--- * STORE button (gold, bag icon; computers: bottom-left, right of TELEPORT; phones: right of the REBIRTH spot), with a
+-- * STORE button (gold, bag icon; right of BALLS and PETS, where DAILY was (owner 2026-10-25)), with a
 --   red "!" until the store is opened this session.
 -- * Quick-buy pills on the HUD (owner 2026-10-25): each doubling ladder's next step ("x2 COINS / R$ 3"), right of the
 --   coin multiplier badge; a MAXED ladder's pill shrinks away and the other moves up.
@@ -566,19 +566,14 @@ function StoreController:Start()
 		end)
 	end
 
-	local GAP = 12 -- pixels between the REBIRTH button and this one (phones)
 	local function placeButton()
 		local holder = buttonParts.Holder
+		-- Right of BALLS and PETS, where DAILY used to be (owner 2026-10-25; DAILY moved under POWER LV)
+		holder.AnchorPoint = Vector2.new(0, 0)
 		if compact() then
-			-- Phones: right of the REBIRTH button's spot (right of the level bar), top edges lined up
-			holder.AnchorPoint = Vector2.new(0, 0)
-			local barPos, barSize = rankBar.AbsolutePosition, rankBar.AbsoluteSize
-			local guiTop = gui.AbsolutePosition
-			holder.Position = UDim2.fromOffset(barPos.X - guiTop.X + barSize.X + GAP + 44 + GAP, barPos.Y - guiTop.Y)
+			holder.Position = UDim2.fromOffset(138, 76)
 		else
-			-- Computers: bottom-left, 12 px right of the TELEPORT button (16 px from the edge, 55 wide), bottoms lined up
-			holder.AnchorPoint = Vector2.new(0, 1)
-			holder.Position = UDim2.new(0, 16 + 55 + 12, 1, -16)
+			holder.Position = UDim2.fromOffset(142, 304)
 		end
 	end
 

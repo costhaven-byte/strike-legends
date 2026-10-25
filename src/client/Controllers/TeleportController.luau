@@ -1,6 +1,6 @@
 -- TELEPORT button (owner 2026-10-25): jump straight to any zone you have unlocked. Kept apart from the other HUD
--- buttons (owner: don't put them all next to each other): bottom-left corner on computers; on phones the thumbstick
--- lives there, so it sits left of the level bar instead (the REBIRTH button is on its right). It shows once zone 2 is
+-- buttons (owner: don't put them all next to each other): top-right corner, right under the GIFTS button (owner
+-- 2026-10-25), on computers and phones. It shows once zone 2 is
 -- open (or after a rebirth). Tapping it opens a card per built zone: GO, or the level that opens it.
 -- Arrival spots: Back Alley = behind your own Back Alley lane; zones 2-4 = their Config.Zones.Gated Arrival (the same
 -- spots as the "TAKE ME THERE" button). The server still keeps players out of zones they haven't unlocked (LaneService).
@@ -27,7 +27,7 @@ local CYAN = Color3.fromRGB(60, 220, 255)
 local LIME = Color3.fromRGB(125, 255, 60)
 local GREY = Color3.fromRGB(120, 110, 150)
 local SOFT = Color3.fromRGB(200, 190, 230)
-local GAP = 12 -- pixels between the level bar and the button (phones)
+local GAP = 10 -- pixels between the GIFTS button and this one
 local COOLDOWN = 2 -- seconds between teleports
 
 -- Each zone's colour on its card (zones 2-4 use their lock wall colour)
@@ -145,18 +145,16 @@ function TeleportController:Start()
 
 	local function place()
 		local compact = hud.AbsoluteSize.Y > 0 and hud.AbsoluteSize.Y < Config.Ui.CompactHeight
+		-- Under the GIFTS button in the top-right corner (owner 2026-10-25), right edges lined up
+		openButton.AnchorPoint = Vector2.new(1, 0)
 		if compact then
-			-- Phones: left of the level bar, top edges lined up
-			openButton.AnchorPoint = Vector2.new(1, 0)
+			-- Phones: GIFTS is at (right 8, top 4), 56 tall
 			openButton.Size = UDim2.fromOffset(44, 46)
-			local barPos = rankBar.AbsolutePosition
-			local guiTop = gui.AbsolutePosition
-			openButton.Position = UDim2.fromOffset(barPos.X - guiTop.X - GAP, barPos.Y - guiTop.Y)
+			openButton.Position = UDim2.new(1, -8, 0, 4 + 56 + GAP)
 		else
-			-- Computers: the bottom-left corner
-			openButton.AnchorPoint = Vector2.new(0, 1)
+			-- Computers: GIFTS is at (right 10, top 6), 56 tall
 			openButton.Size = UDim2.fromOffset(55, 56)
-			openButton.Position = UDim2.new(0, 16, 1, -16)
+			openButton.Position = UDim2.new(1, -10, 0, 6 + 56 + GAP)
 		end
 	end
 	rankBar:GetPropertyChangedSignal("AbsolutePosition"):Connect(place)
