@@ -16,6 +16,7 @@ local Rebirth = require(Shared.Modules.Rebirth)
 local ThrowRules = require(Shared.Modules.ThrowRules)
 local Zones = require(Shared.Modules.Zones)
 local Analytics = require(script.Parent.Analytics)
+local AwayService = require(script.Parent.AwayService)
 local BallService = require(script.Parent.BallService)
 local GoldenPinService = require(script.Parent.GoldenPinService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
@@ -239,6 +240,7 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 		if player.Parent then
 			local firstCoins = reward.Coins > 0 and (PlayerDataService.Get(player, "LifetimePins") or 0) == 0
 			PlayerDataService.Add(player, "Coins", reward.Coins)
+			AwayService.OnCoins(player, reward.Coins)
 			if reward.Gems > 0 then
 				PlayerDataService.Add(player, "Gems", reward.Gems)
 			end

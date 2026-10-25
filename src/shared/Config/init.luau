@@ -215,12 +215,14 @@ Config.StartingData = {
 	SpinDay = 0, -- the day number (see Calendar.Day) of the last free spin on the daily spin wheel (Config.Spin; v17)
 	BossNextAt = 0, -- os.time() when the zone 4 helicopter can fly you to the boss again (Config.Boss; v18)
 	Rebirths = 0, -- rebirths done (Config.Economy.Rebirth; v18)
+	LastOnline = 0, -- os.time() when the player last left, for "while you were away" coins (Config.Away; v19)
+	AwayRate = 0, -- coins per second earned from throws near the end of the last visit (Config.Away; v19)
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 18, -- v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 19, -- v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -2868,6 +2870,29 @@ Config.Daily = {
 --   Kind "StrikeStreak" = Goal strikes in a row (a miss starts it over). Cooldown = seconds before it can be done
 --   again after a win (0 = straight away). Reward = like LevelRewards. Add rows to add challenges.
 -- Preview: the tracker also shows the next level reward (Phase X Part 1.3).
+-- "While you were away" coins (Addendum 2 step 11a): coming back pays Share of the coins per second you were earning
+-- from throws over your last RateMinutes of play, for every second away, up to MaxHours (Addendum: capped at 8 hours).
+-- Nothing under MinMinutes away. A rebirth starts the measuring again (so pre-rebirth income can't be paid after it).
+Config.Away = {
+	Enabled = true,
+	Share = 0.25, -- a quarter of your playing income per second away (8 hours away = about 2 hours of play)
+	MaxHours = 8,
+	MinMinutes = 5,
+	RateMinutes = 10, -- income measured over this much of the end of your last visit
+	PopupDelay = 4, -- seconds after joining before the WELCOME BACK popup (after the daily and zone popups start)
+	-- Studio only (Studio tests never save, so you'd never be "away"): every test pretends you were away this long,
+	-- earning at least Rate coins per second. nil = off.
+	StudioTest = { Hours = 2, Rate = 5000 },
+}
+
+-- Friend coin bonus (Addendum 2 step 11a): +BonusPerFriend coins for each Roblox friend in your server, up to MaxBonus
+-- (FRIENDS row in the multiplier panel)
+Config.Friends = {
+	Enabled = true,
+	BonusPerFriend = 0.1,
+	MaxBonus = 0.5,
+}
+
 Config.Milestones = {
 	Enabled = true,
 	LevelRewards = {

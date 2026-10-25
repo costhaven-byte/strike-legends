@@ -16,6 +16,7 @@ local Rebirth = require(Shared.Modules.Rebirth)
 local ThrowRules = require(Shared.Modules.ThrowRules)
 local Zones = require(Shared.Modules.Zones)
 local BallService = require(script.Parent.BallService)
+local FriendService = require(script.Parent.FriendService)
 local MascotService = require(script.Parent.MascotService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local PotionService = require(script.Parent.PotionService)
@@ -24,7 +25,7 @@ local ProgressionService = require(script.Parent.ProgressionService)
 local REFRESH = 0.5 -- seconds between checks for a changed multiplier
 
 -- The order the panel lists them in
-local ORDER = { "Zone", "PowerLevel", "Ball", "Mascots", "Potion", "Rank", "Rebirth", "Streak", "Modifier" }
+local ORDER = { "Zone", "PowerLevel", "Ball", "Mascots", "Potion", "Rank", "Rebirth", "Friends", "Streak", "Modifier" }
 
 local MultiplierService = {}
 
@@ -40,6 +41,7 @@ function MultiplierService.Coins(player: Player, ball, level, streak: number, mo
 		Potion = PotionService.Multiplier(player, "Coins"), -- Coin Potion x2 / Mega Coin Potion x4 (Config.Potions)
 		Rank = Progression.GetRank(ProgressionService.GetCurrentRankIndex(player)).Multiplier,
 		Rebirth = Rebirth.CoinMultiplier(PlayerDataService.Get(player, "Rebirths")), -- Phase X rebirth stub
+		Friends = FriendService.Multiplier(player), -- +10% per friend in the server (Config.Friends, step 11a)
 		Streak = Progression.GetStreakMultiplier(streak),
 		Modifier = modifier and modifier.CoinMultiplier or 1,
 		GoldenPin = if goldenHit then Config.GoldenPin.CoinMultiplier else 1,

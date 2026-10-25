@@ -268,6 +268,7 @@ function MilestoneController:Start()
 		popupTitle.Text = if data.Kind == "Level"
 			then ("LEVEL %d REWARD!"):format(data.Level)
 			elseif data.Kind == "Boss" then "BOSS DEFEATED!"
+			elseif data.Kind == "Away" then "WELCOME BACK!"
 			else "CHALLENGE DONE!"
 		popupLines.Text = table.concat(rewardLines(data, data.Coins), "\n")
 		Sfx.Play("Reveal")

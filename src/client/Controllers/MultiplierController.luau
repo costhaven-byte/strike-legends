@@ -34,6 +34,7 @@ local SOURCES = {
 	{ Key = "Potion", Name = "COIN POTION" },
 	{ Key = "Rank", Name = "RANK" },
 	{ Key = "Rebirth", Name = "REBIRTH" },
+	{ Key = "Friends", Name = "FRIENDS" },
 	{ Key = "Streak", Name = "STREAK" },
 	{ Key = "Modifier", Name = "LANE EVENT" },
 }
@@ -129,7 +130,7 @@ function MultiplierController:Start()
 	panel.AutoButtonColor = false
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.fromOffset(300, 360) -- 20 taller for the ZONE row (economy pass E2)
+	panel.Size = UDim2.fromOffset(300, 380) -- 20 taller for each of the ZONE (E2) and FRIENDS (step 11a) rows
 	panel.BackgroundColor3 = CARD
 	panel.Visible = false
 	panel.Parent = gui
