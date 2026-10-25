@@ -197,3 +197,50 @@ Please give me:
 4. The triangle count of each model.
 5. 5 short lines Rizzo could say (2 sentences max each, readable by a 9 year old): greeting, when you open a crate, when you get something rare, when you can't afford one, goodbye.
 ```
+
+---
+
+## Store UI (Phase 5 step 12a, 2026-10-25)
+
+Paste this into Claude Design. Bring the finished design back to Claude Code, which rebuilds it in Roblox to match. Everything in it already works in the game today with Claude's placeholder look; this design replaces only the look.
+
+```
+Design the Robux STORE for "Strike Legends", a Roblox bowling simulator for kids and teens (ages 9 to 15). The game's UI style: dark navy panels (#070B1E, cards #1E143C), thick dark ink outlines (#04061A) around every text and button, chunky rounded corners, bright neon accents: gold #FFC93A, cyan #2BE4FF, hot pink #FF4FB0, lime #7DFF3C, red #FF2D4A. Big bold cartoon headings, short punchy words, all caps. It must feel exciting and generous, never pushy: no fake countdown timers, no "only X left", no guilt text, and every popup has an obvious way to close it. Use only fonts Roblox has: Luckiest Guy (headings and buttons), Fredoka One (numbers), Gotham Bold / Black (small text). Prices show a small Robux-style coin icon (a generic hexagon "R$" mark is fine; leave it as one image slot I can swap) followed by the number.
+
+Design for two screens: a computer (1920x1080) and a phone held sideways (844x390, the top 36 px belong to Roblox's own bar, and the bottom-left corner has the movement thumbstick, so keep tappable things out of it). Every button must be at least 44x44 px on the phone.
+
+Please design these 5 pieces:
+
+1. THE STORE BUTTON on the HUD. A square button about 56x56 px on a computer (44x46 on a phone) with a small caption under the icon: "STORE". It sits in the bottom-left corner on a computer, right of an existing cyan "TELEPORT" button of the same size; on a phone it sits at the top, to the right of the level bar. Gold is its colour. Give it an icon that reads as "shop" at a glance (a shopping bag, a gem chest or a Robux coin stack), an idle shine or bounce I can animate, and a small red "!" dot state for when something new is in the store.
+
+2. THE QUICK-BUY BOOST BUTTONS on the HUD. Two small pills, about 78x27 px each, stacked on the left side of the screen next to the coin counter. Top pill: the next COIN BOOST step, e.g. "x2 COINS" with "R$ 3" under it. Bottom pill: the next XP BOOST step, e.g. "x2 XP" with "R$ 15". They must be readable at that tiny size, look tappable and cheap/fun, and match the store's boost cards. When a ladder is maxed its pill disappears.
+
+3. THE STORE WINDOW. A centred panel, about 640x520 px on a computer and nearly the full phone screen. Header: "STORE" on the left, a small line "COINS x4  XP x2" (the player's current boosts) on the right, a red X close button. Under it a scrolling grid of cards, 2 per row. Each card has a small coloured label at the top, a big name, 1-2 lines of description and a price button bottom-right. Card states: normal, pressed, OWNED (grey button, "OWNED"), MAXED (grey, "MAXED"). Show these cards in this order with this exact text:
+
+   a) STARTER PACK (label "ONE TIME ONLY", lime green, should look the most special, can be a full-width card): "Dumpster Diamond (Rare ball), 30 min of 2X COINS and 100 gems. Once only." R$ 199. Hidden once bought. Room for a small picture of the ball (a grimy dark bowling ball with glowing blue crystal cracks).
+   b) COIN BOOST (label "FOREVER - DOUBLES EVERY BUY", pink): shows the next step, e.g. "COIN BOOST x1 > x2", "Doubles your coins forever. Step 1 of 4." The steps are x2 R$ 3, x4 R$ 8, x8 R$ 15, x16 R$ 30. Show a 4-dot progress bar of the steps. After x16: "COIN BOOST x16", "Your coins are doubled 4 times. All done!", MAXED.
+   c) XP BOOST (same style as COIN BOOST, cyan instead of gold text): x2 R$ 15, x4 R$ 30, x8 R$ 50, x16 R$ 100.
+   d) Game passes (label "GAME PASS", gold), each with a small icon:
+      - 2X COINS + 2X XP: "Every throw pays double coins AND double XP. Stacks with potions." R$ 399
+      - VIP: "+25% coins and XP, 25 free gems every day, a gold ball trail and a [VIP] chat tag." R$ 799
+      - AUTO BOWL: "An AUTO button: the game bowls for you and every throw is a STRIKE. No PERFECT x2, no streak." R$ 499
+      - LUCKY: "x1.5 luck: Rare and better balls and pets come more often." R$ 199
+      - SUPER LUCKY: "x2 luck. Stacks with LUCKY for x3." R$ 399
+      - TRIPLE HATCH: "Open 3 eggs or crates at once (when you can pay for 3)." R$ 399
+      - +2 PET SLOTS: "Two more pets follow you." R$ 399
+   e) 2X COINS - 15 MIN (label "BOOST", cyan): "Double coins for 15 minutes of play." R$ 49
+   f) Gem packs (label "GEMS", cyan, with gem pile pictures growing in size): 60 GEMS "A handful of gems." R$ 99; 300 GEMS "A bag of gems." R$ 399; 1,500 GEMS "A chest of gems." R$ 1599.
+   Also design a thin green line under the header for test builds: "STUDIO PREVIEW: buying is free and fake" (it only shows in my test version).
+   Optional: tabs or section headers (BOOSTS / PASSES / GEMS) if they make it easier to scan on a phone. Tell me which you chose and why.
+
+4. THE STARTER PACK POPUP. Shows once, about 10 minutes into a player's first sessions, when they are not throwing. About 360x220 px. Title "STARTER PACK", the contents (ball picture, "30 MIN 2X COINS", "100 GEMS" as three little reward icons), a big lime buy button "R$ 199" and a clear grey "NO THANKS" button the same size. No timer.
+
+5. THE THANK-YOU TOAST. A small banner near the top of the screen, about 340x64 px, shown for 3 seconds after a purchase, with confetti: title "THANK YOU!" and a line like "VIP is yours" or "COIN BOOST is now x4". The same toast with the title "VIP DAILY GIFT" and the line "+25 gems" for VIP's daily gems.
+
+Please give me:
+1. Full-screen mockups on the computer and on the phone: the HUD with the STORE button and the two boost pills in place, the store window open (scrolled to the top, and scrolled to the passes), the Starter Pack popup, and the toast.
+2. Each piece on its own with sizes in px, corner radius, outline thickness, font, font size and hex code for every colour.
+3. Every state: normal, pressed, OWNED, MAXED, and a ladder card at step 1, step 3 and maxed.
+4. Simple animation notes (open/close, button press, buy success, the boost pills' idle shine) that a game engine can do with scale, position, rotation and transparency tweens only.
+5. The icons as separate flat images (transparent PNG) so I can upload them: store button icon, each pass icon, gem packs, boost arrows, the R$ price mark.
+```

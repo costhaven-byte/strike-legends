@@ -2,6 +2,8 @@
 -- preview). A gold STORE button (computers: bottom-left, right of TELEPORT; phones: right of the REBIRTH button) opens
 -- the window: the Starter Pack (until bought), game passes (OWNED once yours) and boosts + gems. BUY asks the server,
 -- which shows Roblox's own purchase window; nothing is given here.
+-- Quick-buy boosts on the HUD (owner 2026-10-25): the COIN BOOST and XP BOOST ladders' next steps also sit right of
+-- the coin multiplier badge and the AUTO spot ("x2 COINS / R$ 3"), gone once that ladder is MAXED.
 -- Also: the one-time Starter Pack popup (the server says when; it waits for a quiet moment, never mid-throw), a THANK
 -- YOU toast after a purchase, and the gold [VIP] tag in chat for VIP owners.
 -- Built in code (not in Studio), so it lives in git.
@@ -159,6 +161,58 @@ function StoreController:Start()
 	rankBar:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
 	hud:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
 	place()
+
+	-- ===== Quick-buy boosts on the HUD =====
+	local bar = hud:WaitForChild("Bar") :: Frame
+	local quick = {}
+	for index, ladder in { { Ladder = "Coins", What = "COINS" }, { Ladder = "Xp", What = "XP" } } do
+		local color = if ladder.Ladder == "Coins" then GOLD else Color3.fromRGB(80, 220, 255)
+		local pill = Instance.new("TextButton")
+		pill.Name = "Quick" .. ladder.Ladder
+		pill.Text = ""
+		pill.AutoButtonColor = false
+		pill.BackgroundColor3 = Color3.fromRGB(255, 120, 200)
+		pill.Parent = hud
+		corner(pill, 10)
+		stroke(pill, INK, 2, true)
+		local top = text(pill, "Boost", FONT, color, UDim2.fromScale(0.06, 0.06), UDim2.fromScale(0.88, 0.5))
+		local price = text(pill, "Price", CAPTION_FONT, Color3.new(1, 1, 1), UDim2.fromScale(0.06, 0.56), UDim2.fromScale(0.88, 0.38))
+		UiFx.Press(pill)
+		pill.Activated:Connect(function()
+			local step = Store.NextStep(player, ladder.Ladder)
+			if step then
+				buyRemote:FireServer(step.Id)
+			end
+		end)
+		quick[ladder.Ladder] = { Pill = pill, Top = top, Price = price, What = ladder.What, Row = index }
+	end
+	-- Right of the multiplier badge (coins row) and the AUTO spot (gems row): the same rows MultiplierController uses
+	local function placeQuick()
+		local height = math.floor(bar.Size.Y.Offset * 0.42)
+		local x = bar.Position.X.Offset + bar.Size.X.Offset + 6 + 66 + 6
+		for _, item in quick do
+			local y = bar.Position.Y.Offset + 2 + (item.Row - 1) * (height + 6)
+			item.Pill.Position = UDim2.new(bar.Position.X.Scale, x, bar.Position.Y.Scale, y)
+			item.Pill.Size = UDim2.fromOffset(78, height)
+		end
+	end
+	local function refreshQuick()
+		for ladder, item in quick do
+			local step = Store.NextStep(player, ladder)
+			item.Pill.Visible = step ~= nil
+			if step then
+				item.Top.Text = ("x%d %s"):format(2 ^ step.Step, item.What)
+				item.Price.Text = Store.PriceText(step.Robux)
+			end
+		end
+	end
+	bar:GetPropertyChangedSignal("Position"):Connect(placeQuick)
+	bar:GetPropertyChangedSignal("Size"):Connect(placeQuick)
+	for _, key in Store.LadderKeys do
+		player:GetAttributeChangedSignal(key):Connect(refreshQuick)
+	end
+	placeQuick()
+	refreshQuick()
 
 	-- ===== The window =====
 	local panel = Instance.new("Frame")
