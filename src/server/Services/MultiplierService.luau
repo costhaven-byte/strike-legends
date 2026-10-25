@@ -27,7 +27,7 @@ local REFRESH = 0.5 -- seconds between checks for a changed multiplier
 
 -- The order the panel lists them in
 local ORDER =
-	{ "Zone", "PowerLevel", "Ball", "Mascots", "Potion", "Rank", "Rebirth", "Friends", "Passes", "Streak", "Modifier" }
+	{ "Zone", "PowerLevel", "Ball", "Mascots", "Potion", "Rank", "Rebirth", "Friends", "Passes", "RobuxBoost", "Streak", "Modifier" }
 
 local MultiplierService = {}
 
@@ -44,7 +44,8 @@ function MultiplierService.Coins(player: Player, ball, level, streak: number, mo
 		Rank = Progression.GetRank(ProgressionService.GetCurrentRankIndex(player)).Multiplier,
 		Rebirth = Rebirth.CoinMultiplier(PlayerDataService.Get(player, "Rebirths")), -- Phase X rebirth stub
 		Friends = FriendService.Multiplier(player), -- +10% per friend in the server (Config.Friends, step 11a)
-		Passes = Store.CoinMultiplier(player), -- 2X COINS and VIP game passes (Config.Monetization, step 12a)
+		Passes = Store.CoinMultiplier(player), -- 2X COINS + 2X XP and VIP game passes (Config.Monetization, step 12a)
+		RobuxBoost = Store.BoostMultiplier(player), -- the COIN BOOST bought with the cheap Robux products
 		Streak = Progression.GetStreakMultiplier(streak),
 		Modifier = modifier and modifier.CoinMultiplier or 1,
 		GoldenPin = if goldenHit then Config.GoldenPin.CoinMultiplier else 1,

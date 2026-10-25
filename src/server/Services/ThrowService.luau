@@ -72,6 +72,7 @@ local function getXpMultipliers(player: Player, streak: number, zone: number): {
 		Pets = MascotService.GetMultiplier(player),
 		Potion = PotionService.Multiplier(player, "XP"), -- XP Potion x2 / Mega XP Potion x4 (Config.Potions)
 		Rebirth = Rebirth.XpMultiplier(PlayerDataService.Get(player, "Rebirths")), -- Phase X rebirth stub
+		Passes = Store.XpMultiplier(player), -- 2X COINS + 2X XP and VIP game passes (Config.Monetization)
 	}
 end
 
@@ -99,6 +100,8 @@ local function measuredHold(player: Player, clientHold: number): number?
 end
 
 -- One throw at `charge` (0 to 1 of the bar). auto = an Auto Bowl throw: never a PERFECT, hook or overcharge.
+-- With the AUTO BOWL game pass every auto throw is a plain strike (no PERFECT x2); auto throws never change the streak
+-- and never count for rank trials or the 3-strike challenge.
 local function throwBall(player: Player, charge: number, auto: boolean)
 	-- No throws until the player's save has loaded, so rewards always have somewhere to go
 	if not PlayerDataService.IsLoaded(player) then
@@ -147,11 +150,16 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 	lane:SetAttribute("GoldCenter", ThrowRules.NextGoldCenter(goldCenter))
 	local forward = lane.BallStart.CFrame.LookVector
 	local distance = (lane.PinSpot.Position - lane.BallStart.Position):Dot(forward)
-	local result = ThrowResolver.Resolve(charge, perfect, hooked, overcharged, ball, distance, level.Power)
+	local autoStrike = auto and Store.Owns(player, "AutoBowl")
+	local result =
+		ThrowResolver.Resolve(charge, perfect, hooked, overcharged, ball, distance, level.Power, autoStrike)
 	local isStrike = result.Tier == "Strike" or result.Tier == "PerfectStrike"
 	-- An overcooked throw always ends the streak: Streak Saver never covers the greedy red
 	local saverCooldown = if result.Overcharge == "Wasted" then 0 else Balls.TraitValue(ball, "StreakSaver")
-	local streak, saved = ProgressionService.NextStreak(player, isStrike, saverCooldown)
+	local streak, saved = shownStreak, false
+	if not auto then
+		streak, saved = ProgressionService.NextStreak(player, isStrike, saverCooldown)
+	end
 	local goldenPin = GoldenPinService.Get(lane)
 	local goldenHit = goldenPin > 0 and table.find(result.Pins, goldenPin) ~= nil
 	local zone = LaneUtil.ZoneOf(lane)
@@ -248,8 +256,10 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 			ProgressionService.ShowStreak(player, streak)
 			ProgressionService.AddXP(player, reward.XP)
 			LeaderboardService.RecordThrow(player, result.Count, reward.Coins)
-			TrialService.OnThrow(player, trialAttempt, result.Tier, saved)
-			MilestoneService.OnThrow(player, LaneUtil.ZoneOf(lane), isStrike, saved)
+			if not auto then
+				TrialService.OnThrow(player, trialAttempt, result.Tier, saved)
+			end
+			MilestoneService.OnThrow(player, LaneUtil.ZoneOf(lane), isStrike and not auto, saved)
 			BallService.AddCrateThrow(player)
 			if goldenHit then
 				SessionLog.Moment(player, "Golden Pin hit")

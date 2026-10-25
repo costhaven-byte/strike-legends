@@ -75,6 +75,7 @@ end
 -- overcharged: missed the gold and the hook band but landed in the red cap (only when overcharge is on)
 -- ball: the equipped ball row from Config.Balls; distance: studs from the ball start to the head pin
 -- power: the Power Level's Power (Config.Economy.PowerLevels), the most pins a non-PERFECT throw knocks down
+-- forceStrike: a strike that is not a PERFECT (the paid Auto Bowl, Config.Monetization)
 function ThrowResolver.Resolve(
 	charge: number,
 	perfect: boolean,
@@ -82,7 +83,8 @@ function ThrowResolver.Resolve(
 	overcharged: boolean,
 	ball,
 	distance: number,
-	power: number
+	power: number,
+	forceStrike: boolean?
 ): Result
 	-- The gamble: a huge strike or the gutter
 	local blasted = false
@@ -98,7 +100,7 @@ function ThrowResolver.Resolve(
 		table.insert(fired, "Curve")
 	end
 
-	local strike = perfect or math.random() < THROW.StrikeChanceWithoutPerfect * charge ^ 3
+	local strike = perfect or forceStrike == true or math.random() < THROW.StrikeChanceWithoutPerfect * charge ^ 3
 	local count = PINS
 	if not strike then
 		local most = math.clamp(math.floor(power), 2, PINS - 1)

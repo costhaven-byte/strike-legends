@@ -5,6 +5,8 @@
 -- Products: handed out in ProcessReceipt. Each purchase id is saved (Purchases), so a purchase is never given twice,
 -- and the save is written straight away before Roblox is told it went through.
 -- Starter Pack: offered once (StarterOffered), after StarterAfterMinutes of play in total, at a quiet moment.
+-- COIN BOOST products add to the saved RobuxBoost (coins x (1 + RobuxBoost), MultiplierService).
+-- VIP: DailyGems once a day (VipGiftDay), given on join or when the day changes.
 -- Studio preview (StudioPreview, switch off): BUY gives the item for free straight away; Studio tests never save.
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -13,6 +15,7 @@ local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Calendar = require(Shared.Modules.Calendar)
 local Store = require(Shared.Modules.Store)
 local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
@@ -22,7 +25,7 @@ local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
 local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
 local MONEY = Config.Monetization
-local OFFER_CHECK = 15 -- seconds between Starter Pack checks
+local OFFER_CHECK = 15 -- seconds between Starter Pack and VIP gift checks
 
 local StoreService = {}
 
@@ -87,13 +90,41 @@ local function grantProduct(player: Player, product)
 	if product.Ball then
 		BallService.GiveBall(player, product.Ball)
 	end
+	if product.CoinBoost then
+		PlayerDataService.Set(player, "RobuxBoost", (PlayerDataService.Get(player, "RobuxBoost") or 0) + product.CoinBoost)
+	end
 	if product.Once then
 		PlayerDataService.Set(player, product.Id, 1) -- StarterPack = 1
 	end
 	Analytics.Purchase(player, "Robux", product.Id)
 	SessionLog.Moment(player, ("Robux purchase: %s"):format(product.Id))
 	if resultEvent then
-		resultEvent:FireClient(player, { Id = product.Id, Name = product.Name })
+		local text = if product.CoinBoost
+			then ("COIN BOOST is now x%s"):format(tostring(math.floor(Store.BoostMultiplier(player) * 100 + 0.5) / 100))
+			else product.Name .. " is yours"
+		resultEvent:FireClient(player, { Id = product.Id, Text = text })
+	end
+end
+
+-- VIP daily gems: once per day (days change at midnight UTC, like the daily reward)
+local function vipGift(player: Player)
+	local today = Calendar.Day()
+	if (PlayerDataService.Get(player, "VipGiftDay") or 0) == today then
+		return
+	end
+	for _, pass in MONEY.Passes do
+		if pass.DailyGems and Store.Owns(player, pass.Id) then
+			PlayerDataService.Set(player, "VipGiftDay", today)
+			PlayerDataService.Add(player, "Gems", pass.DailyGems)
+			Analytics.Currency(player, "Gems", pass.DailyGems, "Gameplay", "VipDaily")
+			if resultEvent then
+				resultEvent:FireClient(
+					player,
+					{ Id = pass.Id, Title = pass.Name .. " DAILY GIFT", Text = ("+%d gems"):format(pass.DailyGems) }
+				)
+			end
+			return
+		end
 	end
 end
 
@@ -142,7 +173,7 @@ local function onBuy(player: Player, id: any)
 		if pass then
 			givePass(player, pass)
 			if resultEvent then
-				resultEvent:FireClient(player, { Id = pass.Id, Name = pass.Name })
+				resultEvent:FireClient(player, { Id = pass.Id, Text = pass.Name .. " is yours" })
 			end
 		else
 			grantProduct(player, product)
@@ -207,7 +238,7 @@ function StoreService:Start()
 				givePass(player, pass)
 				Analytics.Purchase(player, "Robux", pass.Id)
 				SessionLog.Moment(player, ("Robux purchase: %s"):format(pass.Id))
-				result:FireClient(player, { Id = pass.Id, Name = pass.Name })
+				result:FireClient(player, { Id = pass.Id, Text = pass.Name .. " is yours" })
 			end
 		end)
 	elseif RunService:IsStudio() then
@@ -227,6 +258,7 @@ function StoreService:Start()
 			task.wait(OFFER_CHECK)
 			for _, player in Players:GetPlayers() do
 				if PlayerDataService.IsLoaded(player) then
+					pcall(vipGift, player)
 					local ok, err = pcall(checkOffer, player)
 					if not ok then
 						warn("[StoreService] " .. tostring(err))

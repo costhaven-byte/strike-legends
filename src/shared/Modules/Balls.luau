@@ -264,7 +264,9 @@ end
 
 -- Each ball's real chance (percent) in a crate: rarity odds shared by the balls of that rarity, by Balls.CrateWeight
 -- (equal shares, except this week's featured ball). Featured = true on the featured ball's entry.
-function Balls.CrateBallOdds(crate): { { Ball: any, Chance: number, Featured: boolean } }
+-- odds: optional rarity odds to use instead of the crate's own (the player's luck, Store.LuckyOdds)
+function Balls.CrateBallOdds(crate, odds: { [string]: number }?): { { Ball: any, Chance: number, Featured: boolean } }
+	local rarityOdds = odds or crate.Odds
 	local list = {}
 	for _, rarity in Config.Rarities do
 		local pool = {}
@@ -275,11 +277,11 @@ function Balls.CrateBallOdds(crate): { { Ball: any, Chance: number, Featured: bo
 				total += Balls.CrateWeight(ball, crate)
 			end
 		end
-		local odds = crate.Odds[rarity.Name] or 0
-		if odds > 0 then
+		local chance = rarityOdds[rarity.Name] or 0
+		if chance > 0 then
 			for _, ball in pool do
 				local weight = Balls.CrateWeight(ball, crate)
-				table.insert(list, { Ball = ball, Chance = odds * weight / total, Featured = weight > 1 })
+				table.insert(list, { Ball = ball, Chance = chance * weight / total, Featured = weight > 1 })
 			end
 		end
 	end

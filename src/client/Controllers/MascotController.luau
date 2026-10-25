@@ -886,6 +886,15 @@ function MascotController:Start()
 		hatching = true
 		local ok, result = pcall(hatchRemote.InvokeServer, hatchRemote, egg.Id)
 		if ok and result and result.Ok then
+			if result.Extras then
+				-- TRIPLE HATCH: the other pets from this hatch
+				local names = {}
+				for _, extra in result.Extras do
+					local other = Mascots.Get(extra.MascotId)
+					table.insert(names, (if other then other.Name:upper() else "?") .. (if extra.IsNew then " (NEW)" else ""))
+				end
+				task.spawn(showToast, "ALSO HATCHED: " .. table.concat(names, ", "))
+			end
 			play(result)
 		else
 			showToast(if ok and result and result.Error then result.Error else "Try again")

@@ -11,6 +11,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Currency = require(Shared.Modules.Currency)
 local Balls = require(Shared.Modules.Balls)
+local Store = require(Shared.Modules.Store)
 local Zones = require(Shared.Modules.Zones)
 local BallInventoryController = require(script.Parent.BallInventoryController)
 local CollectionBookController = require(script.Parent.CollectionBookController)
@@ -786,6 +787,15 @@ function CrateController:Start()
 		playOpening(crate, result)
 		busy = false
 		CrateController.Opened:Fire(crate, result)
+		if result.Extras then
+			-- TRIPLE HATCH: the other balls from this open
+			local names = {}
+			for _, extra in result.Extras do
+				local ball = Balls.Get(extra.BallId)
+				table.insert(names, (if ball then ball.Name:upper() else "?") .. (if extra.IsNew then " (NEW)" else ""))
+			end
+			task.spawn(showToast, "ALSO GOT: " .. table.concat(names, ", "))
+		end
 		if firstBought and result.IsNew then
 			-- The first crate bought with coins: arrows show how to equip its new ball (BALLS button, then EQUIP)
 			CollectionBookController.GuideEquip(result.BallId)
@@ -881,7 +891,10 @@ function CrateController:Start()
 	oddsScreen.Parent = panel
 
 	showOdds = function(crate)
-		oddsTitle.Text = crate.Name:upper() .. "  ODDS"
+		-- The player's real odds: LUCKY game passes raise Rare and better (Config.Monetization)
+		local luck = Store.Luck(player)
+		local odds = Store.LuckyOdds(crate.Odds, luck)
+		oddsTitle.Text = crate.Name:upper() .. (if luck > 1 then ("  ODDS  (LUCK x%g)"):format(luck) else "  ODDS")
 		oddsTitle.TextColor3 = crate.Color
 		screenStroke.Color = crate.Color
 		local pityParts = {}
@@ -907,7 +920,7 @@ function CrateController:Start()
 		local owned = Balls.DecodeOwned(player:GetAttribute("OwnedBalls"))
 		local order = 0
 		local lastRarity = nil
-		for _, entry in Balls.CrateBallOdds(crate) do
+		for _, entry in Balls.CrateBallOdds(crate, odds) do
 			local ball = entry.Ball
 			local rarity = Balls.GetRarity(ball.Rarity)
 			if ball.Rarity ~= lastRarity then
@@ -917,7 +930,7 @@ function CrateController:Start()
 				local header = oddsText(ball.Rarity, {
 					LayoutOrder = order,
 					Size = UDim2.new(1, -8, 0, 24),
-					Text = ("%s  ·  %g%%"):format(ball.Rarity:upper(), crate.Odds[ball.Rarity]),
+					Text = ("%s  ·  %.4g%%"):format(ball.Rarity:upper(), odds[ball.Rarity]),
 					TextColor3 = rarity.Color,
 					TextXAlignment = Enum.TextXAlignment.Left,
 				})
@@ -986,10 +999,21 @@ function CrateController:Start()
 			row.Visible = true
 			row.Rarity.Text = rarity.Name
 			row.Rarity.TextColor3 = rarity.Color
-			row.Chance.Text = ("%g%%"):format(crate.Odds[rarity.Name] or 0)
 			row.Chance.TextColor3 = rarity.Color
 			row.Parent = card.Odds
 		end
+		-- The card shows the player's real odds (LUCKY game passes raise Rare and better)
+		local function refreshCardOdds()
+			local odds = Store.LuckyOdds(crate.Odds, Store.Luck(player))
+			for _, rarity in Config.Rarities do
+				local row = card.Odds:FindFirstChild(rarity.Name)
+				if row then
+					row.Chance.Text = ("%.3g%%"):format(odds[rarity.Name] or 0)
+				end
+			end
+		end
+		player:GetAttributeChangedSignal("Passes"):Connect(refreshCardOdds)
+		refreshCardOdds()
 		rowTemplate:Destroy()
 
 		-- Room under the odds for this week's featured ball and this crate's guarantee line, and an ODDS button for

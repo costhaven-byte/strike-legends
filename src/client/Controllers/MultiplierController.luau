@@ -37,6 +37,7 @@ local SOURCES = {
 	{ Key = "Rebirth", Name = "REBIRTH" },
 	{ Key = "Friends", Name = "FRIENDS" },
 	{ Key = "Passes", Name = "GAME PASSES" },
+	{ Key = "RobuxBoost", Name = "COIN BOOST" },
 	{ Key = "Streak", Name = "STREAK" },
 	{ Key = "Modifier", Name = "LANE EVENT" },
 }

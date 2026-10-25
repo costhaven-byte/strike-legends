@@ -9,6 +9,7 @@ local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local ThrowRules = require(Shared.Modules.ThrowRules)
 local BallLook = require(Shared.Modules.BallLook)
+local Store = require(Shared.Modules.Store)
 local Zones = require(Shared.Modules.Zones)
 local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
@@ -305,7 +306,7 @@ function BallService.GiveCrate(player: Player, crate, minRarity: string?, exactR
 		minRarity = Config.Economy.FirstCrateMin
 	end
 	local pity = PlayerDataService.Get(player, "CratePity") or {}
-	local ball, newCounts, fromPity = CrateRoller.Roll(crate, pity, minRarity, exactRarity)
+	local ball, newCounts, fromPity = CrateRoller.Roll(crate, pity, minRarity, exactRarity, Store.Luck(player))
 	for key, value in newCounts do
 		pity[key] = value
 		player:SetAttribute("Pity_" .. key, value)
@@ -392,12 +393,31 @@ local function openCrate(player: Player, crateId: any)
 		PlayerDataService.Add(player, "FreeCrates", -1)
 		return BallService.GiveCrate(player, crate)
 	end
-	PlayerDataService.Spend(player, "Coins", price)
-	PlayerDataService.Add(player, "CratesBought", 1)
-	Analytics.Currency(player, "Coins", -price, "Shop", crate.Id)
+	-- TRIPLE HATCH game pass: open 3 at once when the player can pay for all 3 (never the first bought crate)
+	local count = Store.HatchCount(player)
+	if count > 1 and (bought == 0 or not PlayerDataService.CanAfford(player, "Coins", price * count)) then
+		count = 1
+	end
+	PlayerDataService.Spend(player, "Coins", price * count)
+	PlayerDataService.Add(player, "CratesBought", count)
+	Analytics.Currency(player, "Coins", -price * count, "Shop", crate.Id)
 	Analytics.Purchase(player, "Crate", crate.Id)
 	-- The first crate bought with coins is exactly Config.Onboarding.FirstBoughtRarity
-	return BallService.GiveCrate(player, crate, nil, if bought == 0 then Config.Onboarding.FirstBoughtRarity else nil)
+	local best = BallService.GiveCrate(player, crate, nil, if bought == 0 then Config.Onboarding.FirstBoughtRarity else nil)
+	if count == 1 then
+		return best
+	end
+	-- The rarest of the 3 plays the big reveal; the others come along as Extras ({ BallId, IsNew })
+	local extras = {}
+	for _ = 2, count do
+		local result = BallService.GiveCrate(player, crate)
+		if Balls.RarityIndex(Balls.Get(result.BallId).Rarity) > Balls.RarityIndex(Balls.Get(best.BallId).Rarity) then
+			result, best = best, result
+		end
+		table.insert(extras, { BallId = result.BallId, IsNew = result.IsNew })
+	end
+	best.Extras = extras
+	return best
 end
 
 local function onOpenCrate(player: Player, crateId: any)

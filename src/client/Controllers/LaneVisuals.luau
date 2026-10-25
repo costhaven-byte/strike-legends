@@ -15,6 +15,7 @@ local Balls = require(Shared.Modules.Balls)
 local BallLook = require(Shared.Modules.BallLook)
 local Modifiers = require(Shared.Modules.Modifiers)
 local Progression = require(Shared.Modules.Progression)
+local Store = require(Shared.Modules.Store)
 local ThrowRules = require(Shared.Modules.ThrowRules)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local CameraShake = require(Modules.CameraShake)
@@ -396,6 +397,11 @@ local function playThrow(data)
 	local fx = BallFx.Attach(ball, data.BallId, "Lane", forward)
 	local lights = LaneFx.FollowLights(lane, ballInfo.Trail)
 	local streak = powerTrail(lane, feel.Level, ball.Size.X, ballInfo.Trail or ballInfo.Color, forward)
+	-- VIP game pass: a gold streak behind the ball that everyone sees (Config.Monetization)
+	local thrower = Players:GetPlayerByUserId(data.UserId)
+	local vipTrail = if thrower and Store.HasTrail(thrower)
+		then powerTrail(lane, THROW.PowerTrailFromLevel + 4, ball.Size.X, Config.Monetization.TrailColor, forward)
+		else nil
 	BallFx.Dim(ball)
 	local fired = data.Traits or {}
 	local curveTrail = if table.find(fired, "Curve") then TraitFx.CurveTrail(lane, headDistance) else nil
@@ -546,6 +552,9 @@ local function playThrow(data)
 		ball.CFrame = CFrame.new(position) * CFrame.fromAxisAngle(spinAxis, travelled / radius)
 		fx:Move(position)
 		lights.Update(position)
+		if vipTrail then
+			vipTrail.Move(position)
+		end
 		if streak then
 			streak.Move(position)
 		end
@@ -598,6 +607,9 @@ local function playThrow(data)
 			connection:Disconnect()
 			ball:Destroy()
 			lights.Destroy()
+			if vipTrail then
+				vipTrail.Stop()
+			end
 			if streak then
 				streak.Stop()
 			end

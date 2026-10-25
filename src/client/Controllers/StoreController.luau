@@ -181,11 +181,18 @@ function StoreController:Start()
 	title.Text = "STORE"
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	if Store.IsPreview() then
-		local note =
-			text(panel, "Preview", BODY_FONT, LIME, UDim2.new(0, 130, 0, 20), UDim2.new(1, -200, 0, 16))
+		local note = text(panel, "Preview", BODY_FONT, LIME, UDim2.new(0, 130, 0, 20), UDim2.fromOffset(230, 16))
 		note.Text = "STUDIO PREVIEW: buying is free and fake"
 		note.TextXAlignment = Enum.TextXAlignment.Left
 	end
+	-- The COIN BOOST bought so far (cheap products), top right
+	local boostLabel = text(panel, "Boost", FONT, GOLD, UDim2.new(1, -262, 0, 18), UDim2.fromOffset(196, 24))
+	boostLabel.TextXAlignment = Enum.TextXAlignment.Right
+	local function refreshBoost()
+		boostLabel.Text = ("COIN BOOST x%s"):format(tostring(math.floor(Store.BoostMultiplier(player) * 100 + 0.5) / 100))
+	end
+	player:GetAttributeChangedSignal("RobuxBoost"):Connect(refreshBoost)
+	refreshBoost()
 	local close = button(panel, "Close", "X", Color3.fromRGB(255, 70, 90), UDim2.new(1, -54, 0, 12), UDim2.fromOffset(42, 42))
 
 	local list = Instance.new("ScrollingFrame")
@@ -208,7 +215,11 @@ function StoreController:Start()
 	-- One card per pass and product
 	local cards = {}
 	local function addCard(item, kind: string, order: number)
-		local color = if item.Id == "StarterPack" then LIME elseif kind == "Pass" then GOLD else Color3.fromRGB(80, 220, 255)
+		local color = if item.Id == "StarterPack"
+			then LIME
+			elseif kind == "Pass" then GOLD
+			elseif item.CoinBoost then Color3.fromRGB(255, 120, 200)
+			else Color3.fromRGB(80, 220, 255)
 		local card = Instance.new("Frame")
 		card.Name = item.Id
 		card.LayoutOrder = order
@@ -217,7 +228,12 @@ function StoreController:Start()
 		corner(card, 12)
 		stroke(card, color, 3, true)
 		local kindLabel = text(card, "Kind", CAPTION_FONT, color, UDim2.new(0, 10, 0, 8), UDim2.new(0.5, 0, 0, 12))
-		kindLabel.Text = if kind == "Pass" then "GAME PASS" elseif item.Once then "ONE TIME ONLY" else "BOOST"
+		kindLabel.Text = if kind == "Pass"
+			then "GAME PASS"
+			elseif item.Once then "ONE TIME ONLY"
+			elseif item.CoinBoost then "FOREVER"
+			elseif item.Gems then "GEMS"
+			else "BOOST"
 		kindLabel.TextXAlignment = Enum.TextXAlignment.Left
 		local name = text(card, "ItemName", FONT, Color3.new(1, 1, 1), UDim2.new(0, 10, 0, 22), UDim2.new(1, -20, 0, 26))
 		name.Text = item.Name
@@ -298,7 +314,8 @@ function StoreController:Start()
 	local toastItem = text(toast, "Item", BODY_FONT, Color3.new(1, 1, 1), UDim2.new(0, 10, 0, 36), UDim2.new(1, -20, 0, 20))
 	local toastId = 0
 	remotes:WaitForChild("StoreResult").OnClientEvent:Connect(function(info)
-		toastItem.Text = tostring(info.Name) .. " is yours"
+		toastTitle.Text = if info.Title then tostring(info.Title) else "THANK YOU!"
+		toastItem.Text = tostring(info.Text or "")
 		toast.Visible = true
 		UiFx.Pop(toast)
 		UiFx.Confetti(toast)

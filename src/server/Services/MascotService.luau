@@ -92,22 +92,23 @@ end
 
 -- Rolls a rarity with the plan's odds, then a mascot of that rarity from this egg (all equally likely).
 -- If the egg has no mascot of the rolled rarity, the closest commoner one it has is used.
-local function roll(eggId: string)
+local function roll(eggId: string, luck: number)
 	-- Phase X: only the rarities this egg has pets of count (zone 3 and 4 eggs start at Rare and Epic)
 	local present = {}
 	for _, mascot in Mascots.InEgg(eggId) do
 		present[mascot.Rarity] = true
 	end
+	local odds = Store.LuckyOdds(ODDS, luck) -- LUCKY game passes (Config.Monetization)
 	local total = 0
 	for _, name in Mascots.Rarities do
-		total += if present[name] then ODDS[name] or 0 else 0
+		total += if present[name] then odds[name] or 0 else 0
 	end
 	local pick = math.random() * total
 	local rarity = Mascots.Rarities[1]
 	for _, name in Mascots.Rarities do
-		local odds = if present[name] then ODDS[name] or 0 else 0
-		if odds > 0 then
-			pick -= odds
+		local chance = if present[name] then odds[name] or 0 else 0
+		if chance > 0 then
+			pick -= chance
 			if pick <= 0 then
 				rarity = name
 				break
@@ -193,21 +194,41 @@ local function hatch(player: Player, eggId: any)
 		return { Ok = false, Error = "Slow down!" }
 	end
 
+	-- TRIPLE HATCH game pass: 3 at once when the player can pay for all 3 (free hatches go one at a time)
+	local count = Store.HatchCount(player)
+	if free or not PlayerDataService.CanAfford(player, "Coins", egg.Price * count) then
+		count = 1
+	end
 	if free then
 		freeEggs[egg.Id] -= 1
 		if freeEggs[egg.Id] <= 0 then
 			freeEggs[egg.Id] = nil
 		end
 	else
-		PlayerDataService.Spend(player, "Coins", egg.Price)
+		PlayerDataService.Spend(player, "Coins", egg.Price * count)
 	end
-	PlayerDataService.Add(player, "EggsHatched", 1)
-	local mascot = roll(egg.Id)
+	PlayerDataService.Add(player, "EggsHatched", count)
+	local luck = Store.Luck(player)
+	local mascot = roll(egg.Id, luck)
+	-- The rarest pet plays the hatch; the others come along as Extras ({ MascotId, IsNew })
+	local extras = {}
+	for _ = 2, count do
+		local other = roll(egg.Id, luck)
+		if Mascots.RarityIndex(other.Rarity) > Mascots.RarityIndex(mascot.Rarity) then
+			other, mascot = mascot, other
+		end
+		table.insert(extras, other)
+	end
 	local isNew, autoEquipped = addMascot(player, mascot)
+	local extraResults = {}
+	for _, other in extras do
+		local otherNew = addMascot(player, other)
+		table.insert(extraResults, { MascotId = other.Id, IsNew = otherNew })
+	end
 
 	local hatched = PlayerDataService.Get(player, "EggsHatched") or 0
 	if not free then
-		Analytics.Currency(player, "Coins", -egg.Price, "Shop", egg.Id .. "Egg")
+		Analytics.Currency(player, "Coins", -egg.Price * count, "Shop", egg.Id .. "Egg")
 		Analytics.Purchase(player, "Egg", egg.Id)
 	end
 	Analytics.Event(player, "MascotHatched", hatched, { egg.Id, mascot.Rarity, mascot.Id })
@@ -227,6 +248,7 @@ local function hatch(player: Player, eggId: any)
 		MascotId = mascot.Id,
 		IsNew = isNew,
 		Equipped = autoEquipped,
+		Extras = if #extraResults > 0 then extraResults else nil,
 	}
 end
 

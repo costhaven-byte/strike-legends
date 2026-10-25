@@ -220,12 +220,14 @@ Config.StartingData = {
 	Purchases = {}, -- the last Robux purchase ids handed out, so one is never given twice (Config.Monetization; v20)
 	StarterPack = 0, -- 1 = the one-time Starter Pack was bought (v20)
 	StarterOffered = 0, -- 1 = the Starter Pack popup was shown (it only shows once; v20)
+	RobuxBoost = 0, -- COIN BOOST bought with Robux: coins x (1 + this) forever (Config.Monetization; v21)
+	VipGiftDay = 0, -- the day number (see Calendar.Day) the VIP daily gems were last given (v21)
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 20, -- v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 21, -- v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -2930,22 +2932,69 @@ Config.Friends = {
 Config.Monetization = {
 	Enabled = false,
 	StudioPreview = true,
-	-- Game passes: bought once, kept forever
+	-- Game passes: bought once, kept forever (owner 2026-10-25: more giving than plain 2x coins).
+	-- Coins / Xp: multiply every throw's coins / XP (they stack with potions: 2X pass + Mega potion = x8).
+	-- Luck: rarer crate balls and pets (see Luck below; the ODDS screens show the boosted chances).
+	-- PetSlots: more pets follow you. Hatch: eggs and crates open this many at once when you can pay for them all.
+	-- DailyGems: a gift once a day (VIP). Trail: a gold streak behind your rolling ball that everyone sees.
 	Passes = {
-		{ Id = "DoubleCoins", PassId = 0, Robux = 399, Name = "2X COINS", Text = "Every throw pays double. Forever.", Coins = 2 },
+		{
+			Id = "DoubleCoins", -- Id kept from 12a
+			PassId = 0,
+			Robux = 399,
+			Name = "2X COINS + 2X XP",
+			Text = "Every throw pays double coins AND double XP. Stacks with potions.",
+			Coins = 2,
+			Xp = 2,
+		},
+		{
+			Id = "VIP",
+			PassId = 0,
+			Robux = 799,
+			Name = "VIP",
+			Text = "+25% coins and XP, 25 free gems every day, a gold ball trail and a [VIP] chat tag.",
+			Coins = 1.25,
+			Xp = 1.25,
+			DailyGems = 25,
+			Trail = true,
+		},
 		{
 			Id = "AutoBowl",
 			PassId = 0,
-			Robux = 199,
+			Robux = 499,
 			Name = "AUTO BOWL",
-			Text = "An AUTO button: the game bowls for you. Slower than you, and never a PERFECT.",
+			Text = "An AUTO button: the game bowls for you and every throw is a STRIKE. No PERFECT x2, no streak.",
 		},
-		{ Id = "VIP", PassId = 0, Robux = 799, Name = "VIP", Text = "+10% coins and a gold [VIP] tag in chat.", Coins = 1.1 },
+		{
+			Id = "Lucky",
+			PassId = 0,
+			Robux = 199,
+			Name = "LUCKY",
+			Text = "x1.5 luck: Rare and better balls and pets come more often.",
+			Luck = 1.5,
+		},
+		{
+			Id = "SuperLucky",
+			PassId = 0,
+			Robux = 399,
+			Name = "SUPER LUCKY",
+			Text = "x2 luck. Stacks with LUCKY for x3.",
+			Luck = 2,
+		},
+		{
+			Id = "TripleHatch",
+			PassId = 0,
+			Robux = 399,
+			Name = "TRIPLE HATCH",
+			Text = "Open 3 eggs or crates at once (when you can pay for 3).",
+			Hatch = 3,
+		},
 		{ Id = "PetSlots", PassId = 0, Robux = 399, Name = "+2 PET SLOTS", Text = "Two more pets follow you.", PetSlots = 2 },
 	},
-	-- Developer products: can be bought again and again (StarterPack only once)
+	-- Developer products: can be bought again and again (Once = one time only)
 	-- Boost = { Potion, Minutes }: that potion's boost runs this much longer, straight away (Config.Potions)
 	-- Ball = a ball Id given (a duplicate polishes it, like a crate). Gems = gems given.
+	-- CoinBoost = added to the player's saved COIN BOOST multiplier forever (RobuxBoost; x1 + every buy together).
 	Products = {
 		{
 			Id = "StarterPack",
@@ -2958,8 +3007,15 @@ Config.Monetization = {
 			Boost = { Potion = "CoinSmall", Minutes = 30 },
 			Gems = 100,
 		},
+		-- Cheap COIN BOOST ladder (owner 2026-10-25): every buy raises a permanent coin multiplier
+		{ Id = "Boost3", ProductId = 0, Robux = 3, Name = "COIN BOOST +x0.05", Text = "Coins forever. Stacks.", CoinBoost = 0.05 },
+		{ Id = "Boost8", ProductId = 0, Robux = 8, Name = "COIN BOOST +x0.15", Text = "Coins forever. Stacks.", CoinBoost = 0.15 },
+		{ Id = "Boost15", ProductId = 0, Robux = 15, Name = "COIN BOOST +x0.3", Text = "Coins forever. Stacks.", CoinBoost = 0.3 },
+		{ Id = "Boost30", ProductId = 0, Robux = 30, Name = "COIN BOOST +x0.65", Text = "Coins forever. Stacks.", CoinBoost = 0.65 },
+		{ Id = "Boost50", ProductId = 0, Robux = 50, Name = "COIN BOOST +x1.1", Text = "Coins forever. Stacks.", CoinBoost = 1.1 },
+		{ Id = "Boost100", ProductId = 0, Robux = 100, Name = "COIN BOOST +x2.4", Text = "Coins forever. Stacks.", CoinBoost = 2.4 },
 		{
-			Id = "CoinBoost",
+			Id = "CoinBoost", -- Id kept from 12a (the timed boost)
 			ProductId = 0,
 			Robux = 49,
 			Name = "2X COINS - 15 MIN",
@@ -2970,9 +3026,13 @@ Config.Monetization = {
 		{ Id = "GemsMedium", ProductId = 0, Robux = 399, Name = "300 GEMS", Text = "A bag of gems.", Gems = 300 },
 		{ Id = "GemsLarge", ProductId = 0, Robux = 1599, Name = "1,500 GEMS", Text = "A chest of gems.", Gems = 1500 },
 	},
+	-- Luck (LUCKY passes): every rarity from LuckFrom up gets its chance multiplied by the player's luck, then all
+	-- chances are scaled back to 100% (so commons drop a little). Pity and exact guarantees don't change.
+	LuckFrom = "Rare",
 	StarterAfterMinutes = 10, -- the Starter Pack popup shows once, after this many minutes of play in total...
 	QuietSeconds = 3, -- ...at a quiet moment: this long after the player's last throw (never mid-throw)
 	ChatTag = "[VIP]", -- before VIP owners' names in chat (gold)
+	TrailColor = Color3.fromRGB(255, 200, 40), -- the VIP gold trail
 	KeepPurchaseIds = 50, -- how many recent purchase ids each save remembers
 }
 

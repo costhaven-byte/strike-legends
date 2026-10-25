@@ -45,15 +45,86 @@ function Store.Owns(player: Player, passId: string): boolean
 	return type(text) == "string" and string.find(text, ";" .. passId .. ";", 1, true) ~= nil
 end
 
--- Coin multiplier from owned passes (2X COINS x2, VIP x1.1, together x2.2)
-function Store.CoinMultiplier(player: Player): number
+-- Every owned pass's `field` multiplied together (1 with none)
+local function product(player: Player, field: string): number
 	local multiplier = 1
 	for _, pass in MONEY.Passes do
-		if pass.Coins and Store.Owns(player, pass.Id) then
-			multiplier *= pass.Coins
+		if pass[field] and Store.Owns(player, pass.Id) then
+			multiplier *= pass[field]
 		end
 	end
 	return multiplier
+end
+
+-- Coin multiplier from owned passes (2X COINS + 2X XP x2, VIP x1.25, together x2.5)
+function Store.CoinMultiplier(player: Player): number
+	return product(player, "Coins")
+end
+
+-- XP multiplier from owned passes
+function Store.XpMultiplier(player: Player): number
+	return product(player, "Xp")
+end
+
+-- The COIN BOOST bought with the cheap products: x1 + every buy (saved RobuxBoost, mirrored as an attribute).
+-- Kept even if the store is switched off again: it was paid for.
+function Store.BoostMultiplier(player: Player): number
+	return 1 + math.max(0, tonumber(player:GetAttribute("RobuxBoost")) or 0)
+end
+
+-- Luck from owned passes (LUCKY x1.5, SUPER LUCKY x2, both x3)
+function Store.Luck(player: Player): number
+	return product(player, "Luck")
+end
+
+-- Eggs and crates opened at once (TRIPLE HATCH = 3)
+function Store.HatchCount(player: Player): number
+	local count = 1
+	for _, pass in MONEY.Passes do
+		if pass.Hatch and Store.Owns(player, pass.Id) then
+			count = math.max(count, pass.Hatch)
+		end
+	end
+	return count
+end
+
+-- Odds with luck: every rarity from Config.Monetization.LuckFrom up is multiplied by luck, then the total is scaled
+-- back to what it was. odds = { Common = 60, Rare = 10, ... } (percent). Returns a new table (the same one at luck 1).
+function Store.LuckyOdds(odds: { [string]: number }, luck: number): { [string]: number }
+	if luck == 1 then
+		return odds
+	end
+	local fromIndex = 1
+	for index, rarity in Config.Rarities do
+		if rarity.Name == MONEY.LuckFrom then
+			fromIndex = index
+		end
+	end
+	local total, boosted = 0, 0
+	local result = {}
+	for index, rarity in Config.Rarities do
+		local chance = odds[rarity.Name] or 0
+		total += chance
+		result[rarity.Name] = if index >= fromIndex then chance * luck else chance
+		boosted += result[rarity.Name]
+	end
+	if boosted <= 0 then
+		return odds
+	end
+	for name, chance in result do
+		result[name] = chance * total / boosted
+	end
+	return result
+end
+
+-- True when this player's rolling ball gets the VIP gold trail
+function Store.HasTrail(player: Player): boolean
+	for _, pass in MONEY.Passes do
+		if pass.Trail and Store.Owns(player, pass.Id) then
+			return true
+		end
+	end
+	return false
 end
 
 -- Extra pet slots from owned passes
