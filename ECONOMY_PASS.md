@@ -70,6 +70,21 @@ Owner 2026-10-25: rebirth should be fast (not a long prestige grind), open at zo
 | Level 60 | never in 25 h |
 Tried and dropped: +2 levels per rebirth (zone 4 3h03 but rebirths slow down sooner), cost x1.6 (little change).
 
-## E3b (after E3a passes)
-XP curve (zone 2 at 4 min vs the plan's 8-10, late rebirths, level 60), Gold Crate 65M and zone 3/4 crate and egg
-prices, Power Levels 8-12, moved-pet bonuses, boss reward.
+## E3b (built 2026-10-25, test pending): XP curve + prices
+- XP curve (Config.Economy.Ranks; Progression + simulator got a third piece, EndFrom/EndGrowth): Base 570, x1.2 per
+  level to 12, x1.38 to 30, then x1.08. Total XP: L5 3K (was 1.3K), L12 18K (20K), L30 3.7M (11M), L60 162M (382M).
+  Old saves never lose a level (most mid-game saves gain a few: the owner's test save 31 -> 36).
+- Rebirth CostGrowth 2 -> 1.6 (coins, not levels, were what made rebirths 17+ take hours).
+- Gold Crate 65M -> 3M, League 25M -> 8M, Champion 1B -> 40M. Zone 4 crates, eggs and Power Levels kept.
+- Boss reward (placeholder) 1B / 25% of next Power Level -> 5B / 50%, still + a Sky Bronze crate.
+- Moved-pet bonuses: no change (owners keep the stronger pets, Phase X choice).
+
+| Simulated (40 players) | E3a | E3b |
+|---|---|---|
+| Rank 3 / zone 2 / first pet egg | 1:30 / 4:22 / 6:58 | 4:10 / 9:54 / 12:04 (all inside the plan) |
+| Zone 3 / first rebirth | 40 min / 1h00 | 38 min / 1h15 |
+| Gold / League / Champion crate (total play) | ~2h / 1h12 / 2h56 | 43 min / 1h05 / ~1h50 |
+| Zone 4 + boss (total play) | 3h24 | 1h55 |
+| Rebirths 17+ | 1.5-3 h each | 10-25 min, 30-60 min from about rebirth 22 |
+| Level 60 (total play) | never | about 8-10 hours |
+| Power Level 12 / Sky Gold crate | 7h10 / 7h16 | 4h30-7h / 4h40-7h30 |

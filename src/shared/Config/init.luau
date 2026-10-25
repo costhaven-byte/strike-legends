@@ -2156,7 +2156,7 @@ Config.Boss = {
 	UseRange = 18, -- studs from the helipad the server accepts a ride from
 	FightSeconds = 20, -- PLACEHOLDER fight length
 	ReturnDelay = 3, -- seconds after the fight before the helicopter brings you back
-	Reward = { Coins = 1000000000, LevelShare = 0.25, Crate = "SkyBronze" }, -- PLACEHOLDER reward
+	Reward = { Coins = 5000000000, LevelShare = 0.5, Crate = "SkyBronze" }, -- PLACEHOLDER reward (E3b: 1B / 0.25 -> 5B / 0.5)
 	RewardText = "BOSS REWARD",
 }
 
@@ -3381,11 +3381,11 @@ Config.Economy.Crates = {
 	-- L2, Gold U20 R45 E28 L6.5 M0.5)
 	{ Id = "Bronze", Price = 75000 },
 	{ Id = "Silver", Price = 750000 },
-	{ Id = "Gold", Price = 65000000 },
-	-- Phase X: zone 3 and 4 crates. PLACEHOLDER prices (about a quarter of the Power Level players are saving for
-	-- when they reach that zone) until the 4-zone economy pass. Odds come from Config.CrateTiers.
-	{ Id = "League", Price = 25000000 },
-	{ Id = "Champion", Price = 1000000000 },
+	{ Id = "Gold", Price = 3000000 }, -- E3b: 65M -> 3M (at 65M it came after the zone 3 crates, about 2 hours in)
+	-- Phase X: zone 3 and 4 crates. Odds come from Config.CrateTiers. E3b: League 25M -> 8M, Champion 1B -> 40M so
+	-- both come while you play zone 3 (were after zone 4 opened); zone 4 crate prices kept.
+	{ Id = "League", Price = 8000000 },
+	{ Id = "Champion", Price = 40000000 },
 	{ Id = "SkyBronze", Price = 5000000000 },
 	{ Id = "SkySilver", Price = 50000000000 },
 	{ Id = "SkyGold", Price = 500000000000 },
@@ -3473,8 +3473,8 @@ end
 Config.Economy.Eggs = {
 	{ Id = "Alley", Price = 50000, Zone = 2, BonusScale = 0.1 }, -- owner 2026-10-21: pets open with Neon Lanes; 3,700 -> 50K (owner 2026-10-22)
 	{ Id = "Neon", Price = 420000, Zone = 2, BonusScale = 0.2 },
-	{ Id = "Arcade", Price = 6300000, Zone = 3, BonusScale = 0.4 }, -- Main Street Egg (Phase X). PLACEHOLDER price
-	{ Id = "Skyline", Price = 1500000000, Zone = 4, BonusScale = 0.7 }, -- Skyline Egg (Phase X). PLACEHOLDER price
+	{ Id = "Arcade", Price = 6300000, Zone = 3, BonusScale = 0.4 }, -- Main Street Egg (Phase X). E3b: price kept (first one about 1 hour in)
+	{ Id = "Skyline", Price = 1500000000, Zone = 4, BonusScale = 0.7 }, -- Skyline Egg (Phase X). E3b: price kept (about 3 hours of play)
 	{ Id = "Volcano", Price = 35000000000, Zone = 5, BonusScale = 1 },
 }
 Config.Economy.Mascots = {
@@ -3493,14 +3493,19 @@ for name, power in Config.RarityPower do
 	end
 end
 
--- Ranks: XP to go from rank r to r+1 = Base * Growth^(r-1) up to rank LateFrom,
--- then it grows by LateGrowth per rank so ranks LateFrom..MaxRank feel steady.
+-- Ranks: XP to go from rank r to r+1 = Base * Growth^(r-1) up to rank LateFrom, then it grows by LateGrowth per
+-- rank up to EndFrom, then by EndGrowth (nil EndFrom = LateGrowth to the end).
+-- Economy pass E3b (2026-10-25): gentle start (zone 2 at about 9 min, was 4), steep middle (zone 4 at about 2 hours of
+-- play), flat end so level 60 is reachable (about 10 hours of play, was never). Was Base 180, Growth 1.42, LateFrom 30,
+-- LateGrowth 1.06.
 Config.Economy.Ranks = {
 	MaxRank = 60,
-	Base = 180, -- plan: 50 (far too fast, see the changelog)
-	Growth = 1.42, -- plan: 1.35
-	LateFrom = 30,
-	LateGrowth = 1.06,
+	Base = 570, -- plan: 50
+	Growth = 1.2, -- plan: 1.35
+	LateFrom = 12,
+	LateGrowth = 1.38,
+	EndFrom = 30,
+	EndGrowth = 1.08,
 	-- Live since step 7a (rank levels 1-60; XP per throw is still zone 1's, so later levels wait for zones 2-6)
 	LevelsPerTier = 6, -- levels per Pro Tier (Config.Ranks)
 	LevelGems = 2, -- gems for a level-up inside a tier (a new tier gives its own Gems instead)
@@ -3511,15 +3516,15 @@ Config.Economy.Ranks = {
 -- Rebirth = back to level 1, Power Level 1 and 0 coins (balls, pets, gems and potions stay; zones lock again, owner
 -- 2026-10-25) for a permanent coin and XP boost, from the REBIRTH button on the HUD (owner 2026-10-25: no station;
 -- RebirthController). OFF until the owner turns Enabled on.
--- Economy pass E3a (owner 2026-10-25: rebirth should be fast, not a long grind, and open at zone 3). Simulated: first
--- rebirth about 1 hour in, then one every 10-35 minutes (zone 3 is back 4 min after rebirth 1, 30 s by rebirth 10),
--- about 20 rebirths in 20 hours. Was: zone 4, 4B coins x1.6, +3 levels each.
+-- Economy pass E3a (owner 2026-10-25: rebirth should be fast, not a long grind, and open at zone 3). Was: zone 4, 4B
+-- coins x1.6, +3 levels each. E3b (new XP curve, cost x1.6): first rebirth about 1h20 in, then one every 5-25 minutes,
+-- slowing to 30-60 minutes from about rebirth 22.
 Config.Economy.Rebirth = {
 	Enabled = false, -- the owner flips this
 	Zone = 3, -- the first rebirth needs this zone's level (Config.Economy.Zones Rank, 12)...
 	RankStep = 1, -- ...and this many more levels for each one after
 	FirstCost = 20000000, -- coins needed for the first rebirth (20M, about 20 min of zone 3 coins)...
-	CostGrowth = 2, -- ...times this for each one after
+	CostGrowth = 1.6, -- ...times this for each one after (E3b: was 2, which made rebirths 17+ take 1.5-3 hours of coins)
 	DiscountLevels = 5, -- NOT BUILT (old plan, nothing reads it): after a rebirth, Power Levels up to this one...
 	DiscountPrice = 0.1, -- ...cost this share of their price
 	XpBonus = 1, -- +100% XP per rebirth (owner approved). Not in the plan's formula: without it a second run is barely faster

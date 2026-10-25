@@ -45,9 +45,12 @@ local function prepare(config)
 	local R = E.Ranks
 	P.LevelXp = { 0 }
 	for level = 1, R.MaxRank - 1 do
-		local step = if level <= R.LateFrom
-			then math.floor(R.Base * R.Growth ^ (level - 1))
-			else math.floor(R.Base * R.Growth ^ (R.LateFrom - 1) * R.LateGrowth ^ (level - R.LateFrom))
+		local endFrom = R.EndFrom or math.huge
+		local late = math.clamp(level - R.LateFrom, 0, endFrom - R.LateFrom)
+		local final = math.max(level - endFrom, 0)
+		local step = math.floor(
+			R.Base * R.Growth ^ (math.min(level, R.LateFrom) - 1) * R.LateGrowth ^ late * (R.EndGrowth or 1) ^ final
+		)
 		P.LevelXp[level + 1] = P.LevelXp[level] + step
 	end
 

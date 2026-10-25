@@ -11,9 +11,16 @@ end
 local LEVELS = Config.Economy.Ranks
 local levelXp = { 0 } -- levelXp[n] = total XP needed for level n
 for level = 1, LEVELS.MaxRank - 1 do
-	local step = if level <= LEVELS.LateFrom
-		then math.floor(LEVELS.Base * LEVELS.Growth ^ (level - 1))
-		else math.floor(LEVELS.Base * LEVELS.Growth ^ (LEVELS.LateFrom - 1) * LEVELS.LateGrowth ^ (level - LEVELS.LateFrom))
+	-- Growth per level up to LateFrom, LateGrowth up to EndFrom, then EndGrowth
+	local endFrom = LEVELS.EndFrom or math.huge
+	local late = math.clamp(level - LEVELS.LateFrom, 0, endFrom - LEVELS.LateFrom)
+	local final = math.max(level - endFrom, 0)
+	local step = math.floor(
+		LEVELS.Base
+			* LEVELS.Growth ^ (math.min(level, LEVELS.LateFrom) - 1)
+			* LEVELS.LateGrowth ^ late
+			* (LEVELS.EndGrowth or 1) ^ final
+	)
 	levelXp[level + 1] = levelXp[level] + step
 end
 
