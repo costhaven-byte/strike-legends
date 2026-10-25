@@ -252,6 +252,48 @@ local function onBuyPolish(player: Player, ballId: any)
 	return { Ok = true, Level = level + 1 }
 end
 
+-- Adds a ball to the player's collection, or turns a duplicate into Polish Points (coins once that ball is fully
+-- polished). Returns isNew, the coins a sold duplicate paid, and the new Polish level (when a duplicate polished it).
+local function addBall(player: Player, ball): (boolean, number, number?)
+	local owned = getOwned(player)
+	local isNew = not owned[ball.Id]
+	local sellCoins = 0
+	local polishLevel = nil
+	if isNew then
+		owned[ball.Id] = true
+		publishOwned(player)
+	else
+		local polish = PlayerDataService.Get(player, "Polish") or {}
+		local before = polish[ball.Id] or 0
+		if Balls.PolishLevel(before) < POLISH.MaxLevel then
+			-- Duplicate: Polish Points for this ball (+5% of its multiplier per level)
+			polish[ball.Id] = before + POLISH.PointsPerDuplicate
+			polishLevel = Balls.PolishLevel(polish[ball.Id])
+			publishPolish(player)
+			Analytics.Event(player, "PolishLevel", polishLevel, { ball.Id })
+		else
+			-- Fully polished already: sold for coins
+			sellCoins = Balls.GetRarity(ball.Rarity).SellCoins
+			PlayerDataService.Add(player, "Coins", sellCoins)
+			Analytics.Currency(player, "Coins", sellCoins, "Gameplay", "DuplicateSold")
+		end
+	end
+	return isNew, sellCoins, polishLevel
+end
+
+-- Gives one exact ball (no crate roll, no pity): the Robux Starter Pack. Returns isNew.
+function BallService.GiveBall(player: Player, ballId: string): boolean
+	local ball = Balls.Get(ballId)
+	if not ball then
+		return false
+	end
+	local isNew = addBall(player, ball)
+	if isNew then
+		SessionLog.Moment(player, ("Ball unlocked: %s (%s)"):format(ball.Id, ball.Rarity))
+	end
+	return isNew
+end
+
 -- Gives the player one crate's ball (no charge): rolls with this crate's pity, adds the ball, or turns a duplicate
 -- into Polish Points (coins once that ball is fully polished).
 -- Used for bought crates and free ones (like the daily reward). Returns the result the client shows.
@@ -277,29 +319,7 @@ function BallService.GiveCrate(player: Player, crate, minRarity: string?, exactR
 		end)
 	end
 
-	local owned = getOwned(player)
-	local isNew = not owned[ball.Id]
-	local sellCoins = 0
-	local polishLevel = nil
-	if isNew then
-		owned[ball.Id] = true
-		publishOwned(player)
-	else
-		local polish = PlayerDataService.Get(player, "Polish") or {}
-		local before = polish[ball.Id] or 0
-		if Balls.PolishLevel(before) < POLISH.MaxLevel then
-			-- Duplicate: Polish Points for this ball (+5% of its multiplier per level)
-			polish[ball.Id] = before + POLISH.PointsPerDuplicate
-			polishLevel = Balls.PolishLevel(polish[ball.Id])
-			publishPolish(player)
-			Analytics.Event(player, "PolishLevel", polishLevel, { ball.Id })
-		else
-			-- Fully polished already: sold for coins
-			sellCoins = Balls.GetRarity(ball.Rarity).SellCoins
-			PlayerDataService.Add(player, "Coins", sellCoins)
-			Analytics.Currency(player, "Coins", sellCoins, "Gameplay", "DuplicateSold")
-		end
-	end
+	local isNew, sellCoins, polishLevel = addBall(player, ball)
 	SessionLog.Crate(player)
 	SessionLog.Moment(
 		player,

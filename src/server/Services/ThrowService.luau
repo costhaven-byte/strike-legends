@@ -10,6 +10,7 @@ local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modifiers = require(Shared.Modules.Modifiers)
+local Store = require(Shared.Modules.Store)
 local PowerLevels = require(Shared.Modules.PowerLevels)
 local Progression = require(Shared.Modules.Progression)
 local Rebirth = require(Shared.Modules.Rebirth)
@@ -297,8 +298,9 @@ local function startAutoBowl(remotes: Folder)
 	local toggle = Instance.new("RemoteEvent")
 	toggle.Name = "SetAutoBowl"
 	toggle.OnServerEvent:Connect(function(player, on)
-		-- (Phase 5: check the Auto Bowl gamepass here)
-		player:SetAttribute("AutoBowl", on == true)
+		-- Free for everyone only while Config.AutoBowl.Enabled; otherwise it needs the AUTO BOWL game pass
+		local allowed = AUTO.Enabled or Store.Owns(player, "AutoBowl")
+		player:SetAttribute("AutoBowl", on == true and allowed)
 	end)
 	toggle.Parent = remotes
 	task.spawn(function()
@@ -355,7 +357,7 @@ function ThrowService:Start()
 
 	hold.OnServerEvent:Connect(onHoldStart)
 	request.OnServerEvent:Connect(onThrowRequest)
-	if Config.AutoBowl.Enabled then
+	if Config.AutoBowl.Enabled or Store.Active() then
 		startAutoBowl(folder)
 	end
 	Players.PlayerRemoving:Connect(function(player)

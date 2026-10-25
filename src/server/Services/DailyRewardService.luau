@@ -31,10 +31,10 @@ local function getState(player: Player): (number, boolean)
 	local today = Calendar.Day()
 	if lastDay > 0 and lastClaim == today then
 		return lastDay, false -- already claimed today
-	elseif lastDay > 0 and lastClaim == today - 1 then
-		return lastDay % #DAILY.Rewards + 1, true -- came back the next day: streak continues
+	elseif lastDay > 0 and today - lastClaim <= 1 + (DAILY.GraceDays or 0) then
+		return lastDay % #DAILY.Rewards + 1, true -- came back the next day (or skipped a grace day): streak continues
 	end
-	return 1, true -- first time, or missed a day: back to day 1
+	return 1, true -- first time, or missed more than the grace days: back to day 1
 end
 
 local function publish(player: Player)

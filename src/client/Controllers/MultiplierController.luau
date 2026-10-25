@@ -12,6 +12,7 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Currency = require(Shared.Modules.Currency)
+local Store = require(Shared.Modules.Store)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local UiFx = require(Modules:WaitForChild("UiFx"))
 
@@ -35,6 +36,7 @@ local SOURCES = {
 	{ Key = "Rank", Name = "RANK" },
 	{ Key = "Rebirth", Name = "REBIRTH" },
 	{ Key = "Friends", Name = "FRIENDS" },
+	{ Key = "Passes", Name = "GAME PASSES" },
 	{ Key = "Streak", Name = "STREAK" },
 	{ Key = "Modifier", Name = "LANE EVENT" },
 }
@@ -258,8 +260,9 @@ function MultiplierController:Start()
 		UiFx.Close(panel)
 	end)
 
-	-- Auto Bowl (Config.AutoBowl): only when switched on; the server makes the remote only then
-	if Config.AutoBowl.Enabled then
+	-- Auto Bowl (Config.AutoBowl): for everyone when switched on, or with the AUTO BOWL game pass while the store is
+	-- on (Config.Monetization); the server makes the remote only then
+	if Config.AutoBowl.Enabled or Store.Active() then
 		local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SetAutoBowl", 10) :: RemoteEvent?
 		if remote then
 			local auto = Instance.new("TextButton")
@@ -276,11 +279,13 @@ function MultiplierController:Start()
 			label.Position = UDim2.fromScale(0.08, 0.15)
 			label.Size = UDim2.fromScale(0.84, 0.7)
 			local function show()
+				auto.Visible = Config.AutoBowl.Enabled or Store.Owns(player, "AutoBowl")
 				local on = player:GetAttribute("AutoBowl") == true
 				label.Text = if on then "AUTO ON" else "AUTO"
 				auto.BackgroundColor3 = if on then Color3.fromRGB(40, 90, 30) else CARD
 			end
 			player:GetAttributeChangedSignal("AutoBowl"):Connect(show)
+			player:GetAttributeChangedSignal("Passes"):Connect(show)
 			show()
 			auto.Activated:Connect(function()
 				remote:FireServer(player:GetAttribute("AutoBowl") ~= true)

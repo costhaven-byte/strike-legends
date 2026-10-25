@@ -14,6 +14,7 @@ local Config = require(Shared.Config)
 local Mascots = require(Shared.Modules.Mascots)
 local Zones = require(Shared.Modules.Zones)
 local Progression = require(Shared.Modules.Progression)
+local Store = require(Shared.Modules.Store)
 local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionService = require(script.Parent.ProgressionService)
@@ -36,7 +37,11 @@ local function getEquipped(player: Player): { string }
 end
 
 local function slots(player: Player): number
-	return Mascots.Slots(PlayerDataService.Get(player, "RankLevel") or 1, PlayerDataService.Get(player, "Rebirths") or 0)
+	return Mascots.Slots(
+		PlayerDataService.Get(player, "RankLevel") or 1,
+		PlayerDataService.Get(player, "Rebirths") or 0,
+		Store.PetSlots(player)
+	)
 end
 
 -- The highest zone the player's rank level has opened (eggs with a Zone unlock there)
@@ -426,12 +431,14 @@ function MascotService:Start()
 
 	PlayerDataService.OnLoaded(function(player)
 		publish(player)
-		-- New slots open with rank levels
-		player:GetAttributeChangedSignal("RankLevel"):Connect(function()
-			if PlayerDataService.IsLoaded(player) then
-				publish(player)
-			end
-		end)
+		-- New slots open with rank levels (and the +2 PET SLOTS pass, Passes)
+		for _, key in { "RankLevel", "Passes" } do
+			player:GetAttributeChangedSignal(key):Connect(function()
+				if PlayerDataService.IsLoaded(player) then
+					publish(player)
+				end
+			end)
+		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		busy[player] = nil

@@ -79,6 +79,17 @@ function PotionService.Give(player: Player, potionId: string, count: number?): b
 	return true
 end
 
+-- Runs a potion's boost this many seconds longer straight away, past MaxMinutes (Robux boosts, Config.Monetization)
+function PotionService.AddBoost(player: Player, potionId: string, seconds: number): boolean
+	local boosts = PlayerDataService.Get(player, "Boosts")
+	if not byId[potionId] or type(boosts) ~= "table" then
+		return false
+	end
+	boosts[potionId] = (boosts[potionId] or 0) + seconds
+	publish(player)
+	return true
+end
+
 local function use(player: Player, potionId: any)
 	if not RateLimit.Allow(player, "UsePotion") then
 		return { Ok = false, Error = "Slow down!" }

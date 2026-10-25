@@ -33,23 +33,24 @@ local loadedCallbacks: { (Player) -> () } = {}
 local releaseCallbacks: { (Player) -> () } = {}
 local pendingReleases = 0
 
-local function save(player: Player, profile: Profile, release: boolean)
+local function save(player: Player, profile: Profile, release: boolean): boolean
 	if profile.NoSave then
-		return
+		return true
 	end
 	if profile.Untouched then
 		-- Studio unlock-all test: only hand the lock back, with the save exactly as it was loaded
 		if release then
 			SaveStore.Save(player.UserId, profile.Untouched, true)
 		end
-		return
+		return true
 	end
 	while profile.Saving do
 		task.wait() -- let an autosave finish first so saves never overlap
 	end
 	profile.Saving = true
-	SaveStore.Save(player.UserId, profile.Data, release)
+	local ok = SaveStore.Save(player.UserId, profile.Data, release)
 	profile.Saving = false
+	return ok
 end
 
 -- Final save when a player leaves (or the server closes). Safe to call more than once.
@@ -124,6 +125,15 @@ local function onPlayerAdded(player: Player)
 	for _, callback in loadedCallbacks do
 		task.spawn(callback, player)
 	end
+end
+
+-- Saves this player's data right now (Robux purchases). True when it was written (or this test never saves).
+function PlayerDataService.SaveNow(player: Player): boolean
+	local profile = profiles[player]
+	if not profile or profile.Released then
+		return false
+	end
+	return save(player, profile, false)
 end
 
 -- Runs callback for every player whose data is ready, now and in the future.

@@ -113,8 +113,9 @@ function Mascots.BonusText(bonus: number): string
 	return ("+%d%%"):format(math.floor(bonus * 100 + 0.5))
 end
 
--- Equip slots: StartSlots, +1 for each of SlotRanks reached (rank level) and SlotRebirths, up to MaxSlots
-function Mascots.Slots(rankLevel: number, rebirths: number): number
+-- Equip slots: StartSlots, +1 for each of SlotRanks reached (rank level) and SlotRebirths, up to MaxSlots,
+-- plus extra (the +2 PET SLOTS game pass, Config.Monetization) on top of that
+function Mascots.Slots(rankLevel: number, rebirths: number, extra: number?): number
 	local count = ECONOMY.StartSlots
 	for _, rank in ECONOMY.SlotRanks do
 		if rankLevel >= rank then
@@ -126,7 +127,7 @@ function Mascots.Slots(rankLevel: number, rebirths: number): number
 			count += 1
 		end
 	end
-	return math.min(count, ECONOMY.MaxSlots)
+	return math.min(count, ECONOMY.MaxSlots) + (extra or 0)
 end
 
 -- The next locked slot's unlock, as text ("RANK LEVEL 15"), or nil when all slots are open

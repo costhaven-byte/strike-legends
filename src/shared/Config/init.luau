@@ -217,12 +217,15 @@ Config.StartingData = {
 	Rebirths = 0, -- rebirths done (Config.Economy.Rebirth; v18)
 	LastOnline = 0, -- os.time() when the player last left, for "while you were away" coins (Config.Away; v19)
 	AwayRate = 0, -- coins per second earned from throws near the end of the last visit (Config.Away; v19)
+	Purchases = {}, -- the last Robux purchase ids handed out, so one is never given twice (Config.Monetization; v20)
+	StarterPack = 0, -- 1 = the one-time Starter Pack was bought (v20)
+	StarterOffered = 0, -- 1 = the Starter Pack popup was shown (it only shows once; v20)
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 19, -- v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 20, -- v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -291,6 +294,7 @@ Config.RateLimits = {
 	RideElevator = 2,
 	RideHelicopter = 2,
 	Rebirth = 3,
+	StoreBuy = 1,
 }
 
 -- Gems on/off switch. Addendum 1 keeps gems (earned only, a gem sink comes later); set Enabled = false to hide them.
@@ -2860,7 +2864,8 @@ Config.PetIdle = {
 }
 
 -- Daily reward: a 7-day calendar. Claim once per day (days change at midnight UTC).
--- Missing a whole day starts you back at day 1. After day 7 it loops back to day 1.
+-- One missed day is forgiven (GraceDays, Addendum 2 step 11); missing more starts you back at day 1. After day 7 it
+-- loops back to day 1.
 -- Each day can give Coins, Gems, Potions ({ Id, Count } from Config.Potions), a free Egg hatch (an egg Id, hatched at the
 -- egg stand) and/or a free Crate (a crate Id from Config.Crates).
 -- Owner 2026-10-22: make them very valuable (day 1 15K, day 2 three x2 potions, day 3 500K...). Coin income grows
@@ -2880,6 +2885,7 @@ Config.Daily = {
 		{ Crate = "Gold", Potions = { { Id = "CoinBig", Count = 2 } }, Gems = 25 },
 	},
 	CheckInterval = 30, -- seconds between checks for a new day while playing
+	GraceDays = 1, -- days you can skip without losing your place in the 7 days
 }
 
 -- Zone milestones (Phase X Part 1): beats between the zone 2 (level 5) and zone 3 (level 12) unlocks.
@@ -2911,6 +2917,63 @@ Config.Friends = {
 	Enabled = true,
 	BonusPerFriend = 0.1,
 	MaxBonus = 0.5,
+}
+
+-- Monetization (Addendum 2 section 7, step 12a). Enabled is the MonetizationEnabled switch: the owner flips it.
+-- OFF: no STORE button, no popups, no pass perks, nothing can be bought. Robux buys speed, convenience and looks,
+-- never skill (PERFECTs can't be bought) and a free player is never blocked.
+-- Before switching on: make each game pass and developer product on the Creator Dashboard (Monetization page),
+-- paste its number into PassId / ProductId below (0 = not made yet, can't be bought), and set Robux to the price you
+-- picked there (the button only shows this number; Roblox charges what the Dashboard says).
+-- StudioPreview: in Studio only, the STORE shows even while Enabled is off and every BUY is free and instant
+-- (nothing real, and Studio tests don't save). It never does anything in the live game.
+Config.Monetization = {
+	Enabled = false,
+	StudioPreview = true,
+	-- Game passes: bought once, kept forever
+	Passes = {
+		{ Id = "DoubleCoins", PassId = 0, Robux = 399, Name = "2X COINS", Text = "Every throw pays double. Forever.", Coins = 2 },
+		{
+			Id = "AutoBowl",
+			PassId = 0,
+			Robux = 199,
+			Name = "AUTO BOWL",
+			Text = "An AUTO button: the game bowls for you. Slower than you, and never a PERFECT.",
+		},
+		{ Id = "VIP", PassId = 0, Robux = 799, Name = "VIP", Text = "+10% coins and a gold [VIP] tag in chat.", Coins = 1.1 },
+		{ Id = "PetSlots", PassId = 0, Robux = 399, Name = "+2 PET SLOTS", Text = "Two more pets follow you.", PetSlots = 2 },
+	},
+	-- Developer products: can be bought again and again (StarterPack only once)
+	-- Boost = { Potion, Minutes }: that potion's boost runs this much longer, straight away (Config.Potions)
+	-- Ball = a ball Id given (a duplicate polishes it, like a crate). Gems = gems given.
+	Products = {
+		{
+			Id = "StarterPack",
+			ProductId = 0,
+			Robux = 199,
+			Name = "STARTER PACK",
+			Text = "Dumpster Diamond (Rare ball), 30 min of 2X COINS and 100 gems. Once only.",
+			Once = true,
+			Ball = "DumpsterDiamond",
+			Boost = { Potion = "CoinSmall", Minutes = 30 },
+			Gems = 100,
+		},
+		{
+			Id = "CoinBoost",
+			ProductId = 0,
+			Robux = 49,
+			Name = "2X COINS - 15 MIN",
+			Text = "Double coins for 15 minutes of play.",
+			Boost = { Potion = "CoinSmall", Minutes = 15 },
+		},
+		{ Id = "GemsSmall", ProductId = 0, Robux = 99, Name = "60 GEMS", Text = "A handful of gems.", Gems = 60 },
+		{ Id = "GemsMedium", ProductId = 0, Robux = 399, Name = "300 GEMS", Text = "A bag of gems.", Gems = 300 },
+		{ Id = "GemsLarge", ProductId = 0, Robux = 1599, Name = "1,500 GEMS", Text = "A chest of gems.", Gems = 1500 },
+	},
+	StarterAfterMinutes = 10, -- the Starter Pack popup shows once, after this many minutes of play in total...
+	QuietSeconds = 3, -- ...at a quiet moment: this long after the player's last throw (never mid-throw)
+	ChatTag = "[VIP]", -- before VIP owners' names in chat (gold)
+	KeepPurchaseIds = 50, -- how many recent purchase ids each save remembers
 }
 
 Config.Milestones = {

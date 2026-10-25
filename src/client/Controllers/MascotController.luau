@@ -416,7 +416,10 @@ function MascotController:Start()
 		local slots = player:GetAttribute("MascotSlots") or ECONOMY.StartSlots
 		local level = player:GetAttribute("RankLevel") or 1
 		local lockedShown = false
-		for i = 1, ECONOMY.MaxSlots do
+		-- The +2 PET SLOTS pass (Config.Monetization) can go past MaxSlots: smaller boxes so they all fit
+		local shown = math.max(ECONOMY.MaxSlots, slots)
+		local boxSize = math.min(66, math.floor((ECONOMY.MaxSlots * 74 - 8 - (shown - 1) * 8) / shown))
+		for i = 1, shown do
 			local open = i <= slots
 			if not open and lockedShown then
 				break -- show only the next locked slot, so it's clear what unlocks it
@@ -427,7 +430,7 @@ function MascotController:Start()
 			box.AutoButtonColor = false
 			box.LayoutOrder = i
 			box.BackgroundColor3 = SLOT
-			box.Size = UDim2.fromOffset(66, 66)
+			box.Size = UDim2.fromOffset(boxSize, boxSize)
 			box.Parent = slotRow
 			corner(box, 10)
 			local mascot = Mascots.Get(list[i])

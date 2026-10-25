@@ -123,6 +123,7 @@ local function migrate(saved: any): { [string]: any }
 		-- v13 added Mascots, EquippedMascots and EggsHatched: new keys start empty / at 0, nothing to upgrade
 		-- v14 added ZoneSeen, v15 Potions and Boosts, v16 FreeEggs, v17 SpinDay, v18 BossNextAt and Rebirths,
 		-- v19 LastOnline and AwayRate: same, they start at their starting value (0 = no away coins on the first visit)
+		-- v20 Purchases, StarterPack and StarterOffered: same, they start empty / at 0
 	end
 	data.Rank = math.clamp(math.floor(tonumber(data.Rank) or 1), 1, #Config.Ranks)
 	-- Money comes back through Currency, so a future number format can read old plain-number saves here
