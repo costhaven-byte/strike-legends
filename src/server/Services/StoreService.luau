@@ -5,7 +5,7 @@
 -- Products: handed out in ProcessReceipt. Each purchase id is saved (Purchases), so a purchase is never given twice,
 -- and the save is written straight away before Roblox is told it went through.
 -- Starter Pack: offered once (StarterOffered), after StarterAfterMinutes of play in total, at a quiet moment.
--- COIN BOOST products add to the saved RobuxBoost (coins x (1 + RobuxBoost), MultiplierService).
+-- Ladder products (COIN BOOST / XP BOOST) are bought in order: each step doubles (CoinBoostLevel / XpBoostLevel).
 -- VIP: DailyGems once a day (VipGiftDay), given on join or when the day changes.
 -- Studio preview (StudioPreview, switch off): BUY gives the item for free straight away; Studio tests never save.
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -90,8 +90,10 @@ local function grantProduct(player: Player, product)
 	if product.Ball then
 		BallService.GiveBall(player, product.Ball)
 	end
-	if product.CoinBoost then
-		PlayerDataService.Set(player, "RobuxBoost", (PlayerDataService.Get(player, "RobuxBoost") or 0) + product.CoinBoost)
+	if product.Ladder then
+		-- A ladder step: never lower than what's already bought (a step bought twice just keeps the level)
+		local key = Store.LadderKeys[product.Ladder]
+		PlayerDataService.Set(player, key, math.max(PlayerDataService.Get(player, key) or 0, product.Step))
 	end
 	if product.Once then
 		PlayerDataService.Set(player, product.Id, 1) -- StarterPack = 1
@@ -99,8 +101,9 @@ local function grantProduct(player: Player, product)
 	Analytics.Purchase(player, "Robux", product.Id)
 	SessionLog.Moment(player, ("Robux purchase: %s"):format(product.Id))
 	if resultEvent then
-		local text = if product.CoinBoost
-			then ("COIN BOOST is now x%s"):format(tostring(math.floor(Store.BoostMultiplier(player) * 100 + 0.5) / 100))
+		local text = if product.Ladder == "Coins"
+			then ("COIN BOOST is now x%d"):format(Store.BoostMultiplier(player))
+			elseif product.Ladder == "Xp" then ("XP BOOST is now x%d"):format(Store.XpBoostMultiplier(player))
 			else product.Name .. " is yours"
 		resultEvent:FireClient(player, { Id = product.Id, Text = text })
 	end
@@ -167,6 +170,9 @@ local function onBuy(player: Player, id: any)
 	end
 	if product and product.Once and (PlayerDataService.Get(player, product.Id) or 0) > 0 then
 		return
+	end
+	if product and product.Ladder and Store.NextStep(player, product.Ladder) ~= product then
+		return -- ladder steps are bought in order, once each
 	end
 	if Store.IsPreview() then
 		-- Studio preview: free and instant (nothing is real, and Studio tests don't save)

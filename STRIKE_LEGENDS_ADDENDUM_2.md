@@ -138,7 +138,7 @@ Optional if trivial: other players can see your equipped ball with its rarity gl
 Principle: Robux buys speed, convenience and looks. Skill measures cannot be bought. A free player is never blocked.
 
 **Owner changes (Selim, 2026-10-25, step 12a rework; these override the lists below):**
-- Cheap repeatable COIN BOOST products at 3, 8, 15, 30, 50 and 100 Robux: every purchase raises a permanent coin multiplier (shown as xN, not a percent; saved RobuxBoost).
+- Two doubling ladders, bought in order, each step doubles, top = x16 (owner, later the same day): COIN BOOST x2/x4/x8/x16 for 3/8/15/30 R$, XP BOOST x2/x4/x8/x16 for 15/30/50/100 R$ (saved CoinBoostLevel / XpBoostLevel, save v22).
 - Auto Bowl (499 R$): every auto throw is a strike, without the PERFECT x2; auto throws never change the streak and never count for rank trials or the 3-strike challenge. This relaxes "skill cannot be bought" for Auto Bowl only (Selim's call).
 - Passes: 2X COINS + 2X XP (stacks with potions), bigger VIP (+25% coins and XP, 25 daily gems, gold ball trail, chat tag), LUCKY x1.5 and SUPER LUCKY x2 (stack to x3; Rare and better; odds screens show the boosted odds), TRIPLE HATCH (3 eggs or crates at once), +2 PET SLOTS. Numbers in Config.Monetization.
 

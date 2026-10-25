@@ -124,6 +124,20 @@ local function migrate(saved: any): { [string]: any }
 		-- v14 added ZoneSeen, v15 Potions and Boosts, v16 FreeEggs, v17 SpinDay, v18 BossNextAt and Rebirths,
 		-- v19 LastOnline and AwayRate: same, they start at their starting value (0 = no away coins on the first visit)
 		-- v20 Purchases, StarterPack and StarterOffered, v21 RobuxBoost and VipGiftDay: same, they start empty / at 0
+		if version < 22 then
+			-- v22: the COIN BOOST became a doubling ladder (x2, x4, x8, x16). An old adding boost (coins x (1 +
+			-- RobuxBoost)) becomes the highest step it already reached or passed, so nobody loses what they paid for.
+			local old = 1 + math.max(0, tonumber(data.RobuxBoost) or 0)
+			local level = 0
+			while level < 4 and 2 ^ (level + 1) <= old do
+				level += 1
+			end
+			if old > 1 and level == 0 then
+				level = 1
+			end
+			data.CoinBoostLevel = math.max(tonumber(data.CoinBoostLevel) or 0, level)
+			data.RobuxBoost = 0
+		end
 	end
 	data.Rank = math.clamp(math.floor(tonumber(data.Rank) or 1), 1, #Config.Ranks)
 	-- Money comes back through Currency, so a future number format can read old plain-number saves here

@@ -45,7 +45,7 @@ function MultiplierService.Coins(player: Player, ball, level, streak: number, mo
 		Rebirth = Rebirth.CoinMultiplier(PlayerDataService.Get(player, "Rebirths")), -- Phase X rebirth stub
 		Friends = FriendService.Multiplier(player), -- +10% per friend in the server (Config.Friends, step 11a)
 		Passes = Store.CoinMultiplier(player), -- 2X COINS + 2X XP and VIP game passes (Config.Monetization, step 12a)
-		RobuxBoost = Store.BoostMultiplier(player), -- the COIN BOOST bought with the cheap Robux products
+		RobuxBoost = Store.BoostMultiplier(player), -- the COIN BOOST ladder bought with Robux (x2 per step)
 		Streak = Progression.GetStreakMultiplier(streak),
 		Modifier = modifier and modifier.CoinMultiplier or 1,
 		GoldenPin = if goldenHit then Config.GoldenPin.CoinMultiplier else 1,

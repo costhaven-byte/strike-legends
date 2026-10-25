@@ -66,10 +66,34 @@ function Store.XpMultiplier(player: Player): number
 	return product(player, "Xp")
 end
 
--- The COIN BOOST bought with the cheap products: x1 + every buy (saved RobuxBoost, mirrored as an attribute).
--- Kept even if the store is switched off again: it was paid for.
+-- The saved attribute behind each doubling ladder (Config.Monetization Products Ladder)
+Store.LadderKeys = { Coins = "CoinBoostLevel", Xp = "XpBoostLevel" }
+
+-- Steps bought on a ladder ("Coins" or "Xp")
+function Store.LadderLevel(player: Player, ladder: string): number
+	return math.max(0, math.floor(tonumber(player:GetAttribute(Store.LadderKeys[ladder])) or 0))
+end
+
+-- The ladder's next step to buy (a Products row), or nil once it's MAXED
+function Store.NextStep(player: Player, ladder: string)
+	local level = Store.LadderLevel(player, ladder)
+	for _, product in MONEY.Products do
+		if product.Ladder == ladder and product.Step == level + 1 then
+			return product
+		end
+	end
+	return nil
+end
+
+-- COIN BOOST bought on the ladder: x2 per step (x16 at the top). Kept even if the store is switched off again: it
+-- was paid for.
 function Store.BoostMultiplier(player: Player): number
-	return 1 + math.max(0, tonumber(player:GetAttribute("RobuxBoost")) or 0)
+	return 2 ^ Store.LadderLevel(player, "Coins")
+end
+
+-- XP BOOST bought on the ladder: x2 per step
+function Store.XpBoostMultiplier(player: Player): number
+	return 2 ^ Store.LadderLevel(player, "Xp")
 end
 
 -- Luck from owned passes (LUCKY x1.5, SUPER LUCKY x2, both x3)

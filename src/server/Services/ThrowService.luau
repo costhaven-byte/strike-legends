@@ -73,6 +73,7 @@ local function getXpMultipliers(player: Player, streak: number, zone: number): {
 		Potion = PotionService.Multiplier(player, "XP"), -- XP Potion x2 / Mega XP Potion x4 (Config.Potions)
 		Rebirth = Rebirth.XpMultiplier(PlayerDataService.Get(player, "Rebirths")), -- Phase X rebirth stub
 		Passes = Store.XpMultiplier(player), -- 2X COINS + 2X XP and VIP game passes (Config.Monetization)
+		XpBoost = Store.XpBoostMultiplier(player), -- the XP BOOST ladder bought with Robux (x2 per step)
 	}
 end
 

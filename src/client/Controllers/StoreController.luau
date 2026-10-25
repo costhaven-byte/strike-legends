@@ -185,13 +185,16 @@ function StoreController:Start()
 		note.Text = "STUDIO PREVIEW: buying is free and fake"
 		note.TextXAlignment = Enum.TextXAlignment.Left
 	end
-	-- The COIN BOOST bought so far (cheap products), top right
+	-- The ladder boosts bought so far, top right
 	local boostLabel = text(panel, "Boost", FONT, GOLD, UDim2.new(1, -262, 0, 18), UDim2.fromOffset(196, 24))
 	boostLabel.TextXAlignment = Enum.TextXAlignment.Right
 	local function refreshBoost()
-		boostLabel.Text = ("COIN BOOST x%s"):format(tostring(math.floor(Store.BoostMultiplier(player) * 100 + 0.5) / 100))
+		boostLabel.Text =
+			("COINS x%d  XP x%d"):format(Store.BoostMultiplier(player), Store.XpBoostMultiplier(player))
 	end
-	player:GetAttributeChangedSignal("RobuxBoost"):Connect(refreshBoost)
+	for _, key in Store.LadderKeys do
+		player:GetAttributeChangedSignal(key):Connect(refreshBoost)
+	end
 	refreshBoost()
 	local close = button(panel, "Close", "X", Color3.fromRGB(255, 70, 90), UDim2.new(1, -54, 0, 12), UDim2.fromOffset(42, 42))
 
@@ -218,7 +221,7 @@ function StoreController:Start()
 		local color = if item.Id == "StarterPack"
 			then LIME
 			elseif kind == "Pass" then GOLD
-			elseif item.CoinBoost then Color3.fromRGB(255, 120, 200)
+			elseif kind == "Ladder" then Color3.fromRGB(255, 120, 200)
 			else Color3.fromRGB(80, 220, 255)
 		local card = Instance.new("Frame")
 		card.Name = item.Id
@@ -231,7 +234,7 @@ function StoreController:Start()
 		kindLabel.Text = if kind == "Pass"
 			then "GAME PASS"
 			elseif item.Once then "ONE TIME ONLY"
-			elseif item.CoinBoost then "FOREVER"
+			elseif kind == "Ladder" then "FOREVER - DOUBLES EVERY BUY"
 			elseif item.Gems then "GEMS"
 			else "BOOST"
 		kindLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -248,7 +251,16 @@ function StoreController:Start()
 		size.Parent = body
 		local buy = button(card, "Buy", Store.PriceText(item.Robux), color, UDim2.new(1, -106, 1, -48), UDim2.fromOffset(96, 38))
 		buy.Activated:Connect(function()
-			buyRemote:FireServer(item.Id)
+			-- A ladder card buys that ladder's next step
+			local id = item.Id
+			if kind == "Ladder" then
+				local step = Store.NextStep(player, item.Ladder)
+				if not step then
+					return
+				end
+				id = step.Id
+			end
+			buyRemote:FireServer(id)
 		end)
 		cards[item.Id] = { Card = card, Buy = buy, Kind = kind, Item = item, Color = color }
 	end
@@ -259,12 +271,17 @@ function StoreController:Start()
 			addCard(product, "Product", order)
 		end
 	end
+	-- One card per doubling ladder (it shows the next step)
+	for _, ladder in { { Ladder = "Coins", Name = "COIN BOOST" }, { Ladder = "Xp", Name = "XP BOOST" } } do
+		order += 1
+		addCard({ Id = "Ladder_" .. ladder.Ladder, Ladder = ladder.Ladder, Name = ladder.Name, Text = "", Robux = 0 }, "Ladder", order)
+	end
 	for _, pass in MONEY.Passes do
 		order += 1
 		addCard(pass, "Pass", order)
 	end
 	for _, product in MONEY.Products do
-		if not product.Once then
+		if not product.Once and not product.Ladder then
 			order += 1
 			addCard(product, "Product", order)
 		end
@@ -279,11 +296,28 @@ function StoreController:Start()
 				card.Buy.Active = not mine
 			elseif card.Item.Once then
 				card.Card.Visible = (player:GetAttribute(id) or 0) == 0 -- StarterPack: gone once bought
+			elseif card.Kind == "Ladder" then
+				local ladder = card.Item.Ladder
+				local level = Store.LadderLevel(player, ladder)
+				local step = Store.NextStep(player, ladder)
+				local what = if ladder == "Coins" then "coins" else "XP"
+				card.Card.ItemName.Text = if step
+					then ("%s x%d > x%d"):format(card.Item.Name, 2 ^ level, 2 ^ step.Step)
+					else ("%s x%d"):format(card.Item.Name, 2 ^ level)
+				card.Card.Text.Text = if step
+					then ("Doubles your %s forever. Step %d of 4."):format(what, step.Step)
+					else ("Your %s are doubled 4 times. All done!"):format(what)
+				card.Buy.Text = if step then Store.PriceText(step.Robux) else "MAXED"
+				card.Buy.BackgroundColor3 = if step then card.Color else GREY
+				card.Buy.Active = step ~= nil
 			end
 		end
 	end
 	player:GetAttributeChangedSignal("Passes"):Connect(refresh)
 	player:GetAttributeChangedSignal("StarterPack"):Connect(refresh)
+	for _, key in Store.LadderKeys do
+		player:GetAttributeChangedSignal(key):Connect(refresh)
+	end
 	refresh()
 
 	openButton.Activated:Connect(function()

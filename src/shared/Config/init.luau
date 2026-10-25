@@ -220,14 +220,16 @@ Config.StartingData = {
 	Purchases = {}, -- the last Robux purchase ids handed out, so one is never given twice (Config.Monetization; v20)
 	StarterPack = 0, -- 1 = the one-time Starter Pack was bought (v20)
 	StarterOffered = 0, -- 1 = the Starter Pack popup was shown (it only shows once; v20)
-	RobuxBoost = 0, -- COIN BOOST bought with Robux: coins x (1 + this) forever (Config.Monetization; v21)
+	RobuxBoost = 0, -- v21 only (the old adding COIN BOOST); v22 turns it into CoinBoostLevel and it stays 0
+	CoinBoostLevel = 0, -- COIN BOOST ladder steps bought with Robux: coins x 2^this forever (Config.Monetization; v22)
+	XpBoostLevel = 0, -- XP BOOST ladder steps: XP x 2^this forever (v22)
 	VipGiftDay = 0, -- the day number (see Calendar.Day) the VIP daily gems were last given (v21)
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 21, -- v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 22, -- v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -2994,7 +2996,6 @@ Config.Monetization = {
 	-- Developer products: can be bought again and again (Once = one time only)
 	-- Boost = { Potion, Minutes }: that potion's boost runs this much longer, straight away (Config.Potions)
 	-- Ball = a ball Id given (a duplicate polishes it, like a crate). Gems = gems given.
-	-- CoinBoost = added to the player's saved COIN BOOST multiplier forever (RobuxBoost; x1 + every buy together).
 	Products = {
 		{
 			Id = "StarterPack",
@@ -3007,13 +3008,17 @@ Config.Monetization = {
 			Boost = { Potion = "CoinSmall", Minutes = 30 },
 			Gems = 100,
 		},
-		-- Cheap COIN BOOST ladder (owner 2026-10-25): every buy raises a permanent coin multiplier
-		{ Id = "Boost3", ProductId = 0, Robux = 3, Name = "COIN BOOST +x0.05", Text = "Coins forever. Stacks.", CoinBoost = 0.05 },
-		{ Id = "Boost8", ProductId = 0, Robux = 8, Name = "COIN BOOST +x0.15", Text = "Coins forever. Stacks.", CoinBoost = 0.15 },
-		{ Id = "Boost15", ProductId = 0, Robux = 15, Name = "COIN BOOST +x0.3", Text = "Coins forever. Stacks.", CoinBoost = 0.3 },
-		{ Id = "Boost30", ProductId = 0, Robux = 30, Name = "COIN BOOST +x0.65", Text = "Coins forever. Stacks.", CoinBoost = 0.65 },
-		{ Id = "Boost50", ProductId = 0, Robux = 50, Name = "COIN BOOST +x1.1", Text = "Coins forever. Stacks.", CoinBoost = 1.1 },
-		{ Id = "Boost100", ProductId = 0, Robux = 100, Name = "COIN BOOST +x2.4", Text = "Coins forever. Stacks.", CoinBoost = 2.4 },
+		-- Doubling ladders (owner 2026-10-25): bought in order, each step doubles that boost, up to x16 (then MAXED).
+		-- Ladder = "Coins" or "Xp", Step = 1-4: the player's saved CoinBoostLevel / XpBoostLevel becomes Step,
+		-- worth x2^Step forever. The store only offers each ladder's next step.
+		{ Id = "CoinLadder1", ProductId = 0, Robux = 3, Ladder = "Coins", Step = 1 },
+		{ Id = "CoinLadder2", ProductId = 0, Robux = 8, Ladder = "Coins", Step = 2 },
+		{ Id = "CoinLadder3", ProductId = 0, Robux = 15, Ladder = "Coins", Step = 3 },
+		{ Id = "CoinLadder4", ProductId = 0, Robux = 30, Ladder = "Coins", Step = 4 },
+		{ Id = "XpLadder1", ProductId = 0, Robux = 15, Ladder = "Xp", Step = 1 },
+		{ Id = "XpLadder2", ProductId = 0, Robux = 30, Ladder = "Xp", Step = 2 },
+		{ Id = "XpLadder3", ProductId = 0, Robux = 50, Ladder = "Xp", Step = 3 },
+		{ Id = "XpLadder4", ProductId = 0, Robux = 100, Ladder = "Xp", Step = 4 },
 		{
 			Id = "CoinBoost", -- Id kept from 12a (the timed boost)
 			ProductId = 0,
