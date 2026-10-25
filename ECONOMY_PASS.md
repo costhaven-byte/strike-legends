@@ -70,7 +70,7 @@ Owner 2026-10-25: rebirth should be fast (not a long prestige grind), open at zo
 | Level 60 | never in 25 h |
 Tried and dropped: +2 levels per rebirth (zone 4 3h03 but rebirths slow down sooner), cost x1.6 (little change).
 
-## E3b (built 2026-10-25, test pending): XP curve + prices
+## E3b (PASSED 2026-10-25): XP curve + prices
 - XP curve (Config.Economy.Ranks; Progression + simulator got a third piece, EndFrom/EndGrowth): Base 570, x1.2 per
   level to 12, x1.38 to 30, then x1.08. Total XP: L5 3K (was 1.3K), L12 18K (20K), L30 3.7M (11M), L60 162M (382M).
   Old saves never lose a level (most mid-game saves gain a few: the owner's test save 31 -> 36).
