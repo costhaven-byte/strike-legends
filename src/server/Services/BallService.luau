@@ -20,6 +20,8 @@ local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 
 local BallService = {}
 
+local pullBannerEvent: RemoteEvent? = nil -- Legendary/Mythic pull banners for the whole server (Config.PullBanner)
+
 local busy: { [Player]: boolean } = {}
 
 local function getOwned(player: Player): { [string]: boolean }
@@ -267,6 +269,13 @@ function BallService.GiveCrate(player: Player, crate, minRarity: string?, exactR
 		player:SetAttribute("Pity_" .. key, value)
 	end
 	PlayerDataService.Add(player, "CratesOpened", 1)
+	-- A Legendary or Mythic pull: a banner for everyone in the server (Config.PullBanner), after the reveal
+	local banner = Config.PullBanner
+	if banner.Enabled and banner.Rarities[ball.Rarity] and pullBannerEvent then
+		task.delay(banner.Delay, function()
+			pullBannerEvent:FireAllClients({ Name = player.DisplayName, BallId = ball.Id })
+		end)
+	end
 
 	local owned = getOwned(player)
 	local isNew = not owned[ball.Id]
@@ -387,6 +396,10 @@ end
 
 function BallService:Start()
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+	pullBannerEvent = Instance.new("RemoteEvent")
+	pullBannerEvent.Name = "PullBanner"
+	pullBannerEvent.Parent = remotes
 
 	local equip = Instance.new("RemoteEvent")
 	equip.Name = "EquipBall"

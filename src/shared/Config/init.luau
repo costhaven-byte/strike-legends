@@ -2195,6 +2195,26 @@ Config.Rizzo = {
 
 -- The crate shop kiosk in the lobby (Workspace.Hub.CrateShop, built in Studio). Crate looks live in
 -- ReplicatedStorage.CrateModels, one model per crate Id.
+-- Weekly featured ball (Addendum 2 step 11b): each week (Monday 00:00 UTC) every zone features one of its crate balls
+-- from its TopRarities best rarities (Shared.Modules.Balls.Featured; rotates through them, same on every server).
+-- Inside its rarity the featured ball is WeightBoost times likelier than the others; the rarity odds never change.
+-- Shown as FEATURED on the crate cards and in the ODDS list (with its real chance).
+Config.Featured = {
+	Enabled = true,
+	WeightBoost = 3,
+	TopRarities = 2,
+}
+
+-- Server banner (Addendum 2 step 11b): when anyone pulls one of these rarities from a crate, everyone in the server
+-- sees a banner at the top. Delay = seconds after the pull (so it doesn't spoil the puller's own reveal).
+Config.PullBanner = {
+	Enabled = true,
+	Rarities = { Legendary = true, Mythic = true },
+	Delay = 4,
+	Seconds = 4, -- each banner stays this long; more pulls wait their turn
+	Text = "%s PULLED %s (%s)!", -- player's display name, ball name, rarity
+}
+
 Config.CrateShop = {
 	PromptDistance = 10, -- studs from the buy button where "Open" shows up
 	HoldDuration = 0.4, -- seconds to hold the buy button, so nobody spends coins by accident

@@ -1,5 +1,8 @@
 -- Looks up balls, rarities and crates from the tables in Config. Used by both server and client.
+local Workspace = game:GetService("Workspace")
+
 local Config = require(script.Parent.Parent.Config)
+local Calendar = require(script.Parent.Calendar)
 local Zones = require(script.Parent.Zones)
 
 local Balls = {}
@@ -209,20 +212,74 @@ function Balls.PityRows(crateId: string)
 	return rows
 end
 
--- Each ball's real chance (percent) in a crate: rarity odds shared equally by the balls of that rarity
-function Balls.CrateBallOdds(crate): { { Ball: any, Chance: number } }
+-- This week's featured ball of a zone (Config.Featured), or nil. Every server and client agrees: it comes from the
+-- week number (server time) and rotates through the zone's crate balls of its top Config.Featured.TopRarities rarities.
+function Balls.Featured(zone: number?, time: number?)
+	local featured = Config.Featured
+	local range = zone and Config.ZoneRarity[zone]
+	if not featured.Enabled or not range then
+		return nil
+	end
+	local lowest = Balls.RarityIndex(range.Max) - featured.TopRarities + 1
+	local candidates = {}
+	for _, ball in Config.Balls do
+		if
+			ball.Zone == zone
+			and ball.InCrates ~= false
+			and not ball.Retired
+			and Balls.RarityIndex(ball.Rarity) >= lowest
+		then
+			table.insert(candidates, ball)
+		end
+	end
+	if #candidates == 0 then
+		return nil
+	end
+	local week = Calendar.Week(time or Workspace:GetServerTimeNow())
+	return candidates[week % #candidates + 1]
+end
+
+-- How likely a ball is picked inside its rarity in this crate: 1, or Config.Featured.WeightBoost for the featured ball
+-- of the crate's zone (the rarity odds themselves never change)
+function Balls.CrateWeight(ball, crate): number
+	local featured = crate.ZoneBallsOnly and Balls.Featured(crate.Zone)
+	return if featured and featured.Id == ball.Id then Config.Featured.WeightBoost else 1
+end
+
+-- Picks one ball from a crate's pool of one rarity, using Balls.CrateWeight
+function Balls.PickFromPool(pool, crate)
+	local total = 0
+	for _, ball in pool do
+		total += Balls.CrateWeight(ball, crate)
+	end
+	local roll = math.random() * total
+	for _, ball in pool do
+		roll -= Balls.CrateWeight(ball, crate)
+		if roll <= 0 then
+			return ball
+		end
+	end
+	return pool[#pool]
+end
+
+-- Each ball's real chance (percent) in a crate: rarity odds shared by the balls of that rarity, by Balls.CrateWeight
+-- (equal shares, except this week's featured ball). Featured = true on the featured ball's entry.
+function Balls.CrateBallOdds(crate): { { Ball: any, Chance: number, Featured: boolean } }
 	local list = {}
 	for _, rarity in Config.Rarities do
 		local pool = {}
+		local total = 0
 		for _, ball in Config.Balls do
 			if ball.Rarity == rarity.Name and Zones.BallInCrate(ball, crate) then
 				table.insert(pool, ball)
+				total += Balls.CrateWeight(ball, crate)
 			end
 		end
 		local odds = crate.Odds[rarity.Name] or 0
 		if odds > 0 then
 			for _, ball in pool do
-				table.insert(list, { Ball = ball, Chance = odds / #pool })
+				local weight = Balls.CrateWeight(ball, crate)
+				table.insert(list, { Ball = ball, Chance = odds * weight / total, Featured = weight > 1 })
 			end
 		end
 	end

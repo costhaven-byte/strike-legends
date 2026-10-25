@@ -20,7 +20,8 @@
 --            gifts (Config.Playtime, potions drunk at once), a free crate every Config.FreeCrates throws, day 1's
 --            daily reward, one daily spin
 -- Not simulated: overcharge gambles, Blast/Curve/Heavy/Lucky traits, gems and gem Polish, the gold zone shrinking
--- with the streak (PERFECTs are a flat Sim.PerfectShare), walking between zones and shops.
+-- with the streak (PERFECTs are a flat Sim.PerfectShare), walking between zones and shops, the weekly featured ball
+-- (Config.Featured only changes which ball of a rarity you get, not the rarity).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local EconomySim = {}

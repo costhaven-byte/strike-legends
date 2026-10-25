@@ -927,8 +927,9 @@ function CrateController:Start()
 			local row = oddsText(ball.Id, {
 				LayoutOrder = order,
 				Size = UDim2.new(1, -8, 0, 28),
-				Text = ('%s%s  <font color="#%s">%.4g%%</font>'):format(
+				Text = ('%s%s%s  <font color="#%s">%.4g%%</font>'):format(
 					ball.Name,
+					if entry.Featured then '  <font color="#FFC828">FEATURED</font>' else "",
 					if owned[ball.Id] then "" else '  <font color="#8C82A0">(new)</font>',
 					rarity.Color:ToHex(),
 					entry.Chance
@@ -991,8 +992,41 @@ function CrateController:Start()
 		end
 		rowTemplate:Destroy()
 
-		-- Room under the odds for this crate's guarantee line, and an ODDS button for every ball's chance
-		card.Odds.Size = UDim2.new(1, -28, 1, -136)
+		-- Room under the odds for this week's featured ball and this crate's guarantee line, and an ODDS button for
+		-- every ball's chance
+		card.Odds.Size = UDim2.new(1, -28, 1, -156)
+		local featuredLine = Instance.new("TextLabel")
+		featuredLine.Name = "FeaturedLine"
+		featuredLine.BackgroundTransparency = 1
+		featuredLine.AnchorPoint = Vector2.new(0, 1)
+		featuredLine.Position = UDim2.new(0, 12, 1, -92)
+		featuredLine.Size = UDim2.new(1, -24, 0, 18)
+		featuredLine.FontFace = card.CrateName.FontFace
+		featuredLine.TextScaled = true
+		featuredLine.RichText = true
+		featuredLine.TextColor3 = Color3.fromRGB(255, 200, 40)
+		featuredLine.Parent = card
+		local function refreshFeatured()
+			local featured = crate.ZoneBallsOnly and Balls.Featured(crate.Zone)
+			if featured and (crate.Odds[featured.Rarity] or 0) <= 0 then
+				featured = nil -- this crate can't give that rarity
+			end
+			featuredLine.Visible = featured ~= nil
+			if featured then
+				featuredLine.Text = ('FEATURED: <font color="#%s">%s</font> x%g'):format(
+					Balls.GetRarity(featured.Rarity).Color:ToHex(),
+					featured.Name:upper(),
+					Config.Featured.WeightBoost
+				)
+			end
+		end
+		refreshFeatured()
+		task.spawn(function()
+			while card.Parent do
+				task.wait(60) -- the featured ball changes on Monday 00:00 UTC
+				refreshFeatured()
+			end
+		end)
 		local pityLine = Instance.new("TextLabel")
 		pityLine.Name = "PityLine"
 		pityLine.BackgroundTransparency = 1

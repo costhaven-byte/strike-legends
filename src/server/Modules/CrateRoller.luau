@@ -75,7 +75,7 @@ function CrateRoller.Roll(crate, pity: { [string]: number }, minRarity: string?,
 		end
 		rarity = pool[1].Rarity
 	end
-	local ball = pool[math.random(#pool)]
+	local ball = Balls.PickFromPool(pool, crate) -- this week's featured ball is likelier (Config.Featured)
 
 	local got = Balls.RarityIndex(rarity)
 	local newCounts = {}
