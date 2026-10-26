@@ -1678,6 +1678,100 @@ Config.BallVfx = {
 			Halos = { { Image = "Dot", Color = Color3.fromRGB(150, 70, 255), Size = 2.4, Transparency = 0.6 } },
 			Light = { Color = Color3.fromRGB(255, 70, 190), Brightness = 2.5, Range = 6 },
 		},
+
+		-- Main Street Lanes balls (owner's claude.ai/design 'Main Street Lanes Bowling Balls', 2026-10-27):
+		-- trail colours and roll effects from the design notes
+		LeagueBlack = {
+			Trails = { { Colors = { Color3.fromHex("E0465C"), Color3.fromHex("C21E37") }, Width = 1, Lifetime = 0.35 } },
+			-- a thin red ring ripples around the ball as it spins
+			Rings = { { Radius = 0.62, Width = 0.05, Color = Color3.fromHex("C21E37"), Tilt = { 90, 0 }, Spin = 0.6 } },
+			Badge = { Image = "Burst", Size = 0.5, Height = 0.95 },
+			Light = { Color = Color3.fromHex("C21E37"), Brightness = 1.5, Range = 4 },
+		},
+		CherrySwirl = {
+			Trails = { { Colors = { Color3.fromHex("F2E6CF"), Color3.fromHex("E85A6E"), Color3.fromHex("C21E37") }, Width = 1, Lifetime = 0.35 } },
+			-- little whipped-cream puffs
+			Particles = {
+				{ Image = "Dot", Colors = { Color3.fromHex("FFF8EC"), Color3.fromHex("F2E6CF") }, Rate = 14, Size = 0.14,
+					Life = { 0.4, 0.8 }, Speed = { 0.1, 0.4 }, Rise = 0.3, Radius = 0.45 },
+			},
+			Badge = { Image = "Burst", Size = 0.5, Height = 0.95 },
+			Light = { Color = Color3.fromHex("E85A6E"), Brightness = 1.5, Range = 4 },
+		},
+		BlueMarble = {
+			Trails = { { Colors = { Color3.fromHex("F4F6FB"), Color3.fromHex("8FB0EA"), Color3.fromHex("6E93E8") }, Width = 1, Lifetime = 0.35 } },
+			-- a polished glint and tiny stone chips
+			Particles = {
+				{ Image = "Star", Colors = { Color3.fromHex("FFFFFF") }, Rate = 3, Size = 0.25, Life = { 0.15, 0.3 },
+					Speed = { 0, 0.1 }, Radius = 0.5 },
+				{ Image = "Diamond", Colors = { Color3.fromHex("F4F6FB"), Color3.fromHex("8FB0EA") }, Rate = 16, Size = 0.07,
+					Life = { 0.3, 0.6 }, Speed = { 0.5, 1.2 }, Radius = 0.45 },
+			},
+			Badge = { Image = "Burst", Size = 0.5, Height = 0.95 },
+			Light = { Color = Color3.fromHex("6E93E8"), Brightness = 1.5, Range = 4 },
+		},
+		PearlPro = {
+			Trails = {
+				{ Colors = { Color3.fromHex("F2B9CC"), Color3.fromHex("D2C2F0"), Color3.fromHex("B8D2F2") }, Width = 1.1,
+					Lifetime = 0.45, Texture = "TrailRainbow" },
+			},
+			-- rainbow bubbles drift up behind it
+			Particles = {
+				{ Image = "Ring", Colors = { Color3.fromHex("F2B9CC"), Color3.fromHex("B9E6D2"), Color3.fromHex("B8D2F2"), Color3.fromHex("D2C2F0") },
+					Rate = 12, Size = 0.16, Life = { 0.8, 1.4 }, Speed = { 0.05, 0.2 }, Rise = 0.6, Radius = 0.55, Twinkle = true },
+			},
+			Halos = { { Image = "Dot", Color = Color3.fromHex("F6F1E7"), Size = 2.2, Transparency = 0.7 } },
+			Light = { Color = Color3.fromHex("F2D9E6"), Brightness = 2, Range = 5 },
+		},
+		TigerSwirl = {
+			Trails = { { Colors = { Color3.fromHex("FFB347"), Color3.fromHex("F08A24"), Color3.fromHex("A8480C") }, Width = 1.1, Lifetime = 0.4 } },
+			-- glowing scratch sparks that fade out
+			Particles = {
+				{ Image = "Bolt", Colors = { Color3.fromHex("FFB347"), Color3.fromHex("F08A24") }, Rate = 6, Size = 0.35,
+					Life = { 0.3, 0.5 }, Speed = { 0, 0.2 }, Radius = 0.55 },
+				{ Image = "Ember", Colors = { Color3.fromHex("FFB347"), Color3.fromHex("F08A24") }, Rate = 20, Size = 0.06,
+					Life = { 0.3, 0.7 }, Speed = { 0.3, 0.8 }, Radius = 0.45 },
+			},
+			Halos = { { Image = "Dot", Color = Color3.fromHex("F08A24"), Size = 2.2, Transparency = 0.65 } },
+			Light = { Color = Color3.fromHex("F08A24"), Brightness = 2, Range = 5 },
+		},
+		Championship = {
+			Trails = {
+				{ Colors = { Color3.fromHex("F2CF72"), Color3.fromHex("E2B24A"), Color3.fromHex("B8892E") }, Width = 1.1, Lifetime = 0.45 },
+				{ Colors = { Color3.fromHex("2A4FB8") }, Width = 0.45, Lifetime = 0.4 }, -- royal-blue core
+			},
+			-- gold confetti and laurel leaves
+			Particles = {
+				{ Image = "Diamond", Colors = { Color3.fromHex("F2CF72"), Color3.fromHex("E2B24A"), Color3.fromHex("2A4FB8") }, Rate = 30,
+					Size = 0.08, Life = { 0.8, 1.4 }, Speed = { 0.3, 0.8 }, Rise = -0.4, Radius = 0.6, Twinkle = true },
+				{ Image = "Star", Colors = { Color3.fromHex("FFF4CC"), Color3.fromHex("E2B24A") }, Rate = 10, Size = 0.18,
+					Life = { 0.4, 0.8 }, Speed = { 0, 0.2 }, Radius = 0.5, Twinkle = true },
+			},
+			Halos = { { Image = "Dot", Color = Color3.fromHex("E2B24A"), Size = 2.4, Transparency = 0.55 } },
+			Ground = {
+				{ Color = Color3.fromHex("F2CF72"), Radius = 0.9, Transparency = 0 },
+				{ Color = Color3.fromHex("2A4FB8"), Radius = 1.15, Transparency = 0.6 },
+			},
+			Light = { Color = Color3.fromHex("E2B24A"), Brightness = 3, Range = 6 },
+		},
+		Perfect300 = {
+			Trails = {
+				{ Colors = { Color3.fromHex("E0465C"), Color3.fromHex("C21E37"), Color3.fromHex("7A0E1F") }, Width = 1.1, Lifetime = 0.45 },
+			},
+			-- gold X sparks pop off it
+			Particles = {
+				{ Image = "Star", Colors = { Color3.fromHex("FFE9A8"), Color3.fromHex("E2B24A") }, Rate = 24, Size = 0.16,
+					Life = { 0.4, 0.8 }, Speed = { 0.4, 1 }, Spin = 180, Radius = 0.55, Twinkle = true },
+				{ Image = "Ember", Colors = { Color3.fromHex("E2B24A") }, Rate = 20, Size = 0.06,
+					Life = { 0.4, 0.8 }, Speed = { 0.3, 0.7 }, Rise = 0.3, Radius = 0.5 },
+			},
+			Halos = { { Image = "Dot", Color = Color3.fromHex("C21E37"), Size = 2.4, Transparency = 0.55 } },
+			Ground = {
+				{ Color = Color3.fromHex("E2B24A"), Radius = 0.9, Transparency = 0 },
+				{ Color = Color3.fromHex("C21E37"), Radius = 1.15, Transparency = 0.6 },
+			},
+			Light = { Color = Color3.fromHex("E0465C"), Brightness = 3, Range = 6 },
+		},
 	},
 }
 
@@ -2052,8 +2146,9 @@ Config.Balls = {
 		Trail = Color3.fromRGB(255, 220, 120),
 		Traits = { Blast = 1, Heavy = 0.8 },
 	},
-	-- Main Street Lanes (zone 3, Phase X): classic league balls (marble, swirl, league). Placeholders: they reuse other
-	-- balls' models painted one plain colour until real art exists. Numbers follow the Neon Lanes ladder.
+	-- Main Street Lanes (zone 3, Phase X): classic league balls (marble, swirl, league). Real models from the owner's
+	-- claude.ai/design 'Main Street Lanes Bowling Balls' (2026-10-27): ReplicatedStorage.BallModels, one shared mesh +
+	-- a texture each (assets/zone3_balls). Numbers follow the Neon Lanes ladder.
 	{
 		Id = "LeagueBlack",
 		Zone = 3,
@@ -2061,13 +2156,10 @@ Config.Balls = {
 		Rarity = "Rare",
 		Multiplier = 2.0,
 		Forgiveness = 0.02,
-		Color = Color3.fromRGB(35, 35, 42),
+		Color = Color3.fromHex("1A1A22"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromRGB(35, 35, 42),
+		Trail = Color3.fromHex("C21E37"),
 		Traits = { Curve = 0.25 },
-		Model = "Rookie", -- PLACEHOLDER look: reuses Rookie's model, plain paint
-		Tint = Color3.fromRGB(35, 35, 42),
-		PlainModel = true, -- one plain colour and material, no glow
 	},
 	{
 		Id = "CherrySwirl",
@@ -2076,13 +2168,10 @@ Config.Balls = {
 		Rarity = "Rare",
 		Multiplier = 2.2,
 		Forgiveness = 0.02,
-		Color = Color3.fromRGB(190, 30, 55),
+		Color = Color3.fromHex("C21E37"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromRGB(190, 30, 55),
+		Trail = Color3.fromHex("E85A6E"),
 		Traits = { Lucky = 0.75 },
-		Model = "Bubblegum", -- PLACEHOLDER look: reuses Bubblegum's model, plain paint
-		Tint = Color3.fromRGB(190, 30, 55),
-		PlainModel = true, -- one plain colour and material, no glow
 	},
 	{
 		Id = "BlueMarble",
@@ -2091,13 +2180,10 @@ Config.Balls = {
 		Rarity = "Rare",
 		Multiplier = 2.4,
 		Forgiveness = 0.025,
-		Color = Color3.fromRGB(40, 95, 205),
+		Color = Color3.fromHex("2A4FB8"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromRGB(40, 95, 205),
+		Trail = Color3.fromHex("6E93E8"),
 		Traits = { Blast = 0.35 },
-		Model = "Ocean", -- PLACEHOLDER look: reuses Ocean's model, plain paint
-		Tint = Color3.fromRGB(40, 95, 205),
-		PlainModel = true, -- one plain colour and material, no glow
 	},
 	{
 		Id = "PearlPro",
@@ -2106,13 +2192,10 @@ Config.Balls = {
 		Rarity = "Epic",
 		Multiplier = 3.5,
 		Forgiveness = 0.03,
-		Color = Color3.fromRGB(235, 228, 215),
+		Color = Color3.fromHex("F6F1E7"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromRGB(235, 228, 215),
+		Trail = Color3.fromHex("F2B9CC"),
 		Traits = { Curve = 0.35, GemHunter = 0.06 },
-		Model = "Frostbite", -- PLACEHOLDER look: reuses Frostbite's model, plain paint
-		Tint = Color3.fromRGB(235, 228, 215),
-		PlainModel = true, -- one plain colour and material, no glow
 	},
 	{
 		Id = "TigerSwirl",
@@ -2121,13 +2204,10 @@ Config.Balls = {
 		Rarity = "Epic",
 		Multiplier = 4.5,
 		Forgiveness = 0.035,
-		Color = Color3.fromRGB(230, 120, 30),
+		Color = Color3.fromHex("F08A24"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromRGB(230, 120, 30),
+		Trail = Color3.fromHex("F08A24"),
 		Traits = { Blast = 0.5, Lucky = 1.25 },
-		Model = "Tangerine", -- PLACEHOLDER look: reuses Tangerine's model, plain paint
-		Tint = Color3.fromRGB(230, 120, 30),
-		PlainModel = true, -- one plain colour and material, no glow
 	},
 	{
 		Id = "Championship",
@@ -2136,13 +2216,10 @@ Config.Balls = {
 		Rarity = "Legendary",
 		Multiplier = 8.0,
 		Forgiveness = 0.04,
-		Color = Color3.fromRGB(200, 160, 60),
+		Color = Color3.fromHex("E2B24A"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromRGB(200, 160, 60),
+		Trail = Color3.fromHex("E2B24A"),
 		Traits = { Lucky = 2, GemHunter = 0.15 },
-		Model = "Golden", -- PLACEHOLDER look: reuses Golden's model, plain paint
-		Tint = Color3.fromRGB(200, 160, 60),
-		PlainModel = true, -- one plain colour and material, no glow
 	},
 	{
 		Id = "Perfect300",
@@ -2151,13 +2228,10 @@ Config.Balls = {
 		Rarity = "Legendary",
 		Multiplier = 9.0,
 		Forgiveness = 0.045,
-		Color = Color3.fromRGB(150, 20, 35),
+		Color = Color3.fromHex("C21E37"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromRGB(150, 20, 35),
+		Trail = Color3.fromHex("C21E37"),
 		Traits = { Blast = 0.75, StreakSaver = 45 },
-		Model = "Dragon", -- PLACEHOLDER look: reuses Dragon's model, plain paint
-		Tint = Color3.fromRGB(150, 20, 35),
-		PlainModel = true, -- one plain colour and material, no glow
 	},
 	-- Skyline Lanes (zone 4, Phase X): the moved top Neon balls as new zone 4 entries (same numbers as the ball whose
 	-- model they reuse), plus two Epics from the Neon Epic models. Placeholder colour + effect until Claude Design re-skins.
