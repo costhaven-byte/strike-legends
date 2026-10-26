@@ -108,22 +108,17 @@ Config.Throw = {
 		GlowRangePerLevel = 1.5,
 		GlowBrightness = 0.7, -- ...and brightness
 		GlowBrightnessPerLevel = 0.2,
-		TrailWidth = 0.5, -- power trail: half its width, as a share of the ball (+ per level)...
-		TrailWidthPerLevel = 0.05,
-		TrailMaxWidth = 3.2, -- studs, half width; never wider than the lane (Config.Lane.LaneHalfWidth = 4)
-		TrailLife = 0.35, -- ...and how long it hangs in the air (seconds, + per level)
-		TrailLifePerLevel = 0.04,
-		SparkRate = 35, -- sparks per second at SparklesFromLevel (+ per level)
-		SparkRatePerLevel = 25,
+		SparkRate = 14, -- sparks per second at SparklesFromLevel (+ per level) (2026-10-26: was 35 + 25, too busy)
+		SparkRatePerLevel = 8,
 		SparkSize = 0.5, -- spark size in studs, plus this share of the ball
-		FireSize = 1.5, -- flames, times the ball size
-		AuraFill = 0.6, -- 0 = solid glow, 1 = no glow (was 0.45 before 2026-10-25)
+		FireSize = 1, -- flames, times the ball size (2026-10-26: was 1.5)
+		AuraFill = 0.75, -- 0 = solid glow, 1 = no glow (was 0.45 before 2026-10-25, 0.6 before 2026-10-26)
 		ReleaseBurst = 12, -- burst of the level's colour from the hand on release: sparks per level...
 		ReleaseRingFromLevel = 4, -- ...plus a shockwave ring from this level
 		LevelSoundDrop = 0.05, -- every level the ball sounds this much deeper...
 		LevelSoundLoud = 0.08, -- ...and this much louder
 	},
-	PowerTrailFromLevel = 2, -- a bright streak behind the rolling ball, wider every level
+	PowerTrailFromLevel = 2, -- the ball's trail grows from this level (Config.BallVfx.TrailPerLevel; no separate streak since 2026-10-26)
 	SparklesFromLevel = 3, -- sparks pour off the rolling ball
 	FireFromLevel = 5, -- the ball is on fire
 	MegaCrashFromLevel = 7, -- double shockwave, big flash, deep extra boom
@@ -915,85 +910,105 @@ Config.BallVfx = {
 		TrailWisp = "rbxassetid://124462490268355", -- flowing vapour strands, tiles along the trail (SL_Trail_Wisp)
 		TrailRainbow = "rbxassetid://109513255032556", -- rainbow bands across the width + vapour (SL_Trail_Rainbow)
 	},
-	-- Every trail row is drawn as these layers so it reads as real light: a wide soft glow, a wispy body
-	-- that spreads out and thins as it ages, and a short hot core in the row's colours (lightened).
+	-- Every trail row is drawn as these layers so it reads as real light: a soft glow, a wispy body that
+	-- spreads out and thins as it ages, and a short hot core in the row's colours (lightened).
 	-- Width/Lifetime multiply the row's. Fade = extra see-through on top of the row's Transparency.
 	-- Spread = width at the ball -> width at the tail. Emission = how additive (1 = pure glow); the body
 	-- uses the row's Glow if set. Repeat = ball widths per repeat of a tiling texture (it stays put in the
 	-- world as the ball rolls on, like vapour left behind). Rows with their own Texture (Bolt) stay one layer.
-	-- Motion (keeps a trail alive instead of a fixed shape behind the ball): Twist = turns per second the
-	-- ribbon spirals around the ball's path (+/- = direction, Phase = its starting angle), Wobble = how far
-	-- it sways (ball widths), Shimmer = how much its brightness flickers.
+	-- Motion: Twist = turns per second the ribbon spirals around the ball's path (+/- = direction, Phase = its
+	-- starting angle), Wobble = how far it sways (ball widths), Shimmer = how much its brightness flickers.
+	-- FromRarity = the layer only shows on balls of this rarity and up (1 Common .. 6 Mythic), so better balls
+	-- get a visibly richer trail. Only a ball's first trail row gets every layer; extra rows add just the core.
+	-- 2026-10-26 owner: trails too bright, too square, too many at once (was 5 layers on every ball, emission
+	-- up to 0.8, plus a flat power streak and the cosmetic streak on top). Now one trail, tiered by rarity.
 	TrailLayers = {
 		{
 			Texture = "TrailSoft",
-			Width = 1.5,
-			Lifetime = 1.2,
-			Fade = 0.8,
-			Spread = { 1, 1.25 },
-			Emission = 0.8,
-			Wobble = 0.12,
-			Shimmer = 0.25,
+			Width = 1.4,
+			Lifetime = 1.1,
+			Fade = 0.85,
+			Spread = { 0.9, 1.2 },
+			Emission = 0.45,
+			Wobble = 0.08,
 		},
 		{
 			Texture = "TrailWisp",
 			Body = true, -- a row's BodyTexture replaces this layer's texture, and its Glow its Emission
-			Width = 1.1,
+			Width = 1,
 			Lifetime = 1,
-			Fade = 0.15,
-			Spread = { 0.85, 1.3 },
-			Emission = 0.55,
+			Fade = 0.3,
+			Spread = { 0.8, 1.2 },
+			Emission = 0.35,
 			Repeat = 2.5,
-			Wobble = 0.08,
-		},
-		-- two streamers spiralling around each other
-		{
-			Texture = "TrailWisp",
-			Body = true,
-			Width = 0.8,
-			Lifetime = 0.9,
-			Fade = 0.3,
-			Spread = { 0.7, 1.4 },
-			Emission = 0.7,
-			Repeat = 3,
-			Twist = 3,
-		},
-		{
-			Texture = "TrailWisp",
-			Body = true,
-			Width = 0.8,
-			Lifetime = 0.9,
-			Fade = 0.3,
-			Spread = { 0.7, 1.4 },
-			Emission = 0.7,
-			Repeat = 3,
-			Twist = -2.2,
-			Phase = 90,
+			Wobble = 0.05,
 		},
 		{
 			Texture = "TrailCore",
+			Core = true,
 			Width = 0.25,
 			Lifetime = 0.35,
-			Fade = 0.3,
-			Spread = { 1, 0.15 },
-			Emission = 0.5,
+			Fade = 0.35,
+			Spread = { 1, 0.1 },
+			Emission = 0.4,
 			Lighten = 0.1,
-			Wobble = 0.04,
-			Shimmer = 0.4,
+		},
+		-- Epic and up: a streamer spirals around the path
+		{
+			Texture = "TrailWisp",
+			Body = true,
+			FromRarity = 4,
+			Width = 0.7,
+			Lifetime = 0.9,
+			Fade = 0.4,
+			Spread = { 0.7, 1.2 },
+			Emission = 0.45,
+			Repeat = 3,
+			Twist = 2.5,
+		},
+		-- Legendary and up: a second streamer the other way round
+		{
+			Texture = "TrailWisp",
+			Body = true,
+			FromRarity = 5,
+			Width = 0.7,
+			Lifetime = 0.9,
+			Fade = 0.4,
+			Spread = { 0.7, 1.2 },
+			Emission = 0.45,
+			Repeat = 3,
+			Twist = -2,
+			Phase = 90,
 		},
 	},
+	-- How big a ball's trail is, by its rarity (1 Common .. 6 Mythic): Width and Lifetime multiply the trail row's,
+	-- Bright multiplies its glow. Common is a short thin streak; Mythic a long, wide, full one.
+	TrailTiers = {
+		{ Width = 0.65, Lifetime = 0.6, Bright = 0.7 },
+		{ Width = 0.75, Lifetime = 0.75, Bright = 0.8 },
+		{ Width = 0.85, Lifetime = 0.9, Bright = 0.9 },
+		{ Width = 1, Lifetime = 1.15, Bright = 1 },
+		{ Width = 1.15, Lifetime = 1.45, Bright = 1.05 },
+		{ Width = 1.3, Lifetime = 1.8, Bright = 1.1 },
+	},
+	CosmeticTrailTier = 4, -- a worn cosmetic trail (Config.Cosmetics) is drawn at least this rich (4 = Epic)
+	-- Power Level grows the trail a little (the ball itself already grows each level, and the trail with it):
+	-- every level from Config.Throw.PowerTrailFromLevel adds these shares of width and length
+	TrailPerLevel = { Width = 0.02, Lifetime = 0.05 },
 	-- Soft puffs in the trail's colours that peel off behind the ball, drift up, grow, turn and fade.
 	-- Size = ball widths at birth -> at death (times the row's Width). Rise = upward pull. Spin = degrees/second
+	-- Only Legendary and Mythic balls (FromRarity) leave them.
 	TrailWisps = {
 		Image = "Dot",
-		Rate = 40,
-		Size = { 0.4, 1.6 },
+		FromRarity = 5,
+		Rate = 18,
+		Size = { 0.4, 1.4 },
 		Life = { 0.5, 0.9 },
 		Speed = { 0.3, 1 },
 		Rise = 0.8,
-		Transparency = 0.4,
+		Transparency = 0.55,
 		Spin = 40,
-		Emission = 0.6,
+		Emission = 0.4,
 	},
 	Balls = {
 		-- Back Alley balls: effects from the design notes (tape scraps, rust sparks, chrome glint, crystal shards)

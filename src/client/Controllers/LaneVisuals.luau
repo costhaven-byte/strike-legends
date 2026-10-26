@@ -137,76 +137,6 @@ local function makeBall(ballId: string?, level: number): Part
 	return ball
 end
 
--- Power Level 2 and up: a bright streak flat on the lane behind the rolling ball, wider every level.
--- Lives on its own part so it doesn't spin with the ball.
--- sequence: a cosmetic trail's own colours (Config.Cosmetics), instead of the level's colour
-local function powerTrail(
-	lane: Model,
-	level: number,
-	diameter: number,
-	color: Color3,
-	forward: Vector3,
-	sequence: ColorSequence?
-)
-	if level < THROW.PowerTrailFromLevel then
-		return nil
-	end
-	local steps = level - THROW.PowerTrailFromLevel
-	local rig = Instance.new("Part")
-	rig.Name = "PowerTrail"
-	rig.Anchored = true
-	rig.CanCollide = false
-	rig.CanQuery = false
-	rig.CanTouch = false
-	rig.Transparency = 1
-	rig.Size = Vector3.one * 0.2
-	local half =
-		math.min(diameter * (LEVEL_FX.TrailWidth + steps * LEVEL_FX.TrailWidthPerLevel), LEVEL_FX.TrailMaxWidth)
-	local low = -diameter * 0.45
-	local left = Instance.new("Attachment")
-	left.Position = Vector3.new(-half, low, 0)
-	left.Parent = rig
-	local rightSide = Instance.new("Attachment")
-	rightSide.Position = Vector3.new(half, low, 0)
-	rightSide.Parent = rig
-	local trail = Instance.new("Trail")
-	trail.Attachment0 = left
-	trail.Attachment1 = rightSide
-	trail.Color = sequence or (if level >= THROW.RainbowFromLevel then RAINBOW else ColorSequence.new(WHITE, color))
-	trail.Transparency = NumberSequence.new(0, 1)
-	trail.LightEmission = 1
-	trail.FaceCamera = false
-	trail.Lifetime = LEVEL_FX.TrailLife + steps * LEVEL_FX.TrailLifePerLevel
-	trail.Parent = rig
-	-- A second, upright ribbon through the ball, so the streak also reads from the camera behind it
-	local top = Instance.new("Attachment")
-	top.Position = Vector3.new(0, diameter * 0.5, 0)
-	top.Parent = rig
-	local bottom = Instance.new("Attachment")
-	bottom.Position = Vector3.new(0, low, 0)
-	bottom.Parent = rig
-	local upright = trail:Clone()
-	upright.Attachment0 = top
-	upright.Attachment1 = bottom
-	upright.Transparency = NumberSequence.new(0.35, 1)
-	upright.Color = sequence or (if level >= THROW.RainbowFromLevel then RAINBOW else ColorSequence.new(color))
-	upright.Parent = rig
-	BallFx.Dim(rig)
-	rig.Parent = lane
-	return {
-		Move = function(position: Vector3)
-			rig.CFrame = CFrame.lookAt(position, position + forward)
-		end,
-		Stop = function()
-			trail.Enabled = false
-			upright.Enabled = false
-			task.delay(trail.Lifetime + 0.1, function()
-				rig:Destroy()
-			end)
-		end,
-	}
-end
-
 -- Strike slow motion: the ball and the flying pins run at a fraction of normal speed for a moment.
 -- (Roblox can't slow down time itself, so we slow down everything this player sees in the alley.)
 local function slowMotion(rack, setTimeScale: (number) -> ())
@@ -497,21 +427,14 @@ local function playThrow(data)
 
 	ball.CFrame = ballStart.CFrame + lift + handOffset
 	ball.Parent = lane
-	local fx = BallFx.Attach(ball, data.BallId, "Lane", forward)
-	local lights = LaneFx.FollowLights(lane, ballInfo.Trail)
-	local streak = powerTrail(lane, feel.Level, ball.Size.X, ballInfo.Trail or ballInfo.Color, forward)
-	-- Cosmetic trail (Config.Cosmetics; a VIP wearing none gets the VIP gold): a streak behind the ball everyone sees
+	-- One trail per ball: the ball's own, sized by its rarity and Power Level (Config.BallVfx.TrailTiers). A worn
+	-- cosmetic trail (Config.Cosmetics; a VIP wearing none gets the VIP gold) recolours it, so everyone sees it
 	local look = thrower and Cosmetics.Worn(thrower, "Trail")
-	local vipTrail = if look
-		then powerTrail(
-			lane,
-			THROW.PowerTrailFromLevel + 4,
-			ball.Size.X,
-			look.Colors[#look.Colors],
-			forward,
-			Cosmetics.Sequence(look)
-		)
-		else nil
+	local fx = BallFx.Attach(ball, data.BallId, "Lane", forward, {
+		Level = feel.Level,
+		TrailColors = look and look.Colors,
+	})
+	local lights = LaneFx.FollowLights(lane, if look then look.Colors[#look.Colors] else ballInfo.Trail)
 	BallFx.Dim(ball)
 	local fired = data.Traits or {}
 	local curveTrail = if table.find(fired, "Curve") then TraitFx.CurveTrail(lane, headDistance) else nil
@@ -662,12 +585,6 @@ local function playThrow(data)
 		ball.CFrame = CFrame.new(position) * CFrame.fromAxisAngle(spinAxis, travelled / radius)
 		fx:Move(position)
 		lights.Update(position)
-		if vipTrail then
-			vipTrail.Move(position)
-		end
-		if streak then
-			streak.Move(position)
-		end
 		if curveTrail then
 			curveTrail.Move(position)
 		end
@@ -717,12 +634,6 @@ local function playThrow(data)
 			connection:Disconnect()
 			ball:Destroy()
 			lights.Destroy()
-			if vipTrail then
-				vipTrail.Stop()
-			end
-			if streak then
-				streak.Stop()
-			end
 		end
 	end)
 

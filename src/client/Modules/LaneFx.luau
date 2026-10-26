@@ -53,11 +53,12 @@ function LaneFx.FollowLights(lane: Model, color: Color3)
 			runner.CanTouch = false
 			runner.Material = Enum.Material.Neon
 			runner.Color = color
+			runner.Transparency = 0.45 -- 2026-10-26 owner: effects too bright (was a solid neon block, light 3)
 			runner.Size = Vector3.new(strip.Size.X + 0.1, strip.Size.Y + 0.06, 5)
 			local light = Instance.new("PointLight")
 			light.Color = color
-			light.Range = 10
-			light.Brightness = 3 * Config.BallVfx.Dim
+			light.Range = 8
+			light.Brightness = 1.5 * Config.BallVfx.Dim
 			light.Parent = runner
 			runner.Parent = lane
 			table.insert(runners, { Part = runner, Strip = strip })

@@ -141,6 +141,7 @@ local function addTrailLayer(rig: BasePart, row, layer, size: number)
 	trail.WidthScale = NumberSequence.new(layer.Spread[1], layer.Spread[2])
 	trail.Lifetime = row.Lifetime * layer.Lifetime
 	trail.LightEmission = if layer.Body and row.Glow then row.Glow else layer.Emission
+	trail.Brightness = row.Bright or 1
 	trail.LightInfluence = 0
 	trail.FaceCamera = layer.Twist == nil -- twisting ribbons turn in 3D, so they spiral instead
 	trail.MinLength = 0.05
@@ -199,8 +200,10 @@ local function addWisps(rig: BasePart, row, size: number)
 	return emitter
 end
 
--- Draws one Trails row; motions and emitters go into the handle so the frame loop can animate them
-local function addTrail(rig: BasePart, row, size: number, handle)
+-- Draws one Trails row; motions and emitters go into the handle so the frame loop can animate them.
+-- tier: the ball's rarity (1 Common .. 6 Mythic) picks which layers show. Only the first row gets them all;
+-- extra rows add just their core, so a ball never draws a pile of trails at once.
+local function addTrail(rig: BasePart, row, size: number, handle, tier: number, first: boolean)
 	if row.Texture then
 		-- A special streak (lightning bolts): drawn as-is, one layer
 		addTrailLayer(rig, row, {
@@ -214,12 +217,15 @@ local function addTrail(rig: BasePart, row, size: number, handle)
 		return
 	end
 	for _, layer in VFX.TrailLayers do
+		if tier < (layer.FromRarity or 1) or not (first or layer.Core) then
+			continue
+		end
 		local motion = addTrailLayer(rig, row, layer, size)
 		if motion then
 			table.insert(handle.Motions, motion)
 		end
 	end
-	if VFX.TrailWisps then
+	if first and VFX.TrailWisps and tier >= (VFX.TrailWisps.FromRarity or 1) then
 		table.insert(handle.Emitters, addWisps(rig, row, size))
 	end
 end
@@ -360,9 +366,33 @@ local function addHalo(rig: BasePart, row, size: number)
 	return gui
 end
 
+-- A trail row sized for its tier (Config.BallVfx.TrailTiers) and Power Level, in the worn cosmetic's colours if any
+local function tieredRow(row, tier: number, level: number, colors: { Color3 }?)
+	local grow = VFX.TrailTiers[tier] or VFX.TrailTiers[1]
+	local steps = math.max(level - Config.Throw.PowerTrailFromLevel + 1, 0)
+	local copy = table.clone(row)
+	copy.Width = row.Width * grow.Width * (1 + steps * VFX.TrailPerLevel.Width)
+	copy.Lifetime = row.Lifetime * grow.Lifetime * (1 + steps * VFX.TrailPerLevel.Lifetime)
+	copy.Bright = grow.Bright
+	if colors then
+		copy.Colors = colors
+		copy.BodyTexture = nil -- a texture with its own colours (rainbow) would hide the cosmetic's
+		copy.Glow = nil
+	end
+	return copy
+end
+
 -- Adds the effects for ballId to a ball part. Lane balls get moved with :Move() every frame;
 -- held balls are followed automatically. Returns a handle with :Move, :SetEnabled and :Destroy.
-function BallFx.Attach(ball: BasePart, ballId: string?, mode: Mode, forward: Vector3?)
+-- options (lane balls): Level = the thrower's Power Level (grows the trail), TrailColors = a worn cosmetic
+-- trail's colours, which replace the ball's own trail colours (one trail, never a second one on top)
+function BallFx.Attach(
+	ball: BasePart,
+	ballId: string?,
+	mode: Mode,
+	forward: Vector3?,
+	options: { Level: number?, TrailColors: { Color3 }? }?
+)
 	local info = Balls.Get(ballId) or Config.Balls[1]
 	local look = lookFor(info)
 	local size = ball.Size.X
@@ -392,8 +422,20 @@ function BallFx.Attach(ball: BasePart, ballId: string?, mode: Mode, forward: Vec
 	}
 
 	if isLane then
-		for _, row in look.Trails or {} do
-			addTrail(rig, row, size, handle)
+		local colors = options and options.TrailColors
+		local tier = Balls.RarityIndex(info.Rarity)
+		if colors then
+			tier = math.max(tier, VFX.CosmeticTrailTier)
+		end
+		local level = options and options.Level or 1
+		local main = nil -- the first plain row gets every layer (a bolt row with its own Texture doesn't count)
+		for index, row in look.Trails or {} do
+			if not row.Texture then
+				main = main or index
+			end
+		end
+		for index, row in look.Trails or {} do
+			addTrail(rig, tieredRow(row, tier, level, colors), size, handle, tier, index == main)
 		end
 	end
 	for _, row in look.Particles or {} do
