@@ -10,6 +10,9 @@ local Config = require(Shared.Config)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules:WaitForChild("Sfx"))
 local UiFx = require(Modules:WaitForChild("UiFx"))
+local HudKit = require(Modules:WaitForChild("HudKit"))
+local TweenService = game:GetService("TweenService")
+local K = HudKit.C
 
 local player = Players.LocalPlayer
 
@@ -17,7 +20,6 @@ local POTIONS = Config.Potions
 
 local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
 local BODY_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
-local CAPTION_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
 local INK = Color3.fromHex("06060F")
 local CARD = Color3.fromRGB(30, 20, 60)
 local PANEL = Color3.fromRGB(18, 12, 38)
@@ -25,10 +27,12 @@ local PURPLE = Color3.fromRGB(190, 90, 255)
 local LIME = Color3.fromRGB(125, 255, 60)
 local GREY = Color3.fromRGB(120, 110, 150)
 
--- Running timers: bottom-left corner; on phones top-left under the menu buttons (the thumbstick owns the bottom-left)
-local TIMERS_NORMAL = { Anchor = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -16), Scale = 1 }
-local TIMERS_COMPACT = { Anchor = Vector2.new(0, 0), Position = UDim2.fromOffset(12, 140), Scale = 0.7 }
-local TIMER_SIZE = UDim2.fromOffset(62, 84)
+-- Running timers (owner's HUD Kit): one card per running potion, bottom-left on computers, bottom middle (right of
+-- HOLD!) on phones, growing to the right. Name and bar colour per kind.
+local KIND_LOOKS = {
+	Coins = { Icon = "PotionCoin", Color = K.Gold },
+	XP = { Icon = "PotionXp", Color = K.Lime },
+}
 
 local PotionController = {}
 
@@ -237,18 +241,44 @@ local function refresh()
 
 		local chip = chips[potion.Id]
 		if chip then
-			chip.Chip.Visible = left > 0
+			local wasShown = chip.Chip.Visible
+			if left > 0 and not wasShown then
+				-- Start: slides in from the left (0.3 s Back Out)
+				chip.Chip.Visible = true
+				chip.Inner.Position = UDim2.fromOffset(-220, 0)
+				TweenService:Create(chip.Inner, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+					Position = UDim2.fromOffset(0, 0),
+				}):Play()
+			elseif left <= 0 and wasShown and not chip.Ending then
+				-- End: shrinks away (0.15 s), then the others move along
+				chip.Ending = true
+				local shrink = TweenService:Create(
+					chip.Scale,
+					TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+					{ Scale = 0 }
+				)
+				shrink:Play()
+				shrink.Completed:Once(function()
+					chip.Chip.Visible = false
+					chip.Scale.Scale = 1
+					chip.Ending = false
+				end)
+			end
 			if left > 0 then
 				-- A weaker potion waits (paused, faded) while a stronger one of its kind runs
 				local on = active[potion.Id] == true
+				local ending = on and left <= 10
 				chip.Time.Text = if on then clock(left) else "WAIT"
-				chip.Time.TextColor3 = if on then Color3.new(1, 1, 1) else GREY
-				for _, part in chip.Flask:GetDescendants() do
-					if part:IsA("Frame") then
-						part.BackgroundTransparency = if part.Name == "Shine"
-							then (if on then 0.35 else 0.7)
-							else (if on then 0 else 0.5)
-					end
+				chip.Time.TextColor3 = if ending then K.Red elseif on then K.White else GREY
+				chip.Block.Outline.Color = if ending then K.Red else K.Ink
+				chip.Icon.ImageTransparency = if on then 0 else 0.5
+				chip.Bar.Size = UDim2.new(math.clamp(left / (potion.Minutes * 60), 0, 1), 0, 0, chip.Bar.Size.Y.Offset)
+				-- Last 10 s: the card breathes (1 <-> 1.04, 0.5 s)
+				if ending and chip.Pulse.PlaybackState ~= Enum.PlaybackState.Playing then
+					chip.Pulse:Play()
+				elseif not ending then
+					chip.Pulse:Cancel()
+					chip.Block.Scale.Scale = 1
 				end
 			end
 		end
@@ -343,7 +373,7 @@ end
 function PotionController:Start()
 	useRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("UsePotion") :: RemoteFunction
 	local playerGui = player:WaitForChild("PlayerGui")
-	local hud = playerGui:WaitForChild("HUD") :: ScreenGui
+	playerGui:WaitForChild("HUD") -- the HUD Kit lays the timers out against it
 	local ballsUI = playerGui:WaitForChild("BallsUI") :: ScreenGui
 
 	local gui = Instance.new("ScreenGui")
@@ -352,52 +382,109 @@ function PotionController:Start()
 	gui.DisplayOrder = ballsUI.DisplayOrder
 	gui.IgnoreGuiInset = ballsUI.IgnoreGuiInset
 
-	-- ===== Running timers: a row of potions, each with its time left under it =====
+	-- ===== Running timers: a row of cards, one per running potion =====
 	local timers = Instance.new("Frame")
 	timers.Name = "Timers"
 	timers.BackgroundTransparency = 1
 	timers.AutomaticSize = Enum.AutomaticSize.X
-	timers.Size = UDim2.fromOffset(0, TIMER_SIZE.Y.Offset)
 	timers.Parent = gui
 	local list = Instance.new("UIListLayout")
 	list.FillDirection = Enum.FillDirection.Horizontal
 	list.VerticalAlignment = Enum.VerticalAlignment.Bottom
-	list.Padding = UDim.new(0, 6)
 	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.Parent = timers
-	local scale = Instance.new("UIScale")
-	scale.Parent = timers
 
 	for index, potion in POTIONS.List do
+		local look = KIND_LOOKS[potion.Boost] or KIND_LOOKS.Coins
 		local chip = Instance.new("Frame")
 		chip.Name = potion.Id
 		chip.LayoutOrder = index
-		chip.Size = TIMER_SIZE
 		chip.BackgroundTransparency = 1
 		chip.Visible = false
 		chip.Parent = timers
-		local bottle = flask(chip, potion.Color, potion.Big, UDim2.new(0.5, 0, 0, 28), 54)
-		-- x2 / x4 on the bottle
-		local tag = text(chip, "Boost", FONT, Color3.new(1, 1, 1), UDim2.new(0.5, -15, 0, 30), UDim2.fromOffset(30, 20))
-		tag.Text = "x" .. potion.Multiplier
-		tag.ZIndex = 4
-		-- Time left, and what it boosts, under the bottle
-		local time = text(chip, "Time", FONT, Color3.new(1, 1, 1), UDim2.new(0, -6, 1, -29), UDim2.new(1, 12, 0, 20))
-		local kind = text(chip, "Kind", CAPTION_FONT, potion.Color, UDim2.new(0, -6, 1, -10), UDim2.new(1, 12, 0, 11))
-		kind.Text = if potion.Boost == "Coins" then "COINS" else "XP"
-		chips[potion.Id] = { Chip = chip, Time = time, Flask = bottle }
+		local scale = Instance.new("UIScale")
+		scale.Parent = chip
+		local inner = Instance.new("Frame")
+		inner.Name = "Inner"
+		inner.BackgroundTransparency = 1
+		inner.Size = UDim2.fromScale(1, 1)
+		inner.Parent = chip
+		local block = HudKit.Block(inner, { Name = "Card", Paint = "Card", Shine = 0, Lip = 5 })
+		block.Holder.Size = UDim2.fromScale(1, 1)
+		block.LipFrame.ClipsDescendants = true
+		local icon = HudKit.Image(inner, look.Icon, 40)
+		icon.AnchorPoint = Vector2.new(0, 0.5)
+		icon.ZIndex = 5
+		local name = HudKit.Text(inner, potion.Name, HudKit.Head, 14, look.Color, 2)
+		name.Name = "PotionName"
+		name.TextXAlignment = Enum.TextXAlignment.Left
+		name.TextTruncate = Enum.TextTruncate.AtEnd
+		local time = HudKit.Text(inner, "", HudKit.Num, 18, K.White, 2)
+		time.Name = "Time"
+		-- The bottom bar: time left
+		local bar = Instance.new("Frame")
+		bar.Name = "Bar"
+		bar.BackgroundColor3 = look.Color
+		bar.BorderSizePixel = 0
+		bar.AnchorPoint = Vector2.new(0, 1)
+		bar.Position = UDim2.fromScale(0, 1)
+		bar.ZIndex = 4
+		bar.Parent = block.LipFrame
+		local pulse = TweenService:Create(
+			block.Scale,
+			TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+			{ Scale = 1.04 }
+		)
+		chips[potion.Id] = {
+			Chip = chip,
+			Inner = inner,
+			Scale = scale,
+			Block = block,
+			Icon = icon,
+			Name = name,
+			Time = time,
+			Bar = bar,
+			Pulse = pulse,
+			Ending = false,
+		}
 	end
 
-	-- Compact layout on short screens (phones held sideways)
-	local function placeAll()
-		local compact = hud.AbsoluteSize.Y > 0 and hud.AbsoluteSize.Y < Config.Ui.CompactHeight
-		local spot = if compact then TIMERS_COMPACT else TIMERS_NORMAL
-		timers.AnchorPoint = spot.Anchor
-		timers.Position = spot.Position
-		scale.Scale = spot.Scale
+	-- Computer 200x52 (name and time side by side), phone 100x38 (name over time)
+	local function arrange(phone: boolean)
+		list.Padding = UDim.new(0, if phone then 6 else 12)
+		timers.Size = UDim2.fromOffset(0, if phone then 38 else 52)
+		for _, chip in chips do
+			chip.Chip.Size = if phone then UDim2.fromOffset(100, 38) else UDim2.fromOffset(200, 52)
+			chip.Block:SetRadius(if phone then 11 else 14)
+			chip.Block:SetLip(if phone then 3 else 5)
+			local iconSize = if phone then 26 else 40
+			chip.Icon.Size = UDim2.fromOffset(iconSize, iconSize)
+			chip.Icon.Position = UDim2.new(0, if phone then 4 else 6, 0.5, -2)
+			local left = iconSize + (if phone then 6 else 12)
+			if phone then
+				chip.Name.TextSize = 8
+				chip.Name.Position = UDim2.fromOffset(left, 7)
+				chip.Name.Size = UDim2.new(1, -left - 4, 0, 9)
+				chip.Time.TextSize = 13
+				chip.Time.TextXAlignment = Enum.TextXAlignment.Left
+				chip.Time.Position = UDim2.fromOffset(left, 18)
+				chip.Time.Size = UDim2.new(1, -left - 4, 0, 13)
+			else
+				chip.Name.TextSize = 14
+				chip.Name.Position = UDim2.fromOffset(left, 0)
+				chip.Name.Size = UDim2.new(1, -left - 60, 1, -5)
+				chip.Time.TextSize = 18
+				chip.Time.TextXAlignment = Enum.TextXAlignment.Right
+				chip.Time.Position = UDim2.new(1, -62, 0, 0)
+				chip.Time.Size = UDim2.new(0, 52, 1, -5)
+			end
+			chip.Bar.Size = UDim2.new(chip.Bar.Size.X.Scale, 0, 0, if phone then 3 else 5)
+		end
+		local position = HudKit.Spot("Potions", phone)
+		timers.AnchorPoint = Vector2.zero
+		timers.Position = position
 	end
-	hud:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeAll)
-	placeAll()
+	HudKit.OnLayout(arrange)
 
 	player:GetAttributeChangedSignal("Potions"):Connect(refresh)
 	player:GetAttributeChangedSignal("Boosts"):Connect(refresh)

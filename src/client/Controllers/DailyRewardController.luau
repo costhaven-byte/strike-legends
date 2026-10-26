@@ -20,6 +20,7 @@ local PotionController = require(script.Parent.PotionController)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
+local HudKit = require(Modules.HudKit)
 
 local player = Players.LocalPlayer
 
@@ -77,15 +78,20 @@ end
 function DailyRewardController:Start()
 	local gui = player:WaitForChild("PlayerGui"):WaitForChild("DailyUI")
 	local openButton = gui:WaitForChild("DailyButton") :: TextButton
-	-- Right under the POWER LV button (owner 2026-10-25; STORE took its old spot right of PETS); ScreenLayout moves it on phones
-	openButton.AnchorPoint = Vector2.new(0, 0)
-	openButton.Position = UDim2.fromOffset(16, 372 + 66 + 8)
+	-- Owner's HUD Kit look: red gift (READY, red dot), grey lock + throws left (LOCKED), dark with a tick (DONE).
+	-- Under the POWER LV button on computers, top-right left of GIFTS on phones.
+	local dailyKit = HudKit.Adopt(openButton, {
+		Paint = "Red",
+		Icon = "GiftDaily",
+		Caption = "DAILY",
+		Key = "Daily",
+		Drop = { "Caption", "Icon", "Dot" },
+	})
 	if Config.Ui.HidePlayerList then
 		pcall(function()
 			game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 		end)
 	end
-	local dot = openButton:WaitForChild("Dot") :: Frame
 	local popup = gui:WaitForChild("Popup") :: Frame
 	local days = popup:WaitForChild("Days") :: Frame
 	local tileTemplate = popup:WaitForChild("TileTemplate") :: Frame
@@ -106,54 +112,57 @@ function DailyRewardController:Start()
 	end
 	local locked = onboarding()
 	local shaking = false
-	local caption = openButton:WaitForChild("Caption") :: TextLabel
-	local icon = openButton:WaitForChild("Icon") :: Frame
-	local litColors = {}
-	for _, part in { openButton, icon, icon:WaitForChild("Ribbon"), icon:WaitForChild("Band") } do
-		litColors[part] = (part :: GuiObject).BackgroundColor3
-	end
-	local outline = openButton:FindFirstChildOfClass("UIStroke")
-	local litOutline = outline and outline.Color
-	local shade = Instance.new("Frame")
-	shade.Name = "Lock"
-	shade.Size = UDim2.fromScale(1, 1)
-	shade.BackgroundColor3 = Color3.new(0, 0, 0)
-	shade.BackgroundTransparency = 0.45
-	shade.ZIndex = 5
-	local shadeCorner = openButton:FindFirstChildOfClass("UICorner")
-	if shadeCorner then
-		shadeCorner:Clone().Parent = shade
-	end
-	local lockIcon = Instance.new("TextLabel")
-	lockIcon.Name = "Icon"
-	lockIcon.BackgroundTransparency = 1
-	lockIcon.AnchorPoint = Vector2.new(0.5, 0.5)
-	lockIcon.Position = UDim2.fromScale(0.5, 0.4)
-	lockIcon.Size = UDim2.fromScale(0.5, 0.5)
-	lockIcon.Text = "🔒"
-	lockIcon.TextScaled = true
-	lockIcon.ZIndex = 6
-	lockIcon.Parent = shade
-	shade.Parent = openButton
-
-	local function updateLock()
-		shade.Visible = locked
-		caption.ZIndex = 7 -- the countdown sits above the shade
-		for part, color in litColors do
-			local h, s, v = color:ToHSV()
-			part.BackgroundColor3 = if locked then Color3.fromHSV(h, s * 0.1, v * 0.6) else color
+	local dailyLook = ""
+	local function setLook(newLook: string, throwsLeft: number?)
+		if newLook ~= dailyLook then
+			dailyLook = newLook
+			if newLook == "Locked" then
+				dailyKit:Paint("Grey")
+				dailyKit:SetIcon("Lock", 30)
+			elseif newLook == "Done" then
+				dailyKit:Paint("Card")
+				dailyKit:SetIcon("Check", 30)
+				dailyKit:SetCaption("DONE", HudKit.C.Lime)
+			else
+				dailyKit:Paint("Red")
+				dailyKit:SetIcon("GiftDaily")
+				dailyKit:SetCaption("DAILY")
+			end
+			dailyKit:SetDot(newLook == "Ready")
 		end
-		if outline and litOutline then
-			outline.Color = if locked then Color3.fromRGB(90, 85, 100) else litOutline
+		if newLook == "Locked" then
+			local left = throwsLeft or 0
+			dailyKit:SetCaption(
+				if left > 1 then left .. " THROWS" elseif left == 1 then "1 THROW" else "SOON",
+				nil,
+				nil,
+				9
+			)
 		end
+	end
+	local function updateLook()
 		if locked then
 			local unlockAt = onboard.GiftAfterThrows + onboard.LegendsAfterThrows
-			local left = math.max(unlockAt - (player:GetAttribute("OnboardThrows") or 0), 0)
-			caption.Text = if left > 1 then left .. " THROWS" elseif left == 1 then "1 THROW" else "SOON"
+			setLook("Locked", math.max(unlockAt - (player:GetAttribute("OnboardThrows") or 0), 0))
 		else
-			caption.Text = "DAILY"
+			setLook(if player:GetAttribute("DailyClaimable") == true then "Ready" else "Done")
 		end
 	end
+	local function updateLock()
+		updateLook()
+	end
+	-- READY: the gift wiggles (-8/8 degrees, 4 times), rests 2 s, again
+	task.spawn(function()
+		while true do
+			task.wait(2)
+			if dailyLook == "Ready" and openButton.Visible then
+				for _, angle in { -8, 8, -8, 0 } do
+					dailyKit.Slot.Rotation = angle
+					task.wait(0.1)
+				end
+			end
+		end
+	end)
 	updateLock()
 	player:GetAttributeChangedSignal("OnboardThrows"):Connect(updateLock)
 
@@ -204,7 +213,7 @@ function DailyRewardController:Start()
 	local function refresh()
 		local nextDay = player:GetAttribute("DailyNext") or 1
 		local claimable = player:GetAttribute("DailyClaimable") == true
-		dot.Visible = claimable and not locked
+		updateLook()
 
 		for day, tile in tiles do
 			local claimed = day < nextDay or (day == nextDay and not claimable)

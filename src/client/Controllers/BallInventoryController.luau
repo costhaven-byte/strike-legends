@@ -57,7 +57,8 @@ function BallInventoryController:Start()
 	gui.DisplayOrder = 8
 	local menu = gui:WaitForChild("Menu")
 	local ballsButton = menu:WaitForChild("BallsButton") :: TextButton
-	local buttonSwatch = ballsButton:WaitForChild("Swatch") :: Frame
+	-- (the BALLS button may already wear the HUD Kit look, with the swatch moved into its icon slot)
+	local buttonSwatch = (ballsButton:FindFirstChild("Swatch", true) or ballsButton:WaitForChild("Swatch")) :: Frame
 	local panel = gui:WaitForChild("Inventory") :: Frame
 	local grid = panel:WaitForChild("Grid") :: ScrollingFrame
 	local countLabel = panel:WaitForChild("Count") :: TextLabel

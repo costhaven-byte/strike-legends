@@ -14,12 +14,12 @@ local Zones = require(Shared.Modules.Zones)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules:WaitForChild("Sfx"))
 local UiFx = require(Modules:WaitForChild("UiFx"))
+local HudKit = require(Modules:WaitForChild("HudKit"))
 
 local player = Players.LocalPlayer
 
 local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
 local BODY_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
-local CAPTION_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
 local INK = Color3.fromHex("06060F")
 local CARD = Color3.fromRGB(30, 20, 60)
 local PANEL = Color3.fromRGB(18, 12, 38)
@@ -27,7 +27,6 @@ local CYAN = Color3.fromRGB(60, 220, 255)
 local LIME = Color3.fromRGB(125, 255, 60)
 local GREY = Color3.fromRGB(120, 110, 150)
 local SOFT = Color3.fromRGB(200, 190, 230)
-local GAP = 10 -- pixels between the GIFTS button and this one
 local COOLDOWN = 2 -- seconds between teleports
 
 -- Each zone's colour on its card (zones 2-4 use their lock wall colour)
@@ -67,31 +66,6 @@ local function text(parent: Instance, name: string, font: Font, color: Color3, p
 	return label
 end
 
--- The icon: a portal (rings inside a ring)
-local function portalIcon(parent: Instance, position: UDim2, size: number)
-	local holder = Instance.new("Frame")
-	holder.Name = "Icon"
-	holder.BackgroundTransparency = 1
-	holder.AnchorPoint = Vector2.new(0.5, 0.5)
-	holder.Position = position
-	holder.Size = UDim2.fromOffset(size, size)
-	holder.Parent = parent
-	for i, scale in { 1, 0.62, 0.26 } do
-		local ring = Instance.new("Frame")
-		ring.Name = "Ring" .. i
-		ring.AnchorPoint = Vector2.new(0.5, 0.5)
-		ring.Position = UDim2.fromScale(0.5, 0.5)
-		ring.Size = UDim2.fromScale(scale, scale)
-		ring.BackgroundColor3 = CYAN
-		ring.BackgroundTransparency = if i == 3 then 0 else 1
-		ring.Parent = holder
-		corner(ring)
-		if i < 3 then
-			stroke(ring, CYAN, if i == 1 then 3 else 2, true)
-		end
-	end
-end
-
 -- Where a zone's teleport lands, facing the pins
 local function arrival(zone: number): CFrame?
 	if zone == 1 then
@@ -118,7 +92,6 @@ end
 function TeleportController:Start()
 	local playerGui = player:WaitForChild("PlayerGui")
 	local hud = playerGui:WaitForChild("HUD") :: ScreenGui
-	local rankBar = hud:WaitForChild("RankBar") :: GuiObject
 
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "TeleportUI"
@@ -128,38 +101,19 @@ function TeleportController:Start()
 	gui.Parent = playerGui
 
 	-- ===== The button =====
-	local openButton = Instance.new("TextButton")
-	openButton.Name = "TeleportButton"
-	openButton.Text = ""
-	openButton.AutoButtonColor = false
-	openButton.BackgroundColor3 = CARD
-	openButton.BackgroundTransparency = 0.1
+	-- Cyan portal under GIFTS in the top-right corner (owner's HUD Kit); the portal turns slowly all the time
+	local teleportKit = HudKit.Square(gui, {
+		Name = "TeleportButton",
+		Paint = "Cyan",
+		Icon = "Portal",
+		Caption = "TELEPORT",
+		CaptionSize = 9,
+		Key = "Teleport",
+	})
+	local openButton = teleportKit.Holder :: TextButton
 	openButton.Visible = false
-	openButton.Parent = gui
-	corner(openButton, 12)
-	stroke(openButton, CYAN, 3, true)
-	local caption = text(openButton, "Caption", CAPTION_FONT, CYAN, UDim2.new(0, 3, 1, -17), UDim2.new(1, -6, 0, 13))
-	caption.Text = "TELEPORT"
-	portalIcon(openButton, UDim2.new(0.5, 0, 0, 21), 26)
-	UiFx.Press(openButton)
-
-	local function place()
-		local compact = hud.AbsoluteSize.Y > 0 and hud.AbsoluteSize.Y < Config.Ui.CompactHeight
-		-- Under the GIFTS button in the top-right corner (owner 2026-10-25), right edges lined up
-		openButton.AnchorPoint = Vector2.new(1, 0)
-		if compact then
-			-- Phones: GIFTS is at (right 8, top 4), 56 tall
-			openButton.Size = UDim2.fromOffset(44, 46)
-			openButton.Position = UDim2.new(1, -8, 0, 4 + 56 + GAP)
-		else
-			-- Computers: GIFTS is at (right 10, top 6), 56 tall
-			openButton.Size = UDim2.fromOffset(55, 56)
-			openButton.Position = UDim2.new(1, -10, 0, 6 + 56 + GAP)
-		end
-	end
-	rankBar:GetPropertyChangedSignal("AbsolutePosition"):Connect(place)
-	hud:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
-	place()
+	teleportKit:SetCaption("TELEPORT", nil, nil, 9)
+	HudKit.Spin(teleportKit.Slot, 4)
 
 	-- ===== The window: one card per built zone =====
 	local built = Config.Zones.BuiltZones

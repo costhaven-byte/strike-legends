@@ -10,22 +10,11 @@ local player = Players.LocalPlayer
 -- Path inside PlayerGui ("*" = every child) -> properties to use on a compact screen.
 -- Phone screen is roughly 670-930 wide and 320-340 tall here (below Roblox's top bar).
 local COMPACT = {
-	-- Simulator-style: rank bar alone at the top, coins/gems and the menu buttons on the left
-	-- (above the thumbstick), streak on the right (left of the power meter)
-	["HUD.RankBar"] = { Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.new(0.5, 0, 0, 22) },
-	["HUD.Bar"] = { Position = UDim2.fromOffset(12, 4), Size = UDim2.fromOffset(130, 64) },
-	["HUD.Bar.Coins"] = { Size = UDim2.new(1, 0, 0, 28) },
-	["HUD.Bar.Gems"] = { Size = UDim2.new(1, 0, 0, 28) },
-	["BallsUI.Menu"] = { Position = UDim2.fromOffset(12, 76) },
-	["DailyUI.DailyButton"] = { Position = UDim2.fromOffset(12, 196 + 50 + 8) }, -- under the POWER LV button (STORE is right of PETS)
-	-- Left of the TELEPORT button (under GIFTS in the top-right corner)
-	["HUD.Streak"] = { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -60, 0, 66) },
+	-- The HUD itself (counters, level bar, streak, menu buttons, HOLD!) is placed by the HUD Kit (Modules/HudKit)
 
 	-- Throw meters: a shorter panel so the lane stays visible, power meter kept above the jump button
-	["ThrowUI.Panel"] = { Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(0.5, 0, 0, 118) },
-	["ThrowUI.Panel.Hint"] = { Size = UDim2.new(1, 0, 0, 22) },
+	["ThrowUI.Panel"] = { Size = UDim2.new(0.5, 0, 0, 118) },
 	["ThrowUI.Panel.AimBar"] = { Position = UDim2.fromOffset(0, 28), Size = UDim2.new(1, 0, 0, 28) },
-	["ThrowUI.Panel.ThrowButton"] = { Size = UDim2.new(0.6, 0, 0, 56) },
 	["ThrowUI.PowerBar"] = {
 		AnchorPoint = Vector2.new(0, 0),
 		Position = UDim2.new(1, -36, 0, 140),
@@ -33,38 +22,17 @@ local COMPACT = {
 	},
 	["ThrowUI.PowerBar.Label"] = { Size = UDim2.fromOffset(80, 22) },
 	["ThrowUI.ResultText"] = { Position = UDim2.new(0.5, 0, 0, 84), Size = UDim2.new(0.45, 0, 0, 40) },
-	["HUD.RewardPopup"] = { Position = UDim2.new(0.5, 0, 0, 138), Size = UDim2.new(0.7, 0, 0, 20) },
 	["ThrowUI.TraitPopups"] = { Position = UDim2.new(0.5, 0, 0, 166) },
 
-	-- Rank Trial: on phones the ready button and a compact tracker (no goal line, smaller dots) share the
-	-- top-right corner, the only spot clear of the meters and result text (left of the GIFTS button). On computers that corner holds
-	-- Roblox's player list, so there the tracker sits top-left instead.
-	["TrialUI.TrialButton"] = {
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -71, 0, 6),
-		Size = UDim2.fromOffset(140, 40),
-	},
-	["TrialUI.Tracker"] = {
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -71, 0, 4),
-		Size = UDim2.fromOffset(140, 46),
-	},
+	-- Rank Trial: on phones the ready button and a compact tracker (no goal line, smaller dots) share one spot under
+	-- the free-crate goal (TrialController places them, HudKit "Trial")
+	["TrialUI.TrialButton"] = { Size = UDim2.fromOffset(140, 40) },
+	["TrialUI.Tracker"] = { Size = UDim2.fromOffset(140, 46) },
 	["TrialUI.Tracker.Title"] = { Position = UDim2.fromOffset(6, 4), Size = UDim2.new(1, -12, 0, 13) },
 	["TrialUI.Tracker.Goal"] = { Visible = false },
 	["TrialUI.Tracker.Dots"] = { Position = UDim2.fromOffset(6, 19), Size = UDim2.new(1, -12, 0, 13) },
 	["TrialUI.Tracker.Dots.*"] = { Size = UDim2.fromOffset(13, 13) },
 	["TrialUI.Tracker.ThrowsLeft"] = { Position = UDim2.fromOffset(6, 33), Size = UDim2.new(1, -12, 0, 10) },
-	-- Lane modifier pill and the free-crate goal: small, on the left under the menu buttons
-	["EventUI.ModifierPill"] = {
-		AnchorPoint = Vector2.new(0, 0),
-		Position = UDim2.fromOffset(12, 140),
-		Size = UDim2.fromOffset(150, 24),
-	},
-	["EventUI.AlmostBar"] = {
-		AnchorPoint = Vector2.new(0, 0),
-		Position = UDim2.fromOffset(12, 168),
-		Size = UDim2.fromOffset(150, 22),
-	},
 	["EventUI.Popup"] = { Position = UDim2.new(0.5, 0, 0, 150), Size = UDim2.new(0.7, 0, 0, 44) },
 	["EventUI.Banner"] = { Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.new(0.8, 0, 0, 90) },
 

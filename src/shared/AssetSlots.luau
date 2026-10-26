@@ -61,6 +61,29 @@ AssetSlots.Images = {
 	Gift = 123387103603228,
 	Shine = 132724742675090, -- the idle shine stripe on the STORE button and boost pills
 	Halftone = 77494663967744, -- one dot, tiled for the halftone texture on cards and pills
+	-- The owner's HUD Kit icons (claude.ai/design 'Strike Legends HUD Kit', 2026-10-26; files in assets/hud_icons)
+	HudCoin = 124598335657525,
+	HudCoins2 = 135300865220602,
+	HudGem = 104618081407768,
+	HudXp = 101918311174505,
+	HudBall = 121251895958946,
+	HudPaw = 105932963584698,
+	HudStore = 95452699528378,
+	HudBolt = 86616155538115,
+	HudGiftPink = 128822494284495,
+	HudGiftDaily = 72613042452687,
+	HudLock = 71724857225595,
+	HudRebirth = 82349544141230,
+	HudPortal = 104702285368865,
+	HudFlame = 98282114790053,
+	HudPotionCoin = 130322782559457,
+	HudPotionXp = 110385668789086,
+	HudPotionLuck = 79037484496408,
+	HudPin = 124362099981289,
+	HudCrate = 131700039861753,
+	HudClover = 112463627711081,
+	HudClose = 83174793991131,
+	HudCheck = 105468984575166,
 }
 
 -- "rbxassetid://..." for an Images slot

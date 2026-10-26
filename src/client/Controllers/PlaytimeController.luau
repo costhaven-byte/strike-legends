@@ -3,6 +3,7 @@
 -- Built in code (not in Studio), so it lives in git. The server runs the clock and hands out gifts (PlaytimeService).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -15,6 +16,7 @@ local PotionController = require(script.Parent.PotionController)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules:WaitForChild("Sfx"))
 local UiFx = require(Modules:WaitForChild("UiFx"))
+local HudKit = require(Modules:WaitForChild("HudKit"))
 
 local player = Players.LocalPlayer
 
@@ -22,7 +24,6 @@ local PLAYTIME = Config.Playtime
 
 local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
 local BODY_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
-local CAPTION_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
 local INK = Color3.fromHex("06060F")
 local CARD = Color3.fromRGB(30, 20, 60)
 local PANEL = Color3.fromRGB(18, 12, 38)
@@ -32,8 +33,6 @@ local GOLD = Color3.fromRGB(255, 200, 40)
 local GREY = Color3.fromRGB(120, 110, 150)
 
 -- The GIFTS button sits in the top-right corner (owner 2026-10-22; Config.Ui.HidePlayerList frees it on computers)
-local BUTTON_NORMAL = UDim2.new(1, -10, 0, 6) -- tucked into the top-right corner (owner 2026-10-25); TELEPORT sits under it
-local BUTTON_COMPACT = UDim2.new(1, -8, 0, 4)
 local PANEL_SIZE = UDim2.fromOffset(640, 380)
 
 local PlaytimeController = {}
@@ -104,62 +103,6 @@ local function button(
 	pad.Parent = b
 	UiFx.Press(b)
 	return b
-end
-
--- A gift box drawn with frames: box, lid, ribbon both ways
-local function giftBox(parent: Instance, color: Color3, position: UDim2, size: number): Frame
-	local holder = Instance.new("Frame")
-	holder.Name = "Gift"
-	holder.BackgroundTransparency = 1
-	holder.AnchorPoint = Vector2.new(0.5, 0.5)
-	holder.Position = position
-	holder.Size = UDim2.fromOffset(size, size)
-	holder.Parent = parent
-
-	local box = Instance.new("Frame")
-	box.Name = "Box"
-	box.AnchorPoint = Vector2.new(0.5, 1)
-	box.Position = UDim2.fromScale(0.5, 1)
-	box.Size = UDim2.fromScale(0.8, 0.62)
-	box.BackgroundColor3 = color
-	box.Parent = holder
-	corner(box, 3)
-	stroke(box, INK, 2)
-
-	local lid = Instance.new("Frame")
-	lid.Name = "Lid"
-	lid.AnchorPoint = Vector2.new(0.5, 0)
-	lid.Position = UDim2.fromScale(0.5, 0.2)
-	lid.Size = UDim2.fromScale(0.96, 0.24)
-	lid.BackgroundColor3 = color
-	lid.ZIndex = 2
-	lid.Parent = holder
-	corner(lid, 3)
-	stroke(lid, INK, 2)
-
-	local ribbon = Instance.new("Frame")
-	ribbon.Name = "Ribbon"
-	ribbon.AnchorPoint = Vector2.new(0.5, 0)
-	ribbon.Position = UDim2.fromScale(0.5, 0.2)
-	ribbon.Size = UDim2.fromScale(0.18, 0.8)
-	ribbon.BackgroundColor3 = GOLD
-	ribbon.BorderSizePixel = 0
-	ribbon.ZIndex = 3
-	ribbon.Parent = holder
-	for side = -1, 1, 2 do -- the bow
-		local loop = Instance.new("Frame")
-		loop.Name = "Bow"
-		loop.AnchorPoint = Vector2.new(0.5, 1)
-		loop.Position = UDim2.fromScale(0.5 + side * 0.13, 0.24)
-		loop.Size = UDim2.fromScale(0.24, 0.2)
-		loop.BackgroundColor3 = GOLD
-		loop.Rotation = side * 25
-		loop.ZIndex = 3
-		loop.Parent = holder
-		corner(loop)
-		stroke(loop, INK, 1.5)
-	end
-	return holder
 end
 
 -- An egg drawn with frames (tall oval with spots)
@@ -263,33 +206,13 @@ function PlaytimeController:Start()
 	gui.DisplayOrder = ballsUI.DisplayOrder
 	gui.IgnoreGuiInset = ballsUI.IgnoreGuiInset
 
-	-- ===== GIFTS button (same look as BALLS, PETS and DAILY, in pink) =====
-	local openButton = Instance.new("TextButton")
-	openButton.Name = "GiftsButton"
-	openButton.Text = ""
-	openButton.AutoButtonColor = false
-	openButton.BackgroundColor3 = CARD
-	openButton.BackgroundTransparency = 0.1
-	openButton.Size = UDim2.fromOffset(55, 56)
-	openButton.AnchorPoint = Vector2.new(1, 0)
-	openButton.Position = BUTTON_NORMAL
-	openButton.Parent = gui
-	corner(openButton, 12)
-	local buttonStroke = stroke(openButton, PINK, 3, true)
-	-- Caption = time to the next gift ("12:34"), GIFTS when one is ready or all are claimed
-	local caption = text(openButton, "Caption", CAPTION_FONT, PINK, UDim2.new(0, 3, 1, -17), UDim2.new(1, -6, 0, 13))
-	caption.Text = "GIFTS"
-	local buttonGift = giftBox(openButton, PINK, UDim2.new(0.5, 0, 0, 21), 28)
-	-- How many gifts are ready to claim
-	local badge =
-		text(openButton, "Count", FONT, Color3.new(1, 1, 1), UDim2.new(1, -12, 0, -6), UDim2.fromOffset(20, 20))
-	badge.BackgroundTransparency = 0
-	badge.BackgroundColor3 = Color3.fromRGB(255, 50, 70)
-	badge.ZIndex = 4
-	badge.Visible = false
-	corner(badge)
-	stroke(badge, Color3.new(1, 1, 1), 2, true)
-	UiFx.Press(openButton)
+	-- ===== GIFTS button (owner's HUD Kit): pink gift; caption = time to the next gift, or GIFTS + a count badge when
+	-- some are ready, or ALL! with a tick once every gift is claimed =====
+	local giftsKit = HudKit.Square(gui, { Name = "GiftsButton", Paint = "Pink", Icon = "GiftPink", Key = "Gifts" })
+	local openButton = giftsKit.Holder :: TextButton
+	local buttonGift = giftsKit.Slot
+	local giftsState = ""
+	local stopBob: (() -> ())? = nil
 
 	-- ===== The panel =====
 	local panel = Instance.new("Frame")
@@ -455,11 +378,53 @@ function PlaytimeController:Start()
 				nextLeft = nextLeft or left
 			end
 		end
-		badge.Text = tostring(ready)
-		badge.Visible = ready > 0
-		caption.Text = if ready > 0 or not nextLeft then "GIFTS" else clock(nextLeft)
-		caption.TextColor3 = if ready > 0 then LIME else PINK
-		buttonStroke.Color = if ready > 0 then LIME else PINK
+		giftsKit:SetBadge(if ready > 0 then ready else nil)
+		local newState = if ready > 0 then "Ready" elseif nextLeft then "Counting" else "Done"
+		if newState ~= giftsState then
+			giftsState = newState
+			giftsKit:Paint(if newState == "Done" then "Card" else "Pink")
+			if newState == "Done" then
+				giftsKit:SetIcon("Check", 30)
+				giftsKit:SetCaption("ALL!", HudKit.C.Lime)
+			else
+				giftsKit:SetIcon("GiftPink")
+			end
+			-- Ready: the gift bobs up and down (0.5 s each way)
+			if stopBob then
+				stopBob()
+				stopBob = nil
+			end
+			if newState == "Ready" then
+				local running = true
+				stopBob = function()
+					running = false
+				end
+				task.spawn(function()
+					while running and buttonGift.Parent do
+						local home = buttonGift.Position
+						local up = TweenService:Create(
+							buttonGift,
+							TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+							{ Position = home - UDim2.fromOffset(0, 4) }
+						)
+						up:Play()
+						up.Completed:Wait()
+						local down = TweenService:Create(
+							buttonGift,
+							TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+							{ Position = home }
+						)
+						down:Play()
+						down.Completed:Wait()
+					end
+				end)
+			end
+		end
+		if newState == "Ready" then
+			giftsKit:SetCaption("GIFTS")
+		elseif newState == "Counting" then
+			giftsKit:SetCaption(clock(nextLeft :: number), HudKit.C.White, HudKit.Num, 13)
+		end
 		if ready > lastReady then
 			-- A new gift is ready: the button bounces
 			UiFx.Pop(openButton, 1.35, 0.4)
@@ -567,7 +532,6 @@ function PlaytimeController:Start()
 	-- Compact layout on short screens (phones held sideways)
 	local function placeAll()
 		local compact = hud.AbsoluteSize.Y > 0 and hud.AbsoluteSize.Y < Config.Ui.CompactHeight
-		openButton.Position = if compact then BUTTON_COMPACT else BUTTON_NORMAL
 		panel.Size = if compact then UDim2.fromScale(0.94, 0.94) else PANEL_SIZE
 		panel.Position = UDim2.fromScale(0.5, if compact then 0.5 else 0.53)
 	end

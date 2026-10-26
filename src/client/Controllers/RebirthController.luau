@@ -5,6 +5,7 @@
 -- Built in code (not in Studio), so it lives in git. The server decides everything (RebirthService).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -14,22 +15,20 @@ local Zones = require(Shared.Modules.Zones)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules:WaitForChild("Sfx"))
 local UiFx = require(Modules:WaitForChild("UiFx"))
+local HudKit = require(Modules:WaitForChild("HudKit"))
 
 local player = Players.LocalPlayer
 
 local REBIRTH = Config.Economy.Rebirth
 local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
 local BODY_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
-local CAPTION_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
 local INK = Color3.fromHex("06060F")
-local CARD = Color3.fromRGB(30, 20, 60)
 local PANEL = Color3.fromRGB(18, 12, 38)
 local GOLD = Color3.fromRGB(255, 200, 40)
 local LIME = Color3.fromRGB(125, 255, 60)
 local RED = Color3.fromRGB(255, 90, 90)
 local GREY = Color3.fromRGB(120, 110, 150)
 local SOFT = Color3.fromRGB(200, 190, 230)
-local GAP = 12 -- pixels between the level bar and the button
 local CONFIRM_SECONDS = 3
 
 local RebirthController = {}
@@ -63,45 +62,9 @@ local function text(parent: Instance, name: string, font: Font, color: Color3, p
 	return label
 end
 
--- The icon: two arrows chasing round a ring (start over)
-local function rebirthIcon(parent: Instance, position: UDim2, size: number): (Frame, UIStroke, { TextLabel })
-	local holder = Instance.new("Frame")
-	holder.Name = "Icon"
-	holder.BackgroundTransparency = 1
-	holder.AnchorPoint = Vector2.new(0.5, 0.5)
-	holder.Position = position
-	holder.Size = UDim2.fromOffset(size, size)
-	holder.Parent = parent
-	local ring = Instance.new("Frame")
-	ring.Name = "Ring"
-	ring.BackgroundTransparency = 1
-	ring.Size = UDim2.fromScale(1, 1)
-	ring.Parent = holder
-	corner(ring)
-	local ringStroke = stroke(ring, GOLD, 4, true)
-	local arrows = {}
-	for i, spot in { UDim2.fromScale(0.5, 0), UDim2.fromScale(0.5, 1) } do
-		local arrow = Instance.new("TextLabel")
-		arrow.Name = "Arrow" .. i
-		arrow.BackgroundTransparency = 1
-		arrow.AnchorPoint = Vector2.new(0.5, 0.5)
-		arrow.Position = spot
-		arrow.Size = UDim2.fromOffset(size * 0.5, size * 0.5)
-		arrow.Rotation = if i == 1 then 90 else -90
-		arrow.Text = "▲"
-		arrow.TextScaled = true
-		arrow.TextColor3 = GOLD
-		arrow.Font = Enum.Font.GothamBlack
-		arrow.Parent = holder
-		table.insert(arrows, arrow)
-	end
-	return holder, ringStroke, arrows
-end
-
 function RebirthController:Start()
 	local playerGui = player:WaitForChild("PlayerGui")
 	local hud = playerGui:WaitForChild("HUD") :: ScreenGui
-	local rankBar = hud:WaitForChild("RankBar") :: GuiObject
 	local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Rebirth") :: RemoteFunction
 
 	local gui = Instance.new("ScreenGui")
@@ -112,43 +75,47 @@ function RebirthController:Start()
 	gui.Parent = playerGui
 
 	-- ===== The button =====
-	local openButton = Instance.new("TextButton")
-	openButton.Name = "RebirthButton"
-	openButton.Text = ""
-	openButton.AutoButtonColor = false
-	openButton.BackgroundColor3 = CARD
-	openButton.BackgroundTransparency = 0.1
-	openButton.Size = UDim2.fromOffset(55, 56)
+	-- Right of the level bar (owner's HUD Kit): grey with a lock and "ZONE 3" until Main Street Lanes, then lime;
+	-- ready = a glow, a red dot and the arrows turning
+	local rebirthKit = HudKit.Square(gui, { Name = "RebirthButton", Paint = "Lime", Icon = "Rebirth", Key = "Rebirth" })
+	local openButton = rebirthKit.Holder :: TextButton
 	openButton.Visible = false
-	openButton.Parent = gui
-	corner(openButton, 12)
-	local buttonStroke = stroke(openButton, GOLD, 3, true)
-	local caption = text(openButton, "Caption", CAPTION_FONT, GOLD, UDim2.new(0, 3, 1, -17), UDim2.new(1, -6, 0, 13))
-	caption.Text = "REBIRTH"
-	local _, iconStroke, iconArrows = rebirthIcon(openButton, UDim2.new(0.5, 0, 0, 21), 26)
-	-- "!" when a rebirth is ready
-	local badge = text(openButton, "Ready", FONT, Color3.new(1, 1, 1), UDim2.new(1, -12, 0, -6), UDim2.fromOffset(20, 20))
-	badge.Text = "!"
-	badge.BackgroundTransparency = 0
-	badge.BackgroundColor3 = Color3.fromRGB(255, 50, 70)
-	badge.ZIndex = 4
-	badge.Visible = false
-	corner(badge)
-	stroke(badge, Color3.new(1, 1, 1), 2, true)
-	UiFx.Press(openButton)
-
-	-- Right of the level bar, top edges lined up (the bar moves on phones, so follow it)
-	local function place()
-		local compact = hud.AbsoluteSize.Y > 0 and hud.AbsoluteSize.Y < Config.Ui.CompactHeight
-		openButton.Size = if compact then UDim2.fromOffset(44, 46) else UDim2.fromOffset(55, 56)
-		local barPos, barSize = rankBar.AbsolutePosition, rankBar.AbsoluteSize
-		local guiTop = gui.AbsolutePosition
-		openButton.Position = UDim2.fromOffset(barPos.X - guiTop.X + barSize.X + GAP, barPos.Y - guiTop.Y)
+	local kitState = ""
+	local stopSpin: (() -> ())? = nil
+	local glowPulse = TweenService:Create(
+		rebirthKit.GlowRing,
+		TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		{ Transparency = 0.7 }
+	)
+	local function setLook(newState: string)
+		if newState == kitState then
+			return
+		end
+		kitState = newState
+		if newState == "Locked" then
+			rebirthKit:Paint("Grey")
+			rebirthKit:SetIcon("Lock", 30)
+			rebirthKit:SetCaption(("ZONE %d"):format(REBIRTH.Zone), nil, nil, 11)
+		else
+			rebirthKit:Paint("Lime")
+			rebirthKit:SetIcon("Rebirth")
+			rebirthKit:SetCaption("REBIRTH", nil, nil, 10)
+		end
+		local ready = newState == "Ready"
+		rebirthKit:SetGlow(if ready then HudKit.C.Lime else nil)
+		rebirthKit:SetDot(ready)
+		if ready then
+			rebirthKit.GlowRing.Transparency = 0.3
+			glowPulse:Play()
+			stopSpin = HudKit.Spin(rebirthKit.Slot, 3)
+		else
+			glowPulse:Cancel()
+			if stopSpin then
+				stopSpin()
+				stopSpin = nil
+			end
+		end
 	end
-	rankBar:GetPropertyChangedSignal("AbsolutePosition"):Connect(place)
-	rankBar:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
-	hud:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
-	place()
 
 	-- ===== The window =====
 	local panel = Instance.new("Frame")
@@ -239,16 +206,8 @@ function RebirthController:Start()
 		local done, needLevel, cost, zoneOpen, hasLevel, hasCoins = state()
 		openButton.Visible = done > 0 or Zones.Unlocked(player:GetAttribute("RankLevel"), 2)
 		-- The button: grey and "ZONE 3" until Main Street Lanes is reached
-		local color = if zoneOpen then GOLD else GREY
-		buttonStroke.Color = color
-		iconStroke.Color = color
-		for _, arrow in iconArrows do
-			arrow.TextColor3 = color
-		end
-		caption.Text = if zoneOpen then "REBIRTH" else ("ZONE %d"):format(REBIRTH.Zone)
-		caption.TextColor3 = color
 		local ready = REBIRTH.Enabled and zoneOpen and hasLevel and hasCoins
-		badge.Visible = ready
+		setLook(if not zoneOpen then "Locked" elseif ready then "Ready" else "Normal")
 
 		-- The window
 		title.Text = if done > 0 then ("REBIRTH %d"):format(done + 1) else "REBIRTH"

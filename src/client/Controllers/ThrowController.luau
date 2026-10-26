@@ -4,6 +4,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
@@ -18,6 +19,7 @@ local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
 local ThrowPose = require(Modules.ThrowPose)
 local SlUi = require(Modules.SlUi)
+local HudKit = require(Modules.HudKit)
 local ResultText = require(Modules.ResultText)
 
 local THROW = Config.Throw
@@ -202,6 +204,109 @@ function ThrowController:Start()
 	local powerBar = gui:WaitForChild("PowerBar")
 	local resultText = gui:WaitForChild("ResultText")
 	local resultStroke = resultText:FindFirstChildOfClass("UIStroke")
+
+	-- ===== HOLD! button and hint line (owner's HUD Kit) =====
+	-- HOLD! is pink (breathing a little while it waits), sinks and glows while held, grey "ROLLING..." while the ball
+	-- rolls. The hint shows for the first 3 throws of a session, then fades; it comes back after 20 s idle.
+	for _, child in button:GetChildren() do
+		if child:IsA("UICorner") or child:IsA("UIStroke") or child:IsA("UIPadding") then
+			child:Destroy()
+		end
+	end
+	button.BackgroundTransparency = 1
+	button.Text = ""
+	button.AnchorPoint = Vector2.new(0.5, 1)
+	button.Position = UDim2.fromScale(0.5, 1)
+	local holdBlock = HudKit.Block(button, { Name = "Kit", Paint = "Pink", Radius = 16, Lip = 6 })
+	holdBlock.Holder.Size = UDim2.fromScale(1, 1)
+	HudKit.Press(holdBlock, true, button)
+	local holdLabel = HudKit.Text(holdBlock.Face, "HOLD!", HudKit.Head, 28, HudKit.C.White, 3)
+	holdLabel.Position = UDim2.fromOffset(0, 2)
+	hint.FontFace = HudKit.Body
+	hint.TextScaled = false
+	hint.RichText = true
+	hint.TextColor3 = HudKit.C.White
+	local hintStroke = hint:FindFirstChildOfClass("UIStroke") or Instance.new("UIStroke")
+	hintStroke.Color = HudKit.C.Ink
+	hintStroke.Thickness = 2
+	hintStroke.Parent = hint
+	local holdSize = 28
+	HudKit.OnLayout(function(phone)
+		panel.Position = UDim2.new(0.5, 0, 1, if phone then -12 else -46)
+		local _, size = HudKit.Spot("Hold", phone)
+		button.Size = size :: UDim2
+		holdBlock:SetRadius(if phone then 14 else 16)
+		holdBlock:SetLip(if phone then 5 else 6)
+		holdSize = if phone then 22 else 28
+		holdLabel.TextSize = if holdLabel.Text == "ROLLING..." then holdSize - 6 else holdSize
+		-- wider than the panel, so the line never wraps
+		hint.AnchorPoint = Vector2.new(0.5, 0)
+		hint.Position = UDim2.new(0.5, 0, 0, if phone then 54 else 34)
+		hint.Size = UDim2.fromOffset(if phone then 420 else 700, if phone then 12 else 20)
+		hint.TextSize = if phone then 10 else 17
+		hintStroke.Thickness = if phone then 1.5 else 2
+	end)
+
+	local holdScale = holdBlock.Scale
+	local idlePulse = TweenService:Create(
+		holdScale,
+		TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		{ Scale = 1.04 }
+	)
+	-- look: "Ready", "Held" or "Rolling"
+	local function setButton(text: string, look: string)
+		holdLabel.Text = text
+		holdLabel.TextSize = if look == "Rolling" then holdSize - 6 else holdSize
+		holdBlock:Paint(if look == "Rolling" then "Grey" else "Pink")
+		holdBlock:SetGlow(if look == "Held" then HudKit.C.Pink else nil)
+		if look == "Ready" then
+			holdScale.Scale = 1
+			idlePulse:Play()
+		else
+			idlePulse:Cancel()
+			TweenService:Create(holdScale, TweenInfo.new(0.06), { Scale = if look == "Held" then 0.94 else 1 }):Play()
+		end
+		TweenService:Create(holdBlock.Face, TweenInfo.new(0.1), {
+			BackgroundTransparency = if look == "Rolling" then 0.3 else 0,
+		}):Play()
+	end
+
+	local hintThrows = 0 -- throws this session
+	local lastAction = os.clock()
+	local hintWanted = ""
+	local hintShown = true
+	local function colourHint(text: string): string
+		if text == READY_HINT then
+			text = text:gsub("GOLD", '<font color="#FFC93A">GOLD</font>')
+				:gsub("RED", '<font color="#FF2D4A">RED</font>')
+		end
+		return text
+	end
+	local function showHint(on: boolean)
+		if on == hintShown then
+			return
+		end
+		hintShown = on
+		local alpha = if on then 0 else 1
+		TweenService:Create(hint, TweenInfo.new(0.4), { TextTransparency = alpha }):Play()
+		TweenService:Create(hintStroke, TweenInfo.new(0.4), { Transparency = alpha }):Play()
+	end
+	local function setHint(text: string)
+		if text ~= hintWanted then
+			hintWanted = text
+			hint.Text = colourHint(text)
+		end
+		local early = hintThrows < 3 or assisted()
+		showHint(early or os.clock() - lastAction >= 20)
+	end
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			if hintWanted ~= "" then
+				setHint(hintWanted)
+			end
+		end
+	end)
 
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
 	local throwRequest = remotes:WaitForChild("ThrowRequest")
@@ -566,10 +671,7 @@ function ThrowController:Start()
 
 		-- The head, its glow and the gold burst ring
 		local clamped = math.clamp(value, 0, 1)
-		local headColor = if mode == "Gold" or mode == "Full"
-			then C.Gold
-			elseif mode == "Red" then C.Red
-			else C.Cyan
+		local headColor = if mode == "Gold" or mode == "Full" then C.Gold elseif mode == "Red" then C.Red else C.Cyan
 		head.Visible = value > 0.005 and mode ~= "Released"
 		head.Position = arcPoint(clamped, ARC_RADIUS)
 		headStroke.Color = headColor
@@ -653,21 +755,24 @@ function ThrowController:Start()
 			lockFeet(false)
 		elseif newState == "Ready" then
 			charge = 0
-			hint.Text = readyHint()
-			button.Text = "HOLD!"
+			setHint(readyHint())
+			setButton("HOLD!", "Ready")
 			drawBar(0, "Idle", false)
 			lockFeet(false)
 		elseif newState == "Charging" then
 			charge, holdStartedAt = 0, os.clock()
 			wasInRed = false
 			throwHold:FireServer() -- the server starts its own clock for this hold
-			hint.Text = "LET GO IN THE GOLD!"
-			button.Text = "LET GO!"
+			lastAction = os.clock()
+			setHint("LET GO IN THE GOLD!")
+			setButton("LET GO!", "Held")
 			Sfx.Play("Charge", 0.9)
 			lockFeet(true)
 		elseif newState == "Waiting" then
-			hint.Text = "ROLLING..."
-			button.Text = "..."
+			hintThrows += 1
+			lastAction = os.clock()
+			setHint("ROLLING...")
+			setButton("ROLLING...", "Rolling")
 		end
 	end
 
@@ -848,7 +953,8 @@ function ThrowController:Start()
 		local screenScale = math.clamp(Workspace.CurrentCamera.ViewportSize.Y / 720, 0.6, 1)
 		holderScale.Scale = screenScale
 		holder.Position = UDim2.new(0.5, METER_SIDE * screenScale, 0, -ARC_LIFT * screenScale)
-		perfectSpot.Position = UDim2.new(0.5, METER_SIDE * screenScale, 0, -(METER_HEIGHT + ARC_LIFT + 70) * screenScale)
+		perfectSpot.Position =
+			UDim2.new(0.5, METER_SIDE * screenScale, 0, -(METER_HEIGHT + ARC_LIFT + 70) * screenScale)
 		perfectSpotScale.Scale = screenScale
 		resultScreenScale.Scale = screenScale
 
@@ -873,13 +979,13 @@ function ThrowController:Start()
 				setState("Ready")
 			end
 			drawBar(0, "Idle", false, dt)
-			hint.Text = "WAIT..."
+			setHint("WAIT...")
 		elseif state == "Ready" then
 			if held and laneReady(currentLane) then
 				setState("Charging") -- pressed while the lane was still busy
 			else
 				drawBar(0, "Idle", false, dt) -- the gold zone glides to its new spot (and slides with Moving Gold)
-				hint.Text = if laneReady(currentLane) then readyHint() else "WAIT..."
+				setHint(if laneReady(currentLane) then readyHint() else "WAIT...")
 			end
 		elseif state == "Charging" then
 			-- Fills, then slides back down and up again while you keep holding; the arm swings with it

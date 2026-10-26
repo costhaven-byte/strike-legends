@@ -13,6 +13,7 @@ local Config = require(Shared.Config)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
+local HudKit = require(Modules.HudKit)
 
 local TRIALS = Config.Trials
 local READY_COLOR = Color3.fromRGB(255, 200, 40)
@@ -52,6 +53,9 @@ function TrialController:Start()
 	local buttonScale = button:WaitForChild("UIScale") :: UIScale
 	local intro = gui:WaitForChild("Intro") :: Frame
 	local tracker = gui:WaitForChild("Tracker") :: Frame
+	-- On the right, under TELEPORT (the HUD Kit's top-left and top-centre are full); ScreenLayout sizes them on phones
+	HudKit.Place(button, "Trial", true)
+	HudKit.Place(tracker, "TrialTracker", true)
 	local dots = tracker:WaitForChild("Dots") :: Frame
 	local dotTemplate = dots:WaitForChild("DotTemplate") :: Frame
 	local banner = gui:WaitForChild("Banner") :: TextLabel

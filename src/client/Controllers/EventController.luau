@@ -19,7 +19,8 @@ local Progression = require(Shared.Modules.Progression)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local TraitFx = require(Modules.TraitFx)
 local Sfx = require(Modules.Sfx)
-local UiFx = require(Modules.UiFx)
+local HudKit = require(Modules.HudKit)
+local K = HudKit.C
 
 local GOLD = Config.GoldenPin.Color
 local CRATE_COLOR = Color3.fromRGB(60, 230, 255)
@@ -28,6 +29,165 @@ local LEVEL_GEM_COLOR = Color3.fromRGB(60, 230, 255) -- same blue as the "+N GEM
 local POWER_COLOR = Color3.fromRGB(255, 43, 214)
 
 local short = Currency.Format -- Config.Numbers
+
+-- Lane modifier pill look per modifier (owner's HUD Kit): icon and colour
+local MODIFIER_LOOKS = {
+	MovingPins = { Icon = "Coin", Color = K.Gold },
+	DoubleCoins = { Icon = "Coins2", Color = K.Lime },
+	GiantPins = { Icon = "Pin", Color = K.Pink },
+	BonusGems = { Icon = "Gem", Color = K.Cyan },
+}
+
+-- Restyles the Studio pill and goal bar in the HUD Kit look, keeping the children EventController fills in
+-- (ModName, Timer; Fill, Label). Returns the pill's colour ring, its icon, the goal's icon, and a function that
+-- switches the goal between "in progress" and "ready".
+local function kitPieces(pill: Frame, bar: Frame)
+	-- Pill: dark card, a 2 px ring inside in the modifier's colour, icon, name, time
+	for _, child in pill:GetChildren() do
+		if child:IsA("UICorner") or child:IsA("UIStroke") or child:IsA("UIPadding") then
+			child:Destroy()
+		end
+	end
+	pill.BackgroundTransparency = 1
+	local card = HudKit.Block(pill, { Name = "Card", Paint = "Card", Shine = 0, Lip = 4 })
+	card.Holder.Size = UDim2.fromScale(1, 1)
+	card.Holder.ZIndex = 0
+	local ring = Instance.new("UIStroke")
+	ring.Name = "Ring"
+	ring.Thickness = 2
+	ring.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	local ringFrame = Instance.new("Frame")
+	ringFrame.Name = "RingFrame"
+	ringFrame.BackgroundTransparency = 1
+	ringFrame.Position = UDim2.fromOffset(5, 5)
+	ringFrame.Size = UDim2.new(1, -10, 1, -10)
+	ringFrame.ZIndex = 3
+	ringFrame.Parent = pill
+	local ringCorner = HudKit.Corner(ringFrame, 16)
+	ring.Parent = ringFrame
+	local pillIcon = HudKit.Image(pill, "Coin", 30)
+	pillIcon.AnchorPoint = Vector2.new(0, 0.5)
+	pillIcon.ZIndex = 5
+	local name = pill:WaitForChild("ModName") :: TextLabel
+	local timer = pill:WaitForChild("Timer") :: TextLabel
+	for _, label in { name, timer } do
+		for _, child in label:GetChildren() do
+			child:Destroy()
+		end
+		label.TextScaled = false
+		label.ZIndex = 5
+		label.AnchorPoint = Vector2.zero
+		HudKit.Outline(label, K.Ink, 2).ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+	end
+	name.FontFace = HudKit.Head
+	name.TextXAlignment = Enum.TextXAlignment.Left
+	timer.FontFace = HudKit.Num
+	timer.TextColor3 = K.White
+	timer.TextXAlignment = Enum.TextXAlignment.Right
+
+	-- Goal bar: card, crate (or bolt / gift) over the left end, text, a thin purple bar
+	for _, child in bar:GetChildren() do
+		if child:IsA("UICorner") or child:IsA("UIStroke") then
+			child:Destroy()
+		end
+	end
+	bar.BackgroundTransparency = 1
+	local goalCard = HudKit.Block(bar, { Name = "Card", Paint = "Card", Shine = 0, Lip = 5 })
+	goalCard.Holder.Size = UDim2.fromScale(1, 1)
+	goalCard.Holder.ZIndex = 0
+	local track = Instance.new("Frame")
+	track.Name = "Track"
+	track.BackgroundColor3 = K.Panel
+	track.ZIndex = 4
+	track.Parent = bar
+	local trackCorner = HudKit.Corner(track, 4)
+	HudKit.Outline(track, K.Ink, 2)
+	local fill = bar:WaitForChild("Fill") :: Frame
+	fill.Parent = track
+	fill.BackgroundColor3 = K.Purple
+	fill.ZIndex = 5
+	local fillCorner = fill:FindFirstChildOfClass("UICorner") or HudKit.Corner(fill, 4)
+	local label = bar:WaitForChild("Label") :: TextLabel
+	for _, child in label:GetChildren() do
+		child:Destroy()
+	end
+	label.FontFace = HudKit.Head
+	label.TextScaled = false
+	label.TextColor3 = K.White
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.AnchorPoint = Vector2.zero
+	label.ZIndex = 5
+	HudKit.Outline(label, K.Ink, 2).ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+	local goalIcon = HudKit.Image(bar, "Crate", 56)
+	goalIcon.ZIndex = 6
+
+	local ready = false
+	local phone = false
+	local function arrange()
+		local p = phone
+		-- pill
+		card:SetRadius(if p then 15 else 21)
+		ringCorner.CornerRadius = UDim.new(0, if p then 10 else 16)
+		ringFrame.Position = UDim2.fromOffset(if p then 4 else 5, if p then 4 else 5)
+		ringFrame.Size = UDim2.new(1, if p then -8 else -10, 1, if p then -8 else -10)
+		local iconSize = if p then 22 else 30
+		pillIcon.Size = UDim2.fromOffset(iconSize, iconSize)
+		pillIcon.Position = UDim2.new(0, if p then 3 else 5, 0.5, -2)
+		local textLeft = iconSize + (if p then 7 else 11)
+		name.Position = UDim2.fromOffset(textLeft, 0)
+		name.Size = UDim2.new(1, -textLeft - (if p then 44 else 60), 1, -3)
+		name.TextSize = if p then 12 else 17
+		timer.Position = UDim2.new(1, if p then -50 else -64, 0, 0)
+		timer.Size = UDim2.new(0, if p then 40 else 50, 1, -3)
+		timer.TextSize = if p then 13 else 17
+		-- goal
+		goalCard:SetRadius(if p then 11 else 16)
+		goalCard:SetLip(if p then 3 else 5)
+		local goalIconSize = if p then 38 else 56
+		goalIcon.Size = UDim2.fromOffset(goalIconSize, goalIconSize)
+		goalIcon.Position = UDim2.fromOffset(if p then -14 else -18, if p then -1 else -2)
+		local left = if p then 28 else 44
+		local right = if p then 7 else 10
+		local textSize = if ready then (if p then 14 else 20) else (if p then 9 else 13)
+		label.TextSize = textSize
+		label.TextXAlignment = if ready then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
+		if ready then
+			label.Position = UDim2.fromOffset(left, 0)
+			label.Size = UDim2.new(1, -left - right, 1, if p then -3 else -5)
+		else
+			local barHeight = if p then 8 else 12
+			local total = textSize + (if p then 3 else 5) + barHeight
+			local height = (if p then 36 else 54) - (if p then 3 else 5)
+			local top = math.floor((height - total) / 2 + 0.5)
+			label.Position = UDim2.fromOffset(left, top)
+			label.Size = UDim2.new(1, -left - right, 0, textSize)
+			track.Position = UDim2.fromOffset(left, top + textSize + (if p then 3 else 5))
+			track.Size = UDim2.new(1, -left - right, 0, barHeight - 4)
+			trackCorner.CornerRadius = UDim.new(0, (barHeight - 4) / 2)
+			fillCorner.CornerRadius = UDim.new(0, (barHeight - 4) / 2)
+		end
+		track.Visible = not ready
+	end
+	HudKit.OnLayout(function(isPhone)
+		phone = isPhone
+		arrange()
+	end)
+	HudKit.Place(pill, "Modifier")
+	HudKit.Place(bar, "Goal")
+
+	-- Ready: purple face with a glow, one big line
+	local function setReady(on: boolean)
+		if on == ready then
+			return
+		end
+		ready = on
+		goalCard:Paint(if on then "Purple" else "Card")
+		goalCard:SetGlow(if on then K.Purple else nil)
+		goalCard.Shine.Visible = on
+		arrange()
+	end
+	return ring, pillIcon, goalIcon, setReady
+end
 
 local player = Players.LocalPlayer
 
@@ -42,6 +202,7 @@ function EventController:Start()
 	local barScale = bar:WaitForChild("UIScale") :: UIScale
 	local popup = gui:WaitForChild("Popup") :: TextLabel
 	local popupScale = popup:WaitForChild("UIScale") :: UIScale
+	local pillRing, pillIcon, goalIcon, setGoalReady = kitPieces(pill, bar)
 
 	-- Popups: one at a time, queued so two surprises on one throw both get their moment
 	local queue = {}
@@ -94,14 +255,35 @@ function EventController:Start()
 	-- Lane modifier: banner when it changes, pill with the time left
 	local function onModifier(announce: boolean)
 		local modifier = Modifiers.Current()
-		pill.Visible = modifier ~= nil
+		local home = HudKit.Spot("Modifier")
 		if not modifier then
+			-- Out: slides off to the right (0.2 s)
+			if pill.Visible then
+				local out =
+					TweenService:Create(pill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+						Position = home + UDim2.fromOffset(260, 0),
+					})
+				out:Play()
+				out.Completed:Once(function()
+					if not Modifiers.Current() then
+						pill.Visible = false
+						pill.Position = home
+					end
+				end)
+			end
 			return
 		end
+		local look = MODIFIER_LOOKS[modifier.Id] or { Icon = "Clover", Color = modifier.Color }
 		pill.ModName.Text = modifier.Name
-		pill.ModName.TextColor3 = modifier.Color
-		pill.UIStroke.Color = modifier.Color
-		UiFx.Pop(pill, 1.2, 0.35)
+		pill.ModName.TextColor3 = look.Color
+		pillRing.Color = look.Color
+		pillIcon.Image = HudKit.Icon(look.Icon)
+		-- In: slides in from the right (0.3 s Back Out)
+		pill.Visible = true
+		pill.Position = home + UDim2.fromOffset(260, 0)
+		TweenService:Create(pill, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Position = home,
+		}):Play()
 		if not announce then
 			return
 		end
@@ -223,8 +405,8 @@ function EventController:Start()
 	-- or the next free crate (ties go to the first one)
 	local pulse = TweenService:Create(
 		barScale,
-		TweenInfo.new(0.45, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-		{ Scale = 1.08 }
+		TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		{ Scale = 1.04 } -- HUD Kit: 1 <-> 1.04, 0.8 s
 	)
 	local pulsing = false
 	local calledOut = false
@@ -244,6 +426,7 @@ function EventController:Start()
 						short(nextLevel.Price)
 					),
 				Color = POWER_COLOR,
+				Icon = "Bolt",
 			})
 		end
 
@@ -255,6 +438,7 @@ function EventController:Start()
 				Progress = throws / onboard.GiftAfterThrows,
 				Text = ("FREE GIFT CRATE IN %d THROW%s"):format(giftLeft, if giftLeft == 1 then "" else "S"),
 				Color = GOLD,
+				Icon = "GiftPink",
 			})
 		end
 
@@ -275,6 +459,7 @@ function EventController:Start()
 						short(price)
 					),
 				Color = GOLD,
+				Icon = "Crate",
 				Guide = coins >= price,
 			})
 		end
@@ -286,6 +471,7 @@ function EventController:Start()
 			Progress = throws / per,
 			Text = ("FREE CRATE IN %d THROW%s"):format(left, if left == 1 then "" else "S"),
 			Color = CRATE_COLOR,
+			Icon = "Crate",
 		})
 
 		local best = options[1]
@@ -303,10 +489,12 @@ function EventController:Start()
 		-- Rizzo draws his own beam (RizzoController, same moment as his "!"); this one is only the kiosk fallback
 		wantGuide = guideNow and not (guideTarget() and guideTarget().Name == "PromptPoint")
 		setGuide(wantGuide)
+		-- Ready (the goal is reached: buy it / go get it): the purple READY look with the text big
+		setGoalReady(best.Progress >= 1)
 		bar.Label.Text = best.Text
-		bar.UIStroke.Color = best.Color
-		bar.Fill.BackgroundColor3 = best.Color
-		TweenService:Create(bar.Fill, TweenInfo.new(0.35, Enum.EasingStyle.Quad), {
+		goalIcon.Image = HudKit.Icon(best.Icon or "Crate")
+		local fill = bar:FindFirstChild("Fill", true) :: Frame
+		TweenService:Create(fill, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			Size = UDim2.fromScale(math.clamp(best.Progress, 0.04, 1), 1),
 		}):Play()
 

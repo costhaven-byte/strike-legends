@@ -24,6 +24,7 @@ local MascotView = require(Modules:WaitForChild("MascotView"))
 local PetIdle = require(Modules:WaitForChild("PetIdle"))
 local Sfx = require(Modules:WaitForChild("Sfx"))
 local UiFx = require(Modules:WaitForChild("UiFx"))
+local HudKit = require(Modules:WaitForChild("HudKit"))
 
 local player = Players.LocalPlayer
 
@@ -40,10 +41,6 @@ local PINK = Color3.fromRGB(255, 60, 210)
 local GOLD = Color3.fromRGB(255, 200, 40)
 local LIME = Color3.fromRGB(125, 255, 60)
 local GREY = Color3.fromRGB(120, 110, 150)
-
--- The PETS button sits right of BALLS, then DAILY (and the same on short phone screens); GIFTS is top-right
-local BUTTON_NORMAL = UDim2.fromOffset(79, 304)
-local BUTTON_COMPACT = UDim2.fromOffset(75, 76)
 
 local MascotController = {}
 
@@ -160,69 +157,11 @@ function MascotController:Start()
 	gui.DisplayOrder = ballsUI.DisplayOrder
 	gui.IgnoreGuiInset = ballsUI.IgnoreGuiInset
 
-	-- PETS button (same look as BALLS and DAILY, in pink)
-	local petsButton = Instance.new("TextButton")
-	petsButton.Name = "PetsButton"
-	petsButton.Text = ""
-	petsButton.AutoButtonColor = false
-	petsButton.BackgroundColor3 = Color3.fromRGB(30, 20, 60)
-	petsButton.BackgroundTransparency = 0.1
-	petsButton.Size = UDim2.fromOffset(55, 56)
-	petsButton.Position = BUTTON_NORMAL
+	-- PETS button (owner's HUD Kit: pink, paw icon). Count badge = potions to drink; red dot = an egg to hatch.
+	local petsKit =
+		HudKit.Square(gui, { Name = "PetsButton", Paint = "Pink", Icon = "Paw", Caption = "PETS", Key = "Pets" })
+	local petsButton = petsKit.Holder :: TextButton
 	petsButton.Visible = false
-	petsButton.Parent = gui
-	corner(petsButton, 12)
-	stroke(petsButton, PINK, 3, true)
-	local caption = text(
-		petsButton,
-		"Caption",
-		Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy),
-		PINK,
-		UDim2.new(0, 3, 1, -17),
-		UDim2.new(1, -6, 0, 13)
-	)
-	caption.Text = "PETS"
-	-- Icon: a little pink mascot face
-	local face = Instance.new("Frame")
-	face.Name = "Icon"
-	face.AnchorPoint = Vector2.new(0.5, 0)
-	face.Position = UDim2.new(0.5, 0, 0, 7)
-	face.Size = UDim2.fromOffset(28, 28)
-	face.BackgroundColor3 = PINK
-	face.Parent = petsButton
-	corner(face)
-	stroke(face, Color3.new(1, 1, 1), 2)
-	for _, x in { 0.3, 0.7 } do
-		local eye = Instance.new("Frame")
-		eye.AnchorPoint = Vector2.new(0.5, 0.5)
-		eye.Position = UDim2.fromScale(x, 0.42)
-		eye.Size = UDim2.fromOffset(8, 8)
-		eye.BackgroundColor3 = Color3.new(1, 1, 1)
-		eye.Parent = face
-		corner(eye)
-		local pupil = Instance.new("Frame")
-		pupil.AnchorPoint = Vector2.new(0.5, 0.5)
-		pupil.Position = UDim2.fromScale(0.5, 0.6)
-		pupil.Size = UDim2.fromOffset(4, 4)
-		pupil.BackgroundColor3 = INK
-		pupil.Parent = eye
-		corner(pupil)
-	end
-	-- Red badge: potions waiting to be drunk (their number), or "!" when an egg is ready to hatch
-	local dot = Instance.new("Frame")
-	dot.Name = "Dot"
-	dot.AnchorPoint = Vector2.new(0.5, 0.5)
-	dot.Position = UDim2.new(1, -4, 0, 4)
-	dot.Size = UDim2.fromOffset(20, 20)
-	dot.BackgroundColor3 = Color3.fromRGB(255, 50, 70)
-	dot.Visible = false
-	dot.ZIndex = 3
-	dot.Parent = petsButton
-	corner(dot)
-	stroke(dot, Color3.new(1, 1, 1), 2)
-	local dotLabel = text(dot, "Count", FONT, Color3.new(1, 1, 1), UDim2.fromScale(0.1, 0.1), UDim2.fromScale(0.8, 0.8))
-	dotLabel.ZIndex = 4
-	UiFx.Press(petsButton)
 
 	-- The panel borrows the ball inventory's look (like the collection book does)
 	local panel = inventory:Clone()
@@ -549,8 +488,8 @@ function MascotController:Start()
 	function refreshBadge()
 		local potions = PotionController.Count()
 		local unlocked, _, affordable = eggState()
-		dot.Visible = potions > 0 or (unlocked and affordable)
-		dotLabel.Text = if potions > 0 then tostring(potions) else "!"
+		petsKit:SetBadge(if potions > 0 then potions else nil)
+		petsKit:SetDot(potions == 0 and unlocked and affordable)
 	end
 
 	local function refreshButton()
@@ -891,7 +830,10 @@ function MascotController:Start()
 				local names = {}
 				for _, extra in result.Extras do
 					local other = Mascots.Get(extra.MascotId)
-					table.insert(names, (if other then other.Name:upper() else "?") .. (if extra.IsNew then " (NEW)" else ""))
+					table.insert(
+						names,
+						(if other then other.Name:upper() else "?") .. (if extra.IsNew then " (NEW)" else "")
+					)
 				end
 				task.spawn(showToast, "ALSO HATCHED: " .. table.concat(names, ", "))
 			end
@@ -1058,7 +1000,6 @@ function MascotController:Start()
 	-- Compact layout on short screens (phones held sideways)
 	local function layout()
 		local compact = hud.AbsoluteSize.Y > 0 and hud.AbsoluteSize.Y < Config.Ui.CompactHeight
-		petsButton.Position = if compact then BUTTON_COMPACT else BUTTON_NORMAL
 		panel.Position = UDim2.fromScale(0.5, if compact then 0.5 else 0.53)
 		panel.Size = if compact then UDim2.fromScale(0.94, 0.94) else UDim2.fromScale(0.88, 0.74)
 	end

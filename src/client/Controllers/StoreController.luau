@@ -22,6 +22,7 @@ local AssetSlots = require(Shared.AssetSlots)
 local Store = require(Shared.Modules.Store)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules:WaitForChild("Sfx"))
+local HudKit = require(Modules:WaitForChild("HudKit"))
 
 local player = Players.LocalPlayer
 
@@ -568,13 +569,9 @@ function StoreController:Start()
 
 	local function placeButton()
 		local holder = buttonParts.Holder
-		-- Right of BALLS and PETS, where DAILY used to be (owner 2026-10-25; DAILY moved under POWER LV)
+		-- Right of BALLS and PETS (HUD Kit spot)
 		holder.AnchorPoint = Vector2.new(0, 0)
-		if compact() then
-			holder.Position = UDim2.fromOffset(138, 76)
-		else
-			holder.Position = UDim2.fromOffset(142, 304)
-		end
+		holder.Position = HudKit.Spot("Store", compact())
 	end
 
 	-- Idle: the icon pops every 5 s, the "!" wiggles every 3 s (paused while the store is open)
@@ -688,19 +685,18 @@ function StoreController:Start()
 			table.insert(pills, { Holder = holder, Top = top, Price = price, Ladder = ladder, Shown = nil, Slot = nil })
 		end
 	end
-	-- Side by side, 6 px apart, just above the coin counter, lined up with its left edge (owner 2026-10-25: above the
-	-- coins, not next to the multiplier badge)
+	-- Side by side above the coin counter (owner 2026-10-25), on the HUD Kit's spot: 10 px apart (6 on phones)
 	local function placePills(animate: boolean)
 		if #pills == 0 then
 			return
 		end
-		local w, h = pills[1].Holder.Size.X.Offset, pills[1].Holder.Size.Y.Offset
-		local x = bar.Position.X.Offset
-		local top = bar.Position.Y.Offset - 8 - h
+		local w = pills[1].Holder.Size.X.Offset
+		local spot = HudKit.Spot("Boosts", compact())
+		local gap = if compact() then 6 else 10
 		local slot = 0
 		for _, pill in pills do
 			if pill.Shown then
-				local target = UDim2.new(bar.Position.X.Scale, x + slot * (w + 6), bar.Position.Y.Scale, top)
+				local target = spot + UDim2.fromOffset(slot * (w + gap), 0)
 				if animate and pill.Slot ~= nil and pill.Slot ~= slot then
 					tween(pill.Holder, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Position = target })
 				else
