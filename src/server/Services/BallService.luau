@@ -21,7 +21,7 @@ local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 
 local BallService = {}
 
-local pullBannerEvent: RemoteEvent? = nil -- Legendary/Mythic pull banners for the whole server (Config.PullBanner)
+local pullBannerEvent: RemoteEvent? = nil -- Epic+ pull banners for the whole server (Config.PullBanner)
 
 local busy: { [Player]: boolean } = {}
 
@@ -312,7 +312,7 @@ function BallService.GiveCrate(player: Player, crate, minRarity: string?, exactR
 		player:SetAttribute("Pity_" .. key, value)
 	end
 	PlayerDataService.Add(player, "CratesOpened", 1)
-	-- A Legendary or Mythic pull: a banner for everyone in the server (Config.PullBanner), after the reveal
+	-- An Epic or better pull: a banner for everyone in the server (Config.PullBanner), after the reveal
 	local banner = Config.PullBanner
 	if banner.Enabled and banner.Rarities[ball.Rarity] and pullBannerEvent then
 		task.delay(banner.Delay, function()

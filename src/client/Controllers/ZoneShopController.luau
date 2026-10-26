@@ -38,7 +38,7 @@ local function hook(row)
 	refresh()
 	prompt.Triggered:Connect(function()
 		if CrateController.OpenShop then
-			CrateController.OpenShop()
+			CrateController.OpenShop(row.Zone)
 		end
 	end)
 end

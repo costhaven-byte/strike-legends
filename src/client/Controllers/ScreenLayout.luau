@@ -38,12 +38,9 @@ local COMPACT = {
 
 	["TrialUI.Intro"] = { Size = UDim2.fromScale(0.9, 0.92) },
 
-	-- Popups use most of the screen
-	["BallsUI.Shop"] = { Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.94, 0.94) },
+	-- Popups use most of the screen (the crate shop has its own phone layout: CrateController, Crate Kit)
 	["BallsUI.Inventory"] = { Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.94, 0.94) },
 	["DailyUI.Popup"] = { Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.94, 0.94) },
-	["BallsUI.Shop.Cards.*.Buy"] = { Size = UDim2.new(1, -24, 0, 44) },
-	["BallsUI.Shop.Cards.*.Odds"] = { Size = UDim2.new(1, -28, 1, -96) },
 }
 
 local ScreenLayout = {}
