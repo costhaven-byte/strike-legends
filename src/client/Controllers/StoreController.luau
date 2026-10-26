@@ -8,6 +8,9 @@
 -- * The window: BOOSTS / PASSES / LOOKS / GEMS tabs jump within one scrolling list (Starter Pack on top until bought).
 --   LOOKS (step 12b, Config.Cosmetics): trails, strike banners, pin blasts and lane skins for gems or Robux, with
 --   WEAR / WEARING (tap WEARING to take it off). Gem looks are bought here through BuyCosmetic.
+-- * Offer popups (step 12b-2, Config.Monetization.Offers): the server sends one (StoreOffer) at a hard stop (this
+--   script tells it when you stand at a locked zone's wall, OfferAsk) or after a rare pull; it waits for a quiet moment
+--   (no throw, no crate opening, no other window) and always has NO THANKS.
 -- * The one-time Starter Pack popup (the server says when; it waits for a quiet moment, never mid-throw), the THANK
 --   YOU / VIP DAILY GIFT toast, and the gold [VIP] tag in chat for VIP owners.
 -- BUY asks the server, which shows Roblox's own purchase window; nothing is given here. Built in code, so it's in git.
@@ -23,6 +26,7 @@ local Config = require(Shared.Config)
 local AssetSlots = require(Shared.AssetSlots)
 local Store = require(Shared.Modules.Store)
 local Cosmetics = require(Shared.Modules.Cosmetics)
+local Zones = require(Shared.Modules.Zones)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules:WaitForChild("Sfx"))
 local HudKit = require(Modules:WaitForChild("HudKit"))
@@ -1779,9 +1783,185 @@ function StoreController:Start()
 	popupNoBody.Activated:Connect(closePopup)
 	popupCloseBody.Activated:Connect(closePopup)
 
+	-- ===== Offer popup (hard stop / rare pull) =====
+	local offerOpen = false
+	local offerData = nil
+	local offerPopup, offerGroup, offerContent = panelShell(overlay, "OfferPopup", 24, 4, C.Gold, 3, 6)
+	offerPopup.AnchorPoint = Vector2.new(0.5, 0.5)
+	offerPopup.Position = UDim2.fromScale(0.5, 0.5)
+	offerPopup.Size = UDim2.fromOffset(380, 236)
+	innerRing(offerGroup, C.Ink, 2, 7, 24, 20)
+	local offerBody =
+		make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 6 }, offerContent)
+	pad(offerBody, 8, 10, 10, 10)
+	local offerTitle = label(offerBody, "", HEAD, 26, C.Gold, 7)
+	offerTitle.TextXAlignment = Enum.TextXAlignment.Left
+	offerTitle.TextTruncate = Enum.TextTruncate.AtEnd
+	offerTitle.Position = UDim2.fromOffset(4, 5)
+	offerTitle.Size = UDim2.new(1, -50, 0, 38)
+	local offerCloseHolder, offerCloseFace, offerCloseBody = chunky(offerBody, {
+		Name = "Close",
+		Size = UDim2.fromOffset(44, 44),
+		Radius = 12,
+		Color = C.Grey,
+		Lip = C.GreyLip,
+		LipHeight = 3,
+		Drop = 3,
+		Outline = 3,
+		Highlight = 0,
+		HighlightAlpha = 0,
+	})
+	offerCloseHolder.AnchorPoint = Vector2.new(1, 0)
+	offerCloseHolder.Position = UDim2.new(1, 4, 0, -2)
+	local offerX = label(offerCloseFace, "X", HEAD, 22, C.White, 5)
+	offerX.Position = UDim2.fromOffset(0, 2)
+	-- The picture tile (a pass/boost icon, or a look's colour swatch) and the line next to it
+	local offerTile = make("Frame", {
+		BackgroundColor3 = C.Card,
+		Position = UDim2.fromOffset(0, 50),
+		Size = UDim2.fromOffset(100, 100),
+	}, offerBody)
+	corner(offerTile, 16)
+	innerRing(offerTile, C.Ink, 2.5, 0, 16, 5)
+	local offerIcon = image(offerTile, "XpStar", 72, {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		ZIndex = 6,
+	})
+	local offerSwatch = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(72, 72),
+		ZIndex = 6,
+		Visible = false,
+	}, offerTile)
+	corner(offerSwatch, 14)
+	stroke(offerSwatch, C.Ink, 3)
+	local offerGradient = make("UIGradient", { Rotation = 45 }, offerSwatch)
+	local offerText = label(offerBody, "", BOLD, 15, C.White)
+	offerText.TextWrapped = true
+	offerText.TextXAlignment = Enum.TextXAlignment.Left
+	offerText.TextYAlignment = Enum.TextYAlignment.Center
+	offerText.Position = UDim2.fromOffset(112, 50)
+	offerText.Size = UDim2.new(1, -112, 0, 100)
+	local offerBuyHolder, offerBuyFace, offerBuyBody = chunky(offerBody, {
+		Name = "Buy",
+		Size = UDim2.new(0.5, -5, 0, 48),
+		Radius = 14,
+		Color = C.Lime,
+		Down = C.LimeDown,
+		Lip = C.LimeLip,
+		LipHeight = 4,
+		Drop = 4,
+		Outline = 3,
+		Highlight = 3,
+		HighlightAlpha = 0.55,
+	})
+	offerBuyHolder.AnchorPoint = Vector2.new(0, 1)
+	offerBuyHolder.Position = UDim2.new(0, 0, 1, -4)
+	local offerPriceRow, offerAmount = priceContent(offerBuyFace, 22, 24, 6, 4)
+	local offerPriceIcon = offerPriceRow:FindFirstChildOfClass("ImageLabel")
+	local offerNoHolder, offerNoFace, offerNoBody = chunky(offerBody, {
+		Name = "NoThanks",
+		Size = UDim2.new(0.5, -5, 0, 48),
+		Radius = 14,
+		Color = C.Grey,
+		Lip = C.GreyLip,
+		LipHeight = 4,
+		Drop = 4,
+		Outline = 3,
+		Highlight = 3,
+		HighlightAlpha = 0.25,
+	})
+	offerNoHolder.AnchorPoint = Vector2.new(1, 1)
+	offerNoHolder.Position = UDim2.new(1, 0, 1, -4)
+	local offerNoText = label(offerNoFace, "NO THANKS", HEAD, 19, C.White, 5)
+	offerNoText.Position = UDim2.fromOffset(0, 1)
+	offerNoText.Size = UDim2.new(1, 0, 1, -4)
+
+	local function closeOffer()
+		if not offerOpen then
+			return
+		end
+		offerOpen = false
+		offerData = nil
+		hideBackdrop()
+		closePanel(offerPopup, offerGroup, function()
+			return not offerOpen
+		end)
+	end
+	offerBuyBody.Activated:Connect(function()
+		local data = offerData
+		if not data then
+			return
+		end
+		if data.Kind == "Look" then
+			local item = Cosmetics.Get(data.Id)
+			if item and item.Gems then
+				task.spawn(function()
+					local ok, result = pcall(buyLook.InvokeServer, buyLook, item.Id)
+					if ok and type(result) == "table" and result.Ok then
+						Sfx.Play("Reveal", 1.2)
+					end
+				end)
+			elseif item and Cosmetics.Product(item) then
+				buyRemote:FireServer(Cosmetics.Product(item).Id)
+			end
+		else
+			buyRemote:FireServer(data.Id) -- the XP BOOST step or the 2X pass
+		end
+		closeOffer()
+	end)
+	offerNoBody.Activated:Connect(closeOffer)
+	offerCloseBody.Activated:Connect(closeOffer)
+
+	-- Fills the popup for one offer; false when there's nothing to show (bought meanwhile, unknown id)
+	local function fillOffer(data): boolean
+		local robux, gems
+		if data.Kind == "Look" then
+			local item = Cosmetics.Get(data.Id)
+			if not item or Cosmetics.Owns(player, item.Id) then
+				return false
+			end
+			local product = Cosmetics.Product(item)
+			gems = item.Gems
+			robux = product and product.Robux
+			offerSwatch.Visible = true
+			offerIcon.Visible = false
+			offerGradient.Color = Cosmetics.Sequence(item)
+		else
+			local pass = Store.Pass(data.Id)
+			local product = Store.Product(data.Id)
+			if pass and Store.Owns(player, pass.Id) then
+				return false
+			end
+			if product and product.Ladder and Store.NextStep(player, product.Ladder) ~= product then
+				return false
+			end
+			robux = (pass and pass.Robux) or (product and product.Robux)
+			offerSwatch.Visible = false
+			offerIcon.Visible = true
+			offerIcon.Image = AssetSlots.Image(if pass then (ICONS[pass.Id] or "Pass2x") else "XpStar")
+		end
+		if not robux and not gems then
+			return false
+		end
+		local color = if data.Kind == "Look" then C.Pink else C.Gold
+		offerTitle.Text = tostring(data.Title or "")
+		offerTitle.TextColor3 = color
+		offerText.Text = tostring(data.Text or "")
+		if offerPriceIcon then
+			offerPriceIcon.Image = AssetSlots.Image(if gems then "Gem" else "Robux")
+		end
+		offerAmount.Text = if gems then tostring(gems) else formatRobux(robux)
+		return true
+	end
+
 	-- Tapping the dark backdrop or gamepad B closes whatever is open
 	local function closeTop()
-		if popupOpen then
+		if offerOpen then
+			closeOffer()
+		elseif popupOpen then
 			closePopup()
 		elseif isOpen then
 			StoreController.Close()
@@ -1800,15 +1980,112 @@ function StoreController:Start()
 			lastThrow = os.clock()
 		end
 	end)
+	-- A quiet moment for any popup: a few seconds after your last throw, not holding the throw button, no crate
+	-- opening on screen and no other store window open
+	local ballsUi = playerGui:WaitForChild("BallsUI", 10)
+	local crateOpening = ballsUi and ballsUi:FindFirstChild("Opening") :: GuiObject?
+	-- Another game window on screen (daily reward, ball book, pets, spin wheel, rank-up, zone unlock...)
+	local WINDOW_NAMES = { Panel = true, Popup = true, Window = true, Book = true, DailySpinWheel = true }
+	local NOT_WINDOWS = { ThrowUI = true, HUD = true } -- their "Panel" is the throw meter / HUD, always up
+	local function otherWindowOpen(): boolean
+		for _, screen in playerGui:GetChildren() do
+			if
+				screen:IsA("ScreenGui")
+				and screen.Enabled
+				and screen ~= gui
+				and screen ~= overlay
+				and not NOT_WINDOWS[screen.Name]
+			then
+				if screen.Name == "ZoneUnlockUI" or screen.Name == "ElevatorUI" then
+					return true
+				end
+				for _, child in screen:GetChildren() do
+					if child:IsA("GuiObject") and child.Visible then
+						if WINDOW_NAMES[child.Name] then
+							return true
+						end
+						for _, inner in child:GetChildren() do
+							if inner:IsA("GuiObject") and inner.Visible and WINDOW_NAMES[inner.Name] then
+								return true
+							end
+						end
+					end
+				end
+			end
+		end
+		return false
+	end
+	local function quiet(): boolean
+		return os.clock() - lastThrow >= MONEY.QuietSeconds
+			and not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+			and not (crateOpening and crateOpening.Visible)
+			and not otherWindowOpen()
+			and not isOpen
+			and not popupOpen
+			and not offerOpen
+	end
+
+	remotes:WaitForChild("StoreOffer").OnClientEvent:Connect(function(data)
+		if type(data) ~= "table" or type(data.Id) ~= "string" then
+			return
+		end
+		-- Wait (up to a minute) for a quiet moment; a missed offer is simply dropped
+		local waitedUntil = os.clock() + 60
+		while not quiet() do
+			if os.clock() > waitedUntil then
+				return
+			end
+			task.wait(0.5)
+		end
+		if not fillOffer(data) then
+			return
+		end
+		offerData = data
+		offerOpen = true
+		showBackdrop()
+		openPanel(offerPopup, offerGroup)
+		Sfx.Play("Reveal", 0.9)
+	end)
+
+	-- HARD STOP: standing at a locked zone's glowing wall asks the server for an offer (the server decides whether one
+	-- is allowed)
+	local offers = MONEY.Offers
+	if offers and offers.Enabled and offers.HardStop then
+		local offerAsk = remotes:WaitForChild("OfferAsk") :: RemoteEvent
+		local asked: { [number]: boolean } = {}
+		task.spawn(function()
+			while true do
+				task.wait(1)
+				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+				local level = player:GetAttribute("RankLevel")
+				if root then
+					for _, gate in Config.Zones.Gated do
+						-- Asks once each time you walk up (walking away and back asks again; the server only
+						-- offers each zone once per visit)
+						local near, away = false, true
+						for _, box in gate.Walls do
+							local reach = offers.HardStopRange + box.Size.Magnitude / 2
+							local distance = (root.Position - box.Center).Magnitude
+							near = near or distance <= reach
+							away = away and distance > reach + 10
+						end
+						if near and not asked[gate.Zone] and not Zones.Unlocked(level, gate.Zone) then
+							asked[gate.Zone] = true
+							offerAsk:FireServer(gate.Zone)
+						elseif away then
+							asked[gate.Zone] = nil
+						end
+					end
+				end
+			end
+		end)
+	end
+
 	remotes:WaitForChild("StarterOffer").OnClientEvent:Connect(function()
 		if not starter then
 			return
 		end
-		-- A quiet moment: a few seconds after your last throw, not holding the throw button
-		while
-			os.clock() - lastThrow < MONEY.QuietSeconds
-			or UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
-		do
+		while not quiet() do
 			task.wait(0.5)
 		end
 		if (player:GetAttribute("StarterPack") or 0) == 0 and not popupOpen then

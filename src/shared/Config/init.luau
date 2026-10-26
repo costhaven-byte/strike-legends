@@ -298,6 +298,7 @@ Config.RateLimits = {
 	StoreBuy = 1,
 	BuyCosmetic = 0.5,
 	EquipCosmetic = 0.2,
+	OfferAsk = 3,
 }
 
 -- Gems on/off switch. Addendum 1 keeps gems (earned only, a gem sink comes later); set Enabled = false to hide them.
@@ -3324,6 +3325,22 @@ Config.Monetization = {
 	LuckFrom = "Rare",
 	StarterAfterMinutes = 10, -- the Starter Pack popup shows once, after this many minutes of play in total...
 	QuietSeconds = 3, -- ...at a quiet moment: this long after the player's last throw (never mid-throw)
+	-- Offer popups (Addendum 2 section 7, step 12b-2): a soft offer at a natural moment, always with NO THANKS.
+	-- HardStop: you walk up to a locked zone (its glowing wall or the elevator): the next XP BOOST step to reach the
+	-- level sooner (or the 2X COINS + 2X XP pass once the ladder is maxed); once per zone per visit.
+	-- RarePull: a crate ball this rare or better: a trail look for it (one matching the ball's style first, then the
+	-- cheapest you don't own; gem looks only when you can pay for them).
+	-- Rules for both: none in the first AfterMinutes of play in total, none during onboarding, at most one popup per
+	-- GapSeconds (the Starter Pack popup counts too), at a quiet moment (QuietSeconds after a throw, no crate opening).
+	Offers = {
+		Enabled = true,
+		AfterMinutes = 10,
+		GapSeconds = 300,
+		HardStop = true,
+		HardStopRange = 14, -- studs from a locked zone's wall that count as walking up to it
+		RarePull = "Rare",
+		PullDelay = 5, -- seconds after the pull before the offer is sent (the crate reveal plays first)
+	},
 	ChatTag = "[VIP]", -- before VIP owners' names in chat (gold)
 	TrailColor = Color3.fromRGB(255, 200, 40), -- old VIP gold trail colour (since 12b the VIP GOLD look in Config.Cosmetics)
 	KeepPurchaseIds = 50, -- how many recent purchase ids each save remembers
@@ -3618,6 +3635,7 @@ Config.Analytics = {
 		"BossLost", -- the Titan escaped (time ran out); labels = reward tier
 		"PityHit", -- labels = crate, rarity
 		"PerfectRate", -- value = PERFECT % of the session's throws (assisted first throw left out); labels = throws, perfects
+		"OfferShown", -- an offer popup was sent (Config.Monetization.Offers); labels = HardStop/Look, item Id
 		"PolishLevel", -- value = new Polish level; labels = ball
 		"PotionUsed", -- value = minutes left on that potion after drinking; labels = potion
 		"PlaytimeClaimed", -- value = the gift's minute mark; labels = Potion/Egg/Crate, item

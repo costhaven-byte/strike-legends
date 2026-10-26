@@ -9,6 +9,9 @@
 -- (CoinBoostLevel / XpBoostLevel).
 -- Looks (Cosmetic = a Config.Cosmetics Id): bought once, handed to CosmeticService (step 12b).
 -- VIP: DailyGems once a day (VipGiftDay), given on join or when the day changes.
+-- Offers (step 12b-2, Config.Monetization.Offers): HARD STOP (at a locked zone's wall: the next XP BOOST step, or the
+-- 2X pass) and RARE PULL (a trail look for a new Rare+ crate ball). Never in the first 10 minutes or during
+-- onboarding, at most one popup (Starter Pack included) per 5 minutes; the client waits for a quiet moment.
 -- Studio preview (StudioPreview, switch off): BUY gives the item for free straight away; Studio tests never save.
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -19,6 +22,8 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Calendar = require(Shared.Modules.Calendar)
 local Store = require(Shared.Modules.Store)
+local Balls = require(Shared.Modules.Balls)
+local Zones = require(Shared.Modules.Zones)
 local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
 local CosmeticService = require(script.Parent.CosmeticService)
@@ -29,12 +34,16 @@ local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
 local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
 local MONEY = Config.Monetization
+local OFFERS = MONEY.Offers
 local OFFER_CHECK = 15 -- seconds between Starter Pack and VIP gift checks
 
 local StoreService = {}
 
 local owned: { [Player]: { [string]: boolean } } = {}
 local resultEvent: RemoteEvent? = nil
+local offerEvent: RemoteEvent? = nil
+local lastPrompt: { [Player]: number } = {} -- os.clock() of this player's last offer popup (Starter Pack too)
+local hardStopsShown: { [Player]: { [number]: boolean } } = {} -- zones already offered this visit
 
 local passByNumber = {}
 for _, pass in MONEY.Passes do
@@ -213,20 +222,147 @@ local function onBuy(player: Player, id: any)
 	end
 end
 
+-- True when this player may get an offer popup now: not in the first minutes (the Starter Pack has its own time),
+-- not during onboarding, and not within GapSeconds of the last popup
+local function mayPrompt(player: Player, starter: boolean?): boolean
+	if lastPrompt[player] and os.clock() - lastPrompt[player] < OFFERS.GapSeconds then
+		return false
+	end
+	if Config.Onboarding.Enabled and (tonumber(PlayerDataService.Get(player, "Onboarding")) or 3) < 3 then
+		return false
+	end
+	return starter == true or Analytics.MinutesPlayed(player) >= OFFERS.AfterMinutes
+end
+
+local function sendOffer(player: Player, offer)
+	lastPrompt[player] = os.clock()
+	Analytics.Event(player, "OfferShown", 1, { offer.Kind, offer.Id })
+	SessionLog.Moment(player, ("Offer shown: %s %s"):format(offer.Kind, offer.Id))
+	if offerEvent then
+		offerEvent:FireClient(player, offer)
+	end
+end
+
 -- Starter Pack popup: once, after enough play, never for someone who bought it
 local function checkOffer(player: Player)
 	if
 		(PlayerDataService.Get(player, "StarterPack") or 0) > 0
 		or (PlayerDataService.Get(player, "StarterOffered") or 0) > 0
 		or Analytics.MinutesPlayed(player) < MONEY.StarterAfterMinutes
+		or not mayPrompt(player, true)
 	then
 		return
 	end
 	PlayerDataService.Set(player, "StarterOffered", 1)
+	lastPrompt[player] = os.clock()
 	local offer = ReplicatedStorage.Remotes:FindFirstChild("StarterOffer") :: RemoteEvent?
 	if offer then
 		offer:FireClient(player)
 	end
+end
+
+-- HARD STOP: the player stands at a locked zone's wall (the client asks; the server checks the wall is near and
+-- the zone really is locked). Offer: the next XP BOOST step, or the 2X COINS + 2X XP pass once the ladder is maxed.
+local function onHardStop(player: Player, zone: any)
+	if
+		OFFERS.Enabled ~= true
+		or OFFERS.HardStop ~= true
+		or type(zone) ~= "number"
+		or not RateLimit.Allow(player, "OfferAsk")
+		or not PlayerDataService.IsLoaded(player)
+	then
+		return
+	end
+	local gate
+	for _, row in Config.Zones.Gated do
+		if row.Zone == zone then
+			gate = row
+		end
+	end
+	local shown = hardStopsShown[player]
+	if
+		not gate
+		or Zones.Unlocked(PlayerDataService.Get(player, "RankLevel"), zone)
+		or (shown and shown[zone])
+		or not mayPrompt(player)
+	then
+		return
+	end
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local near = false
+	for _, box in gate.Walls do
+		if root and (root.Position - box.Center).Magnitude <= OFFERS.HardStopRange + box.Size.Magnitude / 2 + 4 then
+			near = true
+		end
+	end
+	if not near then
+		return
+	end
+	local step = Store.NextStep(player, "Xp")
+	local pass = Store.Pass("DoubleCoins")
+	local id, what
+	if step then
+		id, what = step.Id, "XP BOOST " .. Store.MultText(step.Mult) .. " gets you there faster, forever."
+	elseif pass and not Store.Owns(player, pass.Id) then
+		id, what = pass.Id, pass.Name .. " gets you there twice as fast, forever."
+	else
+		return -- nothing left to offer here
+	end
+	hardStopsShown[player] = shown or {}
+	hardStopsShown[player][zone] = true
+	sendOffer(player, {
+		Kind = "HardStop",
+		Id = id,
+		Title = ("ZONE %d IS LOCKED"):format(zone),
+		Text = ("%s opens at LEVEL %d. %s"):format(Zones.Name(zone):upper(), Zones.UnlockLevel(zone), what),
+	})
+end
+
+-- The trail look to offer for a new ball: one of the ball's style first, then the cheapest; never one already owned,
+-- never VIP-only, and a gem look only when the player has the gems
+local function trailFor(player: Player, ball)
+	local style = Config.BallVfx.BallStyles[ball.Id]
+	local gems = PlayerDataService.Get(player, "Gems") or 0
+	local best, bestScore = nil, math.huge
+	for _, item in Config.Cosmetics.Items do
+		local product = Cosmetics.Product(item)
+		local buyable = (item.Gems ~= nil and gems >= item.Gems) or product ~= nil
+		if item.Kind == "Trail" and not item.Vip and buyable and not Cosmetics.Owns(player, item.Id) then
+			local price = item.Gems or (product and product.Robux) or 0
+			local score = (if item.Style == style then 0 else 100000) + price
+			if score < bestScore then
+				best, bestScore = item, score
+			end
+		end
+	end
+	return best
+end
+
+-- RARE PULL: a Rare or better crate ball -> a trail look for it, after the reveal
+local function onCratePull(player: Player, ball)
+	if
+		OFFERS.Enabled ~= true
+		or not OFFERS.RarePull
+		or Config.Cosmetics.Enabled ~= true
+		or Balls.RarityIndex(ball.Rarity) < Balls.RarityIndex(OFFERS.RarePull)
+	then
+		return
+	end
+	task.wait(OFFERS.PullDelay)
+	if not player.Parent or not PlayerDataService.IsLoaded(player) or not mayPrompt(player) then
+		return
+	end
+	local item = trailFor(player, ball)
+	if not item then
+		return
+	end
+	sendOffer(player, {
+		Kind = "Look",
+		Id = item.Id,
+		BallId = ball.Id,
+		Title = ("NEW %s!"):format(ball.Name:upper()),
+		Text = ("Make it shine with the %s. Looks only, everyone sees it."):format(item.Name),
+	})
 end
 
 function StoreService:Start()
@@ -250,6 +386,25 @@ function StoreService:Start()
 	local offer = Instance.new("RemoteEvent")
 	offer.Name = "StarterOffer"
 	offer.Parent = remotes
+	local storeOffer = Instance.new("RemoteEvent")
+	storeOffer.Name = "StoreOffer" -- server -> client: show an offer popup (sendOffer)
+	storeOffer.Parent = remotes
+	offerEvent = storeOffer
+	local ask = Instance.new("RemoteEvent")
+	ask.Name = "OfferAsk" -- client -> server: "I'm at zone N's locked wall"
+	ask.OnServerEvent:Connect(function(player, zone)
+		local ok, err = pcall(onHardStop, player, zone)
+		if not ok then
+			warn("[StoreService] " .. tostring(err))
+		end
+	end)
+	ask.Parent = remotes
+	BallService.OnCratePull = function(player, ball)
+		local ok, err = pcall(onCratePull, player, ball)
+		if not ok then
+			warn("[StoreService] " .. tostring(err))
+		end
+	end
 
 	if not Store.IsPreview() then
 		MarketplaceService.ProcessReceipt = processReceipt
@@ -272,6 +427,8 @@ function StoreService:Start()
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		owned[player] = nil
+		lastPrompt[player] = nil
+		hardStopsShown[player] = nil
 	end)
 
 	task.spawn(function()

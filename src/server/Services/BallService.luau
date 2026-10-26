@@ -22,6 +22,8 @@ local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 local BallService = {}
 
 local pullBannerEvent: RemoteEvent? = nil -- Epic+ pull banners for the whole server (Config.PullBanner)
+-- Set by StoreService: told about every crate ball (it offers a trail after a rare pull, Config.Monetization.Offers)
+BallService.OnCratePull = nil :: ((Player, any) -> ())?
 
 local busy: { [Player]: boolean } = {}
 
@@ -321,6 +323,9 @@ function BallService.GiveCrate(player: Player, crate, minRarity: string?, exactR
 	end
 
 	local isNew, sellCoins, polishLevel = addBall(player, ball)
+	if BallService.OnCratePull then
+		task.spawn(BallService.OnCratePull, player, ball)
+	end
 	SessionLog.Crate(player)
 	SessionLog.Moment(
 		player,
