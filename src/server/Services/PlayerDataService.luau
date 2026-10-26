@@ -100,7 +100,7 @@ local function onPlayerAdded(player: Player)
 		return
 	end
 
-	-- Studio test with your real save and every built zone open (Config.Onboarding.StudioUnlockAll)
+	-- Studio test with your real save, every built zone open and everything owned (Config.Onboarding.StudioUnlockAll)
 	local untouched = nil
 	if not noSave and RunService:IsStudio() and Config.Onboarding.StudioUnlockAll == true and SaveStore.Enabled then
 		untouched = SaveStore.DeepCopy(data)
@@ -112,6 +112,18 @@ local function onPlayerAdded(player: Player)
 		data.XP = math.max(data.XP or 0, Progression.LevelXP(data.RankLevel))
 		data.ZoneSeen = math.max(data.ZoneSeen or 1, built)
 		data.Onboarding = math.max(data.Onboarding or 0, 3)
+		data.CratesBought = math.max(data.CratesBought or 0, 1)
+		data.Coins = math.max(data.Coins or 0, Config.Onboarding.StudioUnlockCoins or 0)
+		data.Gems = math.max(data.Gems or 0, Config.Onboarding.StudioUnlockGems or 0)
+		for _, ball in Config.Balls do
+			data.OwnedBalls[ball.Id] = true
+		end
+		for _, mascot in Config.Mascots do
+			data.Mascots[mascot.Id] = math.max(data.Mascots[mascot.Id] or 0, 1)
+		end
+		for _, item in Config.Cosmetics.Items do
+			data.Cosmetics[item.Id] = true
+		end
 		warn(("[PlayerDataService] Studio unlock-all test: your save, at level %d (zones 1-%d open). Nothing from this test is saved (Config.Onboarding.StudioUnlockAll)"):format(data.RankLevel, built))
 	end
 

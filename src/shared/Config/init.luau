@@ -262,7 +262,10 @@ Config.Onboarding = {
 	-- Studio testing with your saved progress (StudioNewPlayer = false): every built zone is open (rank level raised
 	-- to the last built zone's level, its popups marked seen, first-3-minutes done) for the test only. Nothing from
 	-- the test is saved: your real save is handed back exactly as it was loaded. Never affects the live game.
+	-- It also owns every ball, pet (one each) and cosmetic, and tops coins/gems up to these (owner 2026-10-27).
 	StudioUnlockAll = true,
+	StudioUnlockCoins = 1e15,
+	StudioUnlockGems = 100000,
 }
 
 -- Session log: one line per play session (join, leave, throws, crates, level), printed in Output
