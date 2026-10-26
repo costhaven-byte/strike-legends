@@ -2715,7 +2715,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "SunnyHam",
-		Name = "Sunny",
+		Name = "Moony", -- was "Sunny" (owner 2026-10-27: zone 4 is at night); Id stays SunnyHam so owned pets keep working
 		Egg = "Skyline",
 		Rarity = "Legendary",
 		Color = Color3.fromRGB(255, 180, 60),

@@ -55,8 +55,8 @@ Real already (keep): zone 1-4 worlds, zone 1 balls/pins/Alley Crate/Rizzo, zone 
 | 8 | Main Street Egg + its stand (zone 3) | no model, plain pad | 4B |
 | 9 | Skyline Egg + its stand (zone 4) | no model, plain pad | 4C |
 | 10 | Wood Pup, Chrome Bat (zone 3 pets) | Lane Pup / Neon Bat repainted | 4B |
-| 11 | Cloud Bumper, Sunny (zone 4 pets) | Bumper / Hambone repainted | 4C |
-| 12 | Kingpin, Blaze (in zone 3's egg) + Cosmo, Perfecto (in zone 4's egg) | real, but designed for Neon Lanes | 4B, 4C (your call, see Part 4) |
+| 11 | Cloud Bumper, Moony (zone 4 pets) | Bumper / Hambone repainted | 4C |
+| 12 | Kingpin, Blaze (in zone 3's egg) + Cosmo, Perfecto (in zone 4's egg) | real, but designed for Neon Lanes; owner chose to restyle them | 4B, 4C |
 | 13 | Titan Jr. (boss reward pet) | Pinny repainted dark | 4D |
 | 14 | Zone 3 + 4 ball display cases | the zone 2 case recoloured | 6A |
 | 15 | Pet fusion station (zone 3) | plain booth | 6B |
@@ -188,7 +188,7 @@ Please give me: the 3 crates closed and open, the counter from the front and 3/4
 
 ---
 
-## Part 4: pets and eggs (talk it through first)
+## Part 4: pets and eggs
 
 Players see "PETS". Every pet is about 1.6 studs across, follows the player, stands on the ground (or floats if it flies), and has a simple idle move the game animates from separate parts (wings, tails, ears, rings).
 
@@ -196,11 +196,11 @@ Players see "PETS". Every pet is about 1.6 studs across, follows the player, sta
 
 **The problem in zones 3 and 4:** each egg has 4 pets, and none of them were designed for that zone:
 - Main Street Egg (zone 3): Wood Pup (Rare) and Chrome Bat (Epic) are repainted Lane Pup / Neon Bat. Kingpin and Blaze (Legendary) are real models, but they were designed as Neon Egg pets and moved here.
-- Skyline Egg (zone 4): Cloud Bumper (Epic) and Sunny (Legendary) are repainted Bumper / Hambone. Cosmo and Perfecto (Mythic) are real, but also from the Neon Egg.
+- Skyline Egg (zone 4): Cloud Bumper (Epic) and Moony (Legendary, was Sunny) are repainted Bumper / Hambone. Cosmo and Perfecto (Mythic) are real, but also from the Neon Egg.
 - Neither egg has its own egg model or stand.
 - Titan Jr. (boss reward) is a repainted Pinny.
 
-**My suggestion:** give zones 3 and 4 a full matching set: egg, stand and 4 pets each, all in the zone's style. Keep the pet IDs, so anyone who owns a pet gets the new look automatically and loses nothing. Names can change (players only see the name). Below is my proposal; change anything you like before pasting.
+**Decided (owner 2026-10-27):** all 8 zone 3 and 4 pets get new zone-style looks as below, plus each zone gets its own egg and stand. The pet IDs stay the same, so anyone who owns a pet gets the new look automatically and loses nothing. Sunny is renamed Moony (already renamed in the game).
 
 | Zone 3 Main Street Egg | Today | Proposed new look |
 |---|---|---|
@@ -212,7 +212,7 @@ Players see "PETS". Every pet is about 1.6 studs across, follows the player, sta
 | Zone 4 Skyline Egg | Today | Proposed new look |
 |---|---|---|
 | Cloud Bumper (Epic) | repainted Bumper | a fluffy cloud puff with little gold bumper rails like lane guards |
-| Sunny (Legendary) | repainted Hambone | the zone is at night, so either a golden sun-sprite kept for "day", or renamed "Moony": a sleepy moon-cat with a silver crescent |
+| Moony (Legendary, was Sunny) | repainted Hambone | a sleepy moon-cat curled in a silver crescent |
 | Cosmo (Mythic) | neon-era model | a star creature made of a small constellation, gold star joints, a navy body full of tiny stars |
 | Perfecto (Mythic) | neon-era model | a pearl and gold perfect-game spirit: a floating 300 trophy with wings and a halo |
 
@@ -251,7 +251,7 @@ The stand: a floating gold ring pedestal about 6 studs across over a pearl base,
 
 The 4 pets:
 1. "Cloud Bumper" (Epic): a fluffy cloud puff with little gold bumper rails along its sides. Floats. Idle: puffs up and down.
-2. "Sunny" (Legendary): [CHOOSE: a golden sun-sprite with soft rays] OR rename "Moony": a sleepy moon-cat curled in a silver crescent. Floats. Idle: slow spin of its rays / crescent.
+2. "Moony" (Legendary): a sleepy moon-cat curled in a silver crescent moon, soft lilac and moonlight silver, a tiny gold star on its collar. Floats. Idle: the crescent rocks slowly like a cradle and its eyes blink.
 3. "Cosmo" (Mythic): a little star creature made of a constellation, navy body full of tiny stars, gold star joints. Floats. Idle: its stars twinkle.
 4. "Perfecto" (Mythic): a pearl and gold perfect-game spirit: a small floating trophy with wings and a halo. Floats. Idle: wings beat, halo turns.
 
