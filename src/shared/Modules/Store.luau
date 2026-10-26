@@ -66,7 +66,7 @@ function Store.XpMultiplier(player: Player): number
 	return product(player, "Xp")
 end
 
--- The saved attribute behind each doubling ladder (Config.Monetization Products Ladder)
+-- The saved attribute behind each boost ladder (Config.Monetization Products Ladder)
 Store.LadderKeys = { Coins = "CoinBoostLevel", Xp = "XpBoostLevel" }
 
 -- Steps bought on a ladder ("Coins" or "Xp")
@@ -85,15 +85,31 @@ function Store.NextStep(player: Player, ladder: string)
 	return nil
 end
 
--- COIN BOOST bought on the ladder: x2 per step (x16 at the top). Kept even if the store is switched off again: it
--- was paid for.
-function Store.BoostMultiplier(player: Player): number
-	return 2 ^ Store.LadderLevel(player, "Coins")
+-- A ladder's boost at this step (1 at step 0; the step's Mult: x1.25, x1.5, x1.75, x2)
+function Store.LadderMult(ladder: string, level: number): number
+	local mult = 1
+	for _, product in MONEY.Products do
+		if product.Ladder == ladder and product.Step <= level then
+			mult = math.max(mult, product.Mult or 1)
+		end
+	end
+	return mult
 end
 
--- XP BOOST bought on the ladder: x2 per step
+-- "x1.25", "x2"
+function Store.MultText(mult: number): string
+	local text = string.format("%.2f", mult):gsub("0+$", ""):gsub("%.$", "")
+	return "x" .. text
+end
+
+-- COIN BOOST bought on the ladder (x2 at the top). Kept even if the store is switched off again: it was paid for.
+function Store.BoostMultiplier(player: Player): number
+	return Store.LadderMult("Coins", Store.LadderLevel(player, "Coins"))
+end
+
+-- XP BOOST bought on the ladder
 function Store.XpBoostMultiplier(player: Player): number
-	return 2 ^ Store.LadderLevel(player, "Xp")
+	return Store.LadderMult("Xp", Store.LadderLevel(player, "Xp"))
 end
 
 -- Luck from owned passes (LUCKY x1.5, SUPER LUCKY x2, both x3)

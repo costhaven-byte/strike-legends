@@ -3,7 +3,7 @@
 -- specced there (sizes include the outline, like the design); icons are AssetSlots.Images.
 -- * STORE button (gold, bag icon; right of BALLS and PETS, where DAILY was (owner 2026-10-25)), with a
 --   red "!" until the store is opened this session.
--- * Quick-buy pills on the HUD (owner 2026-10-25): each doubling ladder's next step ("x2 COINS / R$ 3"), right of the
+-- * Quick-buy pills on the HUD (owner 2026-10-25): each boost ladder's next step ("x1.25 COINS / R$ 19"), right of the
 --   coin multiplier badge; a MAXED ladder's pill shrinks away and the other moves up.
 -- * The window: BOOSTS / PASSES / GEMS tabs jump within one scrolling list (Starter Pack on top until bought).
 -- * The one-time Starter Pack popup (the server says when; it waits for a quiet moment, never mid-throw), the THANK
@@ -661,6 +661,7 @@ function StoreController:Start()
 			corner(band, 10)
 			local top = label(face, "", HEAD, if phone then 16 else 13, ladder.Color, if phone then 5 else 4)
 			top.Size = UDim2.new(1, 0, 0, if phone then 16 else 13)
+			HudKit.Fit(top, if phone then 16 else 13) -- "x1.25 COINS" is longer than the old "x2 COINS"
 			top.Position = UDim2.fromOffset(0, if phone then 4 else 3)
 			local priceRow = make("Frame", {
 				BackgroundTransparency = 1,
@@ -712,7 +713,7 @@ function StoreController:Start()
 		for _, pill in pills do
 			local step = Store.NextStep(player, pill.Ladder.Ladder)
 			if step then
-				pill.Top.Text = ("x%d %s"):format(2 ^ step.Step, pill.Ladder.What)
+				pill.Top.Text = Store.MultText(step.Mult or 1) .. " " .. pill.Ladder.What
 				pill.Price.Text = formatRobux(step.Robux)
 			end
 			local show = step ~= nil
@@ -1007,12 +1008,11 @@ function StoreController:Start()
 				local level = Store.LadderLevel(player, item.Ladder)
 				local step = Store.NextStep(player, item.Ladder)
 				local what = if item.Ladder == "Coins" then "coins" else "XP"
-				accent.Text = if step then ("x%d > x%d"):format(2 ^ level, 2 ^ step.Step) else ("x%d"):format(2 ^ level)
+				local now = Store.MultText(Store.LadderMult(item.Ladder, level))
+				accent.Text = if step then now .. " > " .. Store.MultText(step.Mult or 1) else now
 				desc.Text = if step
-					then ("Doubles your %s forever. Step %d of 4."):format(what, step.Step)
-					else (if item.Ladder == "Coins"
-						then "Your coins are doubled 4 times. All done!"
-						else "Your XP is doubled 4 times. All done!")
+					then ("Boosts your %s forever. Step %d of 4."):format(what, step.Step)
+					else ("Your %s boost is at the top: x2. All done!"):format(what)
 				for i, dot in dotFrames do
 					local bought, nextOne = i <= level, i == level + 1
 					dot.Frame.BackgroundColor3 = if bought then accentColor else C.Card
@@ -1395,7 +1395,7 @@ function StoreController:Start()
 		local function cardHeight(kind: string, item, width: number): number
 			local text = item.Text or ""
 			if kind == "Ladder" then
-				text = "Your coins are doubled 4 times. All done!"
+				text = "Your coins boost is at the top: x2. All done!"
 			end
 			return math.max(150, 10 + 24 + 58 + 6 + textHeight(text, 12, width - 24) + 6 + 48 + 12)
 		end
@@ -1458,8 +1458,8 @@ function StoreController:Start()
 			ref.Refresh()
 		end
 		if chipValues.Coins then
-			chipValues.Coins.Text = "x" .. Store.BoostMultiplier(player)
-			chipValues.Xp.Text = "x" .. Store.XpBoostMultiplier(player)
+			chipValues.Coins.Text = Store.MultText(Store.BoostMultiplier(player))
+			chipValues.Xp.Text = Store.MultText(Store.XpBoostMultiplier(player))
 		end
 	end
 

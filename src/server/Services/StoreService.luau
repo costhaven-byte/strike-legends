@@ -5,7 +5,8 @@
 -- Products: handed out in ProcessReceipt. Each purchase id is saved (Purchases), so a purchase is never given twice,
 -- and the save is written straight away before Roblox is told it went through.
 -- Starter Pack: offered once (StarterOffered), after StarterAfterMinutes of play in total, at a quiet moment.
--- Ladder products (COIN BOOST / XP BOOST) are bought in order: each step doubles (CoinBoostLevel / XpBoostLevel).
+-- Ladder products (COIN BOOST / XP BOOST) are bought in order: each step boosts more, up to x2
+-- (CoinBoostLevel / XpBoostLevel).
 -- VIP: DailyGems once a day (VipGiftDay), given on join or when the day changes.
 -- Studio preview (StudioPreview, switch off): BUY gives the item for free straight away; Studio tests never save.
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -69,7 +70,8 @@ local function checkPasses(player: Player)
 	owned[player] = owned[player] or {}
 	for _, pass in MONEY.Passes do
 		if pass.PassId > 0 then
-			local ok, has = pcall(MarketplaceService.UserOwnsGamePassAsync, MarketplaceService, player.UserId, pass.PassId)
+			local ok, has =
+				pcall(MarketplaceService.UserOwnsGamePassAsync, MarketplaceService, player.UserId, pass.PassId)
 			if ok and has then
 				owned[player][pass.Id] = true
 			end
@@ -102,8 +104,10 @@ local function grantProduct(player: Player, product)
 	SessionLog.Moment(player, ("Robux purchase: %s"):format(product.Id))
 	if resultEvent then
 		local text = if product.Ladder == "Coins"
-			then ("COIN BOOST is now x%d"):format(Store.BoostMultiplier(player))
-			elseif product.Ladder == "Xp" then ("XP BOOST is now x%d"):format(Store.XpBoostMultiplier(player))
+			then "COIN BOOST is now " .. Store.MultText(Store.BoostMultiplier(player))
+			elseif product.Ladder == "Xp" then "XP BOOST is now " .. Store.MultText(
+				Store.XpBoostMultiplier(player)
+			)
 			else product.Name .. " is yours"
 		resultEvent:FireClient(player, { Id = product.Id, Text = text })
 	end
@@ -188,7 +192,9 @@ local function onBuy(player: Player, id: any)
 	end
 	local number = if pass then pass.PassId else product.ProductId
 	if number <= 0 then
-		warn(("[StoreService] %s has no %s yet (Config.Monetization)"):format(id, if pass then "PassId" else "ProductId"))
+		warn(
+			("[StoreService] %s has no %s yet (Config.Monetization)"):format(id, if pass then "PassId" else "ProductId")
+		)
 		return
 	end
 	if pass then
