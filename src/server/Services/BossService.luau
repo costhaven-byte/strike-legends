@@ -29,9 +29,9 @@ local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
 local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
 local BOSS = Config.Boss
+local ATTACKS = BOSS.Attacks
 local THROW = Config.Throw
 local SWAY_WINDOW = 0.35 -- same as ThrowService: a release counts if it was in the gold this many seconds back
-local SPOT_RANGE = 8 -- studs from your spot's pad you may throw from
 
 local BossService = {}
 
@@ -42,6 +42,8 @@ type Fighter = {
 	Streak: number,
 	Giant: boolean, -- has a giant ball waiting
 	GiantUsed: boolean,
+	HitsTaken: number, -- times the Titan's attacks hit you
+	SafeUntil: number, -- can't be hit again before this server time
 }
 
 local state: Folder
@@ -158,7 +160,7 @@ local function arena(): Instance?
 	return find(BOSS.Arena)
 end
 
-local function spots(): { Model }
+local function arenaSpots(): { Model }
 	local folder = arena() and (arena() :: Instance):FindFirstChild("Spots")
 	local list = {}
 	for _, spot in if folder then folder:GetChildren() else {} do
@@ -305,6 +307,8 @@ local function clearPlayer(player: Player)
 	player:SetAttribute("BossSpot", nil)
 	player:SetAttribute("BossDamage", nil)
 	player:SetAttribute("BossGiant", nil)
+	player:SetAttribute("BossDazedUntil", nil)
+	player:SetAttribute("BossStreak", nil)
 end
 
 -- ===== Damage =====
@@ -410,13 +414,16 @@ function BossService.Throw(player: Player, charge: number)
 	if not f or not (phase == "Armor" or phase == "Core" or phase == "Finale" or phase == "Giant") then
 		return
 	end
+	-- Throw from anywhere on the platform (the spot only keeps your cooldown and gold), never while DAZED
 	local spot = f.Spot
 	local root = rootOf(player)
-	local start = spot:FindFirstChild("BallStart") :: BasePart
-	if not root or (root.Position - start.Position).Magnitude > SPOT_RANGE + 4 then
+	if not root or not inArena(player) then
 		return
 	end
 	local t = now()
+	if t < (player:GetAttribute("BossDazedUntil") or 0) then
+		return
+	end
 	if t < (spot:GetAttribute("ReadyAt") or 0) or not RateLimit.Allow(player, "Throw") then
 		return
 	end
@@ -468,6 +475,7 @@ function BossService.Throw(player: Player, charge: number)
 	toFighters("Throw", {
 		UserId = player.UserId,
 		Spot = spot.Name,
+		From = root.Position + Vector3.new(0, 1.5, 0), -- the ball leaves from where you stand
 		BallId = ball.Id,
 		PowerLevel = ThrowRules.Level(PlayerDataService.Get(player, "PowerLevel")),
 		Kind = kind,
@@ -488,6 +496,192 @@ end
 
 function BossService.InFight(player: Player): boolean
 	return fighters[player] ~= nil
+end
+
+-- ===== The Titan attacks (Config.Boss.Attacks): it throws pins and rolls giant balls; the server checks the hits =====
+local HIT = BOSS.Hit
+local FIGHTING_PHASES = { Armor = true, Core = true, Finale = true, Giant = true }
+
+-- The platform: its centre, its radius and the height of its top
+local function floorInfo(): (Vector3, number, number)
+	local a = arena()
+	local floor = a and a:FindFirstChild("Floor") :: BasePart?
+	if not floor then
+		return Vector3.zero, 0, 0
+	end
+	local size = floor.Size
+	local thickness = math.min(size.X, size.Y, size.Z)
+	return floor.Position, math.max(size.X, size.Y, size.Z) / 2, floor.Position.Y + thickness / 2
+end
+
+local function flat(v: Vector3): Vector3
+	return Vector3.new(v.X, 0, v.Z)
+end
+
+-- The Titan turns to face where it's throwing
+local function faceTitan(position: Vector3)
+	local t = titan()
+	local home = titanHome
+	if not t or not home or phase == "Defeated" then
+		return
+	end
+	local dir = flat(position - home.Position)
+	if dir.Magnitude < 1 then
+		return
+	end
+	local yaw = math.atan2(-dir.X, -dir.Z)
+	local goal = CFrame.new(home.Position) * CFrame.Angles(0, yaw, 0) * home.Rotation
+	local start = t:GetPivot()
+	for i = 1, 6 do
+		if phase == "Defeated" then
+			return
+		end
+		t:PivotTo(start:Lerp(goal, i / 6))
+		task.wait(1 / 30)
+	end
+end
+
+-- Where the Titan's throws leave from (above its head)
+local function throwFrom(): Vector3
+	local center = floorInfo()
+	local t = titan()
+	local head = t and t:FindFirstChild("Head") :: BasePart?
+	return if head then head.Position + Vector3.new(0, 8, 0) else center + Vector3.new(0, 60, 0)
+end
+
+-- Fighters standing in the arena, with their roots
+local function targets(): { { Player: Player, Root: BasePart } }
+	local list = {}
+	for player in fighters do
+		local root = rootOf(player)
+		if root and inArena(player) then
+			table.insert(list, { Player = player, Root = root })
+		end
+	end
+	return list
+end
+
+-- A hit: knocked back (the player's own client does the shove), DAZED, PERFECT streak gone
+local function struck(player: Player, from: Vector3)
+	local f = fighters[player]
+	local t = now()
+	if not f or t < f.SafeUntil then
+		return
+	end
+	f.SafeUntil = t + HIT.SafeSeconds
+	f.HitsTaken += 1
+	f.Streak = 0
+	player:SetAttribute("BossStreak", 0)
+	player:SetAttribute("BossDazedUntil", t + HIT.DazedSeconds)
+	eventRemote:FireClient(player, "Struck", { From = from, Knockback = HIT.Knockback, Seconds = HIT.DazedSeconds })
+end
+
+-- Pins land on red circles after the warning; anyone inside a circle is hit
+local function pins(spots: { Vector3 }, cfg)
+	local impactAt = now() + cfg.Warning
+	toFighters("Attack", {
+		Kind = "Pins",
+		Spots = spots,
+		Radius = cfg.Radius,
+		From = throwFrom(),
+		ImpactAt = impactAt,
+		Warning = cfg.Warning,
+	})
+	task.spawn(faceTitan, spots[1])
+	task.wait(cfg.Warning)
+	if not FIGHTING_PHASES[phase] then
+		return
+	end
+	for _, entry in targets() do
+		for _, spot in spots do
+			if flat(entry.Root.Position - spot).Magnitude <= cfg.Radius - HIT.Leniency then
+				struck(entry.Player, spot)
+				break
+			end
+		end
+	end
+end
+
+local function attack(kind: string)
+	local list = targets()
+	if #list == 0 then
+		return
+	end
+	local center, radius, top = floorInfo()
+	local function onFloor(v: Vector3): Vector3
+		return Vector3.new(v.X, top, v.Z)
+	end
+	-- shuffle, so every player gets picked
+	for i = #list, 2, -1 do
+		local j = math.random(i)
+		list[i], list[j] = list[j], list[i]
+	end
+
+	if kind == "PinToss" then
+		local cfg = BOSS.PinToss
+		local spots = {}
+		for i = 1, math.max(1, math.ceil(#list / cfg.PlayersPerPin)) do
+			table.insert(spots, onFloor(list[i].Root.Position))
+		end
+		pins(spots, cfg)
+	elseif kind == "PinRain" then
+		local cfg = BOSS.PinRain
+		local spots = {}
+		for i = 1, cfg.Count + cfg.PerPlayer * #list do
+			local near = list[(i - 1) % #list + 1]
+			local at
+			if i <= #list then
+				-- one close to each player (not right on top: they get a moment to see it)
+				local angle = math.random() * math.pi * 2
+				at = near.Root.Position + Vector3.new(math.cos(angle), 0, math.sin(angle)) * math.random(0, 6)
+			else
+				local angle = math.random() * math.pi * 2
+				local r = 20 + math.random() * (radius - 26)
+				at = center + Vector3.new(math.cos(angle), 0, math.sin(angle)) * r
+			end
+			table.insert(spots, onFloor(at))
+		end
+		pins(spots, cfg)
+	elseif kind == "BallRoll" then
+		-- A giant ball rolls along a straight line across the platform, through the picked player's spot and
+		-- around the Titan (never through it)
+		local cfg = BOSS.BallRoll
+		local rel = flat(list[1].Root.Position - center)
+		local angle = math.random() * math.pi * 2
+		local radial = if rel.Magnitude > 1 then rel.Unit else Vector3.new(math.cos(angle), 0, math.sin(angle))
+		local r = math.clamp(rel.Magnitude, 22, radius - 8)
+		local reach = math.sqrt(math.max(0, (radius - 2) ^ 2 - r * r))
+		local tangent = radial:Cross(Vector3.yAxis) * (if math.random() < 0.5 then 1 else -1)
+		local mid = center + radial * r
+		local from = onFloor(mid - tangent * reach)
+		local to = onFloor(mid + tangent * reach)
+		local duration = (to - from).Magnitude / cfg.Speed
+		local startsAt = now() + cfg.Warning
+		toFighters("Attack", {
+			Kind = "Roll",
+			From = from,
+			To = to,
+			Width = cfg.Width,
+			StartsAt = startsAt,
+			Duration = duration,
+			Warning = cfg.Warning,
+		})
+		task.spawn(faceTitan, from)
+		task.wait(cfg.Warning)
+		while FIGHTING_PHASES[phase] do
+			local k = (now() - startsAt) / duration
+			if k > 1 then
+				break
+			end
+			local ball = from:Lerp(to, math.max(k, 0))
+			for _, entry in targets() do
+				if flat(entry.Root.Position - ball).Magnitude <= cfg.Width / 2 + 1 - HIT.Leniency then
+					struck(entry.Player, ball)
+				end
+			end
+			task.wait(0.05)
+		end
+	end
 end
 
 -- ===== Rewards =====
@@ -545,7 +739,7 @@ local function payRewards(won: boolean)
 	local mines = {}
 	for rank, entry in list do
 		local player, f = entry.Player, entry.F
-		local mine = { Rank = rank, Damage = f.Damage, Coins = 0 }
+		local mine = { Rank = rank, Damage = f.Damage, Coins = 0, HitsTaken = f.HitsTaken }
 		if f.Hits >= BOSS.MinHits and PlayerDataService.IsLoaded(player) then
 			local share = f.Damage / fair
 			local tier = BOSS.Tiers[1]
@@ -589,7 +783,7 @@ end
 
 -- ===== One event =====
 local function runFight(list: { Player })
-	local spotList = spots()
+	local spotList = arenaSpots()
 	if #spotList == 0 then
 		warn("[BossService] no throw spots in the arena")
 		return
@@ -599,7 +793,17 @@ local function runFight(list: { Player })
 		local spot = spotList[(i - 1) % #spotList + 1]
 		spot:SetAttribute("ReadyAt", 0)
 		spot:SetAttribute("GoldCenter", ThrowRules.NextGoldCenter())
-		fighters[player] = { Spot = spot, Damage = 0, Hits = 0, Streak = 0, Giant = false, GiantUsed = false }
+		fighters[player] = {
+			Spot = spot,
+			Damage = 0,
+			Hits = 0,
+			Streak = 0,
+			Giant = false,
+			GiantUsed = false,
+			HitsTaken = 0,
+			SafeUntil = 0,
+		}
+		player:SetAttribute("BossDazedUntil", nil)
 		player:SetAttribute("BossBoarded", nil)
 		player:SetAttribute("BossFighting", true)
 		player:SetAttribute("BossSpot", spot.Name)
@@ -634,6 +838,7 @@ local function runFight(list: { Player })
 	setPhase("Armor")
 
 	local outside: { [Player]: number } = {}
+	local nextAttack = now() + ATTACKS.FirstAfter
 	while phase ~= "Defeated" do
 		task.wait(0.25)
 		for player, f in fighters do
@@ -654,6 +859,18 @@ local function runFight(list: { Player })
 			break -- everyone left the game
 		end
 		local t = now()
+		-- The Titan attacks (not during the giant balls)
+		local pattern = ATTACKS[phase]
+		if pattern and t >= nextAttack then
+			nextAttack = t + pattern.Every * (0.85 + math.random() * 0.3)
+			local kind = pattern.Kinds[math.random(#pattern.Kinds)]
+			task.spawn(function()
+				local ok, err = pcall(attack, kind)
+				if not ok then
+					warn("[BossService] attack failed: " .. tostring(err))
+				end
+			end)
+		end
 		if phase ~= "Giant" and t >= (state:GetAttribute("FightEndsAt") or math.huge) then
 			startGiant() -- out of time: the finale starts by itself
 		end

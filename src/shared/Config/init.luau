@@ -2191,12 +2191,12 @@ Config.Boss = {
 	-- The fight
 	FightSeconds = 180, -- hard timer: the finale starts by itself when it runs out
 	IntroSeconds = 4, -- "PIN TITAN!" intro before the first throw counts
-	HealthPerPlayer = 6000, -- the Titan's health = this x players in the arena when the fight starts...
-	MinHealth = 6000, -- ...but never less than this (so a fight never ends in seconds)
+	HealthPerPlayer = 10000, -- the Titan's health = this x players in the arena when the fight starts...
+	MinHealth = 10000, -- ...but never less than this (so a fight never ends in seconds)
 	ArmorShare = 0.33, -- the first third of its health is armor plates
 	Plates = 8, -- how many plates the armor is split into
 	FinaleAt = 0.15, -- the finale starts when its health falls to this share
-	MeterPerPlayer = 1200, -- team meter size = this x players (filled by damage during the finale)
+	MeterPerPlayer = 1500, -- team meter size = this x players (filled by damage during the finale)
 	GiantSeconds = 12, -- after the meter fills, players have this long to throw their giant ball
 	ResultsSeconds = 10, -- the results screen, then the ride back
 	ThrowCooldown = 2.2, -- seconds after a throw lands before your next one
@@ -2211,8 +2211,29 @@ Config.Boss = {
 	StreakMax = 2.5, -- streak bonus cap
 	PowerBonusPerLevel = 0.02, -- each Power Level adds this much damage...
 	PowerBonusMax = 1.5, -- ...up to this (so low levels still matter)
-	ArmorNormalShare = 0.35, -- armor: a non-PERFECT throw only chips the plates (strikes break them)
+	ArmorNormalShare = 0.2, -- armor: a non-PERFECT throw only chips the plates (strikes break them)
 	CorePerfectBonus = 1.5, -- core open: PERFECT hits do this much more on top
+
+	-- The Titan fights back (owner 2026-10-26): it throws pins at players and rolls giant balls across the arena.
+	-- Players walk freely and throw from anywhere on the platform (the throw is still auto-aimed); standing still to
+	-- charge makes you an easy target. A red circle or stripe on the floor warns where it lands; get out of it.
+	-- Hit = knocked back, DAZED (no throwing) and your PERFECT streak is gone.
+	Attacks = {
+		-- per phase: seconds between attacks (+-15% random) and which attacks it picks from
+		Armor = { Every = 4, Kinds = { "PinToss", "PinToss", "BallRoll" } },
+		Core = { Every = 3.2, Kinds = { "PinToss", "BallRoll", "PinRain" } },
+		Finale = { Every = 2.4, Kinds = { "PinRain", "BallRoll", "PinToss" } },
+		FirstAfter = 2, -- seconds after the fight starts before the first attack
+	},
+	PinToss = { Warning = 1.4, Radius = 8, PlayersPerPin = 2 }, -- a pin at a player (1 pin per 2 players, at least 1)
+	PinRain = { Warning = 1.5, Radius = 7, Count = 4, PerPlayer = 1 }, -- many pins: Count + PerPlayer x players
+	BallRoll = { Warning = 1.4, Width = 12, Speed = 75 }, -- a giant ball rolls across the arena along a red stripe
+	Hit = {
+		DazedSeconds = 2, -- no throwing for this long after a hit
+		SafeSeconds = 2.5, -- can't be hit again this soon
+		Knockback = 70, -- how hard a hit shoves you (studs per second)
+		Leniency = 2, -- the hit area is this many studs smaller than the red warning (the server sees you a moment late)
+	},
 
 	-- Rewards. Tier by your damage compared to a fair share (total damage / players). Same row format as
 	-- Config.Milestones rewards: Coins (or LevelShare of your next Power Level's price, whichever is more), Potions, Crate.

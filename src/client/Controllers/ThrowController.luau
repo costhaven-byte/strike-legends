@@ -106,8 +106,9 @@ local function assisted(): boolean
 		or player:GetAttribute("BossGiant") == true
 end
 
--- The Pin Titan fight (BossService): your throw spot in the sky arena, while you stand on it and the fight takes
--- throws. It has ReadyAt, GoldCenter and a BallStart facing the Titan, so the throw treats it like a lane.
+-- The Pin Titan fight (BossService): your throw spot in the sky arena, while you're on the platform, the fight takes
+-- throws and you aren't DAZED by a Titan attack. You can throw from anywhere on the platform; the spot keeps your
+-- ReadyAt and GoldCenter, so the throw treats it like a lane.
 local BOSS_THROWS = { Armor = true, Core = true, Finale = true, Giant = true }
 local function bossSpot(root: BasePart): Model?
 	local name = player:GetAttribute("BossSpot")
@@ -122,8 +123,26 @@ local function bossSpot(root: BasePart): Model?
 	end
 	local spots = node and node:FindFirstChild("Spots")
 	local spot = spots and spots:FindFirstChild(name) :: Model?
-	local start = spot and spot:FindFirstChild("BallStart") :: BasePart?
-	return if start and (root.Position - start.Position).Magnitude <= 12 then spot else nil
+	local floor = node and node:FindFirstChild("Floor") :: BasePart?
+	if not spot or not floor or Workspace:GetServerTimeNow() < (player:GetAttribute("BossDazedUntil") or 0) then
+		return nil
+	end
+	local offset = root.Position - floor.Position
+	local radius = math.max(floor.Size.X, floor.Size.Y, floor.Size.Z) / 2
+	return if Vector2.new(offset.X, offset.Z).Magnitude <= radius + 2 then spot else nil
+end
+
+-- In the boss fight you turn to face the Titan instead of down a lane
+local function bossTarget(): BasePart?
+	if not player:GetAttribute("BossSpot") then
+		return nil
+	end
+	local node: Instance? = Workspace
+	for _, step in Config.Boss.Arena do
+		node = node and node:FindFirstChild(step)
+	end
+	local titan = node and node:FindFirstChild("Titan")
+	return titan and (titan:FindFirstChild("Target") or titan:FindFirstChild("Core")) :: BasePart?
 end
 
 local function readyHint(): string
@@ -206,7 +225,13 @@ end
 local function faceLane(dt: number)
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local start = currentLane and currentLane:FindFirstChild("BallStart") :: BasePart?
-	if root and start then
+	local titan = bossTarget()
+	if root and titan then
+		local dir = (titan.Position - root.Position) * Vector3.new(1, 0, 1)
+		if dir.Magnitude > 0.5 then
+			root.CFrame = root.CFrame:Lerp(CFrame.lookAt(root.Position, root.Position + dir), math.min(1, dt * 14))
+		end
+	elseif root and start then
 		local forward = start.CFrame.LookVector
 		local target = CFrame.lookAt(root.Position, root.Position + Vector3.new(forward.X, 0, forward.Z))
 		root.CFrame = root.CFrame:Lerp(target, math.min(1, dt * 14))

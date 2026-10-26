@@ -36,7 +36,7 @@ local PHASE_NAMES = {
 	Defeated = "DEFEATED!",
 }
 local PHASE_CALLS = { -- the big text when a phase starts
-	Intro = { "PIN TITAN!", "BREAK ITS ARMOR WITH STRIKES", C.Red },
+	Intro = { "PIN TITAN!", "DODGE THE RED - STRIKES BREAK ITS ARMOR", C.Red },
 	Core = { "CORE EXPOSED!", "PERFECTS DO BIG DAMAGE", C.Gold },
 	Finale = { "FINALE!", "FILL THE TEAM METER", C.Cyan },
 	Giant = { "GIANT BALLS!", "THROW YOURS TO FINISH IT", C.Pink },
@@ -308,7 +308,7 @@ function BossController:Start()
 		local spot = spots and spots:FindFirstChild(data.Spot)
 		local start = spot and spot:FindFirstChild("BallStart") :: BasePart?
 		local aim = target()
-		if not start or not aim then
+		if not (start or data.From) or not aim then
 			return
 		end
 		local giant = data.Kind == "Giant"
@@ -330,7 +330,7 @@ function BossController:Start()
 		})
 		look.Parent = Workspace
 		glow.Parent = Workspace
-		local from = start.Position
+		local from = data.From or (start :: BasePart).Position
 		local to = aim.Position
 		if data.Kind == "Wasted" then
 			to = from + (to - from) * 0.45 - Vector3.new(0, 30, 0) -- overcooked: it drops off the platform
@@ -456,6 +456,192 @@ function BossController:Start()
 		end
 	end
 
+	-- ===== The Titan's attacks: red warnings on the floor, then pins or a giant ball =====
+	local function plain(props: { [string]: any }): Part
+		local p = new("Part", {
+			Anchored = true,
+			CanCollide = false,
+			CanQuery = false,
+			CanTouch = false,
+			CastShadow = false,
+			Material = Enum.Material.Neon,
+		})
+		for key, value in props do
+			(p :: any)[key] = value
+		end
+		p.Parent = Workspace
+		return p
+	end
+	local DISC = CFrame.Angles(0, 0, math.rad(90)) -- a cylinder part lying flat
+	local WARN = C.Red
+
+	-- A red circle whose inside fills up until the pin lands (so you can see how long you have)
+	local function warningCircle(at: Vector3, radius: number, seconds: number)
+		local ring = plain({
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.15, radius * 2, radius * 2),
+			CFrame = CFrame.new(at + Vector3.new(0, 0.12, 0)) * DISC,
+			Color = WARN,
+			Transparency = 0.7,
+		})
+		local fill = plain({
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.2, 0.5, 0.5),
+			CFrame = CFrame.new(at + Vector3.new(0, 0.16, 0)) * DISC,
+			Color = WARN,
+			Transparency = 0.5,
+		})
+		TweenService:Create(fill, TweenInfo.new(seconds, Enum.EasingStyle.Linear), {
+			Size = Vector3.new(0.2, radius * 2, radius * 2),
+		}):Play()
+		task.delay(seconds, function()
+			ring:Destroy()
+			fill:Destroy()
+		end)
+	end
+
+	-- PLACEHOLDER thrown pin: a white body with a red band
+	local function pinLook(): Model
+		local model = Instance.new("Model")
+		local body = plain({
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(7, 3.4, 3.4),
+			Color = Color3.fromRGB(245, 245, 250),
+			Material = Enum.Material.SmoothPlastic,
+		})
+		body.Parent = model
+		local band = plain({
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.8, 3.6, 3.6),
+			Color = C.Red,
+			Material = Enum.Material.SmoothPlastic,
+		})
+		band.CFrame = body.CFrame * CFrame.new(1.6, 0, 0)
+		band.Parent = model
+		model.PrimaryPart = body
+		model.Parent = Workspace
+		return model
+	end
+
+	local function impact(at: Vector3, size: number)
+		local burst = plain({
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.3, size, size),
+			CFrame = CFrame.new(at + Vector3.new(0, 0.3, 0)) * DISC,
+			Color = Color3.fromRGB(255, 230, 200),
+			Transparency = 0.2,
+		})
+		TweenService:Create(burst, TweenInfo.new(0.35), {
+			Size = Vector3.new(0.3, size * 2, size * 2),
+			Transparency = 1,
+		}):Play()
+		task.delay(0.4, function()
+			burst:Destroy()
+		end)
+	end
+
+	local function pinAttack(data)
+		local left = math.max(0.2, data.ImpactAt - Workspace:GetServerTimeNow())
+		local flightTime = math.min(0.7, left)
+		Sfx.PlayAt("Throw", target() or Workspace, 0.5, 0.8)
+		for _, spot in data.Spots do
+			warningCircle(spot, data.Radius, left)
+			-- the pin leaves the Titan so it lands exactly when the circle is full
+			task.delay(left - flightTime, function()
+				local pin = pinLook()
+				local began = os.clock()
+				local connection
+				connection = RunService.RenderStepped:Connect(function()
+					local t = math.min(1, (os.clock() - began) / flightTime)
+					local pos = data.From:Lerp(spot, t) + Vector3.new(0, math.sin(t * math.pi) * 25, 0)
+					pin:PivotTo(CFrame.new(pos) * CFrame.Angles(t * 9, 0, t * 5))
+					if t >= 1 then
+						connection:Disconnect()
+						pin:Destroy()
+						impact(spot, data.Radius * 1.2)
+						Sfx.PlayAt("BossPlate", target() or Workspace, 0.8, 0.6)
+					end
+				end)
+			end)
+		end
+	end
+
+	local function rollAttack(data)
+		local from, to = data.From :: Vector3, data.To :: Vector3
+		local length = (to - from).Magnitude
+		local mid = from:Lerp(to, 0.5)
+		local stripe = plain({
+			Size = Vector3.new(data.Width, 0.15, length),
+			CFrame = CFrame.lookAt(mid, to) + Vector3.new(0, 0.12, 0),
+			Color = WARN,
+			Transparency = 0.55,
+		})
+		local flash = TweenService:Create(
+			stripe,
+			TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+			{ Transparency = 0.2 }
+		)
+		flash:Play()
+		local ball = plain({
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.one * data.Width,
+			Color = Color3.fromRGB(60, 20, 40),
+			Material = Enum.Material.SmoothPlastic,
+			CFrame = CFrame.new(from + Vector3.new(0, data.Width / 2, 0)),
+			Transparency = 1,
+		})
+		local glow = new("PointLight", { Color = C.Red, Range = 24, Brightness = 3, Enabled = false }, ball)
+		local rolling = false
+		local connection
+		connection = RunService.RenderStepped:Connect(function()
+			local k = (Workspace:GetServerTimeNow() - data.StartsAt) / data.Duration
+			if k < 0 then
+				return
+			end
+			if not rolling then
+				rolling = true
+				ball.Transparency = 0
+				glow.Enabled = true
+				Sfx.PlayAt("Roll", ball, 0.6, 1)
+			end
+			local pos = from:Lerp(to, math.min(k, 1)) + Vector3.new(0, data.Width / 2, 0)
+			ball.CFrame = CFrame.lookAt(pos, pos + (to - from)) * CFrame.Angles(-k * length / data.Width * 2, 0, 0)
+			if k >= 1 then
+				connection:Disconnect()
+				flash:Cancel()
+				stripe:Destroy()
+				ball:Destroy()
+			end
+		end)
+	end
+
+	-- You got hit: shoved away, screen flash and shake, DAZED for a moment
+	local function struck(data)
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if root then
+			local away = (root.Position - data.From) * Vector3.new(1, 0, 1)
+			if away.Magnitude < 0.5 then
+				away = -root.CFrame.LookVector
+			end
+			root.AssemblyLinearVelocity = away.Unit * data.Knockback + Vector3.new(0, 35, 0)
+		end
+		Sfx.Play("StreakLost", 0.8)
+		UiFx.Flash(C.Red, 0.45, 0.4)
+		showCall("OUCH!", "DAZED - STREAK LOST", C.Red, data.Seconds)
+		local camera = Workspace.CurrentCamera
+		local began = os.clock()
+		local connection
+		connection = RunService.RenderStepped:Connect(function()
+			local t = os.clock() - began
+			if t > 0.35 then
+				connection:Disconnect()
+				return
+			end
+			local strength = (1 - t / 0.35) * 0.6
+			camera.CFrame *= CFrame.new((math.random() - 0.5) * strength, (math.random() - 0.5) * strength, 0)
+		end)
+	end
+
 	-- ===== Results =====
 	local results = new("Frame", {
 		Name = "Results",
@@ -569,6 +755,12 @@ function BossController:Start()
 			local color = (TIER_COLORS[data.Tier] or C.White):ToHex()
 			table.insert(lines, ('YOUR TIER: <font color="#%s">%s</font>  (#%d)'):format(color, data.Tier, data.Rank))
 			table.insert(lines, ('<font color="#FFC93A">+%s COINS</font>'):format(Currency.Format(data.Coins or 0)))
+			table.insert(
+				lines,
+				if (data.HitsTaken or 0) == 0
+					then '<font color="#7DFF3C">NO HITS TAKEN!</font>'
+					else ("HITS TAKEN: %d"):format(data.HitsTaken)
+			)
 			if data.TopBonus and data.TopBonus > 0 then
 				table.insert(lines, "TOP DAMAGE BONUS INCLUDED!")
 			end
@@ -619,6 +811,14 @@ function BossController:Start()
 			plateBreak(data.Position)
 		elseif kind == "Results" then
 			showResults(data)
+		elseif kind == "Attack" then
+			if data.Kind == "Pins" then
+				pinAttack(data)
+			elseif data.Kind == "Roll" then
+				rollAttack(data)
+			end
+		elseif kind == "Struck" then
+			struck(data)
 		end
 	end)
 
@@ -741,10 +941,12 @@ function BossController:Start()
 			timerLabel.Text = if endsAt and phase ~= "Defeated" then clock(endsAt - now) else ""
 			timerLabel.TextColor3 = if endsAt and endsAt - now <= 20 then C.Red else C.White
 			local streak = player:GetAttribute("BossStreak") or 0
+			local dazed = now < (player:GetAttribute("BossDazedUntil") or 0)
 			damageLabel.Text = ("YOUR DAMAGE %s%s"):format(
 				Currency.Format(player:GetAttribute("BossDamage") or 0),
-				if streak >= 2 then ("   PERFECT x%d"):format(streak) else ""
+				if dazed then "   DAZED!" elseif streak >= 2 then ("   PERFECT x%d"):format(streak) else ""
 			)
+			damageLabel.TextColor3 = if dazed then C.Red else C.White
 			damageLabel.Position = UDim2.fromOffset(0, if showMeter then 94 else 66)
 		end
 		giantBanner.Visible = fighting and player:GetAttribute("BossGiant") == true
