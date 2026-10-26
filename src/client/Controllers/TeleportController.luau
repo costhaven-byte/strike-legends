@@ -172,6 +172,10 @@ function TeleportController:Start()
 		if not Zones.Unlocked(player:GetAttribute("RankLevel"), zone) then
 			return
 		end
+		-- No teleporting out of the Pin Titan fight (BossService brings you back to the roof after it)
+		if player:GetAttribute("BossFighting") then
+			return
+		end
 		local spot = arrival(zone)
 		if not spot then
 			return

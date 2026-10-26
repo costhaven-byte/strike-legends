@@ -2,8 +2,11 @@
 -- test before they were saved). PlaceholderWorldService builds each one at server start ONLY if it isn't already in
 -- the place, so a real design saved in Studio under the same name always wins.
 --   Zone 3 (Workspace.MainStreetLanes): EggPad (Main Street Egg stand), FusionStation, CrateShop, Showcase (7 case
---   slots + pet shelf). Zone 4 (Workspace.SkylineLanes): EggPad (Skyline Egg stand), CrateShop, Helipad (+ helicopter), Showcase (6 slots + pet shelf). Workspace.BossArena (stub arena + giant pin).
+--   slots + pet shelf). Zone 4 (Workspace.SkylineLanes): EggPad (Skyline Egg stand), CrateShop, Helipad (+ helicopter), Showcase (6 slots + pet shelf). Workspace.TitanArena (the Pin Titan's sky arena, see titanArena).
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared").Config)
 
 local PlaceholderWorld = {}
 
@@ -243,84 +246,228 @@ local function helipad(parent: Instance, padPos: Vector3)
 	heli.Parent = parent
 end
 
-local function bossArena(center: Vector3)
+-- The Pin Titan's sky arena (Config.Boss, BossService). PLACEHOLDER art: a round floating platform and a big plain
+-- pin. Names the code needs: Floor, Spots.SpotN (Pad + BallStart facing the Titan), Titan (Body, Core, Plates.PlateN,
+-- Target). A model saved in Studio as Workspace.TitanArena with the same names replaces this one.
+local function titanArena(center: Vector3, spotCount: number)
 	local arena = Instance.new("Model")
-	arena.Name = "BossArena"
+	arena.Name = "TitanArena"
+	local flat = CFrame.Angles(0, 0, math.rad(90)) -- a cylinder part lies along X: stand it up as a disc
+	local radius = 75
 	local floor = part(
 		arena,
 		"Floor",
-		Vector3.new(120, 4, 120),
-		CFrame.new(center),
+		Vector3.new(4, radius * 2, radius * 2),
+		CFrame.new(center) * flat,
 		Color3.fromRGB(40, 30, 60),
-		Enum.Material.Slate
+		Enum.Material.Slate,
+		Enum.PartType.Cylinder
 	)
 	part(
 		arena,
-		"Edge",
-		Vector3.new(124, 1, 124),
-		CFrame.new(center - Vector3.new(0, 1.6, 0)),
+		"Rim",
+		Vector3.new(3, radius * 2 + 4, radius * 2 + 4),
+		CFrame.new(center - Vector3.new(0, 1, 0)) * flat,
 		Color3.fromRGB(255, 79, 139),
-		Enum.Material.Neon
+		Enum.Material.Neon,
+		Enum.PartType.Cylinder
 	)
 	part(
 		arena,
-		"Spawn",
-		Vector3.new(8, 0.4, 8),
-		CFrame.new(center + Vector3.new(0, 2.2, 45)),
-		Color3.fromRGB(245, 184, 46),
-		Enum.Material.Neon
-	).CanCollide =
-		false
-	-- Placeholder boss: a giant pin with red eyes (no gameplay yet)
-	local boss = Instance.new("Model")
-	boss.Name = "Boss"
+		"Underside",
+		Vector3.new(10, radius * 1.6, radius * 1.6),
+		CFrame.new(center - Vector3.new(0, 6, 0)) * flat,
+		Color3.fromRGB(25, 20, 40),
+		Enum.Material.Slate,
+		Enum.PartType.Cylinder
+	)
+	-- An invisible wall around the edge so nobody falls off
+	local walls = Instance.new("Folder")
+	walls.Name = "Walls"
+	walls.Parent = arena
+	for i = 1, 24 do
+		local angle = i / 24 * math.pi * 2
+		local at = center + Vector3.new(math.cos(angle), 0, math.sin(angle)) * (radius + 1)
+		local wall = part(
+			walls,
+			"Wall",
+			Vector3.new(21, 30, 2),
+			CFrame.lookAt(at + Vector3.new(0, 15, 0), center + Vector3.new(0, 15, 0)),
+			Color3.new(1, 1, 1)
+		)
+		wall.Transparency = 1
+	end
+
+	-- Throw spots around the edge, each facing the Titan
+	local top = center.Y + 2
+	local spotFolder = Instance.new("Folder")
+	spotFolder.Name = "Spots"
+	spotFolder.Parent = arena
+	for i = 1, spotCount do
+		local angle = (i - 1) / spotCount * math.pi * 2 + math.pi / 2
+		local at = Vector3.new(center.X + math.cos(angle) * 58, top, center.Z + math.sin(angle) * 58)
+		local facing = Vector3.new(center.X, top, center.Z)
+		local spot = Instance.new("Model")
+		spot.Name = "Spot" .. i
+		local pad = part(
+			spot,
+			"Pad",
+			Vector3.new(0.3, 7, 7),
+			CFrame.new(at + Vector3.new(0, 0.15, 0)) * flat,
+			Color3.fromRGB(245, 184, 46),
+			Enum.Material.Neon,
+			Enum.PartType.Cylinder
+		)
+		pad.CanCollide = false
+		local start = part(
+			spot,
+			"BallStart",
+			Vector3.new(1, 1, 1),
+			CFrame.lookAt(at + Vector3.new(0, 2, 0), facing + Vector3.new(0, 2, 0)),
+			Color3.new(1, 1, 1)
+		)
+		start.Transparency = 1
+		start.CanCollide = false
+		start.CanQuery = false
+		spot.PrimaryPart = pad
+		spot.Parent = spotFolder
+	end
+
+	-- The Pin Titan: a giant white pin with red bands and eyes, armor plates around its belly, a core under them
+	local titan = Instance.new("Model")
+	titan.Name = "Titan"
 	local white = Color3.fromRGB(245, 245, 250)
 	local up = CFrame.Angles(0, 0, math.rad(90))
-	local at = center + Vector3.new(0, 0, -20)
+	local at = Vector3.new(center.X, top, center.Z)
+	local base = part(
+		titan,
+		"Base",
+		Vector3.new(4, 26, 26),
+		CFrame.new(at + Vector3.new(0, 2, 0)) * up,
+		white,
+		nil,
+		Enum.PartType.Cylinder
+	)
 	part(
-		boss,
+		titan,
 		"Body",
-		Vector3.new(30, 14, 14),
-		CFrame.new(at + Vector3.new(0, 17, 0)) * up,
+		Vector3.new(34, 24, 24),
+		CFrame.new(at + Vector3.new(0, 19, 0)) * up,
 		white,
 		nil,
 		Enum.PartType.Cylinder
 	)
 	part(
-		boss,
+		titan,
+		"Belly",
+		Vector3.new(26, 26, 26),
+		CFrame.new(at + Vector3.new(0, 18, 0)),
+		white,
+		nil,
+		Enum.PartType.Ball
+	)
+	part(
+		titan,
 		"Neck",
-		Vector3.new(10, 8, 8),
-		CFrame.new(at + Vector3.new(0, 36, 0)) * up,
+		Vector3.new(14, 11, 11),
+		CFrame.new(at + Vector3.new(0, 40, 0)) * up,
 		white,
 		nil,
 		Enum.PartType.Cylinder
 	)
-	part(boss, "Head", Vector3.new(12, 12, 12), CFrame.new(at + Vector3.new(0, 44, 0)), white, nil, Enum.PartType.Ball)
-	for _, y in { 31, 34 } do
+	part(titan, "Head", Vector3.new(17, 17, 17), CFrame.new(at + Vector3.new(0, 51, 0)), white, nil, Enum.PartType.Ball)
+	for _, y in { 36, 39.5 } do
 		part(
-			boss,
+			titan,
 			"Band",
-			Vector3.new(1.2, 10.4, 10.4),
+			Vector3.new(1.6, 13.2, 13.2),
 			CFrame.new(at + Vector3.new(0, y, 0)) * up,
 			Color3.fromRGB(220, 30, 50),
 			nil,
 			Enum.PartType.Cylinder
 		)
 	end
-	for _, x in { -2.5, 2.5 } do
+	for _, x in { -3.5, 3.5 } do
+		for _, z in { -1, 1 } do
+			part(
+				titan,
+				"Eye",
+				Vector3.new(3, 3.4, 3.4),
+				CFrame.new(at + Vector3.new(x, 52, z * 7.4)),
+				Color3.fromRGB(255, 50, 80),
+				Enum.Material.Neon,
+				Enum.PartType.Ball
+			)
+		end
+	end
+	local core = part(
+		titan,
+		"Core",
+		Vector3.new(14, 14, 14),
+		CFrame.new(at + Vector3.new(0, 20, 0)),
+		Color3.fromRGB(255, 120, 40),
+		Enum.Material.Neon,
+		Enum.PartType.Ball
+	)
+	core.CanCollide = false
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 140, 60)
+	light.Range = 40
+	light.Brightness = 3
+	light.Enabled = false
+	light.Parent = core
+	local plateFolder = Instance.new("Folder")
+	plateFolder.Name = "Plates"
+	plateFolder.Parent = titan
+	for i = 1, 8 do
+		local angle = (i - 1) / 8 * math.pi * 2
+		local ring = if i % 2 == 0 then 24 else 14 -- two rows, staggered
+		local dir = Vector3.new(math.cos(angle), 0, math.sin(angle))
+		local pos = at + Vector3.new(0, ring, 0) + dir * 13.5
 		part(
-			boss,
-			"Eye",
-			Vector3.new(2, 2.5, 1),
-			CFrame.new(at + Vector3.new(x, 45, 5.8)),
-			Color3.fromRGB(255, 50, 80),
-			Enum.Material.Neon
+			plateFolder,
+			"Plate" .. i,
+			Vector3.new(11, 11, 2),
+			CFrame.lookAt(pos, pos + dir),
+			Color3.fromRGB(110, 115, 135),
+			Enum.Material.DiamondPlate
 		)
 	end
-	boss.Parent = arena
-	local sign =
-		part(arena, "Sign", Vector3.new(40, 6, 1), CFrame.new(at + Vector3.new(0, 58, 0)), Color3.fromRGB(25, 20, 35))
-	signText(sign, "BOSS (PLACEHOLDER)", Color3.fromRGB(255, 79, 139))
+	local target = part(titan, "Target", Vector3.new(1, 1, 1), CFrame.new(at + Vector3.new(0, 20, 0)), white)
+	target.Transparency = 1
+	target.CanCollide = false
+	target.CanQuery = false
+	-- The roof sky is night: an outline and a soft fill keep the Titan readable from every spot
+	local glow = Instance.new("Highlight")
+	glow.FillColor = Color3.fromRGB(255, 220, 230)
+	glow.FillTransparency = 0.85
+	glow.OutlineColor = Color3.fromRGB(255, 79, 139)
+	glow.DepthMode = Enum.HighlightDepthMode.Occluded
+	glow.Parent = titan
+	titan.PrimaryPart = base
+
+	-- Floodlights around the Titan's feet, shining up at it
+	for i = 1, 6 do
+		local angle = i / 6 * math.pi * 2
+		local lamp = part(
+			arena,
+			"Lamp",
+			Vector3.new(3, 1, 3),
+			CFrame.new(at + Vector3.new(math.cos(angle) * 26, 0.5, math.sin(angle) * 26)),
+			Color3.fromRGB(255, 200, 220),
+			Enum.Material.Neon
+		)
+		lamp.CanCollide = false
+		local light = Instance.new("SpotLight")
+		light.Face = Enum.NormalId.Top
+		light.Angle = 70
+		light.Range = 60
+		light.Brightness = 4
+		light.Color = Color3.fromRGB(255, 225, 235)
+		light.Parent = lamp
+	end
+	titan.Parent = arena
+
 	arena.PrimaryPart = floor
 	arena.Parent = Workspace
 end
@@ -446,8 +593,8 @@ function PlaceholderWorld.Build(): { string }
 		)
 	end)
 	if skyline then
-		need(Workspace, "BossArena", function()
-			bossArena(Vector3.new(700, 900, -3500))
+		need(Workspace, "TitanArena", function()
+			titanArena(Vector3.new(700, 900, -3500), Config.Boss.MaxPlayers)
 		end)
 	end
 	return built

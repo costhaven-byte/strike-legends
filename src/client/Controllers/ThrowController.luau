@@ -99,9 +99,31 @@ local function equippedBall()
 	return Balls.Get(player:GetAttribute("EquippedBall")) or Config.Balls[1]
 end
 
--- A brand new player's first throw is assisted (Config.Onboarding): the server makes it a PERFECT
+-- A brand new player's first throw is assisted (Config.Onboarding): the server makes it a PERFECT.
+-- A Pin Titan giant ball (BossService) works the same way: any release throws it.
 local function assisted(): boolean
-	return Config.Onboarding.Enabled and player:GetAttribute("Onboarding") == 0
+	return (Config.Onboarding.Enabled and player:GetAttribute("Onboarding") == 0)
+		or player:GetAttribute("BossGiant") == true
+end
+
+-- The Pin Titan fight (BossService): your throw spot in the sky arena, while you stand on it and the fight takes
+-- throws. It has ReadyAt, GoldCenter and a BallStart facing the Titan, so the throw treats it like a lane.
+local BOSS_THROWS = { Armor = true, Core = true, Finale = true, Giant = true }
+local function bossSpot(root: BasePart): Model?
+	local name = player:GetAttribute("BossSpot")
+	local bossState = ReplicatedStorage:FindFirstChild("BossEvent")
+	local phase = bossState and bossState:GetAttribute("Phase")
+	if not name or not BOSS_THROWS[phase] or (phase == "Giant" and not player:GetAttribute("BossGiant")) then
+		return nil
+	end
+	local node: Instance? = Workspace
+	for _, step in Config.Boss.Arena do
+		node = node and node:FindFirstChild(step)
+	end
+	local spots = node and node:FindFirstChild("Spots")
+	local spot = spots and spots:FindFirstChild(name) :: Model?
+	local start = spot and spot:FindFirstChild("BallStart") :: BasePart?
+	return if start and (root.Position - start.Position).Magnitude <= 12 then spot else nil
 end
 
 local function readyHint(): string
@@ -114,12 +136,13 @@ local function sweetSpot(): (number, number)
 		local ceiling = ThrowRules.GoldCeiling()
 		return ceiling / 2, ceiling
 	end
+	local inBoss = player:GetAttribute("BossSpot") ~= nil -- the boss fight has no lane modifiers and its own streak
 	return ThrowRules.SweetSpot(
 		equippedBall(),
-		Modifiers.Current(),
+		if inBoss then nil else Modifiers.Current(),
 		Workspace:GetServerTimeNow(),
 		currentLane and currentLane:GetAttribute("GoldCenter"),
-		player:GetAttribute("Streak") or 0
+		(if inBoss then player:GetAttribute("BossStreak") else player:GetAttribute("Streak")) or 0
 	)
 end
 
@@ -961,6 +984,9 @@ function ThrowController:Start()
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 		local ownLane = LaneUtil.GetOwnedLane(player.UserId)
 		currentLane = if root and ownLane and LaneUtil.IsInThrowZone(ownLane, root.Position) then ownLane else nil
+		if root and player:GetAttribute("BossSpot") then
+			currentLane = bossSpot(root :: BasePart)
+		end
 
 		if not currentLane then
 			if state ~= "Hidden" then

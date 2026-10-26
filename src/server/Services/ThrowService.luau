@@ -19,6 +19,7 @@ local Zones = require(Shared.Modules.Zones)
 local Analytics = require(script.Parent.Analytics)
 local AwayService = require(script.Parent.AwayService)
 local BallService = require(script.Parent.BallService)
+local BossService = require(script.Parent.BossService)
 local GoldenPinService = require(script.Parent.GoldenPinService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
 local MascotService = require(script.Parent.MascotService)
@@ -152,8 +153,7 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 	local forward = lane.BallStart.CFrame.LookVector
 	local distance = (lane.PinSpot.Position - lane.BallStart.Position):Dot(forward)
 	local autoStrike = auto and Store.Owns(player, "AutoBowl")
-	local result =
-		ThrowResolver.Resolve(charge, perfect, hooked, overcharged, ball, distance, level.Power, autoStrike)
+	local result = ThrowResolver.Resolve(charge, perfect, hooked, overcharged, ball, distance, level.Power, autoStrike)
 	local isStrike = result.Tier == "Strike" or result.Tier == "PerfectStrike"
 	-- An overcooked throw always ends the streak: Streak Saver never covers the greedy red
 	local saverCooldown = if result.Overcharge == "Wasted" then 0 else Balls.TraitValue(ball, "StreakSaver")
@@ -296,6 +296,11 @@ local function onThrowRequest(player: Player, clientHold: any)
 	end
 	local hold = measuredHold(player, clientHold)
 	if not hold then
+		return
+	end
+	-- In the Pin Titan fight the same throw goes at the Titan instead of down a lane
+	if BossService.InFight(player) then
+		BossService.Throw(player, ThrowRules.ChargeAt(hold, ProgressionService.GetCurrentRankIndex(player)))
 		return
 	end
 	throwBall(player, ThrowRules.ChargeAt(hold, ProgressionService.GetCurrentRankIndex(player)), false)

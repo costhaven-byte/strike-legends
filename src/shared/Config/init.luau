@@ -728,7 +728,13 @@ Config.LaneModifiers = {
 -- Zone 3 and 4 themes are PLACEHOLDERS (the zone 2 base recoloured) until their hero case designs arrive.
 Config.Showcase = {
 	Sets = {
-		{ Zone = 2, Slots = { "Showcase", "Slots" }, Shelf = { "Showcase", "MascotShelf" }, Egg = "Alley", Theme = "Neon" },
+		{
+			Zone = 2,
+			Slots = { "Showcase", "Slots" },
+			Shelf = { "Showcase", "MascotShelf" },
+			Egg = "Alley",
+			Theme = "Neon",
+		},
 		{
 			Zone = 3,
 			Slots = { "MainStreetLanes", "Showcase", "Slots" },
@@ -768,7 +774,12 @@ Config.Showcase = {
 			SignBg = Color3.fromRGB(46, 30, 20),
 			SignTop = Color3.fromRGB(120, 80, 46),
 			CaseLight = Color3.fromRGB(255, 220, 170),
-			Materials = { Navy = Enum.Material.Wood, NavyTop = Enum.Material.Wood, BlueCap = Enum.Material.Metal, Pedestal = Enum.Material.Metal },
+			Materials = {
+				Navy = Enum.Material.Wood,
+				NavyTop = Enum.Material.Wood,
+				BlueCap = Enum.Material.Metal,
+				Pedestal = Enum.Material.Metal,
+			},
 		},
 		Skyline = { -- PLACEHOLDER: clean, bright, sky tones
 			Ink = Color3.fromRGB(40, 50, 84),
@@ -2153,21 +2164,72 @@ Config.Fusion = {
 	Path = { "MainStreetLanes", "FusionStation" }, -- placeholder booth built in Studio
 }
 
--- Zone 4 boss loop (Phase X Part 6). The helicopter on the Skyline roof flies you to the boss arena once every
--- CooldownMinutes (per player, saved as BossNextAt). PLACEHOLDER fight: the boss logic is not designed yet
--- (server/Modules/BossStub: stay in the arena FightSeconds = win). Replace BossStub to change the fight; the
--- helicopter, cooldown, arena trip and reward stay. Reward = like Config.Milestones rewards.
+-- Zone 4 boss event: the Pin Titan (owner's milestone 2026-10-26). Every EverySeconds the whole server gets one event:
+-- a countdown in the zone 4 lobby, a siren SirenSeconds before boarding opens, then BoardingSeconds to walk up to the
+-- helicopter on the Skyline roof. Everyone who boarded flies to the sky arena (Workspace.TitanArena) and fights the
+-- Titan with the normal hold-and-release throw (auto-aimed). Fight: ARMOR (plates) -> CORE (glowing core open) ->
+-- FINALE (hits fill one team meter; full = every player's next throw is a GIANT BALL that finishes the Titan).
+-- FightSeconds is a hard cap: at 0 the finale's giant balls start on their own. Then the results screen and the
+-- ride back to the roof. Art is PLACEHOLDER (a big plain pin, a round floating platform): a model saved in Studio
+-- as Workspace.TitanArena wins over the code-built one (keep the part names: Floor, Spots, Titan.Plates/Core/Body).
+-- All numbers below are safe to tune; nothing else needs changing.
 Config.Boss = {
 	Enabled = true,
-	Zone = 4,
-	CooldownMinutes = 45,
+	Zone = 4, -- you need this zone unlocked to board
+	EverySeconds = 45 * 60, -- an event every 45 minutes (on the clock: :00 and :45 slots, same on every server)
+	StudioFirstEventIn = 25, -- Studio only: the first event opens this many seconds after you press Play (0 = off)
+	SirenSeconds = 30, -- the siren warning starts this long before boarding opens
+	BoardingSeconds = 60, -- how long the helicopter waits for players
+	MinPlayers = 1, -- fewer boarders than this = the event is cancelled (next 45-minute slot)
+	MaxPlayers = 16, -- seats on the helicopter (= throw spots around the arena)
 	Helipad = { "SkylineLanes", "Helipad" }, -- the pad (with its placeholder helicopter) on the roof
-	Arena = { "BossArena" }, -- the stub arena, far above the city (Workspace.BossArena: Floor, Spawn, Boss)
-	UseRange = 18, -- studs from the helipad the server accepts a ride from
-	FightSeconds = 20, -- PLACEHOLDER fight length
-	ReturnDelay = 3, -- seconds after the fight before the helicopter brings you back
-	Reward = { Coins = 5000000000, LevelShare = 0.5, Crate = "SkyBronze" }, -- PLACEHOLDER reward (E3b: 1B / 0.25 -> 5B / 0.5)
-	RewardText = "BOSS REWARD",
+	Arena = { "TitanArena" }, -- the sky arena (built in code if missing)
+	UseRange = 18, -- studs from the helipad the server accepts boarding from
+	LobbyArea = { Center = Vector3.new(0, 870, -3500), Size = Vector3.new(220, 60, 236) }, -- the roof: the countdown and siren show here
+	FlightSeconds = 2.5, -- the fade-out while the helicopter takes off (and on the way back)
+
+	-- The fight
+	FightSeconds = 180, -- hard timer: the finale starts by itself when it runs out
+	IntroSeconds = 4, -- "PIN TITAN!" intro before the first throw counts
+	HealthPerPlayer = 6000, -- the Titan's health = this x players in the arena when the fight starts...
+	MinHealth = 6000, -- ...but never less than this (so a fight never ends in seconds)
+	ArmorShare = 0.33, -- the first third of its health is armor plates
+	Plates = 8, -- how many plates the armor is split into
+	FinaleAt = 0.15, -- the finale starts when its health falls to this share
+	MeterPerPlayer = 1200, -- team meter size = this x players (filled by damage during the finale)
+	GiantSeconds = 12, -- after the meter fills, players have this long to throw their giant ball
+	ResultsSeconds = 10, -- the results screen, then the ride back
+	ThrowCooldown = 2.2, -- seconds after a throw lands before your next one
+	BallTravel = 0.7, -- seconds the ball flies to the Titan (damage lands when it hits)
+
+	-- Damage per throw = BaseDamage x charge factor x kind x power x streak (x phase rule)
+	BaseDamage = 100, -- a full-power normal throw
+	WeakestShare = 0.5, -- an empty-bar tap does this share of BaseDamage
+	PerfectMultiplier = 3, -- a PERFECT (gold, or a Curve ball's hook)
+	OverchargeMultiplier = 6, -- a red-cap gamble that pays off (fails half the time like on the lanes: 0 damage)
+	StreakBonus = 0.15, -- each PERFECT in a row adds this much (x1.15, x1.3, ...)
+	StreakMax = 2.5, -- streak bonus cap
+	PowerBonusPerLevel = 0.02, -- each Power Level adds this much damage...
+	PowerBonusMax = 1.5, -- ...up to this (so low levels still matter)
+	ArmorNormalShare = 0.35, -- armor: a non-PERFECT throw only chips the plates (strikes break them)
+	CorePerfectBonus = 1.5, -- core open: PERFECT hits do this much more on top
+
+	-- Rewards. Tier by your damage compared to a fair share (total damage / players). Same row format as
+	-- Config.Milestones rewards: Coins (or LevelShare of your next Power Level's price, whichever is more), Potions, Crate.
+	MinHits = 1, -- throws you need to land to get a reward (stand still = nothing)
+	Tiers = {
+		{ Name = "BRONZE", MinShare = 0, Reward = { Coins = 1000000000, LevelShare = 0.2 } },
+		{ Name = "SILVER", MinShare = 0.5, Reward = { Coins = 2000000000, LevelShare = 0.3, Crate = "SkyBronze" } },
+		{ Name = "GOLD", MinShare = 1, Reward = { Coins = 5000000000, LevelShare = 0.5, Crate = "SkyBronze" } },
+		{ Name = "TITAN", MinShare = 1.5, Reward = { Coins = 8000000000, LevelShare = 0.7, Crate = "SkySilver" } },
+	},
+	TopBonus = { -- extra for the top damage dealers (rank 1, 2, 3)
+		{ Coins = 3000000000, LevelShare = 0.3 },
+		{ Coins = 1500000000, LevelShare = 0.15 },
+		{ Coins = 750000000, LevelShare = 0.1 },
+	},
+	-- The boss-only drop. Kind = "Pet" (a Config.Mascots Id), "Ball" (a Config.Balls Id) or "Crate" (a crate Id).
+	Drop = { Kind = "Pet", Id = "TitanJr", Chance = 0.1, TopChance = 0.25 }, -- TopChance = rank 1's chance
 }
 
 -- Crate counters in zones 3 and 4 (Phase X; placeholder booths built in Studio): walk up and the prompt opens the crate
@@ -2217,7 +2279,8 @@ Config.Featured = {
 -- sees a banner at the top. Delay = seconds after the pull (so it doesn't spoil the puller's own reveal).
 Config.PullBanner = {
 	Enabled = true,
-	Rarities = { Legendary = true, Mythic = true },
+	Rarities = { Epic = true, Legendary = true, Mythic = true }, -- Crate Kit 2026-10-26: Epic and up (was Legendary + Mythic)
+	MaxWaiting = 3, -- banners waiting their turn; more are dropped
 	Delay = 4,
 	Seconds = 4, -- each banner stays this long; more pulls wait their turn
 	Text = "%s PULLED %s (%s)!", -- player's display name, ball name, rarity
@@ -2271,6 +2334,12 @@ Config.CrateShop = {
 		Confetti = 35, -- pieces at the blast
 	},
 	SpinTime = 4.5, -- seconds the crate reel spins before it stops on the result
+	-- Owner's Crate Kit (2026-10-26): reel and shop timings
+	SpinTimeBig = 5.5, -- reel spin when the prize is Legendary or Mythic
+	ReelJitter = 60, -- the reel first stops up to this many design px off centre, then nudges to the exact centre
+	ReelSettle = 0.3, -- seconds of that last nudge
+	ReelHold = 0.4, -- seconds the landed tile stays before the reveal
+	WalkAwayDistance = 20, -- studs you walk from where you opened the crate shop before it closes by itself
 	ScreenBrightness = 1.15, -- glow of the kiosk screens (marquee, odds, prices); higher = more vibrant
 	-- The owner's Crate Kiosk design (2026-10-21): Bronze, Silver, Gold stations
 	PriceShineEvery = 3, -- seconds between shine sweeps across a price plate
@@ -2458,6 +2527,19 @@ Config.Mascots = {
 		Reaction = "Hop",
 		Model = "Hambone", -- PLACEHOLDER look: Hambone's model repainted (Tint) until real art exists
 		Tint = Color3.fromRGB(255, 180, 60),
+	},
+	-- Boss-only pet (Config.Boss.Drop): no egg hatches it, only the Pin Titan drops it
+	{
+		Id = "TitanJr",
+		Name = "Titan Jr.",
+		Egg = nil,
+		BonusEgg = "Skyline", -- its bonus counts like a Skyline Egg pet
+		Rarity = "Legendary",
+		Color = Color3.fromRGB(70, 60, 80),
+		Accent = Color3.fromRGB(255, 50, 80),
+		Reaction = "Flip",
+		Model = "Pinny", -- PLACEHOLDER look: Pinny's model repainted (Tint) until real art exists
+		Tint = Color3.fromRGB(70, 60, 80),
 	},
 }
 
@@ -2991,7 +3073,14 @@ Config.Monetization = {
 			Text = "Open 3 eggs or crates at once (when you can pay for 3).",
 			Hatch = 3,
 		},
-		{ Id = "PetSlots", PassId = 0, Robux = 399, Name = "+2 PET SLOTS", Text = "Two more pets follow you.", PetSlots = 2 },
+		{
+			Id = "PetSlots",
+			PassId = 0,
+			Robux = 399,
+			Name = "+2 PET SLOTS",
+			Text = "Two more pets follow you.",
+			PetSlots = 2,
+		},
 	},
 	-- Developer products: can be bought again and again (Once = one time only)
 	-- Boost = { Potion, Minutes }: that potion's boost runs this much longer, straight away (Config.Potions)
@@ -3251,6 +3340,9 @@ Config.Analytics = {
 		"LuckyThrow", -- later (Milestone 13)
 		"MascotHatched", -- value = eggs hatched so far; labels = egg, rarity, mascot
 		"BossDefeated", -- later (Milestone 15)
+		"BossTrip", -- boarded the Pin Titan helicopter (Config.Boss)
+		"BossWon", -- labels = reward tier
+		"BossDrop", -- the boss-only drop; labels = its Id
 		"PityHit", -- labels = crate, rarity
 		"PerfectRate", -- value = PERFECT % of the session's throws (assisted first throw left out); labels = throws, perfects
 		"PolishLevel", -- value = new Polish level; labels = ball
@@ -3511,12 +3603,66 @@ Config.Economy.Formula = {
 -- simulator so zone 3 opens at about 40 min and zone 4 at about 2.5 hours (were 46 min and ~10 hours at x1).
 -- Pins / PinValue / XpPerPin are the old simulator's numbers (10-3,000 pin racks); nothing reads them since E1.
 Config.Economy.Zones = {
-	{ Id = "StarterAlley", Name = "Back Alley", Pins = 10, PinValue = 10, XpPerPin = 1, Rank = 1, CoinPay = 1, XpPay = 1 },
-	{ Id = "NeonLanes", Name = "Neon Lanes", Pins = 30, PinValue = 50, XpPerPin = 2, Rank = 5, CoinPay = 4, XpPay = 1.2 },
-	{ Id = "MainStreetLanes", Name = "Main Street Lanes", Pins = 100, PinValue = 250, XpPerPin = 4, Rank = 12, CoinPay = 16, XpPay = 2.5 }, -- was Arcade Arena (owner 2026-10-22)
-	{ Id = "SkylineLanes", Name = "Skyline Lanes", Pins = 300, PinValue = 1250, XpPerPin = 8, Rank = 22, CoinPay = 64, XpPay = 6 },
-	{ Id = "VolcanoStrike", Name = "Volcano Strike", Pins = 1000, PinValue = 6000, XpPerPin = 16, Rank = 35, CoinPay = 1, XpPay = 1 },
-	{ Id = "CosmicAlley", Name = "Cosmic Alley", Pins = 3000, PinValue = 30000, XpPerPin = 32, Rank = 50, CoinPay = 1, XpPay = 1 },
+	{
+		Id = "StarterAlley",
+		Name = "Back Alley",
+		Pins = 10,
+		PinValue = 10,
+		XpPerPin = 1,
+		Rank = 1,
+		CoinPay = 1,
+		XpPay = 1,
+	},
+	{
+		Id = "NeonLanes",
+		Name = "Neon Lanes",
+		Pins = 30,
+		PinValue = 50,
+		XpPerPin = 2,
+		Rank = 5,
+		CoinPay = 4,
+		XpPay = 1.2,
+	},
+	{
+		Id = "MainStreetLanes",
+		Name = "Main Street Lanes",
+		Pins = 100,
+		PinValue = 250,
+		XpPerPin = 4,
+		Rank = 12,
+		CoinPay = 16,
+		XpPay = 2.5,
+	}, -- was Arcade Arena (owner 2026-10-22)
+	{
+		Id = "SkylineLanes",
+		Name = "Skyline Lanes",
+		Pins = 300,
+		PinValue = 1250,
+		XpPerPin = 8,
+		Rank = 22,
+		CoinPay = 64,
+		XpPay = 6,
+	},
+	{
+		Id = "VolcanoStrike",
+		Name = "Volcano Strike",
+		Pins = 1000,
+		PinValue = 6000,
+		XpPerPin = 16,
+		Rank = 35,
+		CoinPay = 1,
+		XpPay = 1,
+	},
+	{
+		Id = "CosmicAlley",
+		Name = "Cosmic Alley",
+		Pins = 3000,
+		PinValue = 30000,
+		XpPerPin = 32,
+		Rank = 50,
+		CoinPay = 1,
+		XpPay = 1,
+	},
 }
 
 -- Power Levels (LIVE since Addendum 2 Phase 1 step 3; the plan's "Ball Shop"): upgrades bought with coins, in order.

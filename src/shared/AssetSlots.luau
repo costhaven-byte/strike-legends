@@ -34,6 +34,12 @@ AssetSlots.Sounds = {
 	HatchCrack = { Id = nil, Volume = 0.8, StandIn = "PinHit", StandInPitch = 1.6 }, -- each crack snaps open
 	HatchBurst = { Id = nil, Volume = 0.9, StandIn = "StrikeCrash", StandInPitch = 1.3 }, -- the shell bursts
 	ElevatorDing = { Id = nil, Volume = 0.6, StandIn = "Coin", StandInPitch = 0.6 }, -- elevator doors open (zone 3 <-> roof)
+	-- Pin Titan boss event (Config.Boss). Not picked yet.
+	BossSiren = { Id = nil, Volume = 0.7, StandIn = "Charge", StandInPitch = 0.6 }, -- 30 s before boarding opens
+	BossHit = { Id = nil, Volume = 0.9, StandIn = "PinHit", StandInPitch = 0.55 }, -- a ball hits the Titan
+	BossPlate = { Id = nil, Volume = 1, StandIn = "StrikeCrash", StandInPitch = 1.4 }, -- an armor plate breaks off
+	BossRoar = { Id = nil, Volume = 1, StandIn = "StrikeCrash", StandInPitch = 0.4 }, -- fight starts, core opens, Titan falls
+	Helicopter = { Id = nil, Volume = 0.6, StandIn = "Roll", StandInPitch = 1.6 }, -- takeoff and landing
 }
 
 -- Images: the owner's store kit icons (claude.ai/design 'Strike Legends Store', 2026-10-25; files in

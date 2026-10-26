@@ -1,7 +1,6 @@
 -- Zone 3 and 4 stations (Phase X Part 6), all placeholder booths built in Studio:
 --   Fusion station (Main Street Lanes, Config.Fusion): opens the PETS panel, where MERGE makes Shinies.
---   Helicopter (Skyline roof, Config.Boss): flies you to the boss arena; its sign counts down the 45 minutes.
--- The server decides everything (BossService). Rebirth is a HUD button now (RebirthController).
+-- The helicopter (Pin Titan boss event) lives in BossController. Rebirth is a HUD button now (RebirthController).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -12,12 +11,6 @@ local Zones = require(Shared.Modules.Zones)
 local MascotController = require(script.Parent.MascotController)
 
 local player = Players.LocalPlayer
-
-local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
-local INK = Color3.fromHex("06060F")
-local GOLD = Color3.fromRGB(255, 200, 40)
-local PINK = Color3.fromRGB(255, 79, 139)
-local GREY = Color3.fromRGB(170, 160, 200)
 
 local StationController = {}
 
@@ -48,67 +41,6 @@ local function prompt(parent: BasePart, objectText: string, hold: number?): Prox
 	return p
 end
 
-local function stroke(parent: Instance, thickness: number)
-	local s = Instance.new("UIStroke")
-	s.Color = INK
-	s.Thickness = thickness
-	s.Parent = parent
-end
-
-local function sign(parent: BasePart, height: number): TextLabel
-	local board = Instance.new("BillboardGui")
-	board.Size = UDim2.fromOffset(280, 64)
-	board.StudsOffset = Vector3.new(0, height, 0)
-	board.MaxDistance = 80
-	board.LightInfluence = 0
-	board.Parent = parent
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.FontFace = FONT
-	label.TextScaled = true
-	label.TextColor3 = GOLD
-	label.Parent = board
-	stroke(label, 2)
-	return label
-end
-
-local function clock(seconds: number): string
-	seconds = math.max(0, math.ceil(seconds))
-	return ("%d:%02d"):format(seconds // 60, seconds % 60)
-end
-
--- A short message at the top of the screen
-local toastLabel: TextLabel? = nil
-local function toast(text: string)
-	if not toastLabel then
-		local gui = Instance.new("ScreenGui")
-		gui.Name = "StationToast"
-		gui.ResetOnSpawn = false
-		gui.DisplayOrder = 6
-		local label = Instance.new("TextLabel")
-		label.AnchorPoint = Vector2.new(0.5, 0)
-		label.Position = UDim2.new(0.5, 0, 0, 120)
-		label.Size = UDim2.fromOffset(520, 40)
-		label.BackgroundTransparency = 1
-		label.FontFace = FONT
-		label.TextScaled = true
-		label.TextColor3 = Color3.new(1, 1, 1)
-		label.Parent = gui
-		stroke(label, 2)
-		gui.Parent = player:WaitForChild("PlayerGui")
-		toastLabel = label
-	end
-	local label = toastLabel :: TextLabel
-	label.Text = text
-	label.Visible = true
-	task.delay(2.5, function()
-		if label.Text == text then
-			label.Visible = false
-		end
-	end)
-end
-
 local function fusion()
 	local FUSION = Config.Fusion
 	local station = find(FUSION.Path)
@@ -130,66 +62,8 @@ local function fusion()
 	end)
 end
 
-local function helicopter()
-	local BOSS = Config.Boss
-	local pad = find(BOSS.Helipad)
-	local part = pad and anchorOf(pad)
-	if not part or not BOSS.Enabled then
-		return
-	end
-	local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RideHelicopter") :: RemoteFunction
-	local p = prompt(part, "HELICOPTER", 1)
-	p.ActionText = "Fly to the boss"
-	local label = sign(part, 16)
-
-	-- The fight timer at the top of the screen
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "BossUI"
-	gui.ResetOnSpawn = false
-	gui.Enabled = false
-	local banner = Instance.new("TextLabel")
-	banner.AnchorPoint = Vector2.new(0.5, 0)
-	banner.Position = UDim2.new(0.5, 0, 0, 70)
-	banner.Size = UDim2.fromOffset(560, 46)
-	banner.BackgroundTransparency = 1
-	banner.FontFace = FONT
-	banner.TextScaled = true
-	banner.TextColor3 = PINK
-	banner.Parent = gui
-	stroke(banner, 2.5)
-	gui.Parent = player:WaitForChild("PlayerGui")
-
-	p.Triggered:Connect(function()
-		local ok, result = pcall(remote.InvokeServer, remote)
-		if not ok or not result or not result.Ok then
-			toast(if ok and result and result.Error then result.Error else "Try again")
-		end
-	end)
-	while true do
-		local open = Zones.Unlocked(player:GetAttribute("RankLevel"), BOSS.Zone)
-		local left = (player:GetAttribute("BossNextAt") or 0) - Workspace:GetServerTimeNow()
-		local fighting = player:GetAttribute("BossFighting") == true
-		if not open then
-			label.Text = "BOSS: REACH " .. Zones.Name(BOSS.Zone):upper()
-			label.TextColor3 = GREY
-		elseif left > 0 then
-			label.Text = "NEXT BOSS FLIGHT IN " .. clock(left)
-			label.TextColor3 = GREY
-		else
-			label.Text = "FLY TO THE BOSS!"
-			label.TextColor3 = GOLD
-		end
-		p.Enabled = open and left <= 0 and not fighting
-		gui.Enabled = fighting
-		local fightLeft = player:GetAttribute("BossFightLeft")
-		banner.Text = if fightLeft then ("BOSS FIGHT (PLACEHOLDER): STAY ON %ds"):format(fightLeft) else "BOSS FIGHT"
-		task.wait(0.5)
-	end
-end
-
 function StationController:Start()
 	task.spawn(fusion)
-	task.spawn(helicopter)
 end
 
 return StationController

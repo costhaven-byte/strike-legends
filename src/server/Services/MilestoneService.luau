@@ -118,6 +118,11 @@ function MilestoneService.Reward(player: Player, reward, kind: string, source: s
 	return shown
 end
 
+-- Gives a reward row without the popup (the boss results screen shows it). Returns what was given.
+function MilestoneService.Give(player: Player, reward, source: string)
+	return give(player, reward, source)
+end
+
 function MilestoneService:Start()
 	rewardEvent = Instance.new("RemoteEvent")
 	rewardEvent.Name = "MilestoneReward"

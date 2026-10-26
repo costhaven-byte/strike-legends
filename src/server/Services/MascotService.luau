@@ -266,6 +266,17 @@ function MascotService.GiveFreeEgg(player: Player, eggId: string, count: number?
 	return true
 end
 
+-- Gives one exact pet (no egg): the boss-only drop (Config.Boss.Drop). Returns isNew, or nil if there's no such pet.
+function MascotService.GiveMascot(player: Player, mascotId: string): boolean?
+	local mascot = Mascots.Get(mascotId)
+	if not mascot or not PlayerDataService.IsLoaded(player) then
+		return nil
+	end
+	local isNew = addMascot(player, mascot)
+	SessionLog.Moment(player, ("Pet given: %s (%s)"):format(mascot.Id, mascot.Rarity))
+	return isNew
+end
+
 -- Gives a pet of exactly this rarity from this egg, no hatching (the daily spin wheel's SECRET PET)
 function MascotService.GivePet(player: Player, eggId: string, rarity: string)
 	if not PlayerDataService.IsLoaded(player) then
