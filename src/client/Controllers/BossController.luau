@@ -129,8 +129,8 @@ function BossController:Start()
 	local top = new("Frame", {
 		Name = "FightHud",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 118), -- under the level bar
-		Size = UDim2.fromOffset(560, 120),
+		Position = UDim2.new(0.5, 0, 0, 8), -- where the level bar is (hidden during the fight)
+		Size = UDim2.fromOffset(480, 120), -- narrow enough to stay clear of the power arc on the right
 		BackgroundTransparency = 1,
 		Visible = false,
 	}, gui)
@@ -226,7 +226,6 @@ function BossController:Start()
 
 	HudKit.OnLayout(function(phone)
 		screenScale.Scale = if phone then 0.7 else 1
-		top.Position = UDim2.new(0.5, 0, 0, if phone then 84 else 118)
 		pill.Position = UDim2.new(0.5, 0, 0, if phone then 64 else 96)
 	end)
 
@@ -710,8 +709,13 @@ function BossController:Start()
 			end
 		end
 
-		-- The fight HUD
+		-- The fight HUD (it takes the level bar's place at the top; the bar comes back after the fight)
 		top.Visible = fighting
+		local hud = player.PlayerGui:FindFirstChild("HUD")
+		local rankBar = hud and hud:FindFirstChild("RankBar") :: GuiObject?
+		if rankBar then
+			rankBar.Visible = not fighting
+		end
 		if fighting then
 			local phase = state:GetAttribute("Phase") or "Intro"
 			local hp = state:GetAttribute("Health") or 0
