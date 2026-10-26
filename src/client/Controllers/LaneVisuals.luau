@@ -5,6 +5,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -15,7 +16,7 @@ local Balls = require(Shared.Modules.Balls)
 local BallLook = require(Shared.Modules.BallLook)
 local Modifiers = require(Shared.Modules.Modifiers)
 local Progression = require(Shared.Modules.Progression)
-local Store = require(Shared.Modules.Store)
+local Cosmetics = require(Shared.Modules.Cosmetics)
 local ThrowRules = require(Shared.Modules.ThrowRules)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local CameraShake = require(Modules.CameraShake)
@@ -138,7 +139,15 @@ end
 
 -- Power Level 2 and up: a bright streak flat on the lane behind the rolling ball, wider every level.
 -- Lives on its own part so it doesn't spin with the ball.
-local function powerTrail(lane: Model, level: number, diameter: number, color: Color3, forward: Vector3)
+-- sequence: a cosmetic trail's own colours (Config.Cosmetics), instead of the level's colour
+local function powerTrail(
+	lane: Model,
+	level: number,
+	diameter: number,
+	color: Color3,
+	forward: Vector3,
+	sequence: ColorSequence?
+)
 	if level < THROW.PowerTrailFromLevel then
 		return nil
 	end
@@ -163,7 +172,7 @@ local function powerTrail(lane: Model, level: number, diameter: number, color: C
 	local trail = Instance.new("Trail")
 	trail.Attachment0 = left
 	trail.Attachment1 = rightSide
-	trail.Color = if level >= THROW.RainbowFromLevel then RAINBOW else ColorSequence.new(WHITE, color)
+	trail.Color = sequence or (if level >= THROW.RainbowFromLevel then RAINBOW else ColorSequence.new(WHITE, color))
 	trail.Transparency = NumberSequence.new(0, 1)
 	trail.LightEmission = 1
 	trail.FaceCamera = false
@@ -180,7 +189,7 @@ local function powerTrail(lane: Model, level: number, diameter: number, color: C
 	upright.Attachment0 = top
 	upright.Attachment1 = bottom
 	upright.Transparency = NumberSequence.new(0.35, 1)
-	upright.Color = if level >= THROW.RainbowFromLevel then RAINBOW else ColorSequence.new(color)
+	upright.Color = sequence or (if level >= THROW.RainbowFromLevel then RAINBOW else ColorSequence.new(color))
 	upright.Parent = rig
 	BallFx.Dim(rig)
 	rig.Parent = lane
@@ -233,6 +242,90 @@ local function throwFeel(data, ballInfo)
 end
 
 -- Everything that happens the moment the ball reaches the pins
+-- A cosmetic pin blast (Config.Cosmetics PinFx): a burst and a ring per colour, on top of the normal crash
+local function pinBlast(item, crashPoint: Vector3, ringPoint: Vector3, strength: number)
+	local size = Config.Cosmetics.BlastSize * strength
+	for index, color in item.Colors do
+		task.delay((index - 1) * 0.05, function()
+			ThrowFx.Burst(crashPoint + Vector3.new(0, index * 0.5, 0), color, 30 * size, 40 * size * PIN_SCALE, 1.1)
+			ThrowFx.Shockwave(ringPoint + Vector3.new(0, 0.15 * index, 0), color, (9 + 4 * index) * size * PIN_SCALE, 0.4)
+		end)
+	end
+end
+
+-- A cosmetic strike banner (Config.Cosmetics Banner): a flag with its word that pops up over the pins
+local function strikeBanner(lane: Model, item, headPin: Vector3)
+	local looks = Config.Cosmetics
+	local spot = Instance.new("Part")
+	spot.Name = "StrikeBanner"
+	spot.Anchored = true
+	spot.CanCollide = false
+	spot.CanQuery = false
+	spot.CanTouch = false
+	spot.Transparency = 1
+	spot.Size = Vector3.one * 0.2
+	spot.Position = headPin + Vector3.new(0, looks.BannerHeight, 0)
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.fromScale(14, 3.6)
+	gui.LightInfluence = 0
+	gui.AlwaysOnTop = false
+	gui.MaxDistance = 220
+	gui.Parent = spot
+	local flag = Instance.new("Frame")
+	flag.AnchorPoint = Vector2.new(0.5, 0.5)
+	flag.Position = UDim2.fromScale(0.5, 0.5)
+	flag.Size = UDim2.fromScale(0, 0.85)
+	flag.BackgroundColor3 = item.Colors[1]
+	flag.ClipsDescendants = true
+	flag.Parent = gui
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.25, 0)
+	corner.Parent = flag
+	local edge = Instance.new("UIStroke")
+	edge.Color = item.Colors[2] or WHITE
+	edge.Thickness = 4
+	edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	edge.Parent = flag
+	local word = Instance.new("TextLabel")
+	word.BackgroundTransparency = 1
+	word.Size = UDim2.fromScale(1, 1)
+	word.Font = Enum.Font.LuckiestGuy
+	word.Text = item.Word or "STRIKE!"
+	word.TextScaled = true
+	word.TextColor3 = item.Colors[2] or WHITE
+	word.Parent = flag
+	local outline = Instance.new("UIStroke")
+	outline.Color = Color3.new(0, 0, 0)
+	outline.Thickness = 3
+	outline.Parent = word
+	local padding = Instance.new("UIPadding")
+	padding.PaddingTop = UDim.new(0.1, 0)
+	padding.PaddingBottom = UDim.new(0.08, 0)
+	padding.PaddingLeft = UDim.new(0.05, 0)
+	padding.PaddingRight = UDim.new(0.05, 0)
+	padding.Parent = word
+	spot.Parent = lane
+	-- Unrolls from the middle, bobs while it's up, then rolls back up
+	TweenService:Create(flag, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		Size = UDim2.fromScale(1, 0.85),
+	}):Play()
+	local started = os.clock()
+	local bob = RunService.Heartbeat:Connect(function()
+		local t = os.clock() - started
+		spot.Position = headPin + Vector3.new(0, looks.BannerHeight + math.sin(t * 4) * 0.3, 0)
+		flag.Rotation = math.sin(t * 3) * 3
+	end)
+	task.delay(looks.BannerTime, function()
+		TweenService:Create(flag, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+			Size = UDim2.fromScale(0, 0.85),
+		}):Play()
+		task.delay(0.3, function()
+			bob:Disconnect()
+			spot:Destroy()
+		end)
+	end)
+end
+
 local function onImpact(data, rack, feel, isOwn: boolean, setTimeScale: (number) -> ())
 	local lane: Model = data.Lane
 	local isStrike = data.Tier == "Strike" or data.Tier == "PerfectStrike"
@@ -276,6 +369,16 @@ local function onImpact(data, rack, feel, isOwn: boolean, setTimeScale: (number)
 	end
 	if isPerfect then
 		LaneFx.Fireworks(lane, JUICE.PerfectFireworks)
+	end
+	-- The thrower's looks (Config.Cosmetics): a pin blast on every hit, a banner over the pins on a strike
+	local thrower = Players:GetPlayerByUserId(data.UserId)
+	local blast = thrower and Cosmetics.Worn(thrower, "PinFx")
+	if blast then
+		pinBlast(blast, crashPoint, headPin + forward * 2, if isStrike then 1.4 else 0.8)
+	end
+	local banner = thrower and Cosmetics.Worn(thrower, "Banner")
+	if banner and isStrike then
+		strikeBanner(lane, banner, headPin)
 	end
 	local golden = data.Golden
 	if golden and golden.Hit then
@@ -397,10 +500,17 @@ local function playThrow(data)
 	local fx = BallFx.Attach(ball, data.BallId, "Lane", forward)
 	local lights = LaneFx.FollowLights(lane, ballInfo.Trail)
 	local streak = powerTrail(lane, feel.Level, ball.Size.X, ballInfo.Trail or ballInfo.Color, forward)
-	-- VIP game pass: a gold streak behind the ball that everyone sees (Config.Monetization)
-	local thrower = Players:GetPlayerByUserId(data.UserId)
-	local vipTrail = if thrower and Store.HasTrail(thrower)
-		then powerTrail(lane, THROW.PowerTrailFromLevel + 4, ball.Size.X, Config.Monetization.TrailColor, forward)
+	-- Cosmetic trail (Config.Cosmetics; a VIP wearing none gets the VIP gold): a streak behind the ball everyone sees
+	local look = thrower and Cosmetics.Worn(thrower, "Trail")
+	local vipTrail = if look
+		then powerTrail(
+			lane,
+			THROW.PowerTrailFromLevel + 4,
+			ball.Size.X,
+			look.Colors[#look.Colors],
+			forward,
+			Cosmetics.Sequence(look)
+		)
 		else nil
 	BallFx.Dim(ball)
 	local fired = data.Traits or {}

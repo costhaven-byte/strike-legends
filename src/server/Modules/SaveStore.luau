@@ -124,6 +124,7 @@ local function migrate(saved: any): { [string]: any }
 		-- v14 added ZoneSeen, v15 Potions and Boosts, v16 FreeEggs, v17 SpinDay, v18 BossNextAt and Rebirths,
 		-- v19 LastOnline and AwayRate: same, they start at their starting value (0 = no away coins on the first visit)
 		-- v20 Purchases, StarterPack and StarterOffered, v21 RobuxBoost and VipGiftDay: same, they start empty / at 0
+		-- v23 added Cosmetics and EquippedCosmetics (step 12b): they start empty, nothing to upgrade
 		if version < 22 then
 			-- v22: the COIN BOOST became a doubling ladder (x2, x4, x8, x16). An old adding boost (coins x (1 +
 			-- RobuxBoost)) becomes the highest step it already reached or passed, so nobody loses what they paid for.

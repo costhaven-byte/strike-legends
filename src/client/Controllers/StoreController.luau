@@ -5,7 +5,9 @@
 --   red "!" until the store is opened this session.
 -- * Quick-buy pills on the HUD (owner 2026-10-25): each boost ladder's next step ("x1.25 COINS / R$ 19"), right of the
 --   coin multiplier badge; a MAXED ladder's pill shrinks away and the other moves up.
--- * The window: BOOSTS / PASSES / GEMS tabs jump within one scrolling list (Starter Pack on top until bought).
+-- * The window: BOOSTS / PASSES / LOOKS / GEMS tabs jump within one scrolling list (Starter Pack on top until bought).
+--   LOOKS (step 12b, Config.Cosmetics): trails, strike banners, pin blasts and lane skins for gems or Robux, with
+--   WEAR / WEARING (tap WEARING to take it off). Gem looks are bought here through BuyCosmetic.
 -- * The one-time Starter Pack popup (the server says when; it waits for a quiet moment, never mid-throw), the THANK
 --   YOU / VIP DAILY GIFT toast, and the gold [VIP] tag in chat for VIP owners.
 -- BUY asks the server, which shows Roblox's own purchase window; nothing is given here. Built in code, so it's in git.
@@ -20,6 +22,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local AssetSlots = require(Shared.AssetSlots)
 local Store = require(Shared.Modules.Store)
+local Cosmetics = require(Shared.Modules.Cosmetics)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules:WaitForChild("Sfx"))
 local HudKit = require(Modules:WaitForChild("HudKit"))
@@ -480,6 +483,8 @@ function StoreController:Start()
 	end)
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
 	local buyRemote = remotes:WaitForChild("StoreBuy") :: RemoteEvent
+	local buyLook = remotes:WaitForChild("BuyCosmetic") :: RemoteFunction
+	local wearLook = remotes:WaitForChild("EquipCosmetic") :: RemoteFunction
 	local playerGui = player:WaitForChild("PlayerGui")
 	local hud = playerGui:WaitForChild("HUD") :: ScreenGui
 	local rankBar = hud:WaitForChild("RankBar") :: GuiObject
@@ -810,7 +815,7 @@ function StoreController:Start()
 		end
 		local y = scroller.CanvasPosition.Y
 		local active = "boosts"
-		for _, id in { "passes", "gems" } do
+		for _, id in { "passes", "looks", "gems" } do
 			if sectionHeaders[id] and sectionTop(id) - 36 <= y then
 				active = id
 			end
@@ -825,7 +830,7 @@ function StoreController:Start()
 
 	-- Card background art (clipped to the rounded card): a tint of the label colour fading out, halftone dots
 	-- toward the bottom-right and the card's own icon as a faint tilted watermark
-	local function cardArt(card: Frame, radius: number, color: Color3, iconName: string)
+	local function cardArt(card: Frame, radius: number, color: Color3, iconName: string?)
 		local art = make(
 			"CanvasGroup",
 			{ Name = "Art", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 1 },
@@ -836,6 +841,9 @@ function StoreController:Start()
 		fade(tint, { { 0, 0.7 }, { 0.6, 1 }, { 1, 1 } }, 75)
 		local dots = halftone(art, color, 0.76, 8)
 		fade(dots, { { 0, 1 }, { 0.4, 1 }, { 1, 0 } }, 30)
+		if not iconName then
+			return art -- a look card: its colour swatch is the picture
+		end
 		image(art, iconName, 104, {
 			AnchorPoint = Vector2.new(1, 0),
 			Position = UDim2.new(1, 22, 0, -18),
@@ -875,7 +883,8 @@ function StoreController:Start()
 	end
 
 	-- --- One card ---
-	-- kind: "Ladder" | "Pass" | "Product"; item: the Config row (a ladder card gets { Ladder = "Coins" })
+	-- kind: "Ladder" | "Pass" | "Product" | "Look"; item: the Config row (a ladder card gets { Ladder = "Coins" };
+	-- a look card gets its Config.Cosmetics row)
 	local function buildCard(parent: Instance, kind: string, item, size: UDim2, order: number)
 		local accentColor, labelText, labelColor, name, iconName, iconSize
 		if kind == "Ladder" then
@@ -887,6 +896,10 @@ function StoreController:Start()
 		elseif kind == "Pass" then
 			labelText, labelColor = "GAME PASS", C.Gold
 			name, iconName, iconSize = item.Name, ICONS[item.Id], 54
+		elseif kind == "Look" then
+			local lookKind = Cosmetics.Kind(item.Kind)
+			labelText, labelColor = if lookKind then lookKind.Label else "LOOK", C.Pink
+			name, iconName, iconSize = item.Name, nil, 54
 		else
 			labelText, labelColor = if item.Gems then "GEMS" else "BOOST", C.Cyan
 			name, iconName, iconSize = item.Name, ICONS[item.Id], GEM_ICON_SIZE[item.Id] or 54
@@ -911,10 +924,30 @@ function StoreController:Start()
 		chipText.Position = UDim2.fromOffset(0, 1)
 		-- Icon + name (+ the ladder's "x4 > x8")
 		local rowTop = 24
-		image(body, iconName, iconSize, {
-			Position = UDim2.fromOffset(0, rowTop + math.floor((58 - iconSize) / 2)),
-			ZIndex = 4,
-		})
+		if kind == "Look" then
+			-- A colour swatch: the look's colours blended (a lane skin's single colour is flat)
+			local swatch = make("Frame", {
+				Name = "Swatch",
+				BackgroundColor3 = C.White,
+				Position = UDim2.fromOffset(2, rowTop + 4),
+				Size = UDim2.fromOffset(iconSize - 4, iconSize - 4),
+				Rotation = 8,
+				ZIndex = 4,
+			}, body)
+			corner(swatch, 14)
+			stroke(swatch, C.Ink, 3)
+			make("UIGradient", { Color = Cosmetics.Sequence(item), Rotation = 45 }, swatch)
+			if item.Word then
+				local word = label(swatch, item.Word, HEAD, 11, item.Colors[2] or C.White, 3)
+				word.TextScaled = true
+				word.Rotation = -8
+			end
+		else
+			image(body, iconName, iconSize, {
+				Position = UDim2.fromOffset(0, rowTop + math.floor((58 - iconSize) / 2)),
+				ZIndex = 4,
+			})
+		end
 		local textX = iconSize + 10
 		local nameText = label(body, name, HEAD, 22, C.White, 6)
 		nameText.TextXAlignment = Enum.TextXAlignment.Left
@@ -988,6 +1021,8 @@ function StoreController:Start()
 		buyHolder.Position = UDim2.new(1, 0, 1, -4)
 		buyHolder.ZIndex = 4
 		local priceRow, amount, doneText = priceContent(buyFace, 20, 22, 6, 4)
+		local priceIcon = priceRow:FindFirstChildOfClass("ImageLabel")
+		local lookNote: string? = nil -- a look card's short message on its button ("NEED GEMS")
 
 		local flash = make("Frame", {
 			Name = "Flash",
@@ -1022,7 +1057,28 @@ function StoreController:Start()
 				robux = step and step.Robux
 				done = if step then nil else "MAXED"
 				ref.Level = level
+			elseif kind == "Look" then
+				local product = Cosmetics.Product(item)
+				robux = product and product.Robux
+				if lookNote then
+					done = lookNote
+				elseif Cosmetics.Owns(player, item.Id) then
+					-- WEAR (gold) / WEARING (cyan, tap to take off)
+					local on = Cosmetics.Worn(player, item.Kind) == item
+					recolor(buyHolder, if on then C.Cyan else C.Gold, if on then C.Ink else C.GoldLip, true, 4)
+					priceRow.Visible = false
+					doneText.Text = if on then "WEARING" else "WEAR"
+					doneText.TextColor3 = C.White
+					doneText.Visible = true
+					return
+				elseif item.Vip then
+					done = "VIP ONLY"
+				end
+				if priceIcon then
+					priceIcon.Image = AssetSlots.Image(if item.Gems then "Gem" else "Robux")
+				end
 			end
+			doneText.TextColor3 = C.GreyText
 			if done then
 				recolor(buyHolder, C.Grey, C.GreyLip, false, 2)
 				priceRow.Visible = false
@@ -1032,7 +1088,7 @@ function StoreController:Start()
 				recolor(buyHolder, C.Lime, C.LimeLip, true, 4)
 				priceRow.Visible = true
 				doneText.Visible = false
-				amount.Text = formatRobux(robux or 0)
+				amount.Text = if kind == "Look" and item.Gems then tostring(item.Gems) else formatRobux(robux or 0)
 			end
 		end
 		buyBody.Activated:Connect(function()
@@ -1040,7 +1096,43 @@ function StoreController:Start()
 				return
 			end
 			local id = item.Id
-			if kind == "Ladder" then
+			if kind == "Look" then
+				if lookNote then
+					return
+				end
+				if Cosmetics.Owns(player, item.Id) then
+					pcall(wearLook.InvokeServer, wearLook, item.Id)
+					ref.Refresh()
+					return
+				end
+				if item.Gems then
+					local ok, result = pcall(buyLook.InvokeServer, buyLook, item.Id)
+					if ok and type(result) == "table" and result.Ok then
+						Sfx.Play("Reveal", 1.2)
+						tween(flash, 0.05, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, {
+							BackgroundTransparency = 0.4,
+						}).Completed:Once(function()
+							tween(flash, 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundTransparency = 1 })
+						end)
+					else
+						lookNote = if ok and type(result) == "table" and result.Error == "Not enough gems"
+							then "NEED GEMS"
+							else "TRY AGAIN"
+						ref.Refresh()
+						task.delay(1.4, function()
+							lookNote = nil
+							ref.Refresh()
+						end)
+					end
+					ref.Refresh()
+					return
+				end
+				local product = Cosmetics.Product(item)
+				if not product then
+					return
+				end
+				id = product.Id
+			elseif kind == "Ladder" then
 				local step = Store.NextStep(player, item.Ladder)
 				if not step then
 					return
@@ -1225,7 +1317,7 @@ function StoreController:Start()
 		title.LayoutOrder = 1
 
 		local function makeTabs(parent: Instance, height: number, size: number, padX: number)
-			for i, tab in { { "boosts", "BOOSTS" }, { "passes", "PASSES" }, { "gems", "GEMS" } } do
+			for i, tab in { { "boosts", "BOOSTS" }, { "passes", "PASSES" }, { "looks", "LOOKS" }, { "gems", "GEMS" } } do
 				local holder, face, body, fill = chunky(parent, {
 					Name = "Tab_" .. tab[1],
 					Size = UDim2.fromOffset(textWidth(tab[2], size, Enum.Font.LuckiestGuy) + padX * 2, height),
@@ -1249,10 +1341,10 @@ function StoreController:Start()
 		end
 		if phone then
 			local tabs =
-				make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(300, 44), LayoutOrder = 2 }, left)
+				make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(360, 44), LayoutOrder = 2 }, left)
 			pad(tabs, 0, 0, 0, 6)
-			list(tabs, true, 6)
-			makeTabs(tabs, 44, 15, 14)
+			list(tabs, true, 5)
+			makeTabs(tabs, 44, 14, 10)
 		end
 
 		-- The current boosts chip: COINS x4  XP x2
@@ -1438,6 +1530,21 @@ function StoreController:Start()
 		end
 		for i = 1, #passItems, 2 do
 			cardRow(if passItems[i + 1] then { passItems[i], passItems[i + 1] } else { passItems[i] })
+		end
+		-- LOOKS (step 12b): every look, kind by kind, two to a row
+		if Config.Cosmetics.Enabled == true then
+			sectionHeader("looks", "LOOKS")
+			for _, lookKind in Config.Cosmetics.Kinds do
+				local looks = {}
+				for _, item in Config.Cosmetics.Items do
+					if item.Kind == lookKind.Id then
+						table.insert(looks, { "Look", item })
+					end
+				end
+				for i = 1, #looks, 2 do
+					cardRow(if looks[i + 1] then { looks[i], looks[i + 1] } else { looks[i] })
+				end
+			end
 		end
 		sectionHeader("gems", "GEMS")
 		local gems = {}
@@ -1906,6 +2013,10 @@ function StoreController:Start()
 		end
 	end)
 	player:GetAttributeChangedSignal("Passes"):Connect(refreshCards)
+	player:GetAttributeChangedSignal("Cosmetics"):Connect(refreshCards)
+	for _, lookKind in Config.Cosmetics.Kinds do
+		player:GetAttributeChangedSignal(Cosmetics.AttributeFor(lookKind.Id)):Connect(refreshCards)
+	end
 	for _, key in Store.LadderKeys do
 		player:GetAttributeChangedSignal(key):Connect(function()
 			refreshCards()

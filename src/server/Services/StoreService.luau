@@ -7,6 +7,7 @@
 -- Starter Pack: offered once (StarterOffered), after StarterAfterMinutes of play in total, at a quiet moment.
 -- Ladder products (COIN BOOST / XP BOOST) are bought in order: each step boosts more, up to x2
 -- (CoinBoostLevel / XpBoostLevel).
+-- Looks (Cosmetic = a Config.Cosmetics Id): bought once, handed to CosmeticService (step 12b).
 -- VIP: DailyGems once a day (VipGiftDay), given on join or when the day changes.
 -- Studio preview (StudioPreview, switch off): BUY gives the item for free straight away; Studio tests never save.
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -20,6 +21,8 @@ local Calendar = require(Shared.Modules.Calendar)
 local Store = require(Shared.Modules.Store)
 local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
+local CosmeticService = require(script.Parent.CosmeticService)
+local Cosmetics = require(Shared.Modules.Cosmetics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local PotionService = require(script.Parent.PotionService)
 local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
@@ -91,6 +94,9 @@ local function grantProduct(player: Player, product)
 	end
 	if product.Ball then
 		BallService.GiveBall(player, product.Ball)
+	end
+	if product.Cosmetic then
+		CosmeticService.Give(player, product.Cosmetic) -- a look (Config.Cosmetics), worn straight away
 	end
 	if product.Ladder then
 		-- A ladder step: never lower than what's already bought (a step bought twice just keeps the level)
@@ -174,6 +180,9 @@ local function onBuy(player: Player, id: any)
 	end
 	if product and product.Once and (PlayerDataService.Get(player, product.Id) or 0) > 0 then
 		return
+	end
+	if product and product.Cosmetic and Cosmetics.Owns(player, product.Cosmetic) then
+		return -- a look is bought once
 	end
 	if product and product.Ladder and Store.NextStep(player, product.Ladder) ~= product then
 		return -- ladder steps are bought in order, once each

@@ -224,12 +224,14 @@ Config.StartingData = {
 	CoinBoostLevel = 0, -- COIN BOOST ladder steps bought with Robux: coins x 2^this forever (Config.Monetization; v22)
 	XpBoostLevel = 0, -- XP BOOST ladder steps: XP x 2^this forever (v22)
 	VipGiftDay = 0, -- the day number (see Calendar.Day) the VIP daily gems were last given (v21)
+	Cosmetics = {}, -- looks owned (Config.Cosmetics), by Id: { FireTrail = true } (v23)
+	EquippedCosmetics = {}, -- the look worn per kind: { Trail = "FireTrail", LaneSkin = "CandyLane" } (v23)
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 22, -- v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 23, -- v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -299,6 +301,8 @@ Config.RateLimits = {
 	RideHelicopter = 2,
 	Rebirth = 3,
 	StoreBuy = 1,
+	BuyCosmetic = 0.5,
+	EquipCosmetic = 0.2,
 }
 
 -- Gems on/off switch. Addendum 1 keeps gems (earned only, a gem sink comes later); set Enabled = false to hide them.
@@ -3142,6 +3146,11 @@ Config.Monetization = {
 		{ Id = "GemsSmall", ProductId = 0, Robux = 99, Name = "60 GEMS", Text = "A handful of gems.", Gems = 60 },
 		{ Id = "GemsMedium", ProductId = 0, Robux = 399, Name = "300 GEMS", Text = "A bag of gems.", Gems = 300 },
 		{ Id = "GemsLarge", ProductId = 0, Robux = 1599, Name = "1,500 GEMS", Text = "A chest of gems.", Gems = 1500 },
+		-- Robux looks (step 12b): Cosmetic = the Config.Cosmetics item it unlocks (bought once; looks only)
+		{ Id = "LookGalaxyTrail", ProductId = 0, Robux = 149, Name = "GALAXY TRAIL", Cosmetic = "GalaxyTrail" },
+		{ Id = "LookLegendBanner", ProductId = 0, Robux = 149, Name = "LEGEND BANNER", Cosmetic = "LegendBanner" },
+		{ Id = "LookGalaxyBlast", ProductId = 0, Robux = 149, Name = "GALAXY BLAST", Cosmetic = "GalaxyBlast" },
+		{ Id = "LookGoldLane", ProductId = 0, Robux = 149, Name = "GOLD LANE", Cosmetic = "GoldLane" },
 	},
 	-- Luck (LUCKY passes): every rarity from LuckFrom up gets its chance multiplied by the player's luck, then all
 	-- chances are scaled back to 100% (so commons drop a little). Pity and exact guarantees don't change.
@@ -3149,8 +3158,76 @@ Config.Monetization = {
 	StarterAfterMinutes = 10, -- the Starter Pack popup shows once, after this many minutes of play in total...
 	QuietSeconds = 3, -- ...at a quiet moment: this long after the player's last throw (never mid-throw)
 	ChatTag = "[VIP]", -- before VIP owners' names in chat (gold)
-	TrailColor = Color3.fromRGB(255, 200, 40), -- the VIP gold trail
+	TrailColor = Color3.fromRGB(255, 200, 40), -- old VIP gold trail colour (since 12b the VIP GOLD look in Config.Cosmetics)
 	KeepPurchaseIds = 50, -- how many recent purchase ids each save remembers
+}
+
+-- Cosmetics (Addendum 2 section 7, step 12b): looks only, they never change coins, XP or throws.
+-- Bought with gems (Gems = price) or Robux (Product = a Config.Monetization.Products Id), kept forever, one worn per
+-- kind. They live in the store's LOOKS section, so they show while the store is on (Config.Monetization).
+-- Kinds: Trail = a streak behind your rolling ball, Banner = a flag over your pins when you strike,
+-- PinFx = an extra blast when your ball hits the pins, LaneSkin = your own lane's floor. Everyone sees them.
+-- Colors: the look's colours (trails and blasts blend through them; a banner uses 1 = fill, 2 = text);
+-- Word = a banner's text; Material = a lane skin's floor material. Vip = comes with the VIP pass (can't be bought).
+-- A VIP who wears no trail gets the VIP gold trail.
+Config.Cosmetics = {
+	Enabled = true,
+	Kinds = {
+		{ Id = "Trail", Name = "TRAILS", Label = "TRAIL" },
+		{ Id = "Banner", Name = "STRIKE BANNERS", Label = "BANNER" },
+		{ Id = "PinFx", Name = "PIN BLASTS", Label = "PIN BLAST" },
+		{ Id = "LaneSkin", Name = "LANE SKINS", Label = "LANE SKIN" },
+	},
+	Items = {
+		-- Trails
+		{ Id = "FireTrail", Kind = "Trail", Name = "FIRE TRAIL", Gems = 40, Text = "Your ball leaves a streak of fire.",
+			Colors = { Color3.fromRGB(255, 220, 60), Color3.fromRGB(255, 70, 20) } },
+		{ Id = "IceTrail", Kind = "Trail", Name = "ICE TRAIL", Gems = 120, Text = "A frosty blue streak.",
+			Colors = { Color3.fromRGB(230, 250, 255), Color3.fromRGB(60, 190, 255) } },
+		{ Id = "ToxicTrail", Kind = "Trail", Name = "TOXIC TRAIL", Gems = 300, Text = "Glowing green goo.",
+			Colors = { Color3.fromRGB(200, 255, 80), Color3.fromRGB(40, 200, 40) } },
+		{ Id = "GalaxyTrail", Kind = "Trail", Name = "GALAXY TRAIL", Product = "LookGalaxyTrail",
+			Text = "Purple, pink and blue, like space.",
+			Colors = { Color3.fromRGB(150, 70, 255), Color3.fromRGB(255, 80, 200), Color3.fromRGB(70, 220, 255) } },
+		{ Id = "VipGold", Kind = "Trail", Name = "VIP GOLD", Vip = true, Text = "Comes with the VIP pass.",
+			Colors = { Color3.fromRGB(255, 240, 160), Color3.fromRGB(255, 200, 40) } },
+		-- Strike banners
+		{ Id = "BoomBanner", Kind = "Banner", Name = "BOOM! BANNER", Gems = 40, Word = "BOOM!",
+			Text = "BOOM! flies over your pins on every strike.",
+			Colors = { Color3.fromRGB(255, 60, 60), Color3.fromRGB(255, 230, 60) } },
+		{ Id = "EasyBanner", Kind = "Banner", Name = "TOO EASY BANNER", Gems = 120, Word = "TOO EASY",
+			Text = "Let the whole alley know.",
+			Colors = { Color3.fromRGB(40, 140, 255), Color3.fromRGB(255, 255, 255) } },
+		{ Id = "CrushedBanner", Kind = "Banner", Name = "CRUSHED BANNER", Gems = 300, Word = "CRUSHED!",
+			Text = "Pink and purple, loud and proud.",
+			Colors = { Color3.fromRGB(170, 60, 255), Color3.fromRGB(255, 120, 220) } },
+		{ Id = "LegendBanner", Kind = "Banner", Name = "LEGEND BANNER", Product = "LookLegendBanner", Word = "LEGEND",
+			Text = "Black and gold, for legends only.",
+			Colors = { Color3.fromRGB(25, 20, 30), Color3.fromRGB(255, 200, 40) } },
+		-- Pin blasts
+		{ Id = "ConfettiBlast", Kind = "PinFx", Name = "PARTY BLAST", Gems = 40, Text = "Every hit pops like a party.",
+			Colors = { Color3.fromRGB(255, 80, 120), Color3.fromRGB(255, 220, 60), Color3.fromRGB(70, 220, 255) } },
+		{ Id = "FrostBlast", Kind = "PinFx", Name = "FROST BLAST", Gems = 120, Text = "Pins burst into ice.",
+			Colors = { Color3.fromRGB(230, 250, 255), Color3.fromRGB(80, 200, 255) } },
+		{ Id = "ToxicBlast", Kind = "PinFx", Name = "TOXIC BLAST", Gems = 300, Text = "A green splash.",
+			Colors = { Color3.fromRGB(200, 255, 80), Color3.fromRGB(40, 200, 40) } },
+		{ Id = "GalaxyBlast", Kind = "PinFx", Name = "GALAXY BLAST", Product = "LookGalaxyBlast",
+			Text = "A burst of stars and space dust.",
+			Colors = { Color3.fromRGB(150, 70, 255), Color3.fromRGB(255, 255, 255), Color3.fromRGB(70, 220, 255) } },
+		-- Lane skins
+		{ Id = "CandyLane", Kind = "LaneSkin", Name = "CANDY LANE", Gems = 40, Text = "Your lane turns pink.",
+			Colors = { Color3.fromRGB(255, 150, 200) }, Material = Enum.Material.SmoothPlastic },
+		{ Id = "IceLane", Kind = "LaneSkin", Name = "ICE LANE", Gems = 120, Text = "Bowl on a frozen lake.",
+			Colors = { Color3.fromRGB(170, 225, 255) }, Material = Enum.Material.Ice },
+		{ Id = "LavaLane", Kind = "LaneSkin", Name = "LAVA LANE", Gems = 300, Text = "Hot rock under your feet.",
+			Colors = { Color3.fromRGB(120, 40, 30) }, Material = Enum.Material.CrackedLava },
+		{ Id = "GoldLane", Kind = "LaneSkin", Name = "GOLD LANE", Product = "LookGoldLane", Text = "Pure shiny gold.",
+			Colors = { Color3.fromRGB(255, 195, 60) }, Material = Enum.Material.Foil },
+	},
+	LaneParts = { "LaneFloor", "PinDeck", "Approach" }, -- the lane parts a lane skin repaints
+	BannerTime = 2.2, -- seconds a strike banner stays up
+	BannerHeight = 9, -- studs above the head pin
+	BlastSize = 1, -- pin blast strength (1 = about a strike crash's own burst)
 }
 
 Config.Milestones = {
