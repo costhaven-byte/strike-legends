@@ -230,6 +230,141 @@ local function addTrail(rig: BasePart, row, size: number, handle, tier: number, 
 	end
 end
 
+-- One Bits row of a trail style (Config.BallVfx.TrailStyles): particles left hanging in the world behind the ball.
+-- colors = the trail's own colours, for rows without their own. power = Config.BallVfx.StylePower for the tier.
+local function addBits(rig: BasePart, row, size: number, colors: { Color3 }, power: number)
+	local radius = (row.Radius or 0.5) * size
+	local holder = weldedPart(rig, "TrailBits", Vector3.one * radius * 2, CFrame.identity)
+	holder.Shape = Enum.PartType.Ball
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Texture = IMAGES[row.Image] or row.Image
+	emitter.Color = colorSequence(row.Colors or colors)
+	emitter.LightEmission = row.Emission or 0.5
+	emitter.LightInfluence = if (row.Emission or 0.5) > 0 then 0 else 1
+	emitter.Shape = Enum.ParticleEmitterShape.Sphere
+	emitter.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+	emitter.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
+	local grow = (0.85 + power * 0.15) * size
+	local s = row.Size
+	emitter.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, s[1] * grow),
+		NumberSequenceKeypoint.new(0.3, s[2] * grow),
+		NumberSequenceKeypoint.new(1, s[3] * grow),
+	})
+	local solid = row.Transparency or 0
+	if row.Twinkle then
+		emitter.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.15, solid),
+			NumberSequenceKeypoint.new(0.35, 0.6 + solid * 0.4),
+			NumberSequenceKeypoint.new(0.55, solid),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+	else
+		emitter.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.1, solid),
+			NumberSequenceKeypoint.new(0.6, solid + (1 - solid) * 0.3),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+	end
+	emitter.Lifetime = NumberRange.new(row.Life[1], row.Life[2])
+	emitter.Speed = NumberRange.new(row.Speed[1] * size, row.Speed[2] * size)
+	emitter.Acceleration = Vector3.new(0, (row.Rise or 0) * size, 0)
+	emitter.Drag = row.Drag or 1
+	if not row.Upright then
+		emitter.Rotation = NumberRange.new(0, 360)
+		emitter.RotSpeed = NumberRange.new(-(row.Spin or 0), row.Spin or 0)
+	end
+	emitter.Brightness = row.Bright or 1
+	emitter.Rate = row.Rate * power
+	emitter.Parent = holder
+	return emitter
+end
+
+-- A streak painted flat on the lane under the ball (frozen lane, goo, scorch)
+local function addFloor(rig: BasePart, row, size: number, colors: { Color3 })
+	local width = row.Width * size
+	local height = -size / 2 + 0.04
+	local left = Instance.new("Attachment")
+	left.Position = Vector3.new(-width / 2, height, 0)
+	left.Parent = rig
+	local right = Instance.new("Attachment")
+	right.Position = Vector3.new(width / 2, height, 0)
+	right.Parent = rig
+	local trail = Instance.new("Trail")
+	trail.Name = "FloorTrail"
+	trail.Attachment0 = left
+	trail.Attachment1 = right
+	trail.FaceCamera = false
+	trail.Texture = IMAGES.TrailSoft
+	trail.Color = colorSequence(row.Colors or colors)
+	local solid = row.Transparency or 0.4
+	trail.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, solid),
+		NumberSequenceKeypoint.new(0.6, solid + (1 - solid) * 0.35),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	trail.Lifetime = row.Lifetime
+	trail.LightEmission = row.Emission or 0.5
+	trail.LightInfluence = 0
+	trail.MinLength = 0.05
+	trail.Parent = rig
+end
+
+-- Mythic: flat glowing rings that spread out across the lane from under the ball
+local function addShockwave(rig: BasePart, row, size: number, colors: { Color3 })
+	local spot = Instance.new("Attachment")
+	spot.Position = Vector3.new(0, -size / 2 + 0.06, 0)
+	spot.Parent = rig
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Texture = IMAGES.Ring
+	emitter.Color = colorSequence(colors)
+	emitter.LightEmission = row.Emission
+	emitter.LightInfluence = 0
+	-- Moving straight up (barely) and drawn flat across that motion = lying on the floor
+	emitter.EmissionDirection = Enum.NormalId.Top
+	emitter.SpreadAngle = Vector2.zero
+	emitter.Speed = NumberRange.new(0.01)
+	emitter.Orientation = Enum.ParticleOrientation.VelocityPerpendicular
+	emitter.Size = NumberSequence.new(row.Size[1] * size, row.Size[2] * size)
+	emitter.Transparency = NumberSequence.new(row.Transparency, 1)
+	emitter.Lifetime = NumberRange.new(row.Life)
+	emitter.Rate = row.Rate
+	emitter.Parent = spot
+	return emitter
+end
+
+-- Adds a trail style's bits, floor streak and light (Config.BallVfx.TrailStyles) for a ball of this tier
+local function addStyle(rig: BasePart, style, size: number, handle, tier: number, colors: { Color3 }, hasLight: boolean)
+	local power = VFX.StylePower[tier] or 1
+	for _, row in style.Bits or {} do
+		if tier >= (row.FromRarity or 1) then
+			table.insert(handle.Emitters, addBits(rig, row, size, colors, power))
+		end
+	end
+	local floor = style.Floor
+	if floor and tier >= (floor.FromRarity or 1) then
+		addFloor(rig, floor, size, colors)
+	end
+	if tier >= 6 and VFX.MythicShockwave then
+		table.insert(handle.Emitters, addShockwave(rig, VFX.MythicShockwave, size, colors))
+	end
+	handle.Flicker = style.Flicker or 0
+	local lightRow = style.Light
+	if lightRow and tier >= 3 and not hasLight then -- a ball with its own glow keeps just that one
+		local light = Instance.new("PointLight")
+		light.Name = "StyleLight"
+		light.Color = lightRow.Color
+		light.Brightness = lightRow.Brightness * power
+		light.Range = math.max(lightRow.Range * size, 4)
+		light.Parent = rig
+		if lightRow.Flicker then
+			handle.FlickerLights = { { Light = light, Amount = lightRow.Flicker } }
+		end
+	end
+end
+
 -- Spins a twisting ribbon around the ball's path, sways it and flickers its brightness
 local function moveTrail(motion, t: number)
 	local angle = motion.Phase + t * motion.Twist * 2 * math.pi
@@ -385,13 +520,14 @@ end
 -- Adds the effects for ballId to a ball part. Lane balls get moved with :Move() every frame;
 -- held balls are followed automatically. Returns a handle with :Move, :SetEnabled and :Destroy.
 -- options (lane balls): Level = the thrower's Power Level (grows the trail), TrailColors = a worn cosmetic
--- trail's colours, which replace the ball's own trail colours (one trail, never a second one on top)
+-- trail's colours, which replace the ball's own trail colours (one trail, never a second one on top),
+-- TrailStyle + TrailTier = the cosmetic's style (Config.BallVfx.TrailStyles) and richness, replacing the ball's
 function BallFx.Attach(
 	ball: BasePart,
 	ballId: string?,
 	mode: Mode,
 	forward: Vector3?,
-	options: { Level: number?, TrailColors: { Color3 }? }?
+	options: { Level: number?, TrailColors: { Color3 }?, TrailStyle: string?, TrailTier: number? }?
 )
 	local info = Balls.Get(ballId) or Config.Balls[1]
 	local look = lookFor(info)
@@ -417,6 +553,9 @@ function BallFx.Attach(
 		Trails = {},
 		Motions = {},
 		Clock = 0,
+		Flicker = 0, -- how much the trails flicker (fire, electric trail styles)
+		FlickerLights = nil,
+		TrailBright = {},
 		MotionSpeed = 1, -- slow-motion can lower this so the trail's motion slows with the ball
 		Enabled = true,
 	}
@@ -425,7 +564,7 @@ function BallFx.Attach(
 		local colors = options and options.TrailColors
 		local tier = Balls.RarityIndex(info.Rarity)
 		if colors then
-			tier = math.max(tier, VFX.CosmeticTrailTier)
+			tier = math.max(tier, options.TrailTier or VFX.CosmeticTrailTier)
 		end
 		local level = options and options.Level or 1
 		local main = nil -- the first plain row gets every layer (a bolt row with its own Texture doesn't count)
@@ -437,6 +576,12 @@ function BallFx.Attach(
 		for index, row in look.Trails or {} do
 			addTrail(rig, tieredRow(row, tier, level, colors), size, handle, tier, index == main)
 		end
+		-- The style: what the trail looks like it's made of (a worn cosmetic's, else the ball's own, else stardust)
+		local styleName = (options and options.TrailStyle) or VFX.BallStyles[info.Id] or "Stardust"
+		local style = VFX.TrailStyles[styleName] or VFX.TrailStyles.Stardust
+		local mainRow = look.Trails and main and look.Trails[main]
+		local trailColors = colors or (mainRow and mainRow.Colors) or { info.Trail }
+		addStyle(rig, style, size, handle, tier, trailColors, look.Light ~= nil)
 	end
 	for _, row in look.Particles or {} do
 		table.insert(handle.Emitters, addParticles(rig, row, size, rateScale))
@@ -519,6 +664,7 @@ function BallFx.Attach(
 	for _, descendant in rig:GetDescendants() do
 		if descendant:IsA("Trail") then
 			table.insert(handle.Trails, descendant)
+			handle.TrailBright[descendant] = descendant.Brightness
 		end
 	end
 
@@ -572,6 +718,16 @@ RunService.RenderStepped:Connect(function(dt)
 		handle.Clock += dt * handle.MotionSpeed
 		for _, motion in handle.Motions do
 			moveTrail(motion, handle.Clock)
+		end
+		if handle.Flicker > 0 then
+			local flick = 1 + handle.Flicker * math.noise(handle.Clock * 11, 3.7)
+			for trail, bright in handle.TrailBright do
+				trail.Brightness = bright * flick
+			end
+		end
+		for _, row in handle.FlickerLights or {} do
+			row.Base = row.Base or row.Light.Brightness
+			row.Light.Brightness = row.Base * math.max(0.2, 1 + row.Amount * math.noise(handle.Clock * 13, 9.1) * 1.5)
 		end
 		for _, ring in handle.Rings do
 			placeRing(ring, t)

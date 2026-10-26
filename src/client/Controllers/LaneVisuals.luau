@@ -433,6 +433,8 @@ local function playThrow(data)
 	local fx = BallFx.Attach(ball, data.BallId, "Lane", forward, {
 		Level = feel.Level,
 		TrailColors = look and look.Colors,
+		TrailStyle = look and look.Style,
+		TrailTier = look and look.Tier,
 	})
 	local lights = LaneFx.FollowLights(lane, if look then look.Colors[#look.Colors] else ballInfo.Trail)
 	BallFx.Dim(ball)

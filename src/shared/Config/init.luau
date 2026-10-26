@@ -909,6 +909,14 @@ Config.BallVfx = {
 		TrailCore = "rbxassetid://135350987657237", -- tight bright line (SL_Trail_Core)
 		TrailWisp = "rbxassetid://124462490268355", -- flowing vapour strands, tiles along the trail (SL_Trail_Wisp)
 		TrailRainbow = "rbxassetid://109513255032556", -- rainbow bands across the width + vapour (SL_Trail_Rainbow)
+		-- Trail style bits (assets/trail_fx, made by gen_trail_fx.py, 2026-10-26)
+		Snowflake = "rbxassetid://135281416700469",
+		Bubble = "rbxassetid://96411811936869",
+		Smoke = "rbxassetid://82362520183746",
+		Ember = "rbxassetid://127817510408135",
+		FlameTongue = "rbxassetid://76542934270567",
+		Goo = "rbxassetid://88920115975171",
+		Coin = "rbxassetid://96789932966178", -- already gold: use white Colors so it keeps its own
 	},
 	-- Every trail row is drawn as these layers so it reads as real light: a soft glow, a wispy body that
 	-- spreads out and thins as it ages, and a short hot core in the row's colours (lightened).
@@ -1010,6 +1018,150 @@ Config.BallVfx = {
 		Spin = 40,
 		Emission = 0.4,
 	},
+	-- Trail styles (2026-10-26 owner: trails must look like their name and get cooler with rarity).
+	-- A style adds real things the ball leaves behind on top of its trail ribbons: flames and smoke, snowflakes
+	-- and a frozen lane, bubbles and dripping goo, stars and nebula clouds, coins, sparks and arcs.
+	--   Bits:   particles left hanging in the world behind the ball. Image, Colors (nil = the trail's own colours),
+	--           Rate (per second at Legendary power), Size = { birth, biggest, death } in ball widths,
+	--           Life, Speed, Rise (pull up; minus = falls), Drag, Spin, Twinkle (blinks), Emission (0-1 glow),
+	--           Transparency (at its most solid), Radius (spawn shell), FromRarity (1 Common .. 6 Mythic),
+	--           Bright (glow strength, default 1), Upright (no random turn: flames point up).
+	--   Floor:  a streak painted on the lane under the ball (frozen lane, goo, scorch). Width in ball widths,
+	--           Lifetime in seconds, FromRarity.
+	--   Flicker: how much the trail's brightness flickers (fire, electric). Light: a glow following the ball,
+	--           Flicker makes it flicker too.
+	-- Power: how strong a style is at each rarity (multiplies Rate; Size grows a little with it).
+	-- Ball styles: BallStyles below. A ball without one gets Stardust (its own colours). Cosmetic trails name their
+	-- style and tier in Config.Cosmetics (Style, Tier).
+	StylePower = { 0.35, 0.5, 0.65, 0.8, 1, 1.25 },
+	TrailStyles = {
+		Stardust = {
+			Bits = {
+				{ Image = "Ember", FromRarity = 2, Rate = 30, Size = { 0.05, 0.12, 0 }, Life = { 0.5, 1 },
+					Speed = { 0.1, 0.4 }, Rise = 0.3, Twinkle = true, Emission = 0.7, Transparency = 0.15, Radius = 0.4 },
+				{ Image = "Star", FromRarity = 3, Rate = 14, Size = { 0, 0.22, 0 }, Life = { 0.5, 0.9 },
+					Speed = { 0, 0.15 }, Spin = 90, Twinkle = true, Emission = 0.8, Transparency = 0.1, Radius = 0.5 },
+			},
+			Floor = { FromRarity = 4, Width = 0.7, Lifetime = 0.7, Transparency = 0.55, Emission = 0.6 },
+		},
+		Fire = {
+			Flicker = 0.35,
+			Bits = {
+				{ Image = "FlameTongue", Rate = 70, Upright = true, Bright = 2,
+					Colors = { Color3.fromRGB(255, 245, 170), Color3.fromRGB(255, 160, 30), Color3.fromRGB(230, 50, 10) },
+					Size = { 0.55, 0.8, 0.15 }, Life = { 0.25, 0.5 }, Speed = { 0.2, 0.6 }, Rise = 6, Drag = 2,
+					Emission = 1, Transparency = 0, Radius = 0.35 },
+				{ Image = "FlameTongue", FromRarity = 3, Rate = 30, Upright = true, Bright = 1.5,
+					Colors = { Color3.fromRGB(255, 120, 20), Color3.fromRGB(180, 20, 0) },
+					Size = { 0.9, 1.2, 0.3 }, Life = { 0.3, 0.55 }, Speed = { 0.1, 0.3 }, Rise = 4, Drag = 2,
+					Emission = 0.9, Transparency = 0.2, Radius = 0.3 },
+				{ Image = "Ember", Rate = 25, Colors = { Color3.fromRGB(255, 220, 120), Color3.fromRGB(255, 90, 20) },
+					Size = { 0.08, 0.1, 0 }, Life = { 0.6, 1.2 }, Speed = { 0.8, 2 }, Rise = 3, Drag = 1.5, Twinkle = true,
+					Emission = 1, Transparency = 0, Radius = 0.4 },
+				{ Image = "Smoke", FromRarity = 3, Rate = 10, Colors = { Color3.fromRGB(70, 55, 50), Color3.fromRGB(35, 30, 30) },
+					Size = { 0.4, 1, 1.6 }, Life = { 0.8, 1.3 }, Speed = { 0.2, 0.5 }, Rise = 2, Spin = 40,
+					Emission = 0, Transparency = 0.55, Radius = 0.3 },
+			},
+			Floor = { FromRarity = 2, Width = 0.6, Lifetime = 0.6, Transparency = 0.35, Emission = 0.9,
+				Colors = { Color3.fromRGB(255, 170, 40), Color3.fromRGB(180, 30, 0) } },
+			Light = { Color = Color3.fromRGB(255, 130, 40), Brightness = 2.5, Range = 7, Flicker = 0.5 },
+		},
+		Ice = {
+			Bits = {
+				{ Image = "Snowflake", Rate = 22, Colors = { Color3.fromRGB(240, 252, 255), Color3.fromRGB(150, 220, 255) },
+					Size = { 0.12, 0.28, 0.1 }, Life = { 0.9, 1.6 }, Speed = { 0.3, 0.9 }, Rise = -0.7, Drag = 1.5, Spin = 70,
+					Emission = 0.6, Transparency = 0, Radius = 0.45 },
+				{ Image = "Smoke", Rate = 12, Colors = { Color3.fromRGB(220, 245, 255), Color3.fromRGB(140, 200, 255) },
+					Size = { 0.4, 0.9, 1.4 }, Life = { 0.6, 1 }, Speed = { 0.1, 0.3 }, Rise = -0.2, Spin = 30,
+					Emission = 0.3, Transparency = 0.7, Radius = 0.3 },
+				{ Image = "Diamond", FromRarity = 3, Rate = 12, Colors = { Color3.fromRGB(230, 250, 255), Color3.fromRGB(90, 200, 255) },
+					Size = { 0.1, 0.16, 0 }, Life = { 0.5, 0.9 }, Speed = { 0.6, 1.5 }, Rise = -2, Spin = 200,
+					Twinkle = true, Emission = 0.8, Transparency = 0, Radius = 0.45 },
+			},
+			Floor = { FromRarity = 1, Width = 0.8, Lifetime = 1.6, Transparency = 0.35, Emission = 0.35,
+				Colors = { Color3.fromRGB(235, 250, 255), Color3.fromRGB(120, 200, 255) } },
+			Light = { Color = Color3.fromRGB(150, 220, 255), Brightness = 1.5, Range = 6 },
+		},
+		Toxic = {
+			Bits = {
+				{ Image = "Bubble", Rate = 18, Colors = { Color3.fromRGB(200, 255, 120), Color3.fromRGB(90, 230, 40) },
+					Size = { 0.05, 0.3, 0.38 }, Life = { 0.6, 1.2 }, Speed = { 0.2, 0.5 }, Rise = 1.5, Drag = 1,
+					Emission = 0.55, Transparency = 0.05, Radius = 0.45 },
+				{ Image = "Goo", Rate = 14, Colors = { Color3.fromRGB(170, 255, 60), Color3.fromRGB(60, 200, 20) },
+					Size = { 0.14, 0.18, 0.1 }, Life = { 0.4, 0.7 }, Speed = { 0.1, 0.4 }, Rise = -8,
+					Emission = 0.6, Transparency = 0, Radius = 0.45 },
+				{ Image = "Smoke", FromRarity = 3, Rate = 10, Colors = { Color3.fromRGB(150, 255, 80), Color3.fromRGB(40, 120, 20) },
+					Size = { 0.4, 1, 1.5 }, Life = { 0.7, 1.2 }, Speed = { 0.1, 0.4 }, Rise = 1, Spin = 30,
+					Emission = 0.4, Transparency = 0.65, Radius = 0.3 },
+			},
+			Floor = { FromRarity = 1, Width = 0.75, Lifetime = 1.3, Transparency = 0.25, Emission = 0.6,
+				Colors = { Color3.fromRGB(180, 255, 70), Color3.fromRGB(50, 170, 20) } },
+			Light = { Color = Color3.fromRGB(130, 255, 60), Brightness = 1.5, Range = 6 },
+		},
+		Galaxy = {
+			Bits = {
+				{ Image = "Star", Rate = 30,
+					Colors = { Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 150, 230), Color3.fromRGB(130, 210, 255) },
+					Size = { 0, 0.22, 0 }, Life = { 0.8, 1.6 }, Speed = { 0, 0.2 }, Spin = 60, Twinkle = true,
+					Emission = 1, Transparency = 0, Radius = 0.5 },
+				{ Image = "Smoke", Rate = 14,
+					Colors = { Color3.fromRGB(160, 70, 255), Color3.fromRGB(255, 80, 200), Color3.fromRGB(60, 160, 255) },
+					Size = { 0.5, 1.1, 1.8 }, Life = { 0.8, 1.4 }, Speed = { 0.1, 0.3 }, Spin = 25,
+					Emission = 0.7, Transparency = 0.6, Radius = 0.3 },
+				{ Image = "Ember", FromRarity = 4, Rate = 30, Colors = { Color3.fromRGB(200, 230, 255), Color3.fromRGB(200, 120, 255) },
+					Size = { 0.03, 0.07, 0 }, Life = { 0.6, 1.2 }, Speed = { 0.3, 0.8 }, Drag = 2, Twinkle = true,
+					Emission = 1, Transparency = 0, Radius = 0.55 },
+			},
+			Floor = { FromRarity = 2, Width = 0.8, Lifetime = 1, Transparency = 0.45, Emission = 0.8,
+				Colors = { Color3.fromRGB(150, 70, 255), Color3.fromRGB(60, 120, 255) } },
+			Light = { Color = Color3.fromRGB(180, 110, 255), Brightness = 1.5, Range = 6 },
+		},
+		Gold = {
+			Flicker = 0.15,
+			Bits = {
+				{ Image = "Coin", Rate = 12, Colors = { Color3.fromRGB(255, 255, 255) }, Bright = 1.5,
+					Size = { 0.3, 0.34, 0.26 }, Life = { 0.6, 1 }, Speed = { 2, 3.5 }, Rise = -10, Spin = 360,
+					Emission = 0.3, Transparency = 0, Radius = 0.5 },
+				{ Image = "Star", Rate = 26, Colors = { Color3.fromRGB(255, 250, 200), Color3.fromRGB(255, 200, 40) },
+					Size = { 0, 0.2, 0 }, Life = { 0.5, 1 }, Speed = { 0, 0.3 }, Spin = 120, Twinkle = true,
+					Emission = 1, Transparency = 0, Radius = 0.5 },
+				{ Image = "Ember", FromRarity = 3, Rate = 20, Colors = { Color3.fromRGB(255, 230, 120) },
+					Size = { 0.04, 0.08, 0 }, Life = { 0.5, 1 }, Speed = { 0.2, 0.6 }, Rise = 0.5, Twinkle = true,
+					Emission = 1, Transparency = 0, Radius = 0.45 },
+			},
+			Floor = { FromRarity = 2, Width = 0.7, Lifetime = 0.9, Transparency = 0.4, Emission = 0.8,
+				Colors = { Color3.fromRGB(255, 230, 120), Color3.fromRGB(230, 150, 20) } },
+			Light = { Color = Color3.fromRGB(255, 200, 70), Brightness = 2, Range = 6 },
+		},
+		Electric = {
+			Flicker = 0.6,
+			Bits = {
+				{ Image = "Ember", Rate = 40, Colors = { Color3.fromRGB(240, 250, 255), Color3.fromRGB(80, 200, 255) },
+					Size = { 0.06, 0.08, 0 }, Life = { 0.15, 0.35 }, Speed = { 3, 6 }, Drag = 5,
+					Emission = 1, Transparency = 0, Radius = 0.45 },
+				{ Image = "Bolt", Rate = 12, Colors = { Color3.fromRGB(230, 245, 255), Color3.fromRGB(90, 190, 255) },
+					Size = { 0.5, 0.7, 0.4 }, Life = { 0.07, 0.15 }, Speed = { 0, 0.2 }, Spin = 0,
+					Emission = 1, Transparency = 0, Radius = 0.55 },
+				{ Image = "Smoke", FromRarity = 4, Rate = 8, Colors = { Color3.fromRGB(120, 200, 255), Color3.fromRGB(60, 80, 200) },
+					Size = { 0.4, 0.8, 1.2 }, Life = { 0.4, 0.7 }, Speed = { 0.1, 0.3 }, Spin = 40,
+					Emission = 0.6, Transparency = 0.7, Radius = 0.3 },
+			},
+			Floor = { FromRarity = 3, Width = 0.35, Lifetime = 0.5, Transparency = 0.3, Emission = 1,
+				Colors = { Color3.fromRGB(220, 245, 255), Color3.fromRGB(60, 160, 255) } },
+			Light = { Color = Color3.fromRGB(110, 200, 255), Brightness = 2, Range = 6, Flicker = 0.8 },
+		},
+	},
+	-- Which balls draw which style (ball Id -> TrailStyles name), matched to the ball's name
+	BallStyles = {
+		Electric = "Electric", Thunder = "Electric", Plasma = "Electric", Lightning = "Electric",
+		Toxic = "Toxic",
+		Frostbite = "Ice", DumpsterDiamond = "Ice", Crystal = "Ice",
+		Magma = "Fire", Inferno = "Fire", Dragon = "Fire", Sunburst = "Fire", Daybreak = "Fire",
+		Galaxy = "Galaxy", Nebula = "Galaxy", Void = "Galaxy", Supernova = "Galaxy", CloudSwirl = "Galaxy",
+		Golden = "Gold", Championship = "Gold", SolidGold = "Gold",
+	},
+	-- Mythic balls also send glowing shock rings across the lane in their trail's colours
+	MythicShockwave = { Rate = 4, Size = { 0.6, 3.5 }, Life = 0.7, Transparency = 0.35, Emission = 0.8 },
 	Balls = {
 		-- Back Alley balls: effects from the design notes (tape scraps, rust sparks, chrome glint, crystal shards)
 		DuctTape = {
@@ -3183,7 +3335,8 @@ Config.Monetization = {
 -- Kinds: Trail = a streak behind your rolling ball, Banner = a flag over your pins when you strike,
 -- PinFx = an extra blast when your ball hits the pins, LaneSkin = your own lane's floor. Everyone sees them.
 -- Colors: the look's colours (trails and blasts blend through them; a banner uses 1 = fill, 2 = text);
--- Word = a banner's text; Material = a lane skin's floor material. Vip = comes with the VIP pass (can't be bought).
+-- Word = a banner's text; Material = a lane skin's floor material. Style + Tier (trails) = the Config.BallVfx.TrailStyles
+-- style it draws and how rich (4 Epic .. 6 Mythic; pricier = richer). Vip = comes with the VIP pass (can't be bought).
 -- A VIP who wears no trail gets the VIP gold trail.
 Config.Cosmetics = {
 	Enabled = true,
@@ -3195,16 +3348,20 @@ Config.Cosmetics = {
 	},
 	Items = {
 		-- Trails
-		{ Id = "FireTrail", Kind = "Trail", Name = "FIRE TRAIL", Gems = 40, Text = "Your ball leaves a streak of fire.",
+		{ Id = "FireTrail", Kind = "Trail", Name = "FIRE TRAIL", Gems = 40, Style = "Fire", Tier = 4,
+			Text = "Real flames, flying embers and smoke, and a burning streak on the lane.",
 			Colors = { Color3.fromRGB(255, 220, 60), Color3.fromRGB(255, 70, 20) } },
-		{ Id = "IceTrail", Kind = "Trail", Name = "ICE TRAIL", Gems = 120, Text = "A frosty blue streak.",
+		{ Id = "IceTrail", Kind = "Trail", Name = "ICE TRAIL", Gems = 120, Style = "Ice", Tier = 5,
+			Text = "Snowflakes, frost mist and ice shards. The lane freezes behind your ball.",
 			Colors = { Color3.fromRGB(230, 250, 255), Color3.fromRGB(60, 190, 255) } },
-		{ Id = "ToxicTrail", Kind = "Trail", Name = "TOXIC TRAIL", Gems = 300, Text = "Glowing green goo.",
+		{ Id = "ToxicTrail", Kind = "Trail", Name = "TOXIC TRAIL", Gems = 300, Style = "Toxic", Tier = 5,
+			Text = "Bubbling, dripping toxic goo and green fumes, with a slime trail on the lane.",
 			Colors = { Color3.fromRGB(200, 255, 80), Color3.fromRGB(40, 200, 40) } },
-		{ Id = "GalaxyTrail", Kind = "Trail", Name = "GALAXY TRAIL", Product = "LookGalaxyTrail",
-			Text = "Purple, pink and blue, like space.",
+		{ Id = "GalaxyTrail", Kind = "Trail", Name = "GALAXY TRAIL", Product = "LookGalaxyTrail", Style = "Galaxy", Tier = 6,
+			Text = "Twinkling stars and glowing nebula clouds, plus Mythic shock rings.",
 			Colors = { Color3.fromRGB(150, 70, 255), Color3.fromRGB(255, 80, 200), Color3.fromRGB(70, 220, 255) } },
-		{ Id = "VipGold", Kind = "Trail", Name = "VIP GOLD", Vip = true, Text = "Comes with the VIP pass.",
+		{ Id = "VipGold", Kind = "Trail", Name = "VIP GOLD", Vip = true, Style = "Gold", Tier = 6,
+			Text = "Gold coins, glitter and a golden shine. Comes with the VIP pass.",
 			Colors = { Color3.fromRGB(255, 240, 160), Color3.fromRGB(255, 200, 40) } },
 		-- Strike banners
 		{ Id = "BoomBanner", Kind = "Banner", Name = "BOOM! BANNER", Gems = 40, Word = "BOOM!",
