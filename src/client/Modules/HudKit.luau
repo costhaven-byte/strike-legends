@@ -91,8 +91,9 @@ HudKit.Layout = {
 	Power = { Pc = { 32, 338, 176, 66, "L", "T" }, Phone = { 162, 134, 118, 46, "L", "T" } },
 	Daily = { Pc = { 32, 420, 56, 56, "L", "T" }, Phone = { 736, 40, 44, 46, "R", "T" } },
 	Breakdown = { Pc = { 272, 190, 330, nil, "L", "T" }, Phone = { 272, 50, 300, nil, "C", "T" } },
-	LevelBar = { Pc = { 650, 72, 620, 52, "C", "T" }, Phone = { 262, 42, 320, 34, "C", "T" } },
-	Rebirth = { Pc = { 1290, 70, 56, 56, "C", "T" }, Phone = { 592, 38, 44, 46, "C", "T" } },
+	-- Level bar + REBIRTH sit in the strip at the very top (next to Roblox's own buttons), so the boss pill fits under them
+	LevelBar = { Pc = { 650, 14, 620, 52, "C", "T" }, Phone = { 262, 6, 320, 34, "C", "T" } },
+	Rebirth = { Pc = { 1290, 12, 56, 56, "C", "T" }, Phone = { 592, 2, 44, 46, "C", "T" } },
 	AfterThrow = { Pc = { 660, 140, 600, 30, "C", "T" }, Phone = { 272, 84, 300, 18, "C", "T" } },
 	Gifts = { Pc = { 1832, 72, 56, 56, "R", "T" }, Phone = { 788, 40, 44, 46, "R", "T" } },
 	Teleport = { Pc = { 1832, 146, 56, 56, "R", "T" }, Phone = { 788, 94, 44, 46, "R", "T" } },

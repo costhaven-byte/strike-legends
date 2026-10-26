@@ -115,7 +115,7 @@ function BossController:Start()
 	local pill = new("Frame", {
 		Name = "LobbyPill",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 96),
+		Position = UDim2.new(0.5, 0, 0, 20), -- just under the level bar, above the "+XP" line
 		Size = UDim2.fromOffset(440, 40),
 		BackgroundColor3 = C.Panel,
 		BackgroundTransparency = 0.1,
@@ -131,7 +131,7 @@ function BossController:Start()
 	local top = new("Frame", {
 		Name = "FightHud",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 8), -- where the level bar is (hidden during the fight)
+		Position = UDim2.new(0.5, 0, 0, -42), -- where the level bar is (hidden during the fight)
 		Size = UDim2.fromOffset(480, 120), -- narrow enough to stay clear of the power arc on the right
 		BackgroundTransparency = 1,
 		Visible = false,
@@ -228,7 +228,7 @@ function BossController:Start()
 
 	HudKit.OnLayout(function(phone)
 		screenScale.Scale = if phone then 0.7 else 1
-		pill.Position = UDim2.new(0.5, 0, 0, if phone then 64 else 96)
+		pill.Position = UDim2.new(0.5, 0, 0, if phone then 14 else 20)
 	end)
 
 	-- ===== The helipad: sign + BOARD prompt =====
