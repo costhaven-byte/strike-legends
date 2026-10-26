@@ -60,7 +60,11 @@ local function buildBubble(head: BasePart)
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	local token = 0
-	return function(text: string)
+	local function hush()
+		token += 1
+		gui.Enabled = false
+	end
+	local function say(text: string)
 		token += 1
 		local mine = token
 		gui.Enabled = true
@@ -79,6 +83,7 @@ local function buildBubble(head: BasePart)
 			end
 		end)
 	end
+	return say, hush
 end
 
 function RizzoController:Start()
@@ -101,7 +106,7 @@ function RizzoController:Start()
 
 	local body = rizzo:WaitForChild("Rizzo_R15_Body")
 	local head = body:WaitForChild("Head_Node"):FindFirstChildWhichIsA("BasePart", true) :: BasePart
-	local say = buildBubble(head)
+	local say, hush = buildBubble(head)
 
 	-- Prompts sit on an invisible point just above the pad
 	local padCFrame = pad:GetBoundingBox()
@@ -188,7 +193,7 @@ function RizzoController:Start()
 				discount
 			)
 			else ("Open  (%s coins)"):format(formatNumber(CrateController.Price(crate)))
-		deal.Enabled = discount ~= nil
+		deal.Enabled = if discount then true else false -- discount is false (not nil) while a free crate waits
 		if discount then
 			dealTitle.Text = ("FIRST CRATE %d%% OFF!"):format(discount)
 			dealPrice.Text = ('<s><font color="#FFFFFF" transparency="0.3">%s</font></s>  %s COINS'):format(
@@ -221,6 +226,30 @@ function RizzoController:Start()
 	local waveStart = -math.huge
 	local function wave()
 		waveStart = os.clock()
+	end
+
+	-- Studio only: the Day 1 video intro (IntroCinematicController) makes him talk, wave and show the deal sign
+	if RunService:IsStudio() then
+		local firstPrice = Balls.CratePrice(crate, 0)
+		RizzoController.Cinematic = {
+			Say = say,
+			Hush = hush,
+			Wave = wave,
+			ShowDeal = function(on: boolean)
+				if not on then
+					refreshPrompt()
+					return
+				end
+				deal.Enabled = true
+				dealTitle.Text = ("FIRST CRATE %d%% OFF!"):format(
+					math.floor((1 - firstPrice / crate.Price) * 100 + 0.5)
+				)
+				dealPrice.Text = ('<s><font color="#FFFFFF" transparency="0.3">%s</font></s>  %s COINS'):format(
+					formatNumber(crate.Price),
+					formatNumber(firstPrice)
+				)
+			end,
+		}
 	end
 
 	buyPrompt.Triggered:Connect(function()

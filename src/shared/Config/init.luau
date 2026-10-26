@@ -2459,6 +2459,44 @@ Config.Rizzo = {
 	FirstCrateMarker = true, -- a bouncing "!" over Rizzo (seen through walls) while your first crate waits for you
 }
 
+-- Day 1 video intro (Studio only, never in the live game): press Key in Play mode and the camera flies through the
+-- Back Alley in 4 hard-cut shots, about 10 s, with the HUD hidden. Record the window (resize it tall for 9:16).
+-- Each shot moves the camera From -> To (Pos = where it is, Look = what it looks at) over Time seconds.
+-- Text = big caption, Rizzo = his speech bubble line (he waves too), Deal = show the FIRST CRATE % OFF sign.
+Config.IntroCinematic = {
+	Enabled = true,
+	Key = Enum.KeyCode.K,
+	Lane = "Lane3", -- your character stands on this Back Alley lane's approach, facing the pins
+	FieldOfView = 70,
+	Shots = {
+		{ -- hook: low drift through the junk at the back of the alley
+			Time = 2.2,
+			From = { Pos = Vector3.new(-26, 2.6, 206), Look = Vector3.new(-8, 3, 140) },
+			To = { Pos = Vector3.new(-18, 3.4, 190), Look = Vector3.new(-6, 3, 140) },
+			Text = "POV: you're a homeless bowler",
+		},
+		{ -- slow push down to you, standing at a beat-up lane
+			Time = 3,
+			From = { Pos = Vector3.new(6, 6.5, 172), Look = Vector3.new(-7, 3.5, 146) },
+			To = { Pos = Vector3.new(-1, 4.6, 157), Look = Vector3.new(-7, 3.5, 145) },
+			Text = "0 coins.",
+		},
+		{ -- Rizzo waves from his cart
+			Time = 3,
+			From = { Pos = Vector3.new(12, 5.5, 158), Look = Vector3.new(14, 6.5, 176) },
+			To = { Pos = Vector3.new(13.2, 6, 161.5), Look = Vector3.new(14, 6.5, 176) },
+			Rizzo = "You? A bowler? Prove it.",
+		},
+		{ -- snap to the first crate deal
+			Time = 2,
+			From = { Pos = Vector3.new(13, 7, 160), Look = Vector3.new(14, 7, 170) },
+			To = { Pos = Vector3.new(13.8, 7.2, 163), Look = Vector3.new(14, 7, 170) },
+			Text = "Day 1.",
+			Deal = true,
+		},
+	},
+}
+
 -- The crate shop kiosk in the lobby (Workspace.Hub.CrateShop, built in Studio). Crate looks live in
 -- ReplicatedStorage.CrateModels, one model per crate Id.
 -- Weekly featured ball (Addendum 2 step 11b): each week (Monday 00:00 UTC) every zone features one of its crate balls
