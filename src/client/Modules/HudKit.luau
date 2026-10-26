@@ -8,6 +8,7 @@
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextService = game:GetService("TextService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -234,13 +235,46 @@ function HudKit.Text(
 end
 
 -- Text at most `size` px that shrinks to stay inside its box (for lines that can be longer than the design's)
+-- (Measured by hand: TextScaled wraps to two lines and lets the outline and italic lean poke past the box.)
 function HudKit.Fit(label: TextLabel, size: number)
-	local limit = label:FindFirstChildOfClass("UITextSizeConstraint") or Instance.new("UITextSizeConstraint")
-	limit.MaxTextSize = size
-	limit.Parent = label
-	label.TextScaled = true
+	local old = label:FindFirstChildOfClass("UITextSizeConstraint")
+	if old then
+		old:Destroy()
+	end
+	label.TextScaled = false
 	label.TextWrapped = false -- one line, smaller, never two lines
+	label:SetAttribute("FitMax", size)
+	local function fit()
+		local max = label:GetAttribute("FitMax") :: number
+		local stroke = label:FindFirstChildOfClass("UIStroke")
+		-- room for the outline on both sides + the italic lean
+		local room = label.AbsoluteSize.X - (if stroke then stroke.Thickness * 2 else 0) - max * 0.12
+		if room <= 0 then
+			return
+		end
+		local params = Instance.new("GetTextBoundsParams")
+		params.Text = label.Text
+		params.Font = label.FontFace
+		params.Size = max
+		params.Width = 1e5
+		local ok, bounds = pcall(TextService.GetTextBoundsAsync, TextService, params)
+		if not ok then
+			return
+		end
+		local width = bounds.X
+		label.TextSize = if width > room then math.max(8, math.floor(max * room / width)) else max
+	end
+	if not label:GetAttribute("FitHooked") then
+		label:SetAttribute("FitHooked", true)
+		label:GetPropertyChangedSignal("Text"):Connect(function()
+			task.spawn(fit)
+		end)
+		label:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+			task.spawn(fit)
+		end)
+	end
 	label.TextSize = size
+	task.spawn(fit)
 end
 
 function HudKit.Image(parent: Instance, icon: string, size: number, props: { [string]: any }?): ImageLabel
