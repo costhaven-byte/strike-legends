@@ -44,6 +44,7 @@ local RED = Color3.fromRGB(255, 59, 92) -- overcharge
 local normalFov = Workspace.CurrentCamera.FieldOfView
 
 local LaneVisuals = {}
+LaneVisuals.CameraHeld = false -- true while the Studio-only Day 1 video intro holds your camera (its pin camera)
 
 local racks: { [Model]: any } = {}
 local busy: { [Model]: boolean } = {} -- a throw is playing on this lane; rack changes wait for the reset
@@ -647,6 +648,9 @@ local function playThrow(data)
 		camera.CameraType = Enum.CameraType.Scriptable
 		local smooth = camera.CFrame
 		cameraConnection = RunService.RenderStepped:Connect(function(dt)
+			if LaneVisuals.CameraHeld then
+				return -- the Studio-only Day 1 video intro has the camera (its pin camera)
+			end
 			local camTravel = math.min(travelled, headDistance - CAMERA.StopBeforePins)
 			local base = ballStart.Position + forward * camTravel + right * (x * 0.5)
 			local target = CFrame.lookAt(

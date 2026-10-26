@@ -3,6 +3,7 @@
 -- stepping onto it and keep it until they leave the zone.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local LaneUtil = require(Shared.Modules.LaneUtil)
@@ -150,6 +151,32 @@ function LaneService:Start()
 			PlayerDataService.Set(player, "ZoneSeen", zone)
 		end
 	end)
+
+	-- Studio only: the Day 1 video intro (Config.IntroCinematic) moves you onto its Back Alley lane and makes your
+	-- next throw an assisted PERFECT (ThrowService reads IntroAssist); false switches the assist off again
+	local intro = Config.IntroCinematic
+	if RunService:IsStudio() and intro and intro.Enabled then
+		local introRemote = Instance.new("RemoteEvent")
+		introRemote.Name = "IntroCinematic"
+		introRemote.Parent = ReplicatedStorage:WaitForChild("Remotes")
+		introRemote.OnServerEvent:Connect(function(player, on)
+			player:SetAttribute("IntroAssist", if on == true then true else nil)
+			local alley = workspace:FindFirstChild(Config.Zones.AssignFolder)
+			local lane = alley and alley:FindFirstChild(intro.Lane)
+			local owner = lane and lane:GetAttribute("OwnerId")
+			if on ~= true or not lane or not player.Character or (owner and owner ~= player.UserId) then
+				return
+			end
+			for _, other in alley:GetChildren() do
+				if other ~= lane and other:IsA("Model") and other:GetAttribute("OwnerId") == player.UserId then
+					release(other)
+				end
+			end
+			lane:SetAttribute("OwnerId", player.UserId)
+			setSign(lane, player.DisplayName)
+			placeOnLane(player.Character, lane)
+		end)
+	end
 
 	task.spawn(function()
 		while true do

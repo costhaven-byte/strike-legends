@@ -137,9 +137,11 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 	local goldCenter = lane:GetAttribute("GoldCenter")
 	local shownStreak = player:GetAttribute("Streak") or 0
 	-- A brand new player's first throw is an assisted PERFECT (Config.Onboarding; the client shows the whole arc gold)
-	local assisted = not auto and OnboardingService.IsAssisted(player)
+	-- (Studio only: the Day 1 video intro's throw is assisted too, LaneService sets IntroAssist)
+	local assisted = not auto and (OnboardingService.IsAssisted(player) or player:GetAttribute("IntroAssist") == true)
 	if assisted then
 		OnboardingService.UseAssist(player)
+		player:SetAttribute("IntroAssist", nil)
 	end
 	local perfect = assisted
 		or (not auto and ThrowRules.WasInSpot(charge, ball, modifier, now, SWAY_WINDOW, nil, goldCenter, shownStreak))

@@ -100,10 +100,12 @@ local function equippedBall()
 end
 
 -- A brand new player's first throw is assisted (Config.Onboarding): the server makes it a PERFECT.
--- A Pin Titan giant ball (BossService) works the same way: any release throws it.
+-- A Pin Titan giant ball (BossService) works the same way: any release throws it. So does the Studio-only Day 1 video
+-- intro's throw (IntroAssist).
 local function assisted(): boolean
 	return (Config.Onboarding.Enabled and player:GetAttribute("Onboarding") == 0)
 		or player:GetAttribute("BossGiant") == true
+		or player:GetAttribute("IntroAssist") == true
 end
 
 -- The Pin Titan fight (BossService): your throw spot in the sky arena, while you're on the platform, the fight takes

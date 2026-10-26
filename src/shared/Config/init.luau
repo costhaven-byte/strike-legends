@@ -2460,7 +2460,8 @@ Config.Rizzo = {
 }
 
 -- Day 1 video intro (Studio only, never in the live game): press Key in Play mode and the camera flies through the
--- Back Alley in 4 hard-cut shots, about 10 s, with the HUD hidden. Record the window (resize it tall for 9:16).
+-- Back Alley in 4 hard-cut shots, about 10 s, with the HUD hidden, then you throw a strike and it ends behind the
+-- pins and cuts to black (Throw). Record the window (resize it tall for 9:16).
 -- Each shot moves the camera From -> To (Pos = where it is, Look = what it looks at) over Time seconds.
 -- Text = big caption, Rizzo = his speech bubble line (he waves too), Deal = show the FIRST CRATE % OFF sign.
 Config.IntroCinematic = {
@@ -2494,6 +2495,18 @@ Config.IntroCinematic = {
 			Text = "Day 1.",
 			Deal = true,
 		},
+	},
+	-- After the shots: you throw for real (ThrowUI only, the whole arc gold, any release is a PERFECT strike). Just
+	-- before the ball reaches the pins the camera cuts behind the pins, then the screen cuts to black and it ends.
+	Throw = {
+		Text = nil, -- caption while you throw (nil = none; the throw bar says HOLD... THEN LET GO!)
+		WaitLimit = 30, -- seconds to wait for your throw before the intro gives up
+		CutBefore = 0.35, -- seconds before the ball reaches the pins that the pin camera cuts in (a roll takes about 0.6 s)
+		Hold = 2.2, -- seconds on the pin camera after the hit (the strike slow motion plays inside this)
+		Black = 1.5, -- seconds of black at the very end
+		-- Pin camera, measured from the lane's PinSpot: Back = studs behind the pins, Up = height, Side = to the
+		-- right (seen from the bowler), LookAt = studs up the lane it looks at
+		PinCam = { Back = 6, Up = 2.2, Side = 1.2, LookAt = 14, LookUp = 0.8 },
 	},
 }
 
