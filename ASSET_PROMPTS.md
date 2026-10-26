@@ -45,7 +45,7 @@ Real already (keep): zone 1-4 worlds, zone 1 balls/pins/Alley Crate/Rizzo, zone 
 
 | # | Placeholder now | What it is today | Prompt |
 |---|---|---|---|
-| 1 | 7 zone 3 balls (League Black, Cherry Swirl, Blue Marble, Pearl Pro, Tiger Swirl, Championship, Perfect 300) | zone 1/2 ball models painted one colour | 2A |
+| 1 | 7 zone 3 balls (League Black, Cherry Swirl, Blue Marble, Pearl Pro, Tiger Swirl, Championship, Perfect 300) | DONE 2026-10-27 (owner's design, in game) | 2A |
 | 2 | 6 zone 4 balls (Cloud Swirl, Crystal, Sunburst, Solid Gold, Lightning, Daybreak) | zone 2 models recoloured | 2B |
 | 3 | 4 zone 1 commons (Bubblegum, Lime Twist, Tangerine, Deep Ocean) + Rookie Ball | real, but neon-era looks that don't match the alley | 2C (optional) |
 | 4 | Bronze, Silver, Gold crates (zone 2) | recoloured copies of one model | 3A |
