@@ -739,6 +739,7 @@ Config.Showcase = {
 			Zone = 3,
 			Slots = { "MainStreetLanes", "Showcase", "Slots" },
 			Shelf = { "MainStreetLanes", "Showcase", "MascotShelf" },
+			ShelfOnFloor = true, -- the shelf part sits high up with nothing under it: drop it onto the floor
 			Egg = "Arcade",
 			Theme = "MainStreet",
 		},
@@ -746,6 +747,7 @@ Config.Showcase = {
 			Zone = 4,
 			Slots = { "SkylineLanes", "Showcase", "Slots" },
 			Shelf = { "SkylineLanes", "Showcase", "MascotShelf" },
+			ShelfOnFloor = true,
 			Egg = "Skyline",
 			Theme = "Skyline",
 		},
@@ -2876,7 +2878,7 @@ Config.MascotFx = {
 	-- The mascot shelf in the lobby Vault (step 8b): every mascot on a glowing stand, yours lit, missing ones dark.
 	-- It sits along Workspace.Showcase.MascotShelf (a part you can move in Studio; the mascots face its front).
 	ShelfSize = 2.2, -- studs across each mascot on the shelf
-	ShelfHover = 1.6, -- studs above the shelf
+	ShelfHover = 1.6, -- studs above the shelf (placeholder pets and pets that fly: Config.PetIdle Floats); walkers stand on it
 }
 
 -- Real pet models (the owner's Claude Design pets, 2026-10-21): ReplicatedStorage.PetModels.<mascot Id> (and Egg_<egg Id>),
@@ -4130,7 +4132,7 @@ Config.Economy.Ranks = {
 -- coins x1.6, +3 levels each. E3b (new XP curve, cost x1.6): first rebirth about 1h20 in, then one every 5-25 minutes,
 -- slowing to 30-60 minutes from about rebirth 22.
 Config.Economy.Rebirth = {
-	Enabled = false, -- the owner flips this
+	Enabled = true, -- the owner flips this (switched ON by the owner 2026-10-26)
 	Zone = 3, -- the first rebirth needs this zone's level (Config.Economy.Zones Rank, 12)...
 	RankStep = 1, -- ...and this many more levels for each one after
 	FirstCost = 20000000, -- coins needed for the first rebirth (20M, about 20 min of zone 3 coins)...

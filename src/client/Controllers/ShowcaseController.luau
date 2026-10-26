@@ -648,15 +648,35 @@ end
 
 -- The mascot shelf: mascots spread along the shelf part's length (its X side), facing its front, on stands.
 -- Returns a function that animates them (bob and a slow sway).
-local function buildMascotShelf(shelf: BasePart, parent: Instance, list: { any }): (number) -> ()
+local function buildMascotShelf(shelf: BasePart, parent: Instance, list: { any }, onFloor: boolean?): (number) -> ()
 	local FX = Config.MascotFx
 	local folder = Instance.new("Folder")
 	folder.Name = "MascotShelf"
 	folder.Parent = parent
+	if onFloor then
+		-- Rest the shelf on whatever is under it (the zone's floor)
+		local params = RaycastParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = { shelf, parent }
+		local bottom = shelf.Position - Vector3.yAxis * shelf.Size.Y / 2
+		local hit = workspace:Raycast(bottom, Vector3.yAxis * -60, params)
+		if hit then
+			shelf.CFrame -= Vector3.yAxis * (bottom.Y - hit.Position.Y)
+		end
+	end
 	local spacing = shelf.Size.X / #list
 	local top = shelf.CFrame * CFrame.new(0, shelf.Size.Y / 2, 0)
 
-	type Spot = { Base: CFrame, Model: Model?, Id: string?, Half: number?, Phase: number, Mascot: any, Plate: Part }
+	type Spot = {
+		Base: CFrame,
+		Model: Model?,
+		Id: string?,
+		Lift: number?,
+		Floats: boolean?,
+		Phase: number,
+		Mascot: any,
+		Plate: Part,
+	}
 	local spots: { Spot } = {}
 	for i, mascot in list do
 		local base = top * CFrame.new(-shelf.Size.X / 2 + spacing * (i - 0.5), 0, 0)
@@ -734,7 +754,15 @@ local function buildMascotShelf(shelf: BasePart, parent: Instance, list: { any }
 					model:ScaleTo(model:GetScale() * FX.ShelfSize * 1.4 / widest)
 					box *= FX.ShelfSize * 1.4 / widest
 				end
-				spot.Half = math.max(box.Y / 2, FX.ShelfSize / 2)
+				-- Walkers stand on the stand (bottom of the model on its top); floaters and placeholders hover
+				local idle = Config.PetIdle[mascot.Model or mascot.Id] -- placeholder pets borrow a real pet (Model)
+				local real = model:FindFirstChild("Root") ~= nil
+				spot.Floats = not real or (idle ~= nil and idle.Floats == true)
+				local boxCFrame = model:GetBoundingBox()
+				local bottom = model:GetPivot():PointToObjectSpace(boxCFrame.Position).Y - box.Y / 2
+				spot.Lift = if spot.Floats
+					then FX.ShelfHover + math.max(box.Y / 2, FX.ShelfSize / 2)
+					else 0.25 - bottom
 				if id == "" then
 					silhouette(model)
 				end
@@ -753,7 +781,8 @@ local function buildMascotShelf(shelf: BasePart, parent: Instance, list: { any }
 		for _, spot in spots do
 			local model = spot.Model
 			if model then
-				local lift = FX.ShelfHover + (spot.Half or FX.ShelfSize / 2) + math.sin((t + spot.Phase) * 2) * 0.2
+				local bob = if spot.Floats then math.sin((t + spot.Phase) * 2) * 0.2 else 0
+				local lift = (spot.Lift or FX.ShelfHover + FX.ShelfSize / 2) + bob
 				local sway = if spot.Id ~= "" then math.sin(t * 0.8 + spot.Phase) * 0.5 else 0
 				-- The model's front is its -Z; the shelf's front is its -Z too
 				model:PivotTo(spot.Base * CFrame.new(0, lift, 0) * CFrame.Angles(0, sway, 0))
@@ -834,7 +863,7 @@ local function buildSet(set, diamondTemplate: BasePart?): ((number) -> ())?
 	-- The pet shelf: this zone egg's pets
 	local shelf = set.Shelf and find(set.Shelf)
 	local animateShelf = if shelf and shelf:IsA("BasePart")
-		then buildMascotShelf(shelf, cases, Mascots.InEgg(set.Egg))
+		then buildMascotShelf(shelf, cases, Mascots.InEgg(set.Egg), set.ShelfOnFloor)
 		else nil
 
 	-- Animate only while you're close enough to see it
