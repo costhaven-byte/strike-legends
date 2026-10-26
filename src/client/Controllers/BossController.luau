@@ -34,6 +34,7 @@ local PHASE_NAMES = {
 	Finale = "FINALE",
 	Giant = "GIANT BALLS!",
 	Defeated = "DEFEATED!",
+	Escaped = "ESCAPED!",
 }
 local PHASE_CALLS = { -- the big text when a phase starts
 	Intro = { "PIN TITAN!", "DODGE THE RED - STRIKES BREAK ITS ARMOR", C.Red },
@@ -41,6 +42,7 @@ local PHASE_CALLS = { -- the big text when a phase starts
 	Finale = { "FINALE!", "FILL THE TEAM METER", C.Cyan },
 	Giant = { "GIANT BALLS!", "THROW YOURS TO FINISH IT", C.Pink },
 	Defeated = { "PIN TITAN DEFEATED!", "", C.Lime },
+	Escaped = { "THE TITAN ESCAPED!", "OUT OF TIME", C.Red },
 }
 local HIT_COLORS = {
 	Normal = C.White,
@@ -751,6 +753,9 @@ function BossController:Start()
 			damage.ZIndex = 23
 		end
 		local lines = {}
+		if data.Won == false then
+			table.insert(lines, '<font color="#FF2D4A">OUT OF TIME! SMALL REWARD ONLY</font>')
+		end
 		if data.Tier then
 			local color = (TIER_COLORS[data.Tier] or C.White):ToHex()
 			table.insert(lines, ('YOUR TIER: <font color="#%s">%s</font>  (#%d)'):format(color, data.Tier, data.Rank))
@@ -785,10 +790,17 @@ function BossController:Start()
 			table.insert(lines, "LAND A HIT TO EARN REWARDS NEXT TIME!")
 		end
 		mineText.Text = table.concat(lines, "\n")
-		resultsTitle.Text = if data.Won == false then "THE TITAN GOT AWAY!" else "PIN TITAN DEFEATED!"
+		local lost = data.Won == false
+		resultsTitle.Text = if lost then "THE TITAN GOT AWAY!" else "PIN TITAN DEFEATED!"
+		resultsTitle.TextColor3 = if lost then C.Red else C.Lime
+		closeText.Text = if lost then "OK" else "AWESOME!"
 		UiFx.Open(results)
-		UiFx.Confetti(nil, 40)
-		Sfx.Play("RevealBig")
+		if lost then
+			Sfx.Play("StreakLost", 0.7)
+		else
+			UiFx.Confetti(nil, 40)
+			Sfx.Play("RevealBig")
+		end
 		if data.Drop then
 			task.delay(0.6, function()
 				showCall("BOSS DROP!", data.Drop.Name:upper(), C.Pink, 2.5)
@@ -850,6 +862,7 @@ function BossController:Start()
 
 	-- ===== Every frame-ish: lobby countdown, siren, HUD numbers =====
 	local lastSiren = 0
+	local warnedAt = nil -- the FightEndsAt the 30-seconds-left call was shown for
 	local function inLobby(): boolean
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		return root ~= nil and Zones.InArea(BOSS.LobbyArea, root.Position)
@@ -925,6 +938,18 @@ function BossController:Start()
 			healthText.Text = Currency.Format(hp) .. " / " .. Currency.Format(maxHp)
 			local plates = state:GetAttribute("Plates") or 0
 			phaseLabel.Text = if phase == "Armor" then ("ARMOR: %d PLATES"):format(plates) else PHASE_NAMES[phase] or ""
+			-- 30 seconds left before the Titan escapes
+			local fightEnds = state:GetAttribute("FightEndsAt")
+			if
+				fightEnds
+				and warnedAt ~= fightEnds
+				and (phase == "Armor" or phase == "Core" or phase == "Finale")
+				and fightEnds - now <= 30
+			then
+				warnedAt = fightEnds
+				showCall("30 SECONDS LEFT!", "BEAT IT OR IT ESCAPES", C.Red, 2.4)
+				Sfx.Play("BossSiren")
+			end
 			local showMeter = phase == "Finale" or phase == "Giant" or phase == "Defeated"
 			meterBack.Visible = showMeter
 			if showMeter then

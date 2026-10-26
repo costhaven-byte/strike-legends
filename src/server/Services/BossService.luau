@@ -3,7 +3,8 @@
 -- the helicopter on the Skyline roof, then everyone who boarded flies to the sky arena (Workspace.TitanArena) and
 -- throws at the Titan with the normal hold-and-release throw (ThrowService hands boss throws to BossService.Throw).
 -- Phases: ARMOR (plates) -> CORE (glowing core open) -> FINALE (damage fills the team meter) -> GIANT (every player's
--- next throw is a giant ball; together they finish it). FightSeconds is a hard cap that starts GIANT by itself.
+-- next throw is a giant ball; together they finish it). FightSeconds is a hard cap: if the giant balls haven't
+-- started by then, the Titan ESCAPES and the players lose (owner 2026-10-26; Config.Boss.LossRewardShare).
 -- Then rewards by damage tier (+ top damage bonus + the boss-only drop), the results screen and the ride back.
 -- Shared state for every client: attributes on ReplicatedStorage.BossEvent (State, OpensAt, BoardingEndsAt,
 -- FightEndsAt, GiantEndsAt, Phase, Health, MaxHealth, Plates, Meter, MeterGoal, Fighters).
@@ -345,6 +346,26 @@ local function giantsLeft(): number
 		end
 	end
 	return count
+end
+
+-- Out of time: the Titan leaps off into the sky and the players lose
+local function escape()
+	if phase == "Defeated" or phase == "Escaped" then
+		return
+	end
+	setPhase("Escaped")
+	task.spawn(function()
+		local t = titan()
+		if not t then
+			return
+		end
+		local start = t:GetPivot()
+		for i = 1, 60 do
+			local k = i / 60
+			t:PivotTo(start + Vector3.new(0, 260 * k * k, -120 * k * k))
+			task.wait(1 / 30)
+		end
+	end)
 end
 
 local function defeat()
@@ -749,22 +770,33 @@ local function payRewards(won: boolean)
 				end
 			end
 			mine.Tier = tier.Name
-			local shown = MilestoneService.Give(player, tier.Reward, "Boss")
+			-- A loss pays only LossRewardShare of the tier's coins: no crate, no top bonus, no drop
+			local reward = tier.Reward
+			if not won then
+				local cut = BOSS.LossRewardShare
+				reward = {
+					Coins = (reward.Coins or 0) * cut,
+					LevelShare = if reward.LevelShare then reward.LevelShare * cut else nil,
+				}
+			end
+			local shown = if won or BOSS.LossRewardShare > 0
+				then MilestoneService.Give(player, reward, "Boss")
+				else { Coins = 0 }
 			mine.Coins += shown.Coins or 0
 			mine.Potions = shown.Potions
 			mine.CrateId, mine.Crate = shown.CrateId, shown.Crate
 			local top = BOSS.TopBonus[rank]
-			if top then
+			if top and won then
 				local bonus = MilestoneService.Give(player, top, "BossTop")
 				mine.Coins += bonus.Coins or 0
 				mine.TopBonus = bonus.Coins or 0
 			end
-			mine.Drop = giveDrop(player, rank)
+			mine.Drop = if won then giveDrop(player, rank) else nil
 			if mine.Drop then
 				SessionLog.Moment(player, "Boss drop: " .. mine.Drop.Id)
 				Analytics.Event(player, "BossDrop", 1, { mine.Drop.Id })
 			end
-			Analytics.Event(player, "BossWon", 1, { tier.Name })
+			Analytics.Event(player, if won then "BossWon" else "BossLost", 1, { tier.Name })
 			SessionLog.Moment(
 				player,
 				("Boss %s: %d damage, rank %d, %s"):format(if won then "won" else "over", f.Damage, rank, tier.Name)
@@ -839,7 +871,7 @@ local function runFight(list: { Player })
 
 	local outside: { [Player]: number } = {}
 	local nextAttack = now() + ATTACKS.FirstAfter
-	while phase ~= "Defeated" do
+	while phase ~= "Defeated" and phase ~= "Escaped" do
 		task.wait(0.25)
 		for player, f in fighters do
 			if not player.Parent then
@@ -872,7 +904,7 @@ local function runFight(list: { Player })
 			end)
 		end
 		if phase ~= "Giant" and t >= (state:GetAttribute("FightEndsAt") or math.huge) then
-			startGiant() -- out of time: the finale starts by itself
+			escape() -- out of time before the giant balls: the Titan gets away
 		end
 		if
 			phase == "Giant"
@@ -884,9 +916,9 @@ local function runFight(list: { Player })
 	end
 
 	if next(fighters) ~= nil then
-		task.wait(2.5) -- watch it fall
+		task.wait(2.5) -- watch it fall (or fly off)
 		state:SetAttribute("State", "Results")
-		payRewards(true)
+		payRewards(phase == "Defeated")
 		task.wait(BOSS.ResultsSeconds)
 		toFighters("Return", { Seconds = BOSS.FlightSeconds })
 		task.wait(BOSS.FlightSeconds * 0.6)

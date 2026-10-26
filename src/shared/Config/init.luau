@@ -2169,8 +2169,8 @@ Config.Fusion = {
 -- helicopter on the Skyline roof. Everyone who boarded flies to the sky arena (Workspace.TitanArena) and fights the
 -- Titan with the normal hold-and-release throw (auto-aimed). Fight: ARMOR (plates) -> CORE (glowing core open) ->
 -- FINALE (hits fill one team meter; full = every player's next throw is a GIANT BALL that finishes the Titan).
--- FightSeconds is a hard cap: at 0 the finale's giant balls start on their own. Then the results screen and the
--- ride back to the roof. Art is PLACEHOLDER (a big plain pin, a round floating platform): a model saved in Studio
+-- FightSeconds is a hard cap: at 0 the Titan escapes and the players lose (owner 2026-10-26). Then the results
+-- screen and the ride back to the roof. Art is PLACEHOLDER (a big plain pin, a round floating platform): a model saved in Studio
 -- as Workspace.TitanArena wins over the code-built one (keep the part names: Floor, Spots, Titan.Plates/Core/Body).
 -- All numbers below are safe to tune; nothing else needs changing.
 Config.Boss = {
@@ -2189,7 +2189,8 @@ Config.Boss = {
 	FlightSeconds = 2.5, -- the fade-out while the helicopter takes off (and on the way back)
 
 	-- The fight
-	FightSeconds = 180, -- hard timer: the finale starts by itself when it runs out
+	FightSeconds = 180, -- hard timer: if the giant balls haven't started by then, the Titan ESCAPES (players lose)
+	LossRewardShare = 0.25, -- a loss still pays this share of your tier's coins (no crate, top bonus or drop; 0 = nothing)
 	IntroSeconds = 4, -- "PIN TITAN!" intro before the first throw counts
 	HealthPerPlayer = 10000, -- the Titan's health = this x players in the arena when the fight starts...
 	MinHealth = 10000, -- ...but never less than this (so a fight never ends in seconds)
@@ -3364,6 +3365,7 @@ Config.Analytics = {
 		"BossTrip", -- boarded the Pin Titan helicopter (Config.Boss)
 		"BossWon", -- labels = reward tier
 		"BossDrop", -- the boss-only drop; labels = its Id
+		"BossLost", -- the Titan escaped (time ran out); labels = reward tier
 		"PityHit", -- labels = crate, rarity
 		"PerfectRate", -- value = PERFECT % of the session's throws (assisted first throw left out); labels = throws, perfects
 		"PolishLevel", -- value = new Polish level; labels = ball
