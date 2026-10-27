@@ -1,0 +1,35 @@
+{
+"CloudSwirl": {
+"Color": "rbxassetid://126156567782328",
+"Rough": "rbxassetid://112080023414734",
+"Glow": "rbxassetid://73274356420769 (SL_White_Glow, strength 0.35)"
+},
+"Crystal": {
+"Color": "rbxassetid://116154239127122",
+"Rough": "rbxassetid://138214313990893",
+"Glow": "rbxassetid://82550714147950"
+},
+"Sunburst": {
+"Color": "rbxassetid://135188900153822",
+"Rough": "rbxassetid://109508094971377",
+"Metal": "rbxassetid://75768630978885",
+"Glow": "rbxassetid://106410613207498",
+"Glow2": "rbxassetid://73274356420769 (SL_White_Glow, strength 0.4; Glow mask unused)"
+},
+"SolidGold": {
+"Color": "rbxassetid://122808192034042",
+"Rough": "rbxassetid://77066934202435",
+"Metal": "rbxassetid://107987149827987",
+"Glow": "rbxassetid://73274356420769 (SL_White_Glow, strength 0.55)"
+},
+"Lightning": {
+"Color": "rbxassetid://75261766450799",
+"Rough": "rbxassetid://75768630978885",
+"Glow": "rbxassetid://115988608088385"
+},
+"Daybreak": {
+"Color": "rbxassetid://118810431423293",
+"Rough": "rbxassetid://128684534640076",
+"Glow": "rbxassetid://84154933549395"
+}
+}

@@ -1158,14 +1158,83 @@ Config.BallVfx = {
 				Colors = { Color3.fromRGB(220, 245, 255), Color3.fromRGB(60, 160, 255) } },
 			Light = { Color = Color3.fromRGB(110, 200, 255), Brightness = 2, Range = 6, Flicker = 0.8 },
 		},
+		-- Skyline Lanes styles (zone 4 balls, 2026-10-27)
+		Sky = { -- puffy clouds left hanging in the air, wind streaks and sky sparkles
+			Bits = {
+				{ Image = "Smoke", Rate = 22, Colors = { Color3.fromRGB(255, 255, 255), Color3.fromRGB(200, 232, 255) },
+					Size = { 0.5, 1.1, 1.7 }, Life = { 0.9, 1.5 }, Speed = { 0.2, 0.6 }, Rise = 0.4, Drag = 1.5, Spin = 25,
+					Emission = 0.15, Transparency = 0.25, Radius = 0.35, Bright = 1.2 },
+				{ Image = "Star", Rate = 26, Colors = { Color3.fromRGB(255, 255, 255), Color3.fromRGB(120, 200, 255) },
+					Size = { 0, 0.2, 0 }, Life = { 0.5, 1 }, Speed = { 0.1, 0.4 }, Spin = 120, Twinkle = true,
+					Emission = 1, Transparency = 0, Radius = 0.55 },
+				{ Image = "Dot", FromRarity = 4, Rate = 30, Colors = { Color3.fromRGB(220, 240, 255) },
+					Size = { 0.03, 0.06, 0 }, Life = { 0.4, 0.8 }, Speed = { 1.5, 3 }, Drag = 3,
+					Emission = 1, Transparency = 0.1, Radius = 0.5 },
+			},
+			Floor = { FromRarity = 2, Width = 0.8, Lifetime = 1, Transparency = 0.45, Emission = 0.6,
+				Colors = { Color3.fromRGB(230, 245, 255), Color3.fromRGB(90, 170, 240) } },
+			Light = { Color = Color3.fromRGB(170, 220, 255), Brightness = 1.5, Range = 6 },
+		},
+		Storm = { -- gold lightning: bolts crackling round the ball, sparks flying off, dark storm cloud behind
+			Flicker = 0.7,
+			Bits = {
+				{ Image = "Bolt", Rate = 22, Colors = { Color3.fromRGB(255, 255, 230), Color3.fromRGB(255, 220, 60) }, Bright = 2,
+					Size = { 0.6, 0.9, 0.5 }, Life = { 0.06, 0.14 }, Speed = { 0, 0.2 },
+					Emission = 1, Transparency = 0, Radius = 0.6 },
+				{ Image = "Ember", Rate = 55, Colors = { Color3.fromRGB(255, 255, 220), Color3.fromRGB(255, 200, 40) },
+					Size = { 0.06, 0.09, 0 }, Life = { 0.15, 0.4 }, Speed = { 3, 7 }, Drag = 5,
+					Emission = 1, Transparency = 0, Radius = 0.45 },
+				{ Image = "Smoke", Rate = 14, Colors = { Color3.fromRGB(40, 45, 110), Color3.fromRGB(15, 18, 50) },
+					Size = { 0.5, 1.1, 1.6 }, Life = { 0.6, 1.1 }, Speed = { 0.1, 0.3 }, Rise = 0.5, Spin = 40,
+					Emission = 0, Transparency = 0.45, Radius = 0.3 },
+			},
+			Floor = { FromRarity = 1, Width = 0.4, Lifetime = 0.6, Transparency = 0.2, Emission = 1,
+				Colors = { Color3.fromRGB(255, 250, 200), Color3.fromRGB(255, 190, 30) } },
+			Light = { Color = Color3.fromRGB(255, 220, 90), Brightness = 2.5, Range = 7, Flicker = 0.9 },
+		},
+		Solar = { -- a little sun: flares licking up, glowing embers, flashes of sunlight and a burning lane
+			Flicker = 0.25,
+			Bits = {
+				{ Image = "FlameTongue", Rate = 45, Upright = true, Bright = 1.8,
+					Colors = { Color3.fromRGB(255, 250, 200), Color3.fromRGB(255, 190, 40), Color3.fromRGB(255, 110, 20) },
+					Size = { 0.45, 0.7, 0.1 }, Life = { 0.25, 0.45 }, Speed = { 0.2, 0.5 }, Rise = 5, Drag = 2,
+					Emission = 1, Transparency = 0, Radius = 0.4 },
+				{ Image = "Ember", Rate = 35, Colors = { Color3.fromRGB(255, 240, 160), Color3.fromRGB(255, 150, 30) },
+					Size = { 0.06, 0.1, 0 }, Life = { 0.6, 1.2 }, Speed = { 0.8, 2 }, Rise = 2, Drag = 1.5, Twinkle = true,
+					Emission = 1, Transparency = 0, Radius = 0.45 },
+				{ Image = "Burst", FromRarity = 5, Rate = 6, Colors = { Color3.fromRGB(255, 230, 140), Color3.fromRGB(255, 160, 40) },
+					Size = { 0.3, 0.9, 1.3 }, Life = { 0.4, 0.6 }, Speed = { 0, 0.1 }, Spin = 60,
+					Emission = 1, Transparency = 0.5, Radius = 0.2 },
+			},
+			Floor = { FromRarity = 1, Width = 0.7, Lifetime = 0.8, Transparency = 0.3, Emission = 0.9,
+				Colors = { Color3.fromRGB(255, 220, 90), Color3.fromRGB(255, 120, 20) } },
+			Light = { Color = Color3.fromRGB(255, 180, 60), Brightness = 2.5, Range = 7, Flicker = 0.3 },
+		},
+		Dawn = { -- night turning to sunrise: twinkling stars, pink-gold sun sparks and a warm glow on the lane
+			Bits = {
+				{ Image = "Star", Rate = 30, Colors = { Color3.fromRGB(255, 255, 255), Color3.fromRGB(200, 210, 255) },
+					Size = { 0, 0.2, 0 }, Life = { 0.8, 1.5 }, Speed = { 0, 0.2 }, Spin = 60, Twinkle = true,
+					Emission = 1, Transparency = 0, Radius = 0.55 },
+				{ Image = "Smoke", Rate = 16,
+					Colors = { Color3.fromRGB(255, 150, 190), Color3.fromRGB(255, 170, 90), Color3.fromRGB(60, 50, 150) },
+					Size = { 0.5, 1.1, 1.8 }, Life = { 0.8, 1.4 }, Speed = { 0.1, 0.3 }, Rise = 0.3, Spin = 25,
+					Emission = 0.6, Transparency = 0.55, Radius = 0.3 },
+				{ Image = "Ember", Rate = 35, Colors = { Color3.fromRGB(255, 230, 150), Color3.fromRGB(255, 120, 150) },
+					Size = { 0.05, 0.09, 0 }, Life = { 0.6, 1.1 }, Speed = { 0.6, 1.6 }, Rise = 1.5, Drag = 1.5, Twinkle = true,
+					Emission = 1, Transparency = 0, Radius = 0.45 },
+			},
+			Floor = { FromRarity = 1, Width = 0.85, Lifetime = 1.1, Transparency = 0.35, Emission = 0.8,
+				Colors = { Color3.fromRGB(255, 210, 120), Color3.fromRGB(255, 120, 160), Color3.fromRGB(70, 60, 170) } },
+			Light = { Color = Color3.fromRGB(255, 160, 130), Brightness = 2, Range = 7 },
+		},
 	},
 	-- Which balls draw which style (ball Id -> TrailStyles name), matched to the ball's name
 	BallStyles = {
-		Electric = "Electric", Thunder = "Electric", Plasma = "Electric", Lightning = "Electric",
+		Electric = "Electric", Thunder = "Electric", Plasma = "Electric", Lightning = "Storm",
 		Toxic = "Toxic",
 		Frostbite = "Ice", DumpsterDiamond = "Ice", Crystal = "Ice",
-		Magma = "Fire", Inferno = "Fire", Dragon = "Fire", Sunburst = "Fire", Daybreak = "Fire",
-		Galaxy = "Galaxy", Nebula = "Galaxy", Void = "Galaxy", Supernova = "Galaxy", CloudSwirl = "Galaxy",
+		Magma = "Fire", Inferno = "Fire", Dragon = "Fire", Sunburst = "Solar", Daybreak = "Dawn",
+		Galaxy = "Galaxy", Nebula = "Galaxy", Void = "Galaxy", Supernova = "Galaxy", CloudSwirl = "Sky",
 		Golden = "Gold", Championship = "Gold", SolidGold = "Gold",
 	},
 	-- Mythic balls also send glowing shock rings across the lane in their trail's colours
@@ -1777,6 +1846,147 @@ Config.BallVfx = {
 			},
 			Light = { Color = Color3.fromHex("E0465C"), Brightness = 3, Range = 6 },
 		},
+
+		-- Skyline Lanes balls (owner's claude.ai/design 'Skyline Lanes' set, 2026-10-27). Built to look better than
+		-- anything below them: every one has moving rings, a breathing glow and its own sky effect.
+		-- Halos: Spin = degrees per second the image turns, Pulse = { times per second, how much it grows }.
+		-- Light Flicker = how much the ball's own glow flickers.
+		CloudSwirl = {
+			Trails = { { Colors = { Color3.fromHex("FFFFFF"), Color3.fromHex("BFE4FF"), Color3.fromHex("5AAEE8") }, Width = 1.1, Lifetime = 0.45 } },
+			-- little clouds puff off the ball and wind sparkles whirl round it
+			Particles = {
+				{ Image = "Smoke", Colors = { Color3.fromHex("FFFFFF"), Color3.fromHex("DDF0FF") }, Rate = 10, Size = 0.4,
+					Life = { 0.6, 1.1 }, Speed = { 0.1, 0.3 }, Rise = 0.3, Radius = 0.5, Spin = 30 },
+				{ Image = "Star", Colors = { Color3.fromHex("FFFFFF"), Color3.fromHex("8FD0FF") }, Rate = 14, Size = 0.14,
+					Life = { 0.4, 0.8 }, Speed = { 0.1, 0.3 }, Radius = 0.6, Twinkle = true, Spin = 90 },
+			},
+			-- two wind rings at crossed tilts, turning opposite ways
+			Rings = {
+				{ Radius = 0.68, Width = 0.035, Color = Color3.fromHex("E8F6FF"), Tilt = { 70, 15 }, Spin = 0.5 },
+				{ Radius = 0.76, Width = 0.025, Color = Color3.fromHex("7CC4F5"), Tilt = { 110, -20 }, Spin = -0.35 },
+			},
+			Halos = { { Image = "Dot", Color = Color3.fromHex("BFE4FF"), Size = 2.3, Transparency = 0.6, Pulse = { 0.6, 0.12 } } },
+			Light = { Color = Color3.fromHex("BFE4FF"), Brightness = 1.5, Range = 4 },
+		},
+		Crystal = {
+			Trails = { { Colors = { Color3.fromHex("E8FCFF"), Color3.fromHex("8FE0FF"), Color3.fromHex("2F8FE0") }, Width = 1.1, Lifetime = 0.45 } },
+			-- the owner's glowing core and glints turn slowly inside the see-through shell (BallFxPieces.Crystal)
+			Pieces = { CrystalCore = 40, CrystalGlints = -25 },
+			Particles = {
+				{ Image = "Diamond", Colors = { Color3.fromHex("FFFFFF"), Color3.fromHex("8FE0FF"), Color3.fromHex("4AB8FF") }, Rate = 24,
+					Size = 0.11, Life = { 0.5, 1 }, Speed = { 0.3, 0.8 }, Radius = 0.55, Twinkle = true, Spin = 200 },
+				{ Image = "Star", Colors = { Color3.fromHex("FFFFFF") }, Rate = 5, Size = 0.3, Life = { 0.15, 0.3 },
+					Speed = { 0, 0.05 }, Radius = 0.48 },
+			},
+			Rings = { { Radius = 0.7, Width = 0.03, Color = Color3.fromHex("B8F0FF"), Tilt = { 90, 0 }, Spin = 0.4 } },
+			Halos = {
+				{ Image = "Dot", Color = Color3.fromHex("6CCBFF"), Size = 2.2, Transparency = 0.55, Pulse = { 0.8, 0.15 } },
+				{ Image = "Diamond", Color = Color3.fromHex("DDF8FF"), Size = 1.5, Transparency = 0.75, Spin = 20 },
+			},
+			Light = { Color = Color3.fromHex("6CCBFF"), Brightness = 2, Range = 4 },
+		},
+		Sunburst = {
+			Trails = {
+				{ Colors = { Color3.fromHex("FFF4C2"), Color3.fromHex("FFB52E"), Color3.fromHex("FF7A1A") }, Width = 1.2, Lifetime = 0.5 },
+				{ Colors = { Color3.fromHex("FFFBE6") }, Width = 0.4, Lifetime = 0.35 }, -- white-hot core
+			},
+			-- sun rays turning behind the ball, solar flares and sparks
+			Halos = {
+				{ Image = "Burst", Color = Color3.fromHex("FFE6A0"), Size = 2.4, Transparency = 0.78, Spin = 30, Pulse = { 1, 0.1 } },
+				{ Image = "Dot", Color = Color3.fromHex("FF9A2E"), Size = 2.4, Transparency = 0.55, Pulse = { 0.7, 0.15 } },
+			},
+			Particles = {
+				{ Image = "Flame", Colors = { Color3.fromHex("FFF0A0"), Color3.fromHex("FFB52E"), Color3.fromHex("FF6A1A") }, Rate = 30,
+					Size = 0.35, Life = { 0.3, 0.6 }, Speed = { 0.3, 0.8 }, Rise = 2, Radius = 0.45, Spin = 60 },
+				{ Image = "Ember", Colors = { Color3.fromHex("FFE9A0"), Color3.fromHex("FFA030") }, Rate = 25, Size = 0.07,
+					Life = { 0.6, 1.2 }, Speed = { 0.4, 1 }, Rise = 1, Radius = 0.5, Twinkle = true },
+			},
+			Rings = { { Radius = 0.72, Width = 0.04, Color = Color3.fromHex("FFD45A"), Tilt = { 90, 0 }, Spin = 0.7 } },
+			Ground = {
+				{ Color = Color3.fromHex("FFD45A"), Radius = 0.9, Transparency = 0 },
+				{ Color = Color3.fromHex("FF7A1A"), Radius = 1.2, Transparency = 0.5 },
+			},
+			Light = { Color = Color3.fromHex("FFB52E"), Brightness = 2.5, Range = 5, Flicker = 0.2 },
+		},
+		SolidGold = {
+			Trails = {
+				{ Colors = { Color3.fromHex("FFF0B0"), Color3.fromHex("FFD45A"), Color3.fromHex("C98A10") }, Width = 1.2, Lifetime = 0.5 },
+				{ Colors = { Color3.fromHex("D8F4FF") }, Width = 0.35, Lifetime = 0.3 }, -- diamond-white core
+			},
+			-- a gold gyroscope: two crossed rings spinning opposite ways, diamond glints and gold dust
+			Rings = {
+				{ Radius = 0.7, Width = 0.045, Color = Color3.fromHex("FFD45A"), Tilt = { 60, 0 }, Spin = 0.6 },
+				{ Radius = 0.7, Width = 0.045, Color = Color3.fromHex("FFE9A0"), Tilt = { 120, 0 }, Spin = -0.6 },
+			},
+			Particles = {
+				{ Image = "Diamond", Colors = { Color3.fromHex("FFFFFF"), Color3.fromHex("BFEFFF") }, Rate = 10, Size = 0.14,
+					Life = { 0.8, 1.4 }, Speed = { 0.05, 0.2 }, Radius = 0.85, Twinkle = true, Spin = 120 },
+				{ Image = "Dot", Colors = { Color3.fromHex("FFE9A0"), Color3.fromHex("FFC030") }, Rate = 40, Size = 0.06,
+					Life = { 0.8, 1.6 }, Speed = { 0.1, 0.4 }, Rise = 0.3, Radius = 0.7, Twinkle = true },
+			},
+			Halos = {
+				{ Image = "Dot", Color = Color3.fromHex("FFC030"), Size = 2.4, Transparency = 0.55, Pulse = { 0.8, 0.1 } },
+			},
+			Ground = {
+				{ Color = Color3.fromHex("FFE07A"), Radius = 0.9, Transparency = 0 },
+				{ Color = Color3.fromHex("C98A10"), Radius = 1.2, Transparency = 0.5 },
+			},
+			Light = { Color = Color3.fromHex("FFC94A"), Brightness = 2.5, Range = 5 },
+		},
+		Lightning = {
+			Trails = {
+				{ Colors = { Color3.fromHex("FFFBE0"), Color3.fromHex("FFE45A") }, Width = 0.6, Lifetime = 0.45, Texture = "Bolt" },
+				{ Colors = { Color3.fromHex("FFF6B0"), Color3.fromHex("FFD020"), Color3.fromHex("2A2F8F") }, Width = 1.25, Lifetime = 0.5 },
+			},
+			-- bolts crackle all round it, sparks spit off, and storm rings whip round fast
+			Particles = {
+				{ Image = "Bolt", Colors = { Color3.fromHex("FFFFFF"), Color3.fromHex("FFE45A") }, Rate = 18, Size = 0.55,
+					Life = { 0.05, 0.12 }, Speed = { 0, 0.1 }, Radius = 0.62, Spin = 0 },
+				{ Image = "Ember", Colors = { Color3.fromHex("FFFFFF"), Color3.fromHex("FFD020") }, Rate = 40, Size = 0.06,
+					Life = { 0.15, 0.35 }, Speed = { 2, 4 }, Radius = 0.5 },
+			},
+			Rings = {
+				{ Radius = 0.7, Width = 0.035, Color = Color3.fromHex("FFE45A"), Tilt = { 75, 20 }, Spin = 1.6 },
+				{ Radius = 0.78, Width = 0.03, Color = Color3.fromHex("FFF6B0"), Tilt = { 105, -25 }, Spin = -1.2 },
+				{ Radius = 0.86, Width = 0.02, Color = Color3.fromHex("6A7BFF"), Tilt = { 90, 0 }, Spin = 0.8 },
+			},
+			Halos = {
+				{ Image = "Dot", Color = Color3.fromHex("FFD020"), Size = 2.6, Transparency = 0.5, Pulse = { 2.5, 0.15 } },
+				{ Image = "Bolt", Color = Color3.fromHex("FFF6B0"), Size = 1.9, Transparency = 0.6, Spin = 90 },
+			},
+			Light = { Color = Color3.fromHex("FFD84A"), Brightness = 2.5, Range = 5, Flicker = 0.9 },
+		},
+		Daybreak = {
+			Trails = {
+				{
+					-- night to sunrise along the trail
+					Colors = { Color3.fromHex("FFE9A0"), Color3.fromHex("FF9C7A"), Color3.fromHex("FF7AB0"), Color3.fromHex("3A3A9A") },
+					Width = 1.3,
+					Lifetime = 0.55,
+				},
+				{ Colors = { Color3.fromHex("FFF6D8") }, Width = 0.4, Lifetime = 0.35 },
+			},
+			-- a rising sun behind it (turning rays), stars twinkling round the night side, sun sparks
+			Halos = {
+				{ Image = "Burst", Color = Color3.fromHex("FFE0B0"), Size = 2.5, Transparency = 0.8, Spin = 18, Pulse = { 0.5, 0.12 } },
+				{ Image = "Dot", Color = Color3.fromHex("FF7AB0"), Size = 2.5, Transparency = 0.55, Pulse = { 0.5, 0.1 } },
+			},
+			Rings = {
+				{ Radius = 0.74, Width = 0.04, Color = Color3.fromHex("FFD27A"), Tilt = { 80, 10 }, Spin = 0.5 },
+				{ Radius = 0.84, Width = 0.03, Color = Color3.fromHex("FF8FC0"), Tilt = { 100, -15 }, Spin = -0.4 },
+			},
+			Particles = {
+				{ Image = "Star", Colors = { Color3.fromHex("FFFFFF"), Color3.fromHex("FFE9A0"), Color3.fromHex("C8C8FF") }, Rate = 22,
+					Size = 0.17, Life = { 0.6, 1.2 }, Speed = { 0.05, 0.2 }, Radius = 0.9, Twinkle = true, Spin = 45 },
+				{ Image = "Dot", Colors = { Color3.fromHex("FFD27A"), Color3.fromHex("FF7AB0"), Color3.fromHex("8A7AFF") }, Rate = 40,
+					Size = 0.05, Life = { 0.5, 1 }, Speed = { 0.2, 0.6 }, Radius = 0.5, Twinkle = true },
+			},
+			Ground = {
+				{ Color = Color3.fromHex("FFD27A"), Radius = 0.9, Transparency = 0 },
+				{ Color = Color3.fromHex("FF7AB0"), Radius = 1.2, Transparency = 0.5 },
+			},
+			Light = { Color = Color3.fromHex("FFA88A"), Brightness = 2.5, Range = 5 },
+		},
 	},
 }
 
@@ -2238,8 +2448,9 @@ Config.Balls = {
 		Trail = Color3.fromHex("C21E37"),
 		Traits = { Blast = 0.75, StreakSaver = 45 },
 	},
-	-- Skyline Lanes (zone 4, Phase X): the moved top Neon balls as new zone 4 entries (same numbers as the ball whose
-	-- model they reuse), plus two Epics from the Neon Epic models. Placeholder colour + effect until Claude Design re-skins.
+	-- Skyline Lanes (zone 4, Phase X): sky, sun and storm balls. Real models from the owner's claude.ai/design
+	-- 'Skyline Lanes' set (2026-10-27): ReplicatedStorage.BallModels, one shared mesh + a texture each
+	-- (assets/zone4_balls); Crystal's glowing core is a BallFxPieces piece. Numbers unchanged.
 	{
 		Id = "CloudSwirl",
 		Zone = 4,
@@ -2247,12 +2458,10 @@ Config.Balls = {
 		Rarity = "Epic",
 		Multiplier = 4.0,
 		Forgiveness = 0.035,
-		Color = Color3.fromRGB(225, 240, 255),
-		Material = Enum.Material.Neon,
-		Trail = Color3.fromRGB(225, 240, 255),
+		Color = Color3.fromHex("5AAEE8"),
+		Material = Enum.Material.SmoothPlastic,
+		Trail = Color3.fromHex("BFE4FF"),
 		Traits = { Lucky = 1.25, GemHunter = 0.08 },
-		Model = "Nebula", -- PLACEHOLDER look: reuses Nebula's model and effect, recoloured
-		Tint = Color3.fromRGB(225, 240, 255),
 	},
 	{
 		Id = "Crystal",
@@ -2261,12 +2470,10 @@ Config.Balls = {
 		Rarity = "Epic",
 		Multiplier = 3.0,
 		Forgiveness = 0.03,
-		Color = Color3.fromRGB(120, 230, 255),
-		Material = Enum.Material.Neon,
-		Trail = Color3.fromRGB(120, 230, 255),
+		Color = Color3.fromHex("8FE0FF"),
+		Material = Enum.Material.SmoothPlastic,
+		Trail = Color3.fromHex("8FE0FF"),
 		Traits = { Heavy = 0.4, GemHunter = 0.06 },
-		Model = "Plasma", -- PLACEHOLDER look: reuses Plasma's model and effect, recoloured
-		Tint = Color3.fromRGB(120, 230, 255),
 	},
 	{
 		Id = "Sunburst",
@@ -2275,12 +2482,10 @@ Config.Balls = {
 		Rarity = "Legendary",
 		Multiplier = 7.0,
 		Forgiveness = 0.04,
-		Color = Color3.fromRGB(255, 170, 40),
-		Material = Enum.Material.Neon,
-		Trail = Color3.fromRGB(255, 170, 40),
+		Color = Color3.fromHex("FFB52E"),
+		Material = Enum.Material.SmoothPlastic,
+		Trail = Color3.fromHex("FFB52E"),
 		Traits = { Lucky = 2, GemHunter = 0.15 },
-		Model = "Golden", -- PLACEHOLDER look: reuses Golden's model and effect, recoloured
-		Tint = Color3.fromRGB(255, 170, 40),
 	},
 	{
 		Id = "SolidGold",
@@ -2289,12 +2494,10 @@ Config.Balls = {
 		Rarity = "Legendary",
 		Multiplier = 10.0,
 		Forgiveness = 0.045,
-		Color = Color3.fromRGB(255, 205, 60),
-		Material = Enum.Material.Neon,
-		Trail = Color3.fromRGB(255, 205, 60),
+		Color = Color3.fromHex("F0B530"),
+		Material = Enum.Material.SmoothPlastic,
+		Trail = Color3.fromHex("FFD45A"),
 		Traits = { Blast = 0.75, StreakSaver = 45 },
-		Model = "Dragon", -- PLACEHOLDER look: reuses Dragon's model and effect, recoloured
-		Tint = Color3.fromRGB(255, 205, 60),
 	},
 	{
 		Id = "Lightning",
@@ -2303,12 +2506,10 @@ Config.Balls = {
 		Rarity = "Mythic",
 		Multiplier = 20.0,
 		Forgiveness = 0.05,
-		Color = Color3.fromRGB(255, 245, 90),
-		Material = Enum.Material.Neon,
-		Trail = Color3.fromRGB(255, 245, 90),
+		Color = Color3.fromHex("141A4A"),
+		Material = Enum.Material.SmoothPlastic,
+		Trail = Color3.fromHex("FFE45A"),
 		Traits = { Curve = 0.6, StreakSaver = 30 },
-		Model = "Void", -- PLACEHOLDER look: reuses Void's model and effect, recoloured
-		Tint = Color3.fromRGB(255, 245, 90),
 	},
 	{
 		Id = "Daybreak",
@@ -2317,12 +2518,10 @@ Config.Balls = {
 		Rarity = "Mythic",
 		Multiplier = 25.0,
 		Forgiveness = 0.05,
-		Color = Color3.fromRGB(255, 150, 120),
-		Material = Enum.Material.Neon,
-		Trail = Color3.fromRGB(255, 150, 120),
+		Color = Color3.fromHex("FF9C7A"),
+		Material = Enum.Material.SmoothPlastic,
+		Trail = Color3.fromHex("FF9C7A"),
 		Traits = { Blast = 1, Heavy = 0.8 },
-		Model = "Supernova", -- PLACEHOLDER look: reuses Supernova's model and effect, recoloured
-		Tint = Color3.fromRGB(255, 150, 120),
 	},
 }
 
@@ -4306,6 +4505,7 @@ Config.Economy.Sim = {
 	BadQuality = { 0.6, 0.85 }, -- the rest
 	PerfectShare = 0.15, -- share of all throws that are Perfect (counted inside the good ones)
 	SpendShare = 0.25, -- buys an egg or crate only when it costs at most this share of the next Power Level
+	SaveForRebirthAt = 0, -- stops buying eggs/crates once a zone-opening rebirth is this far paid (0 = from its level on, like the goal bar)
 	MaxEggs = 8, -- stops hatching an egg type after this many
 	MaxCrates = 10, -- stops buying a crate type after this many
 	Minutes = 600, -- how long each pretend player plays (one long session: playtime gifts restart each visit)
@@ -4318,4 +4518,3 @@ Config.Economy.Sim = {
 }
 
 return Config
-	SaveForRebirthAt = 0, -- stops buying eggs/crates once a zone-opening rebirth is this far paid (0 = from its level on, like the goal bar)

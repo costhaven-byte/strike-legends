@@ -498,7 +498,7 @@ local function addHalo(rig: BasePart, row, size: number)
 	label.ImageTransparency = row.Transparency or 0
 	label.Parent = gui
 	gui.Parent = rig
-	return gui
+	return gui, label
 end
 
 -- A trail row sized for its tier (Config.BallVfx.TrailTiers) and Power Level, in the worn cosmetic's colours if any
@@ -547,6 +547,7 @@ function BallFx.Attach(
 		Rings = {},
 		Spinners = {},
 		Pieces = {},
+		Halos = {}, -- halos that turn or pulse
 		Badge = nil,
 		BadgeHeight = 0,
 		Emitters = {},
@@ -623,7 +624,18 @@ function BallFx.Attach(
 		pieces:Destroy()
 	end
 	for _, row in look.Halos or {} do
-		addHalo(rig, row, size)
+		local gui, label = addHalo(rig, row, size)
+		if row.Spin or row.Pulse then
+			-- turning rays and breathing glows (zone 4 balls)
+			table.insert(handle.Halos, {
+				Gui = gui,
+				Label = label,
+				Size = row.Size * size,
+				Spin = row.Spin or 0,
+				Pulse = row.Pulse,
+				Seed = math.random() * 10,
+			})
+		end
 	end
 	if isLane then
 		for i, row in look.Ground or {} do
@@ -659,6 +671,10 @@ function BallFx.Attach(
 		light.Brightness = lightRow.Brightness
 		light.Range = math.max(lightRow.Range * size, 4)
 		light.Parent = rig
+		if lightRow.Flicker then
+			handle.FlickerLights = handle.FlickerLights or {}
+			table.insert(handle.FlickerLights, { Light = light, Amount = lightRow.Flicker })
+		end
 	end
 	BallFx.Dim(rig)
 	for _, descendant in rig:GetDescendants() do
@@ -734,6 +750,13 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 		for _, spinner in handle.Spinners do
 			spinner.Label.Rotation = (t * spinner.Speed) % 360
+		end
+		for _, halo in handle.Halos do
+			halo.Label.Rotation = (t * halo.Spin) % 360
+			if halo.Pulse then
+				local grow = 1 + halo.Pulse[2] * math.sin((t + halo.Seed) * halo.Pulse[1] * math.pi * 2)
+				halo.Gui.Size = UDim2.fromScale(halo.Size * grow, halo.Size * grow)
+			end
 		end
 		for _, piece in handle.Pieces do
 			piece.Weld.C0 = CFrame.Angles(0, math.rad(t * piece.Speed % 360), 0) * piece.Offset
