@@ -8,7 +8,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -20,14 +19,18 @@ local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
 local BallView = require(Modules.BallView)
 local MascotView = require(Modules.MascotView)
+local UiKit = require(Modules.UiKit)
+local CrateKit = require(Modules.CrateKit)
+local HudKit = require(Modules.HudKit)
+local RewardKit = require(Modules.RewardKit)
 local ThrowController = require(script.Parent.ThrowController)
 
 local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
-local BODY_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
 local INK = Color3.fromHex("06060F")
-local GOLD = Color3.fromRGB(255, 200, 40)
 
 local player = Players.LocalPlayer
+local C = UiKit.C
+local make = UiKit.Make
 
 local ZoneGateController = {}
 
@@ -50,12 +53,6 @@ local function stroke(parent: Instance, color: Color3, thickness: number)
 	s.Thickness = thickness
 	s.Parent = parent
 	return s
-end
-
-local function corner(parent: Instance, radius: number)
-	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0, radius)
-	c.Parent = parent
 end
 
 -- The glowing wall around a locked zone: only on this screen, so it only stops you
@@ -157,65 +154,6 @@ local function crateView(crateId: string): ViewportFrame?
 	return view
 end
 
--- One row of 3D pictures under a heading
-local function showcaseRow(
-	parent: Instance,
-	order: number,
-	heading: string,
-	color: Color3,
-	views: { GuiObject },
-	labels: { string },
-	labelColors: { Color3 }
-)
-	local row = Instance.new("Frame")
-	row.Name = "Row" .. order
-	row.LayoutOrder = order
-	row.BackgroundColor3 = Color3.fromRGB(18, 10, 34)
-	row.Size = UDim2.new(1, 0, 0, 132)
-	corner(row, 12)
-	stroke(row, color, 2).Transparency = 0.4
-	local head = text(row, {
-		Position = UDim2.fromOffset(12, 6),
-		Size = UDim2.new(1, -24, 0, 22),
-		Text = heading,
-		TextColor3 = color,
-		TextXAlignment = Enum.TextXAlignment.Left,
-	})
-	stroke(head, INK, 2)
-	local strip = Instance.new("Frame")
-	strip.BackgroundTransparency = 1
-	strip.Position = UDim2.fromOffset(8, 30)
-	strip.Size = UDim2.new(1, -16, 1, -34)
-	strip.Parent = row
-	local layout = Instance.new("UIListLayout")
-	layout.FillDirection = Enum.FillDirection.Horizontal
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	layout.Padding = UDim.new(0, 6)
-	layout.Parent = strip
-	local width = 1 / math.max(#views, 4)
-	for index, view in views do
-		local cell = Instance.new("Frame")
-		cell.BackgroundTransparency = 1
-		cell.LayoutOrder = index
-		cell.Size = UDim2.new(width, -6, 1, 0)
-		view.Size = UDim2.new(1, 0, 1, -18)
-		view.Parent = cell
-		local name = Instance.new("TextLabel")
-		name.BackgroundTransparency = 1
-		name.FontFace = BODY_FONT
-		name.TextScaled = true
-		name.AnchorPoint = Vector2.new(0, 1)
-		name.Position = UDim2.fromScale(0, 1)
-		name.Size = UDim2.new(1, 0, 0, 16)
-		name.Text = labels[index]
-		name.TextColor3 = labelColors[index]
-		name.Parent = cell
-		cell.Parent = strip
-	end
-	row.Parent = parent
-	return row
-end
-
 -- Waits until no throw is going on and the camera is back with the player
 local function waitForCalm()
 	local camera = Workspace.CurrentCamera
@@ -255,8 +193,61 @@ function ZoneGateController:Start()
 		end
 	end
 
-	-- The "ZONE UNLOCKED" window
+	-- The "ZONE UNLOCKED" window (UI pass batch 2: the owner's kit look, RewardKit window + cover)
 	local showing = false
+	local W, H = 800, 764
+	local function slot(parent: Instance, x: number, w: number, view: GuiObject?, label: string, color: Color3)
+		local cell = UiKit.Block(parent, {
+			Name = "Slot",
+			Size = Vector2.new(w, 128),
+			Fill = C.Slot,
+			Lip = C.Ink,
+			LipPx = 4,
+			Radius = 14,
+			Outline = 3,
+		})
+		cell.Holder.Position = UDim2.fromOffset(x, 40)
+		if view then
+			view.AnchorPoint = Vector2.zero
+			view.Position = UDim2.fromOffset(4, 2)
+			view.Size = UDim2.new(1, -8, 1, -28)
+			view.ZIndex = 4
+			view.Parent = cell.Face
+		end
+		local name = RewardKit.Label(cell.Face, label, UiKit.Body, 12, color, 0, 4, 98, w - 14, 18)
+		name.ZIndex = 5
+		return cell.Holder
+	end
+	local function card(parent: Instance, x: number, y: number, w: number, heading: string, color: Color3)
+		local block = UiKit.Block(parent, {
+			Name = "Card",
+			Size = Vector2.new(w, 184),
+			Fill = C.Page,
+			Lip = C.Ink,
+			LipPx = 5,
+			Radius = 18,
+			Outline = 3,
+		})
+		block.Holder.Position = UDim2.fromOffset(x, y)
+		local head = RewardKit.Label(block.Face, heading, UiKit.Head, 20, color, 2, 16, 8, w - 32, 28)
+		head.TextXAlignment = Enum.TextXAlignment.Left
+		return block.Face, block.Holder
+	end
+	-- a row of slots spread across a card's width
+	local function fillCard(face: Frame, w: number, items: { { any } })
+		local count = #items
+		if count == 0 then
+			return
+		end
+		local gap = 8
+		local cellW = math.min(120, math.floor((w - 24 - gap * (count - 1)) / count))
+		local x = math.floor((w - (cellW * count + gap * (count - 1))) / 2)
+		for _, item in items do
+			slot(face, x, cellW, item[1], item[2], item[3])
+			x += cellW + gap
+		end
+	end
+
 	local function showUnlock(gate)
 		local info = Config.ZoneUnlock[gate.Zone]
 		if not info then
@@ -272,72 +263,73 @@ function ZoneGateController:Start()
 		gui.DisplayOrder = 40
 		gui.ResetOnSpawn = false
 		gui.IgnoreGuiInset = true
+		gui.Parent = player:WaitForChild("PlayerGui")
+		local win = RewardKit.Window(gui, W, H)
+		local cover, closeX = RewardKit.Cover(win.Panel, W, H, "ZONE UNLOCKED!", nil, C.Gold)
+		local titleBox = cover:FindFirstChild("TitleBox") :: Frame
+		titleBox.Size = UDim2.fromOffset(W - 52, 54)
+		for _, child in titleBox:GetDescendants() do
+			if child:IsA("TextLabel") then
+				child.TextXAlignment = Enum.TextXAlignment.Center
+			end
+		end
 
-		local shade = Instance.new("TextButton") -- swallows taps so they don't throw a ball
-		shade.Name = "Shade"
-		shade.AutoButtonColor = false
-		shade.Text = ""
-		shade.Size = UDim2.fromScale(1, 1)
-		shade.BackgroundColor3 = Color3.new(0, 0, 0)
-		shade.BackgroundTransparency = 1
-		shade.Parent = gui
-		TweenService:Create(shade, TweenInfo.new(0.4), { BackgroundTransparency = 0.35 }):Play()
+		-- the zone's name big in its colour, what it pays, the tagline
+		local nameBox = make("Frame", {
+			Name = "NameBox",
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(20, 70),
+			Size = UDim2.fromOffset(W - 40, 72),
+		}, cover)
+		local zoneName = CrateKit.Title(nameBox, info.Name, 64, info.Color, 4, 6)
+		RewardKit.Fit(zoneName, 64, W - 60, 72)
+		local chips = make("Frame", {
+			Name = "Chips",
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(0, 148),
+			Size = UDim2.fromOffset(W, 44),
+		}, cover)
+		make("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			HorizontalAlignment = Enum.HorizontalAlignment.Center,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			Padding = UDim.new(0, 12),
+		}, chips)
+		for order, chip in
+			{
+				{ ("x%s COINS"):format(Zones.CoinPay(gate.Zone)), C.Gold, "Coins2" },
+				{ ("x%s XP"):format(Zones.XpPay(gate.Zone)), C.Cyan, nil },
+			}
+		do
+			local width = CrateKit.TextWidth(chip[1], UiKit.Head, 22) + (if chip[3] then 66 else 40)
+			local block = UiKit.Block(chips, {
+				Name = "Chip",
+				Size = Vector2.new(width, 44),
+				Fill = C.Card,
+				Lip = C.Ink,
+				LipPx = 4,
+				Radius = 22,
+				Outline = 3,
+			})
+			block.Holder.LayoutOrder = order
+			local x = 20
+			if chip[3] then
+				HudKit.Image(block.Face, chip[3], 28, {
+					AnchorPoint = Vector2.new(0, 0.5),
+					Position = UDim2.new(0, 14, 0.5, 0),
+				})
+				x = 48
+			end
+			local label = UiKit.Text(block.Face, chip[1], UiKit.Head, 22, chip[2], 2)
+			label.Position = UDim2.fromOffset(x, 3)
+			label.Size = UDim2.new(1, -x - 14, 1, 0)
+		end
+		local tagline = RewardKit.Label(cover, info.Tagline, UiKit.Body, 15, C.Label, 0, 60, 198, W - 120, 40)
+		tagline.TextWrapped = true
+		RewardKit.Fit(tagline, 15, W - 120, 40)
 
-		local window = Instance.new("Frame")
-		window.Name = "Window"
-		window.AnchorPoint = Vector2.new(0.5, 0.5)
-		window.Position = UDim2.fromScale(0.5, 0.5)
-		window.Size = UDim2.fromScale(0.92, 0.9)
-		window.BackgroundColor3 = Color3.fromRGB(14, 8, 28)
-		window.Visible = false
-		corner(window, 18)
-		stroke(window, info.Color, 4)
-		local limit = Instance.new("UISizeConstraint")
-		limit.MaxSize = Vector2.new(560, 600)
-		limit.Parent = window
-		local gradient = Instance.new("UIGradient")
-		gradient.Rotation = 90
-		gradient.Color = ColorSequence.new(Color3.fromRGB(70, 20, 90), Color3.fromRGB(12, 8, 26))
-		gradient.Parent = window
-		window.Parent = gui
-
-		local scroll = Instance.new("ScrollingFrame")
-		scroll.BackgroundTransparency = 1
-		scroll.BorderSizePixel = 0
-		scroll.Position = UDim2.fromOffset(16, 12)
-		scroll.Size = UDim2.new(1, -32, 1, -24)
-		scroll.ScrollBarThickness = 4
-		scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-		scroll.CanvasSize = UDim2.new()
-		scroll.Parent = window
-		local list = Instance.new("UIListLayout")
-		list.SortOrder = Enum.SortOrder.LayoutOrder
-		list.HorizontalAlignment = Enum.HorizontalAlignment.Center
-		list.Padding = UDim.new(0, 8)
-		list.Parent = scroll
-
-		local title =
-			text(scroll, { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 34), Text = info.Title, TextColor3 = GOLD })
-		stroke(title, INK, 3)
-		local name =
-			text(scroll, { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 62), Text = info.Name, TextColor3 = info.Color })
-		stroke(name, Color3.new(1, 1, 1), 2)
-		local nameGlow = stroke(name, info.Color, 6)
-		nameGlow.Transparency = 0.5
-		local tagline = text(scroll, {
-			LayoutOrder = 3,
-			Size = UDim2.new(1, -10, 0, 40),
-			Text = info.Tagline,
-			FontFace = BODY_FONT,
-			TextWrapped = true,
-			TextColor3 = Color3.fromRGB(225, 215, 245),
-		})
-		local taglineLimit = Instance.new("UITextSizeConstraint")
-		taglineLimit.MaxTextSize = 17
-		taglineLimit.Parent = tagline
-
-		-- The pets waiting there: their egg, turning in 3D
-		local eggViews, eggNames, eggColors = {}, {}, {}
+		-- The pets waiting there: their egg turning in 3D, its pets a surprise ("?" slots)
+		local pets = {}
 		for _, eggId in info.Eggs or {} do
 			local look = Config.EggLooks[eggId]
 			if look then
@@ -352,50 +344,22 @@ function ZoneGateController:Start()
 				view.Destroying:Connect(function()
 					spin:Disconnect()
 				end)
-				table.insert(eggViews, view)
-				table.insert(eggNames, look.Name:upper())
-				table.insert(eggColors, look.Color)
+				table.insert(pets, { view, look.Name:upper(), look.Color })
 			end
 		end
-		-- Its pets are a surprise: mystery cards next to the egg
-		for _ = 1, #eggViews > 0 and (info.MysteryPets or 0) or 0 do
-			local card = Instance.new("Frame")
-			card.BackgroundTransparency = 1
-			local bubble = text(card, {
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.fromScale(0.5, 0.5),
-				Size = UDim2.fromScale(0.8, 0.8),
-				BackgroundTransparency = 0,
-				BackgroundColor3 = Color3.fromRGB(40, 24, 70),
-				Text = "?",
-				TextColor3 = info.Accent,
-			})
-			Instance.new("UIAspectRatioConstraint").Parent = bubble
-			corner(bubble, 999)
-			stroke(bubble, info.Accent, 2).ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-			table.insert(eggViews, card)
-			table.insert(eggNames, "NEW PET")
-			table.insert(eggColors, Color3.fromRGB(200, 190, 230))
+		for _ = 1, #pets > 0 and (info.MysteryPets or 0) or 0 do
+			local mystery = UiKit.Text(nil :: any, "?", UiKit.Head, 54, info.Accent, 3)
+			table.insert(pets, { mystery, "NEW PET", C.Muted })
 		end
-		if #eggViews > 0 then
-			showcaseRow(scroll, 4, info.PetsLine, info.Accent, eggViews, eggNames, eggColors)
-		end
-
 		-- The crates waiting there
-		local crateViews, crateNames, crateColors = {}, {}, {}
+		local crates = {}
 		for _, crateId in info.Crates do
 			local crate = Balls.GetCrate(crateId)
 			local view = crateView(crateId)
 			if crate and view then
-				table.insert(crateViews, view)
-				table.insert(crateNames, crate.Name:upper())
-				table.insert(crateColors, crate.Color)
+				table.insert(crates, { view, crate.Name:upper(), crate.Color })
 			end
 		end
-		if #crateViews > 0 then
-			showcaseRow(scroll, 5, info.CratesLine, info.Accent, crateViews, crateNames, crateColors)
-		end
-
 		-- Its best balls, and how many new ones those crates can give you
 		local owned = Balls.DecodeOwned(player:GetAttribute("OwnedBalls"))
 		local count = 0
@@ -404,80 +368,60 @@ function ZoneGateController:Start()
 				count += 1
 			end
 		end
-		local ballViews, ballNames, ballColors = {}, {}, {}
+		local balls = {}
 		for _, ballId in info.Balls do
 			local ball = Balls.Get(ballId)
 			if ball then
-				table.insert(ballViews, BallView.New(ball, { Spin = true, Margin = 1.1 }))
-				table.insert(ballNames, ball.Name:upper())
-				table.insert(ballColors, Balls.GetRarity(ball.Rarity).Color)
+				table.insert(balls, {
+					BallView.New(ball, { Spin = true, Margin = 1.1 }),
+					ball.Name:upper(),
+					Balls.GetRarity(ball.Rarity).Color,
+				})
 			end
 		end
-		if #ballViews > 0 then
-			showcaseRow(scroll, 6, info.BallsLine:format(count), GOLD, ballViews, ballNames, ballColors)
+
+		local cards: { GuiObject } = {}
+		local y = 248
+		if #pets > 0 and #crates > 0 then
+			local leftW = math.floor((W - 56) * #pets / (#pets + #crates))
+			local face, holder = card(cover, 20, y, leftW, info.PetsLine, info.Accent)
+			fillCard(face, leftW, pets)
+			table.insert(cards, holder)
+			face, holder = card(cover, 36 + leftW, y, W - 56 - leftW, info.CratesLine, info.Accent)
+			fillCard(face, W - 56 - leftW, crates)
+			table.insert(cards, holder)
+			y += 196
+		else
+			for _, row in { { pets, info.PetsLine }, { crates, info.CratesLine } } do
+				if #row[1] > 0 then
+					local face, holder = card(cover, 20, y, W - 40, row[2], info.Accent)
+					fillCard(face, W - 40, row[1])
+					table.insert(cards, holder)
+					y += 196
+				end
+			end
+		end
+		if #balls > 0 then
+			local face, holder = card(cover, 20, y, W - 40, info.BallsLine:format(count), C.Gold)
+			fillCard(face, W - 40, balls)
+			table.insert(cards, holder)
 		end
 
-		local hint = text(scroll, {
-			LayoutOrder = 7,
-			Size = UDim2.new(1, 0, 0, 20),
-			Text = info.Hint,
-			FontFace = BODY_FONT,
-			TextColor3 = info.Accent,
-		})
-		hint.TextScaled = true
+		local hint = RewardKit.Label(cover, info.Hint:upper(), UiKit.Body, 14, info.Accent, 0, 40, H - 128, W - 80, 20)
+		hint.Name = "Hint"
+		local go = RewardKit.Button(cover, info.Button, "Lime", 340, 68, 30)
+		go.Holder.Position = UDim2.fromOffset(W / 2 - 270, H - 68 - 20)
+		local later = RewardKit.Button(cover, "CLOSE", "Grey", 180, 68, 28)
+		later.Holder.Position = UDim2.fromOffset(W / 2 + 90, H - 68 - 20)
+		win.Screen.Name = "Screen"
 
-		local buttons = Instance.new("Frame")
-		buttons.BackgroundTransparency = 1
-		buttons.LayoutOrder = 8
-		buttons.Size = UDim2.new(1, 0, 0, 56)
-		buttons.Parent = scroll
-		local go = Instance.new("TextButton")
-		go.Name = "Go"
-		go.AnchorPoint = Vector2.new(0.5, 0)
-		go.Position = UDim2.fromScale(0.5, 0)
-		go.Size = UDim2.new(0.62, 0, 0, 52)
-		go.BackgroundColor3 = Color3.fromRGB(90, 230, 110)
-		go.FontFace = FONT
-		go.TextScaled = true
-		go.Text = info.Button
-		go.TextColor3 = Color3.new(1, 1, 1)
-		corner(go, 12)
-		stroke(go, INK, 3).ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-		local goText = Instance.new("UIStroke")
-		goText.Color = INK
-		goText.Thickness = 2
-		goText.Parent = go
-		local goPad = Instance.new("UIPadding")
-		goPad.PaddingTop = UDim.new(0, 8)
-		goPad.PaddingBottom = UDim.new(0, 8)
-		goPad.Parent = go
-		go.Parent = buttons
-		local later = Instance.new("TextButton")
-		later.Name = "Later"
-		later.AnchorPoint = Vector2.new(1, 0)
-		later.Position = UDim2.new(1, 0, 0, 10)
-		later.Size = UDim2.new(0.18, 0, 0, 32)
-		later.BackgroundColor3 = Color3.fromRGB(60, 50, 80)
-		later.FontFace = FONT
-		later.TextScaled = true
-		later.Text = "LATER"
-		later.TextColor3 = Color3.fromRGB(200, 190, 230)
-		corner(later, 10)
-		later.Parent = buttons
-		UiFx.Press(go)
-		UiFx.Press(later)
-
-		gui.Parent = player:WaitForChild("PlayerGui")
-		UiFx.Open(window)
+		win:Open()
+		RewardKit.Stagger(cards, 0.08, 0.2)
+		RewardKit.Stamp(nameBox)
 		UiFx.Flash(info.Color, 0.45, 0.6)
-		UiFx.Confetti(window, 50, { info.Color, GOLD, info.Accent })
+		CrateKit.Confetti(cover, 0, -200, 44, 420, 1)
 		Sfx.Play("RevealBig", 1)
-		local pulse = TweenService:Create(
-			nameGlow,
-			TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-			{ Transparency = 0 }
-		)
-		pulse:Play()
+		local stopTwinkle = RewardKit.Twinkle(nameBox, 6, info.Accent)
 
 		local closing = false
 		local function close()
@@ -486,17 +430,18 @@ function ZoneGateController:Start()
 			end
 			closing = true
 			zoneSeen:FireServer(gate.Zone)
-			pulse:Cancel()
-			UiFx.Close(window)
-			TweenService:Create(shade, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
+			stopTwinkle()
 			task.delay(0.4, gui.Destroy, gui)
 			showing = false
 		end
-		go.Activated:Connect(function()
-			close()
-		end)
-		later.Activated:Connect(function()
-			close()
+		win.Closed.Event:Connect(close)
+		for _, b in { go, later } do
+			b.Activated:Connect(function()
+				win:Close()
+			end)
+		end
+		closeX.Activated:Connect(function()
+			win:Close()
 		end)
 	end
 

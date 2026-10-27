@@ -61,15 +61,15 @@ local METER_SIDE = if IS_SIDE then SIDE_SIDE else ARC_SIDE
 -- Popups that must be closed before you can throw (ScreenGui, frame), so a tap meant for one never rolls the
 -- ball by accident and costs a streak
 local POPUPS = {
-	{ "RankUpUI", "Overlay" },
+	{ "RankUpKitUI", "Screen" },
 	{ "BallsUI", "Inventory" },
 	{ "BallsUI", "Book" },
 	{ "BallsUI", "Shop" },
 	{ "BallsUI", "Opening" },
 	{ "DailyCalendarUI", "Screen" },
 	{ "PlaytimeUI", "Screen" },
-	{ "TrialUI", "Intro" },
-	{ "ZoneUnlockUI", "Window" },
+	{ "TrialKitUI", "Screen" },
+	{ "ZoneUnlockUI", "Screen" },
 	{ "MascotUI", "Panel" }, -- pets + potions (ITEMS tab)
 }
 

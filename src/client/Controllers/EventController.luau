@@ -16,19 +16,18 @@ local Balls = require(Shared.Modules.Balls)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modifiers = require(Shared.Modules.Modifiers)
 local PowerLevels = require(Shared.Modules.PowerLevels)
-local Progression = require(Shared.Modules.Progression)
 local Rebirth = require(Shared.Modules.Rebirth)
 local Zones = require(Shared.Modules.Zones)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local TraitFx = require(Modules.TraitFx)
 local Sfx = require(Modules.Sfx)
 local HudKit = require(Modules.HudKit)
+local MomentKit = require(Modules.MomentKit)
 local K = HudKit.C
 
 local GOLD = Config.GoldenPin.Color
 local CRATE_COLOR = Color3.fromRGB(60, 230, 255)
 local GEM_COLOR = Color3.fromRGB(255, 90, 200)
-local LEVEL_GEM_COLOR = Color3.fromRGB(60, 230, 255) -- same blue as the "+N GEMS" after a throw (HudController)
 local POWER_COLOR = Color3.fromRGB(255, 43, 214)
 local REBIRTH_COLOR = Color3.fromRGB(125, 255, 60) -- the REBIRTH button's lime
 
@@ -211,6 +210,7 @@ function EventController:Start()
 	-- Popups: one at a time, queued so two surprises on one throw both get their moment
 	local queue = {}
 	local showing = false
+	local holdPopupsUntil = 0 -- the LEVEL UP burst has the centre until then
 	local defaultSubColor = popup.Sub.TextColor3 -- the sub line's own colour, used when a popup doesn't pick one
 	local fades: { Tween } = {}
 	local function runQueue()
@@ -218,6 +218,9 @@ function EventController:Start()
 			return
 		end
 		showing = true
+		while os.clock() < holdPopupsUntil do
+			task.wait(0.1)
+		end
 		while #queue > 0 do
 			local item = table.remove(queue, 1)
 			-- Stop the last popup's fade first: if it finished a frame late it would turn this one invisible,
@@ -660,18 +663,20 @@ function EventController:Start()
 		end
 		pulsing = close
 	end
-	for _, key in {
-		"CrateStrikes",
-		"Coins",
-		"PowerLevel",
-		"Onboarding",
-		"OnboardThrows",
-		"CratesBought",
-		"RankLevel",
-		"Rebirths",
-		"ZonesOpen",
-		"ZoneVisited",
-	} do
+	for _, key in
+		{
+			"CrateStrikes",
+			"Coins",
+			"PowerLevel",
+			"Onboarding",
+			"OnboardThrows",
+			"CratesBought",
+			"RankLevel",
+			"Rebirths",
+			"ZonesOpen",
+			"ZoneVisited",
+		}
+	do
 		player:GetAttributeChangedSignal(key):Connect(refreshBar)
 	end
 	refreshBar()
@@ -715,17 +720,12 @@ function EventController:Start()
 	player:GetAttributeChangedSignal("FreeCrates"):Connect(refreshBadge)
 	refreshBadge()
 
-	-- Rank level-up inside a tier (a new tier gets the full RankUpUI screen instead).
-	-- A free crate from the same level shows its own popup right after this one.
+	-- Rank level-up inside a tier (a new tier gets the full rank-up screen instead): the kit's LEVEL UP burst.
+	-- Popups wait for it, so a free crate from the same level shows right after.
+	local levelUp = MomentKit.LevelUp()
 	ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("LevelUp").OnClientEvent:Connect(function(data)
-		local rank = Progression.GetRank(player:GetAttribute("Rank") or 1)
-		showPopup(
-			("LEVEL %d!"):format(data.Level),
-			rank.Color,
-			if data.Gems > 0 then ("+%d GEMS"):format(data.Gems) else rank.Name:upper(),
-			false,
-			if data.Gems > 0 then LEVEL_GEM_COLOR else nil
-		)
+		levelUp(data.Level, data.Gems, player:GetAttribute("Rank") or 1)
+		holdPopupsUntil = os.clock() + 2.9
 		Sfx.Play("RankUp", 1.15, 0.7)
 	end)
 
