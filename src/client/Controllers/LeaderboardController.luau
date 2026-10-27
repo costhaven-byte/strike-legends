@@ -1,7 +1,10 @@
--- Draws the leaderboard wall screen (Workspace.Leaderboards.Screen.Board, built in Studio).
+-- Draws the leaderboard wall screens (built in Studio): every Model tagged "LeaderboardWall" (one per zone,
+-- lobby = Workspace.Leaderboards), each with Screen.Board. Colours are set in Studio per zone; the wall's
+-- "Accent" attribute (Color3) colours your own name in the top 10.
 -- One panel per board in Board.Panels: Row1-3 are the crown rows, Row4-10 plain rows, You is pinned at the bottom.
 -- The server shares the top scores in ReplicatedStorage.Leaderboards; this script adds your own live
 -- score on top, so your row and position update right away instead of waiting for the next refresh.
+local CollectionService = game:GetService("CollectionService")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -15,6 +18,7 @@ local Calendar = require(Shared.Modules.Calendar)
 local player = Players.LocalPlayer
 
 local LB = Config.Leaderboards
+local WALL_TAG = "LeaderboardWall"
 local ME_COLOR = Color3.fromRGB(60, 230, 255)
 local NAME_COLOR = Color3.fromRGB(255, 255, 255)
 
@@ -43,7 +47,7 @@ local function setValue(holder: Frame, score: number?, showCoin: boolean)
 	holder.Coin.Visible = showCoin and score ~= nil
 end
 
-local function setupPanel(board, panel: Frame, data: Folder)
+local function setupPanel(board, panel: Frame, data: Folder, meColor: Color3)
 	local rows = panel:WaitForChild("Rows")
 	local you = panel:WaitForChild("You")
 	local loading = panel:WaitForChild("Loading") :: TextLabel
@@ -108,7 +112,7 @@ local function setupPanel(board, panel: Frame, data: Folder)
 				then "-"
 				elseif entry.Me then player.DisplayName
 				else decoded.Names[tostring(entry.UserId)] or "Player"
-			row.PlayerName.TextColor3 = if entry and entry.Me then ME_COLOR else NAME_COLOR
+			row.PlayerName.TextColor3 = if entry and entry.Me then meColor else NAME_COLOR
 			row.AvatarFrame.Avatar.Image = if entry then headshot(entry.UserId) else ""
 			setValue(row.Value, entry and entry.Score, board.ShowCoin == true and i <= 3)
 		end
@@ -157,24 +161,42 @@ local function runLiveLabel(label: TextLabel)
 	end
 end
 
-function LeaderboardController:Start()
-	local data = ReplicatedStorage:WaitForChild("Leaderboards") :: Folder
-	local screen = Workspace:WaitForChild("Leaderboards"):WaitForChild("Screen", 10)
+local function setupWall(wall: Instance, data: Folder)
+	local screen = wall:WaitForChild("Screen", 10)
 	local surface = screen and screen:WaitForChild("Board", 10)
 	if not surface then
-		warn("[LeaderboardController] Missing Workspace.Leaderboards.Screen.Board")
+		warn("[LeaderboardController] Missing Screen.Board in " .. wall:GetFullName())
 		return
 	end
+	local accent = wall:GetAttribute("Accent")
+	local meColor = if typeof(accent) == "Color3" then accent else ME_COLOR
 	local panels = surface:WaitForChild("Panels")
 	for _, board in LB.Boards do
 		local panel = panels:WaitForChild(board.Id, 10)
 		if panel then
-			task.spawn(setupPanel, board, panel, data)
+			task.spawn(setupPanel, board, panel, data, meColor)
 		else
 			warn("[LeaderboardController] Missing leaderboard panel: " .. board.Id)
 		end
 	end
 	task.spawn(runLiveLabel, surface.Header.Live.Updated)
+end
+
+function LeaderboardController:Start()
+	local data = ReplicatedStorage:WaitForChild("Leaderboards") :: Folder
+	local walls = CollectionService:GetTagged(WALL_TAG)
+	if #walls == 0 then
+		-- Older place copies: only the lobby wall, untagged
+		table.insert(walls, Workspace:WaitForChild("Leaderboards"))
+	end
+	for _, wall in walls do
+		task.spawn(setupWall, wall, data)
+	end
+	CollectionService:GetInstanceAddedSignal(WALL_TAG):Connect(function(wall)
+		if wall:IsDescendantOf(Workspace) then
+			task.spawn(setupWall, wall, data)
+		end
+	end)
 end
 
 return LeaderboardController
