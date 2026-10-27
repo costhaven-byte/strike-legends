@@ -11,8 +11,7 @@ local Config = require(Shared.Config)
 local Currency = require(Shared.Modules.Currency)
 local Calendar = require(Shared.Modules.Calendar)
 local Balls = require(Shared.Modules.Balls)
-local Zones = require(Shared.Modules.Zones)
-local PowerLevels = require(Shared.Modules.PowerLevels)
+local DailyRewards = require(Shared.Modules.DailyRewards)
 local CrateController = require(script.Parent.CrateController)
 local OnboardingController = require(script.Parent.OnboardingController)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
@@ -44,11 +43,19 @@ local function potionById(id: string)
 	return nil
 end
 
--- "15,000 COINS" / "3x COIN POTION" / "GOLD CRATE\n+2x MEGA COIN POTION\n+25 GEMS"
+-- A day's reward for this player's progress right now (same rule as the server: Shared.Modules.DailyRewards)
+local function resolve(day: number)
+	return DailyRewards.Resolve(day, {
+		PowerLevel = player:GetAttribute("PowerLevel"),
+		ZonesOpen = player:GetAttribute("ZonesOpen"),
+		AwayRate = player:GetAttribute("AwayRate"),
+	})
+end
+
+-- "15,000 COINS" / "3x COIN POTION" / "GOLD CRATE\n+2x MEGA COIN POTION\n+25 GEMS" (reward = resolve(day))
 local function rewardText(reward): string
 	local parts = {}
-	-- A crate from a zone you haven't unlocked yet comes as your zone's crate (same rule as the server)
-	local crate = Balls.GetCrate(Zones.RewardCrateId(reward.Crate, player:GetAttribute("ZonesOpen")))
+	local crate = Balls.GetCrate(reward.Crate)
 	if crate then
 		table.insert(parts, crate.Name:upper())
 	end
@@ -62,9 +69,7 @@ local function rewardText(reward): string
 		table.insert(parts, if item.Count > 1 then ("%dx %s"):format(item.Count, name) else name)
 	end
 	if reward.Coins then
-		-- Grows with your Power Level (same rule as the server)
-		local coins = PowerLevels.DailyCoins(reward, player:GetAttribute("PowerLevel"))
-		table.insert(parts, shortNumber(coins) .. " COINS")
+		table.insert(parts, shortNumber(reward.Coins) .. " COINS")
 	end
 	if reward.Gems then
 		table.insert(parts, formatNumber(reward.Gems) .. " GEMS")
@@ -184,11 +189,10 @@ function DailyRewardController:Start()
 		return 24 + col * 160, 104 + row * 146, 148, 134
 	end
 
-	-- One big icon per tile: crate, else egg, else potion, else coins, else gems
+	-- One big icon per tile: crate, else egg, else potion, else coins, else gems (reward = resolve(day))
 	local function mainIcon(reward): (string, any)
 		if reward.Crate then
-			-- a crate from a zone you haven't unlocked yet comes as your zone's crate (same rule as the server)
-			return "Crate", Zones.RewardCrateId(reward.Crate, player:GetAttribute("ZonesOpen"))
+			return "Crate", reward.Crate
 		elseif reward.Egg then
 			return "Egg", reward.Egg
 		elseif reward.Potions and reward.Potions[1] then
@@ -202,7 +206,8 @@ function DailyRewardController:Start()
 	-- One tile per day, straight from Config.Daily. States: CLAIMED (dark cover + tick), TODAY (gold edge, rays,
 	-- TODAY tag, breathing), LATER (darker card). The last day is the big gold tile with sparkles.
 	local tiles = {}
-	for day, reward in Config.Daily.Rewards do
+	for day in Config.Daily.Rewards do
+		local reward = resolve(day)
 		local x, y, w, h = spot(day)
 		local big = day == #Config.Daily.Rewards
 		local block = UiKit.Block(cover, {
@@ -292,10 +297,12 @@ function DailyRewardController:Start()
 		chip.Holder.Visible = false
 		RewardKit.Label(chip.Face, "TODAY", UiKit.Head, 16, C.White, 2, 4, 2, 72, 16)
 
+		-- Rewards follow your zone, Power Level and income, so the tile updates when they change
 		local function paint()
+			reward = resolve(day)
 			amount.Text = rewardText(reward)
 			local newKind, newValue = mainIcon(reward)
-			if newKind == "Crate" and newValue ~= value then
+			if newValue ~= value then
 				value = newValue
 				RewardKit.Fill(icon, newKind, newValue)
 			end
@@ -303,6 +310,7 @@ function DailyRewardController:Start()
 		paint()
 		player:GetAttributeChangedSignal("ZonesOpen"):Connect(paint)
 		player:GetAttributeChangedSignal("PowerLevel"):Connect(paint)
+		player:GetAttributeChangedSignal("AwayRate"):Connect(paint)
 		tiles[day] = {
 			Block = block,
 			Edge = edge,

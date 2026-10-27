@@ -1,4 +1,5 @@
 -- The 7-day daily reward calendar (Config.Daily: coins, gems, potions, a free egg hatch, crates). The server decides which day you're on and hands out the reward.
+-- What a day gives follows the player's progress (zone, Power Level, income): Shared.Modules.DailyRewards.
 -- Clients see two Player attributes: DailyNext (the calendar day to claim, or just claimed today)
 -- and DailyClaimable (true if today's reward is waiting).
 local Players = game:GetService("Players")
@@ -8,8 +9,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Calendar = require(Shared.Modules.Calendar)
 local Balls = require(Shared.Modules.Balls)
-local Zones = require(Shared.Modules.Zones)
-local PowerLevels = require(Shared.Modules.PowerLevels)
+local DailyRewards = require(Shared.Modules.DailyRewards)
 local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local BallService = require(script.Parent.BallService)
@@ -58,14 +58,16 @@ local function claim(player: Player)
 	if not claimable then
 		return { Ok = false, Error = "Come back tomorrow!" }
 	end
-	local reward = DAILY.Rewards[day]
+	local reward = DailyRewards.Resolve(day, {
+		PowerLevel = PlayerDataService.Get(player, "PowerLevel"),
+		ZonesOpen = PlayerDataService.Get(player, "ZonesOpen"),
+		AwayRate = PlayerDataService.Get(player, "AwayRate"),
+	})
 
 	PlayerDataService.Set(player, "DailyDay", day)
 	PlayerDataService.Set(player, "DailyLastClaim", Calendar.Day())
-	local coins = 0
-	if reward.Coins then
-		-- The day's coins, or a share of the next Power Level if that's more (Config.Daily)
-		coins = PowerLevels.DailyCoins(reward, PlayerDataService.Get(player, "PowerLevel"))
+	local coins = reward.Coins or 0
+	if coins > 0 then
 		PlayerDataService.Add(player, "Coins", coins)
 		Analytics.Currency(player, "Coins", coins, "TimedReward", "Daily")
 	end
@@ -82,8 +84,7 @@ local function claim(player: Player)
 	Analytics.Event(player, "DailyClaimed", day)
 	SessionLog.Moment(player, ("Daily reward day %d claimed"):format(day))
 	local crateResult
-	-- A crate from a zone you haven't unlocked yet comes as your zone's crate
-	local crate = Balls.GetCrate(Zones.RewardCrateId(reward.Crate, PlayerDataService.Get(player, "ZonesOpen")))
+	local crate = Balls.GetCrate(reward.Crate)
 	if crate then
 		crateResult = BallService.GiveCrate(player, crate)
 	end

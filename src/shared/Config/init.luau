@@ -3484,16 +3484,27 @@ Config.PetIdle = {
 -- number stops mattering fast: Coins is the least you get, LevelShare = or that share of your next Power Level's
 -- price if it's more (PowerLevels.DailyCoins). Sim with ~30 min of play a day: day 1 = ~4 min of bowling, day 3 =
 -- ~11 min, day 6 = ~35 min.
+-- Owner 2026-10-28: daily rewards follow the player's progress (Shared.Modules.DailyRewards; playtime gifts don't):
+--   Coins = the biggest of: Coins x your highest zone's coin pay (x1/4/16/64), LevelShare of your next Power Level,
+--   or Minutes of your own bowling income (AwayRate: coins per second over your last 10 minutes of throwing).
+--   Egg / Crate = "Zone": your highest open zone's egg / best crate (ByZone). Gems x your zone's Gems.
+--   Potions stay the same (a x2 potion already pays more the more you earn).
 Config.Daily = {
 	Rewards = {
-		{ Coins = 15000, LevelShare = 0.25 },
+		{ Coins = 15000, LevelShare = 0.25, Minutes = 5 },
 		{ Potions = { { Id = "CoinSmall", Count = 3 } } },
-		{ Coins = 500000, LevelShare = 0.5, Gems = 5 },
-		{ Egg = "Alley", Gems = 10 }, -- a free Neon Egg hatch at the egg stand
+		{ Coins = 500000, LevelShare = 0.5, Minutes = 12, Gems = 5 },
+		{ Egg = "Zone", Gems = 10 }, -- a free hatch of your zone's egg at its egg stand
 		{ Potions = { { Id = "CoinBig", Count = 1 }, { Id = "XpBig", Count = 1 } } },
-		{ Coins = 5000000, LevelShare = 0.5, Gems = 15 },
-		-- an Alley Crate until Neon Lanes opens (Zones.RewardCrateId)
-		{ Crate = "Gold", Potions = { { Id = "CoinBig", Count = 2 } }, Gems = 25 },
+		{ Coins = 5000000, LevelShare = 0.5, Minutes = 30, Gems = 15 },
+		{ Crate = "Zone", Potions = { { Id = "CoinBig", Count = 2 } }, Gems = 25 },
+	},
+	-- By your highest open zone (ZonesOpen). Zone 1 gets the Neon Egg too (pets open with zone 2; it waits at the stand).
+	ByZone = {
+		{ Egg = "Alley", Crate = "Basic", Gems = 1 },
+		{ Egg = "Alley", Crate = "Gold", Gems = 1.5 },
+		{ Egg = "Arcade", Crate = "Champion", Gems = 2 },
+		{ Egg = "Skyline", Crate = "SkyGold", Gems = 3 },
 	},
 	CheckInterval = 30, -- seconds between checks for a new day while playing
 	GraceDays = 1, -- days you can skip without losing your place in the 7 days
