@@ -1,5 +1,6 @@
 -- Playtime gifts on screen (owner 2026-10-22, Config.Playtime): the GIFTS button (top-right corner) with the time
 -- to the next gift, and the gifts panel (12 gifts, one every 15 minutes) with a CLAIM button on each ready gift.
+-- The panel is in the owner's kit style (RewardKit, UI pass batch 1, 2026-10-28).
 -- Built in code (not in Studio), so it lives in git. The server runs the clock and hands out gifts (PlaytimeService).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,28 +13,22 @@ local Balls = require(Shared.Modules.Balls)
 local Mascots = require(Shared.Modules.Mascots)
 local Zones = require(Shared.Modules.Zones)
 local CrateController = require(script.Parent.CrateController)
-local PotionController = require(script.Parent.PotionController)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules:WaitForChild("Sfx"))
 local UiFx = require(Modules:WaitForChild("UiFx"))
 local HudKit = require(Modules:WaitForChild("HudKit"))
+local UiKit = require(Modules:WaitForChild("UiKit"))
+local CrateKit = require(Modules:WaitForChild("CrateKit"))
+local RewardKit = require(Modules:WaitForChild("RewardKit"))
+
+local C = UiKit.C
 
 local player = Players.LocalPlayer
 
 local PLAYTIME = Config.Playtime
 
-local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
-local BODY_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
-local INK = Color3.fromHex("06060F")
-local CARD = Color3.fromRGB(30, 20, 60)
-local PANEL = Color3.fromRGB(18, 12, 38)
 local PINK = Color3.fromRGB(255, 70, 170)
-local LIME = Color3.fromRGB(125, 255, 60)
 local GOLD = Color3.fromRGB(255, 200, 40)
-local GREY = Color3.fromRGB(120, 110, 150)
-
--- The GIFTS button sits in the top-right corner (owner 2026-10-22; Config.Ui.HidePlayerList frees it on computers)
-local PANEL_SIZE = UDim2.fromOffset(640, 380)
 
 local PlaytimeController = {}
 
@@ -43,121 +38,6 @@ local function clock(seconds: number): string
 		return ("%d:%02d:%02d"):format(seconds // 3600, seconds % 3600 // 60, seconds % 60)
 	end
 	return ("%d:%02d"):format(seconds // 60, seconds % 60)
-end
-
-local function corner(parent: Instance, radius: number?)
-	local c = Instance.new("UICorner")
-	c.CornerRadius = if radius then UDim.new(0, radius) else UDim.new(1, 0)
-	c.Parent = parent
-end
-
-local function stroke(parent: Instance, color: Color3, thickness: number, border: boolean?): UIStroke
-	local s = Instance.new("UIStroke")
-	s.Color = color
-	s.Thickness = thickness
-	s.ApplyStrokeMode = if border then Enum.ApplyStrokeMode.Border else Enum.ApplyStrokeMode.Contextual
-	s.Parent = parent
-	return s
-end
-
-local function text(parent: Instance, name: string, font: Font, color: Color3, position: UDim2, size: UDim2): TextLabel
-	local label = Instance.new("TextLabel")
-	label.Name = name
-	label.BackgroundTransparency = 1
-	label.FontFace = font
-	label.TextScaled = true
-	label.TextColor3 = color
-	label.Position = position
-	label.Size = size
-	label.Parent = parent
-	stroke(label, INK, 1.5)
-	return label
-end
-
-local function button(
-	parent: Instance,
-	name: string,
-	label: string,
-	color: Color3,
-	position: UDim2,
-	size: UDim2
-): TextButton
-	local b = Instance.new("TextButton")
-	b.Name = name
-	b.Text = label
-	b.FontFace = FONT
-	b.TextScaled = true
-	b.TextColor3 = INK
-	b.BackgroundColor3 = color
-	b.AutoButtonColor = false
-	b.Position = position
-	b.Size = size
-	b.Parent = parent
-	corner(b, 10)
-	stroke(b, INK, 2, true)
-	local pad = Instance.new("UIPadding")
-	pad.PaddingTop = UDim.new(0, 4)
-	pad.PaddingBottom = UDim.new(0, 4)
-	pad.PaddingLeft = UDim.new(0, 6)
-	pad.PaddingRight = UDim.new(0, 6)
-	pad.Parent = b
-	UiFx.Press(b)
-	return b
-end
-
--- An egg drawn with frames (tall oval with spots)
-local function eggIcon(parent: Instance, look, position: UDim2, size: number): Frame
-	local egg = Instance.new("Frame")
-	egg.Name = "Egg"
-	egg.AnchorPoint = Vector2.new(0.5, 0.5)
-	egg.Position = position
-	egg.Size = UDim2.fromOffset(size * 0.72, size)
-	egg.BackgroundColor3 = look.Color
-	egg.Parent = parent
-	corner(egg)
-	stroke(egg, INK, 2.5)
-	for _, spot in { { 0.3, 0.3, 0.22 }, { 0.62, 0.52, 0.18 }, { 0.36, 0.7, 0.14 } } do
-		local dot = Instance.new("Frame")
-		dot.Name = "Spot"
-		dot.AnchorPoint = Vector2.new(0.5, 0.5)
-		dot.Position = UDim2.fromScale(spot[1], spot[2])
-		dot.Size = UDim2.fromScale(spot[3] * 1.3, spot[3])
-		dot.BackgroundColor3 = look.Spots
-		dot.Parent = egg
-		corner(dot)
-	end
-	return egg
-end
-
--- A crate drawn with frames (box with a lid band and a lock)
-local function crateIcon(parent: Instance, color: Color3, position: UDim2, size: number): Frame
-	local crate = Instance.new("Frame")
-	crate.Name = "Crate"
-	crate.AnchorPoint = Vector2.new(0.5, 0.5)
-	crate.Position = position
-	crate.Size = UDim2.fromOffset(size, size * 0.8)
-	crate.BackgroundColor3 = color
-	crate.Parent = parent
-	corner(crate, 4)
-	stroke(crate, INK, 2.5)
-	local band = Instance.new("Frame")
-	band.Name = "Band"
-	band.Position = UDim2.fromScale(0, 0.3)
-	band.Size = UDim2.fromScale(1, 0.14)
-	band.BackgroundColor3 = INK
-	band.BackgroundTransparency = 0.4
-	band.BorderSizePixel = 0
-	band.Parent = crate
-	local lock = Instance.new("Frame")
-	lock.Name = "Lock"
-	lock.AnchorPoint = Vector2.new(0.5, 0.5)
-	lock.Position = UDim2.fromScale(0.5, 0.42)
-	lock.Size = UDim2.fromScale(0.22, 0.26)
-	lock.BackgroundColor3 = GOLD
-	lock.Parent = crate
-	corner(lock, 3)
-	stroke(lock, INK, 1.5)
-	return crate
 end
 
 local function potionById(id: string)
@@ -197,7 +77,6 @@ function PlaytimeController:Start()
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
 	local claimRemote = remotes:WaitForChild("ClaimPlaytime") :: RemoteFunction
 	local playerGui = player:WaitForChild("PlayerGui")
-	local hud = playerGui:WaitForChild("HUD") :: ScreenGui
 	local ballsUI = playerGui:WaitForChild("BallsUI") :: ScreenGui
 
 	local gui = Instance.new("ScreenGui")
@@ -214,113 +93,145 @@ function PlaytimeController:Start()
 	local giftsState = ""
 	local stopBob: (() -> ())? = nil
 
-	-- ===== The panel =====
-	local panel = Instance.new("Frame")
-	panel.Name = "Panel"
-	panel.AnchorPoint = Vector2.new(0.5, 0.5)
-	panel.Position = UDim2.fromScale(0.5, 0.53)
-	panel.Size = PANEL_SIZE
-	panel.BackgroundColor3 = PANEL
-	panel.BackgroundTransparency = 0.05
-	panel.Visible = false
-	panel.Active = true -- taps on the panel don't fall through to the throw meter
-	panel.Parent = gui
-	corner(panel, 18)
-	stroke(panel, PINK, 4, true)
+	-- ===== The gifts window (760x500, owner's kit style): 12 gift tiles in a 4x3 grid. The gift boxes grow toward the
+	-- last one, a big gold gift. States: READY (lime edge + rays, wiggling gift, CLAIM), NEXT (pink edge, live timer),
+	-- LATER (darker card), CLAIMED (what it gave + a tick) =====
+	local W, H = 760, 500
+	local win = RewardKit.Window(gui, W, H)
+	local panel = win.Screen
+	local cover, close = RewardKit.Cover(
+		win.Panel,
+		W,
+		H,
+		"FREE GIFTS",
+		("A NEW GIFT EVERY %d MINUTES YOU PLAY · THEY START OVER EVERY VISIT"):format(PLAYTIME.Rewards[1].Minutes),
+		C.Pink
+	)
+	local COUNT = #PLAYTIME.Rewards
+	local TILE_W, TILE_H = 169, 119
+	local RIGHT_X, RIGHT_W = 84, TILE_W - 6 - 90 -- the text column right of the gift
 
-	local title = text(panel, "Title", FONT, Color3.new(1, 1, 1), UDim2.new(0, 20, 0, 12), UDim2.new(1, -80, 0, 38))
-	title.Text = "PLAYTIME GIFTS"
-	title.TextXAlignment = Enum.TextXAlignment.Left
-	local hint =
-		text(panel, "Hint", BODY_FONT, Color3.fromRGB(200, 190, 230), UDim2.new(0, 20, 0, 52), UDim2.new(1, -40, 0, 18))
-	hint.Text = "A free gift every 15 minutes you play. They start over every visit!"
-	hint.TextXAlignment = Enum.TextXAlignment.Left
-
-	local close =
-		button(panel, "Close", "X", Color3.fromRGB(255, 70, 90), UDim2.new(1, -54, 0, 12), UDim2.fromOffset(42, 42))
-	close.TextColor3 = Color3.new(1, 1, 1)
-
-	local grid = Instance.new("Frame")
-	grid.Name = "Gifts"
-	grid.BackgroundTransparency = 1
-	grid.Position = UDim2.new(0, 16, 0, 80)
-	grid.Size = UDim2.new(1, -32, 1, -116)
-	grid.Parent = panel
-	local layout = Instance.new("UIGridLayout")
-	layout.CellSize = UDim2.new(1 / 6, -7, 0.5, -5)
-	layout.CellPadding = UDim2.fromOffset(8, 10)
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Parent = grid
+	local function rewardIcon(reward): (string, any)
+		if reward.Potion then
+			return "Potion", reward.Potion
+		elseif reward.Egg then
+			return "Egg", reward.Egg
+		end
+		return "Crate", nil
+	end
 
 	local tiles = {}
 	for index, reward in PLAYTIME.Rewards do
-		local tile = Instance.new("Frame")
-		tile.Name = "Gift" .. index
-		tile.LayoutOrder = index
-		tile.BackgroundColor3 = CARD
-		tile.Parent = grid
-		corner(tile, 12)
-		local outline = stroke(tile, GREY, 2, true)
-
-		local mark = text(tile, "Minutes", FONT, Color3.new(1, 1, 1), UDim2.new(0, 4, 0, 4), UDim2.new(1, -8, 0, 16))
-		mark.Text = if reward.Minutes >= 60 and reward.Minutes % 60 == 0
-			then ("%d HOUR%s"):format(reward.Minutes // 60, if reward.Minutes == 60 then "" else "S")
-			else ("%d MIN"):format(reward.Minutes)
-
-		local iconSpot = UDim2.fromScale(0.5, 0.37)
-		local icon
-		if reward.Potion then
-			local potion = potionById(reward.Potion)
-			icon = PotionController.Flask(
-				tile,
-				if potion then potion.Color else PINK,
-				potion ~= nil and potion.Big,
-				iconSpot,
-				40
-			)
-		elseif reward.Egg then
-			icon = eggIcon(tile, Config.EggLooks[reward.Egg] or { Color = PINK, Spots = GOLD }, iconSpot, 40)
-		else
-			icon = crateIcon(tile, GOLD, iconSpot, 40)
+		local col, row = (index - 1) % 4, (index - 1) // 4
+		local x, y = 24 + col * (TILE_W + 12), 100 + row * (TILE_H + 12)
+		local last = index == COUNT
+		local block = UiKit.Block(cover, {
+			Name = "Gift" .. index,
+			Size = Vector2.new(TILE_W, TILE_H),
+			Fill = if last then C.Gold else C.Card,
+			Lip = if last then C.GoldLip else C.Page,
+			LipPx = 6,
+			Radius = 16,
+			Outline = 3,
+		})
+		block.Holder.Position = UDim2.fromOffset(x, y)
+		local face = block.Face
+		local edge = UiKit.Outline(face, C.Lime, 3)
+		edge.Enabled = false
+		local giftSpot = UiKit.Make("Frame", {
+			Name = "GiftSpot",
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(4, 4),
+			Size = UDim2.fromOffset(76, TILE_H - 20),
+		}, face)
+		local rays = RewardKit.Rays(giftSpot, C.White, 104, 8)
+		rays.Visible = last
+		local giftSize = math.floor(44 + (index - 1) / math.max(COUNT - 1, 1) * 24)
+		local gift = RewardKit.Icon(giftSpot, if last then "GiftGold" else "Gift", nil, giftSize)
+		local kind, value = rewardIcon(reward)
+		local prize = RewardKit.Icon(giftSpot, kind, value, 58)
+		prize.Visible = false
+		local tick = CrateKit.Icon(giftSpot, "Check", 30)
+		tick.AnchorPoint = Vector2.new(0.5, 0.5)
+		tick.Position = UDim2.new(0.5, 24, 0.5, 22)
+		tick.ZIndex = 8
+		tick.Visible = false
+		if last then
+			RewardKit.Twinkle(face, 3, C.White)
 		end
 
-		local name =
-			text(tile, "GiftName", BODY_FONT, Color3.new(1, 1, 1), UDim2.new(0, 4, 0.56, 0), UDim2.new(1, -8, 0, 26))
+		local mark = RewardKit.Label(
+			face,
+			if reward.Minutes >= 60 and reward.Minutes % 60 == 0
+				then ("%d HOUR%s"):format(reward.Minutes // 60, if reward.Minutes == 60 then "" else "S")
+				else ("%d MIN"):format(reward.Minutes),
+			UiKit.Head,
+			15,
+			if last then C.White else C.Label,
+			2,
+			RIGHT_X,
+			8,
+			RIGHT_W,
+			18
+		)
+		mark.TextXAlignment = Enum.TextXAlignment.Left
+		local name = UiKit.Text(face, "", UiKit.Body, 12, C.White, if last then 2 else 0)
+		name.Name = "GiftName"
+		name.Position = UDim2.fromOffset(RIGHT_X, 29)
+		name.Size = UDim2.fromOffset(RIGHT_W, 30)
 		name.TextWrapped = true
-
-		local timer = text(tile, "Timer", FONT, GREY, UDim2.new(0, 6, 1, -30), UDim2.new(1, -12, 0, 24))
-		local claim = button(tile, "Claim", "CLAIM", LIME, UDim2.new(0, 6, 1, -32), UDim2.new(1, -12, 0, 26))
-		claim.Visible = false
+		name.TextXAlignment = Enum.TextXAlignment.Left
+		name.TextYAlignment = Enum.TextYAlignment.Top
+		RewardKit.Fit(name, 12, RIGHT_W, 30)
+		local timer = RewardKit.Label(face, "", UiKit.Num, 22, C.White, 2, RIGHT_X, 62, RIGHT_W, 32)
+		timer.TextXAlignment = Enum.TextXAlignment.Left
+		local claim = RewardKit.Button(face, "CLAIM", "Lime", 76, 38, 18)
+		claim.Holder.Position = UDim2.fromOffset(RIGHT_X - 4, 60)
+		claim.Holder.Visible = false
 		claim.Activated:Connect(function()
 			PlaytimeController.Claim(index)
 		end)
 		tiles[index] = {
-			Tile = tile,
-			Outline = outline,
-			Icon = icon,
+			Block = block,
+			Edge = edge,
+			Rays = rays,
+			Gift = gift,
+			Prize = prize,
+			Tick = tick,
 			Name = name,
 			Timer = timer,
 			Claim = claim,
+			Last = last,
+			X = x,
+			Y = y,
+			State = "",
+			StopPulse = nil :: (() -> ())?,
 		}
 	end
 
-	-- Toast for messages ("Hatch it at the egg stand!")
-	local toast = text(gui, "Toast", FONT, Color3.new(1, 1, 1), UDim2.fromScale(0.5, 0.2), UDim2.new(0.7, 0, 0, 34))
-	toast.AnchorPoint = Vector2.new(0.5, 0.5)
-	toast.Visible = false
-	toast.ZIndex = 20
-	local toastToken = 0
-	local function showToast(message: string, seconds: number?)
-		toastToken += 1
-		local token = toastToken
-		toast.Text = message
-		toast.Visible = true
-		UiFx.Pop(toast, 1.3, 0.25)
-		task.delay(seconds or 1.6, function()
-			if toastToken == token then
-				toast.Visible = false
+	-- Ready gifts wiggle (-12/10/-6 degrees) every 1.6 s while the window is open
+	task.spawn(function()
+		while true do
+			task.wait(1.6)
+			if panel.Visible then
+				for _, t in tiles do
+					if t.State == "Ready" then
+						task.spawn(function()
+							for _, angle in { -12, 10, -6, 0 } do
+								UiKit.Tween(t.Gift, 0.08, Enum.EasingStyle.Quad, { Rotation = angle })
+								task.wait(0.08)
+							end
+						end)
+					end
+				end
 			end
-		end)
+		end
+	end)
+
+	-- Toast for messages ("Hatch it at the egg stand!")
+	local toast = RewardKit.Toast(gui)
+	local function showToast(message: string, seconds: number?)
+		toast(message, nil, nil, nil, seconds)
 	end
 
 	local function claimedSet(): { [number]: boolean }
@@ -346,36 +257,50 @@ function PlaytimeController:Start()
 		local ready = 0
 		local nextLeft = nil
 		for index, reward in PLAYTIME.Rewards do
-			local tile = tiles[index]
-			local nameText, color = describe(reward)
-			tile.Name.Text = nameText
-			if reward.Crate then
-				tile.Icon.BackgroundColor3 = color
-			end
+			local t = tiles[index]
+			t.Name.Text = (describe(reward))
 			local left = if seconds then reward.Minutes * 60 - seconds else math.huge
+			local state
 			if claimed[index] then
-				tile.Claim.Visible = false
-				tile.Timer.Visible = true
-				tile.Timer.Text = "CLAIMED"
-				tile.Timer.TextColor3 = LIME
-				tile.Outline.Color = GREY
-				tile.Tile.BackgroundTransparency = 0.5
+				state = "Claimed"
 			elseif left <= 0 then
+				state = "Ready"
 				ready += 1
-				tile.Claim.Visible = true
-				tile.Timer.Visible = false
-				tile.Outline.Color = LIME
-				tile.Outline.Thickness = 3
-				tile.Tile.BackgroundTransparency = 0
+			elseif nextLeft == nil then
+				state = "Next"
+				nextLeft = left
 			else
-				tile.Claim.Visible = false
-				tile.Timer.Visible = true
-				tile.Timer.Text = if seconds then clock(left) else "--:--"
-				tile.Timer.TextColor3 = if nextLeft == nil then Color3.new(1, 1, 1) else GREY
-				tile.Outline.Color = if nextLeft == nil then color else GREY
-				tile.Outline.Thickness = 2
-				tile.Tile.BackgroundTransparency = 0
-				nextLeft = nextLeft or left
+				state = "Later"
+			end
+			if state == "Next" or state == "Later" then
+				t.Timer.Text = if seconds then clock(left) else "--:--"
+			end
+			if state ~= t.State then
+				t.State = state
+				t.Gift.Visible = state ~= "Claimed"
+				t.Prize.Visible = state == "Claimed"
+				t.Tick.Visible = state == "Claimed"
+				t.Claim.Holder.Visible = state == "Ready"
+				t.Timer.Visible = state ~= "Ready"
+				t.Edge.Enabled = state == "Ready" or state == "Next"
+				t.Edge.Color = if state == "Ready" then C.Lime else C.Pink
+				t.Rays.Visible = state == "Ready" or (t.Last and state ~= "Claimed")
+				t.Rays.ImageColor3 = if state == "Ready" then C.Lime else C.White
+				if not t.Last then
+					t.Block:Paint(if state == "Later" or state == "Claimed" then C.Page else C.Card, C.Page)
+				end
+				if state == "Claimed" then
+					t.Timer.Text = "CLAIMED"
+					t.Timer.TextColor3 = C.Lime
+				else
+					t.Timer.TextColor3 = if state == "Next" or t.Last then C.White else C.Muted
+				end
+				if state == "Ready" and not t.StopPulse then
+					t.StopPulse = RewardKit.Pulse(t.Claim.Holder, 1.08, 0.45)
+				elseif state ~= "Ready" and t.StopPulse then
+					t.StopPulse()
+					t.StopPulse = nil
+				end
 			end
 		end
 		giftsKit:SetBadge(if ready > 0 then ready else nil)
@@ -451,57 +376,69 @@ function PlaytimeController:Start()
 		local tile = tiles[index]
 		local _, color = describe(reward)
 		Sfx.Play("Reveal")
-		UiFx.Pop(tile.Tile, 1.15, 0.35)
+		-- The tile jumps, the tick stamps down on what it gave and confetti bursts out of it
+		local scale = UiKit.ScaleOf(tile.Block.Holder)
+		scale.Scale = 1.2
+		UiKit.Tween(scale, 0.4, Enum.EasingStyle.Back, { Scale = 1 })
+		RewardKit.Stamp(tile.Tick)
+		CrateKit.Confetti(cover, tile.X + TILE_W / 2 - W / 2, tile.Y + TILE_H / 2 - H / 2, 24, 180, 0.6)
 		UiFx.Flash(color, 0.3, 0.4)
 		if result.Potion then
 			local potion = potionById(result.Potion)
-			showToast(("%s ADDED TO YOUR POTIONS!"):format(if potion then potion.Name else "POTION"), 2.2)
+			toast(
+				("%s ADDED TO YOUR POTIONS!"):format(if potion then potion.Name else "POTION"),
+				"Potion",
+				result.Potion,
+				nil,
+				2.6
+			)
 		elseif result.Egg then
 			local egg = Mascots.GetEgg(result.Egg)
 			local level = player:GetAttribute("RankLevel") or 1
 			local unlocked = egg ~= nil and Mascots.EggUnlocked(egg, level, Zones.Highest(player:GetAttribute("ZonesOpen")))
 			local look = Config.EggLooks[result.Egg]
 			local eggName = string.upper(if look then look.Name else "EGG")
-			showToast(
+			toast(
 				if unlocked
 					then ("FREE %s! HATCH IT AT THE EGG STAND"):format(eggName)
 					else ("FREE %s! IT WAITS FOR YOU IN THE NEXT ZONE"):format(eggName),
+				"Egg",
+				result.Egg,
+				nil,
 				3
 			)
 		end
 		local crate = Balls.GetCrate(result.CrateId)
 		if crate and result.Crate and CrateController.PlayOpening then
-			UiFx.Confetti(nil, 30)
-			task.wait(0.6)
-			UiFx.Close(panel)
+			task.wait(0.8)
+			win:Close()
 			CrateController.PlayOpening(crate, result.Crate)
 		end
 	end
 
 	openButton.Activated:Connect(function()
 		if panel.Visible then
-			UiFx.Close(panel)
+			win:Close()
 		else
 			refresh()
-			UiFx.Open(panel)
+			win:Open()
+			-- the gifts pop in one after another
+			local gifts = {}
+			for index = 1, COUNT do
+				table.insert(gifts, tiles[index].Block.Holder)
+			end
+			RewardKit.Stagger(gifts, 0.03, 0.12)
 		end
 	end)
 	close.Activated:Connect(function()
-		UiFx.Close(panel)
+		win:Close()
 	end)
 
 	-- Studio only: jump the clock 15 minutes ahead
 	local testRemote = remotes:FindFirstChild("TestPlaytime") :: RemoteEvent?
 	if testRemote then
-		local test = button(
-			panel,
-			"TestPlaytime",
-			"TEST: +15 MIN",
-			Color3.fromRGB(60, 60, 80),
-			UDim2.new(0, 16, 1, -30),
-			UDim2.fromOffset(140, 22)
-		)
-		test.TextColor3 = Color3.new(1, 1, 1)
+		local test = RewardKit.Button(cover, "TEST: +15 MIN", "Grey", 150, 34, 14)
+		test.Holder.Position = UDim2.fromOffset(W - 240, 20)
 		test.Activated:Connect(function()
 			testRemote:FireServer()
 		end)
@@ -521,22 +458,13 @@ function PlaytimeController:Start()
 		end
 		openButton.Visible = not covered
 		if covered then
-			UiFx.Close(panel)
+			win:Close()
 		end
 	end
 	for _, screen in covers do
 		screen:GetPropertyChangedSignal("Visible"):Connect(updateButton)
 	end
 	updateButton()
-
-	-- Compact layout on short screens (phones held sideways)
-	local function placeAll()
-		local compact = hud.AbsoluteSize.Y > 0 and hud.AbsoluteSize.Y < Config.Ui.CompactHeight
-		panel.Size = if compact then UDim2.fromScale(0.94, 0.94) else PANEL_SIZE
-		panel.Position = UDim2.fromScale(0.5, if compact then 0.5 else 0.53)
-	end
-	hud:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeAll)
-	placeAll()
 
 	player:GetAttributeChangedSignal("PlaytimeStart"):Connect(refresh)
 	player:GetAttributeChangedSignal("PlaytimeClaimed"):Connect(refresh)
@@ -553,7 +481,5 @@ function PlaytimeController:Start()
 		end
 	end)
 end
-
-PlaytimeController.EggIcon = eggIcon -- the daily calendar draws its egg day with it too
 
 return PlaytimeController

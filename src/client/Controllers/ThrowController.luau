@@ -66,7 +66,8 @@ local POPUPS = {
 	{ "BallsUI", "Book" },
 	{ "BallsUI", "Shop" },
 	{ "BallsUI", "Opening" },
-	{ "DailyUI", "Popup" },
+	{ "DailyCalendarUI", "Screen" },
+	{ "PlaytimeUI", "Screen" },
 	{ "TrialUI", "Intro" },
 	{ "ZoneUnlockUI", "Window" },
 	{ "MascotUI", "Panel" }, -- pets + potions (ITEMS tab)

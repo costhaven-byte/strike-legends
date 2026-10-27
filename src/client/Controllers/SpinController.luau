@@ -18,6 +18,7 @@ local Modules = script.Parent.Parent:WaitForChild("Modules")
 local MascotView = require(Modules:WaitForChild("MascotView"))
 local Sfx = require(Modules:WaitForChild("Sfx"))
 local UiFx = require(Modules:WaitForChild("UiFx"))
+local RewardKit = require(Modules:WaitForChild("RewardKit"))
 
 local player = Players.LocalPlayer
 
@@ -29,7 +30,6 @@ local STEP = 2 * math.pi / COUNT
 local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
 local INK = Color3.fromHex("06060F")
 local NAVY = Color3.fromRGB(14, 10, 34)
-local PANEL = Color3.fromRGB(18, 12, 38)
 local PINK = Color3.fromRGB(255, 60, 210)
 local CYAN = Color3.fromRGB(70, 230, 255)
 local GOLD = Color3.fromRGB(255, 200, 40)
@@ -83,12 +83,6 @@ local function triangle(parent: Instance, a: Vector3, b: Vector3, c: Vector3, co
 		w.CastShadow = false
 		w.Parent = parent
 	end
-end
-
-local function corner(parent: Instance, radius: number?)
-	local c = Instance.new("UICorner")
-	c.CornerRadius = if radius then UDim.new(0, radius) else UDim.new(1, 0)
-	c.Parent = parent
 end
 
 local function stroke(parent: Instance, color: Color3, thickness: number, border: boolean?): UIStroke
@@ -284,100 +278,56 @@ function SpinController:Start()
 	end
 	uprightLabels()
 
-	-- Screen bits: a message line and the pet card
+	-- Screen bits in the owner's kit style (RewardKit, UI pass batch 1): a toast and the YOU WON! prize card
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "SpinUI"
 	gui.ResetOnSpawn = false
-	gui.IgnoreGuiInset = true
+	gui.IgnoreGuiInset = false
 	gui.DisplayOrder = 30
 	gui.Parent = playerGui
 
-	local toast = text(gui, "", WHITE, UDim2.fromScale(0.5, 0.22), UDim2.new(0.7, 0, 0, 38))
-	toast.Visible = false
-	toast.ZIndex = 20
-	local toastToken = 0
+	local toast = RewardKit.Toast(gui)
 	local function showToast(message: string, seconds: number?, color: Color3?)
-		toastToken += 1
-		local token = toastToken
-		toast.Text = message
-		toast.TextColor3 = color or WHITE
-		toast.Visible = true
-		UiFx.Pop(toast, 1.3, 0.25)
-		task.delay(seconds or 2, function()
-			if toastToken == token then
-				toast.Visible = false
-			end
-		end)
+		toast(message, nil, nil, color, seconds)
 	end
 
-	local card = Instance.new("Frame")
-	card.Name = "PetCard"
-	card.AnchorPoint = Vector2.new(0.5, 0.5)
-	card.Position = UDim2.fromScale(0.5, 0.5)
-	card.Size = UDim2.fromOffset(340, 330)
-	card.BackgroundColor3 = PANEL
-	card.Visible = false
-	card.Parent = gui
-	corner(card, 18)
-	stroke(card, GOLD, 4, true)
-	local cardTitle = text(card, "SECRET PET!", GOLD, UDim2.new(0.5, 0, 0, 34), UDim2.new(0.9, 0, 0, 44))
-	cardTitle.UIStroke.Color = PINK
-	local petHolder = Instance.new("Frame")
-	petHolder.BackgroundTransparency = 1
-	petHolder.AnchorPoint = Vector2.new(0.5, 0)
-	petHolder.Position = UDim2.new(0.5, 0, 0, 60)
-	petHolder.Size = UDim2.fromOffset(160, 150)
-	petHolder.Parent = card
-	local petName = text(card, "", WHITE, UDim2.new(0.5, 0, 0, 228), UDim2.new(0.9, 0, 0, 32))
-	local petInfo = text(card, "", LIME, UDim2.new(0.5, 0, 0, 260), UDim2.new(0.9, 0, 0, 20))
-	local ok = Instance.new("TextButton")
-	ok.AnchorPoint = Vector2.new(0.5, 1)
-	ok.Position = UDim2.new(0.5, 0, 1, -12)
-	ok.Size = UDim2.fromOffset(150, 40)
-	ok.BackgroundColor3 = LIME
-	ok.FontFace = FONT
-	ok.TextScaled = true
-	ok.TextColor3 = INK
-	ok.Text = "AWESOME!"
-	ok.AutoButtonColor = false
-	ok.Parent = card
-	corner(ok, 10)
-	stroke(ok, INK, 2, true)
-	UiFx.Press(ok)
+	local prizeCard = RewardKit.PrizeCard(gui)
 	local turning: RBXScriptConnection? = nil
-	ok.Activated:Connect(function()
-		UiFx.Close(card)
+	prizeCard.Window.Closed.Event:Connect(function()
 		if turning then
 			turning:Disconnect()
 			turning = nil
 		end
 	end)
 
+	-- SECRET PET: the pet turns on the card's rays
 	local function showPet(pet)
 		local mascot = pet and Mascots.Get(pet.MascotId)
 		if not mascot then
 			return
 		end
-		petHolder:ClearAllChildren()
-		local model = MascotView.Mascot(mascot, 2)
-		MascotView.Viewport(petHolder, model, 1.15)
-		local start = os.clock()
-		if turning then
-			turning:Disconnect()
-		end
-		turning = RunService.RenderStepped:Connect(function()
-			model:PivotTo(CFrame.Angles(0, math.sin((os.clock() - start) * 1.2) * 0.6, 0))
-		end)
-		petName.Text = string.upper(mascot.Name)
-		petName.TextColor3 = Mascots.RarityColor(mascot.Rarity)
-		petInfo.Text = ("%s  ·  %s COINS%s"):format(
-			string.upper(mascot.Rarity),
-			Mascots.BonusText(Mascots.Bonus(mascot)),
-			if pet.Equipped then "  ·  EQUIPPED!" else ""
-		)
-		UiFx.Open(card)
-		UiFx.Confetti(nil, 60)
-		Sfx.Play("RevealBig")
+		prizeCard:Show({
+			Title = "SECRET PET!",
+			Name = string.upper(mascot.Name),
+			NameColor = Mascots.RarityColor(mascot.Rarity),
+			Sub = ("%s  ·  %s COINS%s"):format(
+				string.upper(mascot.Rarity),
+				Mascots.BonusText(Mascots.Bonus(mascot)),
+				if pet.Equipped then "  ·  EQUIPPED!" else ""
+			),
+			Big = true,
+			Fill = function(slot: Frame)
+				local model = MascotView.Mascot(mascot, 2)
+				MascotView.Viewport(slot, model, 1.15)
+				local start = os.clock()
+				if turning then
+					turning:Disconnect()
+				end
+				turning = RunService.RenderStepped:Connect(function()
+					model:PivotTo(CFrame.Angles(0, math.sin((os.clock() - start) * 1.2) * 0.6, 0))
+				end)
+			end,
+		})
 	end
 
 	-- Sign + prompt follow whether today's spin is waiting
@@ -459,16 +409,32 @@ function SpinController:Start()
 		if result.Potion then
 			local potion = potionById(result.Potion)
 			UiFx.Flash(slice.Color, 0.3, 0.4)
-			Sfx.Play("Reveal")
-			showToast(("%s! ADDED TO YOUR ITEMS"):format(if potion then potion.Name else "POTION"), 2.6, slice.Color)
+			prizeCard:Show({
+				Name = if potion then potion.Name else "POTION",
+				NameColor = slice.Color,
+				Sub = if potion
+					then ("x%d %s FOR %d:00  ·  IN YOUR ITEMS"):format(
+						potion.Multiplier,
+						if potion.Boost == "XP" then "XP" else "COINS",
+						potion.Minutes
+					)
+					else "IN YOUR ITEMS",
+				Kind = "Potion",
+				Value = result.Potion,
+			})
 		elseif result.Pet then
 			UiFx.Flash(GOLD, 0.6, 0.6)
 			showPet(result.Pet)
 		elseif result.Egg then
 			UiFx.Flash(slice.Color, 0.3, 0.4)
-			Sfx.Play("Reveal")
 			local look = Config.EggLooks[result.Egg]
-			showToast(("FREE %s! HATCH IT AT THE EGG STAND"):format(string.upper(if look then look.Name else "EGG")), 3, slice.Color)
+			prizeCard:Show({
+				Name = "FREE " .. string.upper(if look then look.Name else "EGG"),
+				NameColor = if look then look.Color else slice.Color,
+				Sub = "HATCH IT AT THE EGG STAND",
+				Kind = "Egg",
+				Value = result.Egg,
+			})
 		end
 		local crate = Balls.GetCrate(result.CrateId)
 		if crate and result.Crate and CrateController.PlayOpening then

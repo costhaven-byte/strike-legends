@@ -1,9 +1,9 @@
 -- The daily reward calendar popup. Opens by itself on join when a reward is waiting,
 -- and from the DAILY button any time. The server decides the day and gives the reward.
--- The UI itself (StarterGui.DailyUI) is built in Studio; this script fills it in and animates it.
+-- The DAILY button is in StarterGui.DailyUI (Studio); the calendar window is built here in the owner's kit style
+-- (RewardKit, UI pass batch 1, 2026-10-28).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -15,20 +15,17 @@ local Zones = require(Shared.Modules.Zones)
 local PowerLevels = require(Shared.Modules.PowerLevels)
 local CrateController = require(script.Parent.CrateController)
 local OnboardingController = require(script.Parent.OnboardingController)
-local PlaytimeController = require(script.Parent.PlaytimeController)
-local PotionController = require(script.Parent.PotionController)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
 local HudKit = require(Modules.HudKit)
+local UiKit = require(Modules.UiKit)
+local CrateKit = require(Modules.CrateKit)
+local RewardKit = require(Modules.RewardKit)
+
+local C = UiKit.C
 
 local player = Players.LocalPlayer
-
-local READY_COLOR = Color3.fromRGB(90, 230, 110)
-local WAIT_COLOR = Color3.fromRGB(110, 100, 130)
-local TODAY_STROKE = Color3.fromRGB(255, 200, 40)
-local CLAIMED_STROKE = Color3.fromRGB(90, 230, 110)
-local LOCKED_STROKE = Color3.fromRGB(80, 70, 110)
 
 local DailyRewardController = {}
 
@@ -92,12 +89,10 @@ function DailyRewardController:Start()
 			game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 		end)
 	end
-	local popup = gui:WaitForChild("Popup") :: Frame
-	local days = popup:WaitForChild("Days") :: Frame
-	local tileTemplate = popup:WaitForChild("TileTemplate") :: Frame
-	local claimButton = popup:WaitForChild("Claim") :: TextButton
-	local claimLabel = claimButton:WaitForChild("Label") :: TextLabel
-	local closeButton = popup:WaitForChild("Close") :: TextButton
+	-- The old Studio-built calendar (StarterGui.DailyUI.Popup) stays in the place as a template but is never shown:
+	-- the calendar is built in code in the owner's kit style (RewardKit, UI pass batch 1)
+	local oldPopup = gui:WaitForChild("Popup") :: Frame
+	oldPopup.Visible = false
 
 	local claimDaily = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ClaimDaily") :: RemoteFunction
 
@@ -166,102 +161,261 @@ function DailyRewardController:Start()
 	updateLock()
 	player:GetAttributeChangedSignal("OnboardThrows"):Connect(updateLock)
 
-	-- One tile per day, straight from Config.Daily
+	-- ===== The calendar window (760x500, owner's kit style): DAY 1-6 in two rows of 3, DAY 7 a big gold tile on the
+	-- right, the CLAIM button under them and the grace-day line =====
+	local calGui = Instance.new("ScreenGui")
+	calGui.Name = "DailyCalendarUI"
+	calGui.ResetOnSpawn = false
+	calGui.DisplayOrder = gui.DisplayOrder + 5
+	calGui.IgnoreGuiInset = gui.IgnoreGuiInset
+	calGui.Parent = player.PlayerGui
+	local W, H = 760, 500
+	local win = RewardKit.Window(calGui, W, H)
+	local popup = win.Screen
+	local cover, closeButton =
+		RewardKit.Cover(win.Panel, W, H, "DAILY REWARD", "COME BACK EVERY DAY FOR BIGGER REWARDS", C.Gold)
+
+	-- Where each day's tile goes (design px on the cover)
+	local function spot(day: number): (number, number, number, number)
+		if day == #Config.Daily.Rewards then
+			return 508, 100, 228, 280
+		end
+		local col, row = (day - 1) % 3, (day - 1) // 3
+		return 24 + col * 160, 100 + row * 146, 148, 134
+	end
+
+	-- One big icon per tile: crate, else egg, else potion, else coins, else gems
+	local function mainIcon(reward): (string, any)
+		if reward.Crate then
+			return "Crate", nil
+		elseif reward.Egg then
+			return "Egg", reward.Egg
+		elseif reward.Potions and reward.Potions[1] then
+			return "Potion", reward.Potions[1].Id
+		elseif reward.Coins then
+			return "Coins", nil
+		end
+		return "Gems", nil
+	end
+
+	-- One tile per day, straight from Config.Daily. States: CLAIMED (dark cover + tick), TODAY (gold edge, rays,
+	-- TODAY tag, breathing), LATER (darker card). The last day is the big gold tile with sparkles.
 	local tiles = {}
 	for day, reward in Config.Daily.Rewards do
-		local tile = tileTemplate:Clone()
-		tile.Name = "Day" .. day
-		tile.LayoutOrder = day
-		tile.Visible = true
-		tile.DayLabel.Text = "DAY " .. day
-		-- One big icon per tile: crate, else egg, else potion, else coins, else gems
-		local firstPotion = reward.Potions and reward.Potions[1] and potionById(reward.Potions[1].Id)
-		local showEgg = reward.Egg ~= nil and reward.Crate == nil
-		local showPotion = firstPotion ~= nil and reward.Crate == nil and not showEgg
-		local plain = reward.Crate == nil and not showEgg and not showPotion
-		tile.Icons.Coin.Visible = reward.Coins ~= nil and plain
-		tile.Icons.Gem.Visible = reward.Gems ~= nil and reward.Coins == nil and plain
-		tile.Icons.Crate.Visible = reward.Crate ~= nil
-		if showEgg then
-			local look = Config.EggLooks[reward.Egg]
-			if look then
-				local egg = PlaytimeController.EggIcon(tile.Icons, look, UDim2.fromScale(0.5, 0.5), 10)
-				egg.Size = UDim2.fromScale(0.62, 0.9)
-				egg.SizeConstraint = Enum.SizeConstraint.RelativeYY
-			end
-		elseif showPotion and firstPotion then
-			local flask =
-				PotionController.Flask(tile.Icons, firstPotion.Color, firstPotion.Big, UDim2.fromScale(0.5, 0.5), 10)
-			flask.Size = UDim2.fromScale(1, 1)
-			flask.SizeConstraint = Enum.SizeConstraint.RelativeYY
+		local x, y, w, h = spot(day)
+		local big = day == #Config.Daily.Rewards
+		local block = UiKit.Block(cover, {
+			Name = "Day" .. day,
+			Size = Vector2.new(w, h),
+			Fill = if big then C.Gold else C.Card,
+			Lip = if big then C.GoldLip else C.Page,
+			LipPx = 6,
+			Radius = 16,
+			Outline = 3,
+		})
+		block.Holder.Position = UDim2.fromOffset(x, y)
+		local face = block.Face
+		local faceW, faceH = w - 6, h - 12
+		local edge = UiKit.Outline(face, C.Gold, 3)
+		edge.Enabled = false
+		RewardKit.Label(
+			face,
+			"DAY " .. day,
+			UiKit.Head,
+			if big then 32 else 20,
+			C.White,
+			2.5,
+			4,
+			6,
+			faceW - 8,
+			if big then 38 else 24
+		)
+		local iconSize = if big then 116 else 56
+		local iconY = if big then 0.42 else 0.46
+		local rays = RewardKit.Rays(face, if big then C.White else C.Gold, if big then 220 else 108, 9)
+		rays.Position = UDim2.fromScale(0.5, iconY)
+		local kind, value = mainIcon(reward)
+		local icon = RewardKit.Icon(face, kind, value, iconSize, UDim2.fromScale(0.5, iconY))
+		local amountH = if big then 72 else 34
+		local amount = UiKit.Text(face, "", UiKit.Num, if big then 19 else 14, C.White, 2)
+		amount.Name = "Amount"
+		amount.Position = UDim2.fromOffset(4, faceH - amountH - 4)
+		amount.Size = UDim2.fromOffset(faceW - 8, amountH)
+		amount.TextWrapped = true
+		amount.TextYAlignment = Enum.TextYAlignment.Bottom
+		amount.ZIndex = 5
+		RewardKit.Fit(amount, if big then 19 else 14, faceW - 12, amountH)
+		if big then
+			RewardKit.Twinkle(face, 4, C.White)
+			-- a pink BIG ONE! tag on the corner
+			local tag = UiKit.Block(cover, {
+				Name = "BigTag",
+				Size = Vector2.new(96, 30),
+				Fill = C.Pink,
+				Lip = C.PinkLip,
+				LipPx = 4,
+				Radius = 10,
+				Outline = 3,
+			})
+			tag.Holder.Position = UDim2.fromOffset(x + w - 82, y - 10)
+			tag.Holder.Rotation = 10
+			tag.Holder.ZIndex = 6
+			RewardKit.Label(tag.Face, "BIG ONE!", UiKit.Head, 15, C.White, 2, 4, 2, 82, 20)
 		end
+		local overlay = UiKit.Make("Frame", {
+			Name = "Claimed",
+			BackgroundColor3 = C.Ink,
+			BackgroundTransparency = 0.35,
+			BorderSizePixel = 0,
+			Size = UDim2.fromScale(1, 1),
+			Visible = false,
+			ZIndex = 8,
+		}, face)
+		UiKit.Corner(overlay, 13)
+		local check = CrateKit.Icon(face, "Check", if big then 96 else 56)
+		check.AnchorPoint = Vector2.new(0.5, 0.5)
+		check.Position = UDim2.fromScale(0.5, iconY)
+		check.Visible = false
+		check.ZIndex = 9
+		local chip = UiKit.Block(cover, {
+			Name = "Today",
+			Size = Vector2.new(86, 28),
+			Fill = C.Gold,
+			Lip = C.GoldLip,
+			LipPx = 4,
+			Radius = 10,
+			Outline = 3,
+		})
+		chip.Holder.Position = UDim2.fromOffset(x + (w - 86) / 2, y - 22)
+		chip.Holder.ZIndex = 6
+		chip.Holder.Visible = false
+		RewardKit.Label(chip.Face, "TODAY", UiKit.Head, 16, C.White, 2, 4, 2, 72, 18)
+
 		local function paint()
-			tile.Amount.Text = rewardText(reward)
-			local crate = Balls.GetCrate(Zones.RewardCrateId(reward.Crate, player:GetAttribute("ZonesOpen")))
-			if crate then
-				tile.Icons.Crate.BackgroundColor3 = crate.Color
-			end
+			amount.Text = rewardText(reward)
 		end
 		paint()
 		player:GetAttributeChangedSignal("ZonesOpen"):Connect(paint)
 		player:GetAttributeChangedSignal("PowerLevel"):Connect(paint)
-		tile.Parent = days
-		tiles[day] = tile
+		tiles[day] = {
+			Block = block,
+			Edge = edge,
+			Rays = rays,
+			Icon = icon,
+			Amount = amount,
+			Overlay = overlay,
+			Check = check,
+			Chip = chip.Holder,
+			Big = big,
+			StopPulse = nil :: (() -> ())?,
+		}
 	end
-	tileTemplate.Visible = false
+
+	local claimButton = RewardKit.Button(cover, "CLAIM DAY 1!", "Lime", 400, 62, 30)
+	claimButton.Holder.Position = UDim2.fromOffset((W - 400) / 2, 392)
+	local graceDays = Config.Daily.GraceDays or 0
+	local grace = RewardKit.Label(
+		cover,
+		("MISS A DAY? YOU GET %d GRACE DAY%s"):format(graceDays, if graceDays == 1 then "" else "S"),
+		UiKit.Body,
+		13,
+		C.Muted,
+		0,
+		24,
+		462,
+		W - 48,
+		18
+	)
+	grace.Visible = graceDays > 0
+
+	-- The CLAIM button: lime and breathing when today's reward waits, grey countdown otherwise, red on an error
+	local claimPaint = ""
+	local stopClaimPulse: (() -> ())? = nil
+	local function paintClaim(paint: string)
+		if paint == claimPaint then
+			return
+		end
+		claimPaint = paint
+		local colours = RewardKit.Paint[paint]
+		claimButton:Paint(colours[1], colours[2])
+		claimButton:SetPressable(paint == "Lime")
+		if stopClaimPulse then
+			stopClaimPulse()
+			stopClaimPulse = nil
+		end
+		if paint == "Lime" then
+			stopClaimPulse = RewardKit.Pulse(claimButton.Holder, 1.04, 0.6)
+		end
+	end
 
 	local function refresh()
 		local nextDay = player:GetAttribute("DailyNext") or 1
 		local claimable = player:GetAttribute("DailyClaimable") == true
 		updateLook()
 
-		for day, tile in tiles do
+		for day, t in tiles do
 			local claimed = day < nextDay or (day == nextDay and not claimable)
-			local isToday = day == nextDay
-			tile.Check.Visible = claimed
-			tile.UIStroke.Color = if isToday and claimable
-				then TODAY_STROKE
-				elseif claimed then CLAIMED_STROKE
-				else LOCKED_STROKE
-			tile.UIStroke.Thickness = if isToday then 4 else 2
-			tile.BackgroundTransparency = if claimed then 0.4 else 0
+			local today = day == nextDay and claimable
+			t.Overlay.Visible = claimed
+			t.Check.Visible = claimed
+			t.Chip.Visible = today
+			t.Rays.Visible = (today or t.Big) and not claimed
+			t.Edge.Enabled = today and not t.Big
+			if not t.Big then
+				t.Block:Paint(if claimed or today then C.Card else C.Page, C.Page)
+				t.Amount.TextColor3 = if today or claimed then C.White else C.Label
+			end
+			if today and not t.StopPulse then
+				t.StopPulse = RewardKit.Pulse(t.Block.Holder, 1.05, 0.55)
+			elseif not today and t.StopPulse then
+				t.StopPulse()
+				t.StopPulse = nil
+			end
 		end
 
 		if errorText then
-			claimLabel.Text = errorText:upper()
-			claimButton.BackgroundColor3 = WAIT_COLOR
+			paintClaim("Red")
+			claimButton:SetText(errorText:upper())
 		elseif claimable then
-			claimLabel.Text = "CLAIM DAY " .. nextDay .. "!"
-			claimButton.BackgroundColor3 = READY_COLOR
+			paintClaim("Lime")
+			claimButton:SetText("CLAIM DAY " .. nextDay .. "!")
 		else
+			paintClaim("Grey")
 			local wait = Calendar.SecondsUntilNextDay(Workspace:GetServerTimeNow())
-			claimLabel.Text = "NEXT REWARD IN " .. Calendar.FormatCountdown(wait):upper()
-			claimButton.BackgroundColor3 = WAIT_COLOR
+			claimButton:SetText("COME BACK IN " .. Calendar.FormatCountdown(wait):upper())
 		end
 	end
 
 	local function setOpen(open: boolean)
 		if open then
 			refresh()
-			UiFx.Open(popup)
+			win:Open()
+			-- the day icons pop in one after another
+			local icons = {}
+			for day = 1, #tiles do
+				table.insert(icons, tiles[day].Icon)
+			end
+			RewardKit.Stagger(icons, 0.04, 0.15)
 		else
-			UiFx.Close(popup)
+			win:Close()
 		end
 	end
 
-	-- Today's tile does a little hop when you claim it
+	-- Today's tile jumps, the tick stamps down and confetti bursts out of it
 	local function celebrate(day: number)
-		local tile = tiles[day]
-		if not tile then
+		local t = tiles[day]
+		if not t then
 			return
 		end
-		local scale = tile:FindFirstChildOfClass("UIScale")
-		if scale then
-			scale.Scale = 1.3
-			TweenService:Create(scale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-				Scale = 1,
-			}):Play()
-		end
+		local scale = UiKit.ScaleOf(t.Block.Holder)
+		scale.Scale = 1.3
+		UiKit.Tween(scale, 0.5, Enum.EasingStyle.Back, { Scale = 1 })
+		t.Overlay.Visible = true
+		t.Check.Visible = true
+		RewardKit.Stamp(t.Check)
+		local x, y, w, h = spot(day)
+		CrateKit.Confetti(cover, x + w / 2 - W / 2, y + h / 2 - H / 2, 30, 220, 0.7)
+		UiFx.Flash(C.Gold, 0.25, 0.35)
 	end
 
 	local function claim()
@@ -273,6 +427,7 @@ function DailyRewardController:Start()
 		if not ok or not result or not result.Ok then
 			errorText = if ok and result and result.Error then result.Error else "Try again"
 			refresh()
+			claimButton:Shake()
 			task.delay(1.5, function()
 				errorText = nil
 				refresh()
@@ -284,19 +439,19 @@ function DailyRewardController:Start()
 		refresh()
 		celebrate(result.Day)
 		Sfx.Play("Reveal")
-		UiFx.Confetti(nil, 30)
 		local crate = Balls.GetCrate(result.CrateId)
 		if crate and result.Crate and CrateController.PlayOpening then
-			task.wait(0.8)
-			UiFx.Close(popup)
+			task.wait(0.9)
+			win:Close()
 			CrateController.PlayOpening(crate, result.Crate)
 		else
 			if result.Egg then
-				claimLabel.Text = "HATCH IT AT THE EGG STAND!"
+				paintClaim("Pink")
+				claimButton:SetText("HATCH IT AT THE EGG STAND!")
 				task.wait(1.4)
 			end
 			task.wait(1.2)
-			UiFx.Close(popup)
+			win:Close()
 		end
 		busy = false
 	end
@@ -326,7 +481,6 @@ function DailyRewardController:Start()
 		setOpen(false)
 	end)
 	claimButton.Activated:Connect(claim)
-	popup.Active = true -- taps on the popup don't fall through to the throw meter
 
 	-- Hide the DAILY button while the book, crates or crate-opening screens are up
 	-- (on phones those fill the screen and the button would sit on top of them)
@@ -344,7 +498,7 @@ function DailyRewardController:Start()
 		end
 		openButton.Visible = not covered
 		if covered and popup.Visible and not busy then
-			UiFx.Close(popup)
+			win:Close()
 		end
 	end
 	for _, screen in covers do
@@ -354,7 +508,6 @@ function DailyRewardController:Start()
 
 	player:GetAttributeChangedSignal("DailyNext"):Connect(refresh)
 	player:GetAttributeChangedSignal("DailyClaimable"):Connect(refresh)
-	popup.Visible = false
 	refresh()
 
 	-- Keep the countdown ticking while the popup is open
