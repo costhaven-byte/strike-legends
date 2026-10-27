@@ -85,7 +85,18 @@ function Store.NextStep(player: Player, ladder: string)
 	return nil
 end
 
--- A ladder's boost at this step (1 at step 0; the step's Mult: x1.25, x1.5, x1.75, x2)
+-- How many steps a ladder has (its Products rows)
+function Store.LadderSteps(ladder: string): number
+	local steps = 0
+	for _, product in MONEY.Products do
+		if product.Ladder == ladder then
+			steps = math.max(steps, product.Step)
+		end
+	end
+	return steps
+end
+
+-- A ladder's boost at this step (1 at step 0; the step's Mult: x2, x3, x4)
 function Store.LadderMult(ladder: string, level: number): number
 	local mult = 1
 	for _, product in MONEY.Products do

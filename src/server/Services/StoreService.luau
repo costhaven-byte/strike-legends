@@ -5,7 +5,7 @@
 -- Products: handed out in ProcessReceipt. Each purchase id is saved (Purchases), so a purchase is never given twice,
 -- and the save is written straight away before Roblox is told it went through.
 -- Starter Pack: offered once (StarterOffered), after StarterAfterMinutes of play in total, at a quiet moment.
--- Ladder products (COIN BOOST / XP BOOST) are bought in order: each step boosts more, up to x2
+-- Ladder products (COIN BOOST / XP BOOST) are bought in order: each step boosts more, up to x4
 -- (CoinBoostLevel / XpBoostLevel).
 -- Looks (Cosmetic = a Config.Cosmetics Id): bought once, handed to CosmeticService (step 12b).
 -- VIP: DailyGems once a day (VipGiftDay), given on join or when the day changes.

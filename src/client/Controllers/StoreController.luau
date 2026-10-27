@@ -3,7 +3,7 @@
 -- specced there (sizes include the outline, like the design); icons are AssetSlots.Images.
 -- * STORE button (gold, bag icon; right of BALLS and PETS, where DAILY was (owner 2026-10-25)), with a
 --   red "!" until the store is opened this session.
--- * Quick-buy pills on the HUD (owner 2026-10-25): each boost ladder's next step ("x1.25 COINS / R$ 19"), right of the
+-- * Quick-buy pills on the HUD (owner 2026-10-25): each boost ladder's next step ("x2 COINS / R$ 19"), right of the
 --   coin multiplier badge; a MAXED ladder's pill shrinks away and the other moves up.
 -- * The window: BOOSTS / PASSES / LOOKS / GEMS tabs jump within one scrolling list (Starter Pack on top until bought).
 --   LOOKS (step 12b, Config.Cosmetics): trails, strike banners, pin blasts and lane skins for gems or Robux, with
@@ -670,7 +670,7 @@ function StoreController:Start()
 			corner(band, 10)
 			local top = label(face, "", HEAD, if phone then 16 else 13, ladder.Color, if phone then 5 else 4)
 			top.Size = UDim2.new(1, 0, 0, if phone then 16 else 13)
-			HudKit.Fit(top, if phone then 16 else 13) -- "x1.25 COINS" is longer than the old "x2 COINS"
+			HudKit.Fit(top, if phone then 16 else 13) -- long texts like "x1.75 COINS" must fit too
 			top.Position = UDim2.fromOffset(0, if phone then 4 else 3)
 			local priceRow = make("Frame", {
 				BackgroundTransparency = 1,
@@ -977,21 +977,22 @@ function StoreController:Start()
 		desc.LineHeight = 1.1
 		desc.Position = UDim2.fromOffset(0, rowTop + 58 + 6)
 		desc.Size = UDim2.new(1, 0, 1, -(rowTop + 64 + 52))
-		-- Bottom row: the ladder's 4 dots, then the price button
+		-- Bottom row: one dot per ladder step, then the price button
 		local dotFrames = {}
 		if kind == "Ladder" then
+			local steps = Store.LadderSteps(item.Ladder)
 			local track = make("Frame", {
 				BackgroundColor3 = C.Track,
 				AnchorPoint = Vector2.new(0, 1),
 				Position = UDim2.new(0, 0, 1, -13),
-				Size = UDim2.fromOffset(4 * 14 + 3 * 6 + 18, 26),
+				Size = UDim2.fromOffset(steps * 14 + (steps - 1) * 6 + 18, 26),
 				ZIndex = 4,
 			}, body)
 			corner(track, 12)
 			stroke(track, C.Ink, 2)
 			pad(track, 0, 9, 0, 9)
 			list(track, true, 6)
-			for i = 1, 4 do
+			for i = 1, steps do
 				local dot = make("Frame", { Size = UDim2.fromOffset(14, 14), LayoutOrder = i, ZIndex = 5 }, track)
 				corner(dot, 7)
 				-- 1.5 px ink just outside, the coloured ring inside
@@ -1050,8 +1051,8 @@ function StoreController:Start()
 				local now = Store.MultText(Store.LadderMult(item.Ladder, level))
 				accent.Text = if step then now .. " > " .. Store.MultText(step.Mult or 1) else now
 				desc.Text = if step
-					then ("Boosts your %s forever. Step %d of 4."):format(what, step.Step)
-					else ("Your %s boost is at the top: x2. All done!"):format(what)
+					then ("Boosts your %s forever. Step %d of %d."):format(what, step.Step, #dotFrames)
+					else ("Your %s boost is at the top: %s. All done!"):format(what, now)
 				for i, dot in dotFrames do
 					local bought, nextOne = i <= level, i == level + 1
 					dot.Frame.BackgroundColor3 = if bought then accentColor else C.Card
