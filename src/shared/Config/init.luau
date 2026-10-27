@@ -2634,9 +2634,12 @@ Config.Boss = {
 	BoardingSeconds = 60, -- how long the helicopter waits for players
 	MinPlayers = 1, -- fewer boarders than this = the event is cancelled (next 45-minute slot)
 	MaxPlayers = 16, -- seats on the helicopter (= throw spots around the arena)
-	Helipad = { "SkylineLanes", "Helipad" }, -- the pad (with its placeholder helicopter) on the roof
+	Helipad = { "SkylineLanes", "Design", "helipad" }, -- the real helipad on the roof (owner's design; the old code-built
+	-- "SkylineLanes.Helipad" placeholder is only used if this is missing)
+	Helicopter = "helicopter", -- the helicopter model inside it: players hold E on it to board (always parked there)
+	PadPart = "helipad_deck", -- the pad part inside it: boarding range, landing spots and the sign sit on this
 	Arena = { "TitanArena" }, -- the sky arena (built in code if missing)
-	UseRange = 18, -- studs from the helipad the server accepts boarding from
+	UseRange = 26, -- studs from the helipad the server accepts boarding from
 	LobbyArea = { Center = Vector3.new(0, 870, -3500), Size = Vector3.new(220, 60, 236) }, -- the roof: the countdown and siren show here
 	FlightSeconds = 2.5, -- the fade-out while the helicopter takes off (and on the way back)
 

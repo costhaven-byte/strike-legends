@@ -231,10 +231,18 @@ function BossController:Start()
 		pill.Position = UDim2.new(0.5, 0, 0, if phone then 14 else 20)
 	end)
 
-	-- ===== The helipad: sign + BOARD prompt =====
+	-- ===== The helicopter on the helipad: sign + hold-E BOARD prompt on its body =====
 	local function padPart(): BasePart?
-		local pad = find(BOSS.Helipad)
-		return pad and (pad:FindFirstChild("Pad") or pad:FindFirstChildWhichIsA("BasePart", true)) :: BasePart?
+		local pad = find(BOSS.Helipad) or find({ "SkylineLanes", "Helipad" }) -- old code-built pad as a fallback
+		if not pad then
+			return nil
+		end
+		local heli = pad:FindFirstChild(BOSS.Helicopter) or pad:FindFirstChild("Helicopter")
+		local body = heli and (heli:FindFirstChild("heli_body", true) or heli:FindFirstChild("Body", true))
+		return (body or pad:FindFirstChild(BOSS.PadPart, true) or pad:FindFirstChild("Pad") or pad:FindFirstChildWhichIsA(
+			"BasePart",
+			true
+		)) :: BasePart?
 	end
 	local sign: TextLabel? = nil
 	local prompt: ProximityPrompt? = nil
@@ -246,7 +254,7 @@ function BossController:Start()
 		local board = new("BillboardGui", {
 			Name = "BossSign",
 			Size = UDim2.fromOffset(420, 90),
-			StudsOffset = Vector3.new(0, 22, 0),
+			StudsOffset = Vector3.new(0, 14, 0), -- above the rotor
 			MaxDistance = 400,
 			LightInfluence = 0,
 		}, part)
@@ -257,7 +265,7 @@ function BossController:Start()
 			ObjectText = "HELICOPTER",
 			ActionText = "Board: fight the Pin Titan",
 			HoldDuration = 0.5,
-			MaxActivationDistance = 14,
+			MaxActivationDistance = 18, -- the helicopter is big: measured from the middle of its body
 			RequiresLineOfSight = false,
 			Enabled = false,
 		}, part)

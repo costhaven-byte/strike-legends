@@ -72,9 +72,18 @@ local function rootOf(player: Player): BasePart?
 	return player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 end
 
+-- The real helipad (Config.Boss.Helipad); the old code-built SkylineLanes.Helipad only if that is missing
+local function helipad(): Instance?
+	return find(BOSS.Helipad) or find({ "SkylineLanes", "Helipad" })
+end
+
 local function padPart(): BasePart?
-	local pad = find(BOSS.Helipad)
-	return pad and (pad:FindFirstChild("Pad") or pad:FindFirstChildWhichIsA("BasePart", true)) :: BasePart?
+	local pad = helipad()
+	return pad
+		and (pad:FindFirstChild(BOSS.PadPart, true) or pad:FindFirstChild("Pad") or pad:FindFirstChildWhichIsA(
+			"BasePart",
+			true
+		)) :: BasePart?
 end
 
 local function setPhase(name: string)
@@ -88,17 +97,17 @@ local function toFighters(kind: string, data: { [string]: any }?)
 	end
 end
 
--- ===== The helicopter on the roof: only there while boarding =====
-local heliParts: { [BasePart]: number } = {} -- each part's normal transparency
+-- ===== The helicopter on the roof: always parked on the pad; it only flies off when the fight starts =====
+local heliParts: { [BasePart]: { number } } = {} -- each part's normal transparency (1 = collides, 0 = not)
 -- The code-built placeholder keeps its helicopter parts loose in the Helipad model: group them into a
 -- "Helicopter" model the first time (a Studio-made Helicopter model is used as it is)
 local LOOSE_PARTS = { Body = true, Glass = true, Tail = true, Rotor = true, Rotor2 = true, Skid = true }
 local function helicopter(): Model?
-	local pad = find(BOSS.Helipad)
+	local pad = helipad()
 	if not pad then
 		return nil
 	end
-	local heli = pad:FindFirstChild("Helicopter") :: Model?
+	local heli = (pad:FindFirstChild(BOSS.Helicopter) or pad:FindFirstChild("Helicopter")) :: Model?
 	if not heli then
 		local loose = {}
 		for _, child in pad:GetChildren() do
@@ -127,10 +136,10 @@ local function showHelicopter(on: boolean)
 	for _, p in heli:GetDescendants() do
 		if p:IsA("BasePart") then
 			if heliParts[p] == nil then
-				heliParts[p] = p.Transparency
+				heliParts[p] = { p.Transparency, if p.CanCollide then 1 else 0 }
 			end
-			p.Transparency = if on then heliParts[p] else 1
-			p.CanCollide = on and p.Name == "Body"
+			p.Transparency = if on then heliParts[p][1] else 1
+			p.CanCollide = on and heliParts[p][2] == 1
 		elseif p:IsA("Decal") or p:IsA("Texture") then
 			p.Transparency = if on then 0 else 1
 		end
@@ -154,6 +163,8 @@ local function flyAway()
 	end
 	showHelicopter(false)
 	heli:PivotTo(start)
+	task.wait(BOSS.FlightSeconds)
+	showHelicopter(true) -- back on the pad for the next event
 end
 
 -- ===== The arena and the Titan =====
@@ -285,7 +296,7 @@ local function backToRoof(player: Player, index: number)
 	local character = player.Character
 	if pad and character then
 		local angle = index * 2.4
-		local at = pad.Position + Vector3.new(math.cos(angle) * 10, 4, math.sin(angle) * 10)
+		local at = pad.Position + Vector3.new(math.cos(angle) * 20, 4, math.sin(angle) * 20) -- round the helicopter
 		character:PivotTo(CFrame.new(at))
 	end
 end
@@ -956,7 +967,7 @@ local function waitUntil(at: number)
 end
 
 local function eventLoop()
-	showHelicopter(false)
+	showHelicopter(true) -- parked on the pad between events
 	while true do
 		local opensAt = nextSlot()
 		state:SetAttribute("State", "Waiting")
@@ -985,7 +996,7 @@ local function eventLoop()
 		end
 		table.clear(boarders)
 		if #list < BOSS.MinPlayers then
-			showHelicopter(false)
+			showHelicopter(true)
 			for _, player in list do
 				player:SetAttribute("BossBoarded", nil)
 			end
@@ -1003,7 +1014,7 @@ local function eventLoop()
 			table.clear(fighters)
 			setPhase("None")
 		end
-		showHelicopter(false)
+		showHelicopter(true)
 	end
 end
 

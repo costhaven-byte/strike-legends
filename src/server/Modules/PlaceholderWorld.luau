@@ -574,9 +574,13 @@ function PlaceholderWorld.Build(): { string }
 			true
 		)
 	end)
-	need(skyline, "Helipad", function()
-		helipad(skyline :: Instance, Vector3.new(60, 848, -3485))
-	end)
+	-- The owner's helipad + helicopter (SkylineLanes.Design.helipad) replaces this placeholder
+	local design = skyline and skyline:FindFirstChild("Design")
+	if not (design and design:FindFirstChild("helipad")) then
+		need(skyline, "Helipad", function()
+			helipad(skyline :: Instance, Vector3.new(60, 848, -3485))
+		end)
+	end
 	need(skyline, "Showcase", function()
 		local slots = {}
 		for i = 1, 6 do
