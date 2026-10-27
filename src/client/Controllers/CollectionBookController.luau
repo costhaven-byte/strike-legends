@@ -21,6 +21,7 @@ local UiKit = require(Modules:WaitForChild("UiKit"))
 local BallView = require(Modules:WaitForChild("BallView"))
 local Sfx = require(Modules:WaitForChild("Sfx"))
 local HudKit = require(Modules:WaitForChild("HudKit"))
+local MomentKit = require(Modules:WaitForChild("MomentKit"))
 
 local player = Players.LocalPlayer
 
@@ -1136,20 +1137,11 @@ function CollectionBookController:Start()
 	guideGui.DisplayOrder = 30
 	guideGui.IgnoreGuiInset = gui.IgnoreGuiInset
 	guideGui.Parent = player:WaitForChild("PlayerGui")
-	local guideArrow = Instance.new("TextLabel")
+	-- the kit's gold callout bubble with its arrow pointing down at EQUIP (UI pass batch 3)
+	local guideArrow = MomentKit.Callout(guideGui, "TRY YOUR NEW BALL!", nil, "Down")
 	guideArrow.Name = "Arrow"
-	guideArrow.BackgroundTransparency = 1
-	guideArrow.FontFace = Head
-	guideArrow.TextScaled = true
-	guideArrow.TextColor3 = Color3.fromRGB(255, 200, 40)
-	guideArrow.Text = "<"
-	guideArrow.Rotation = -90 -- points down
-	guideArrow.AnchorPoint = Vector2.new(0.5, 0.5)
-	guideArrow.Size = UDim2.fromOffset(46, 46)
-	guideArrow.ZIndex = 50
 	guideArrow.Visible = false
-	guideArrow.Parent = guideGui
-	stroke(guideArrow, INK, 3)
+	local guideScale = UiKit.ScaleOf(guideArrow)
 	local arrowWasOn: GuiObject? = nil
 	-- The BALLS button's own outline turns gold while it pulses
 	local ballsGlow = ballsButton:FindFirstChildOfClass("UIStroke") or stroke(ballsButton, INK, 2)
@@ -1186,9 +1178,11 @@ function CollectionBookController:Start()
 		guideArrow.Visible = target ~= nil
 		if target then
 			local pos, size = target.AbsolutePosition, target.AbsoluteSize
-			guideArrow.Position = UDim2.fromOffset(pos.X + size.X / 2, pos.Y - 26 - wave * 12)
+			guideArrow.Position = UDim2.fromOffset(pos.X + size.X / 2, pos.Y - 2 - wave * 10)
 			if arrowWasOn ~= target then
-				UiFx.Pop(guideArrow, 1.6, 0.4)
+				local small = guideGui.AbsoluteSize.Y < Config.Ui.CompactHeight
+				guideScale.Scale = 0.3
+				UiKit.Tween(guideScale, 0.35, Enum.EasingStyle.Back, { Scale = if small then 0.6 else 0.85 })
 			end
 		end
 		arrowWasOn = target

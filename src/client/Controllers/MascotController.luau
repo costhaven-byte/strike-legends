@@ -25,6 +25,7 @@ local PetIdle = require(Modules:WaitForChild("PetIdle"))
 local Sfx = require(Modules:WaitForChild("Sfx"))
 local UiFx = require(Modules:WaitForChild("UiFx"))
 local HudKit = require(Modules:WaitForChild("HudKit"))
+local RewardKit = require(Modules:WaitForChild("RewardKit"))
 
 local player = Players.LocalPlayer
 
@@ -512,22 +513,12 @@ function MascotController:Start()
 	end
 
 	-- Toast for errors ("Not enough coins")
-	local toast = text(gui, "Toast", FONT, Color3.new(1, 1, 1), UDim2.fromScale(0.5, 0.2), UDim2.new(0.6, 0, 0, 34))
-	toast.AnchorPoint = Vector2.new(0.5, 0.5)
-	toast.Visible = false
-	toast.ZIndex = 20
-	local toastToken = 0
+	-- (the kit's navy toast at the top centre since UI pass batch 3)
+	local kitToast = RewardKit.Toast(gui)
 	local function showToast(message: string)
-		toastToken += 1
-		local token = toastToken
-		toast.Text = message
-		toast.Visible = true
-		UiFx.Pop(toast, 1.3, 0.25)
-		task.delay(1.6, function()
-			if toastToken == token then
-				toast.Visible = false
-			end
-		end)
+		local upper = message:upper()
+		local problem = upper:find("NOT ENOUGH") or upper:find("WRONG") or upper:find("FULL")
+		kitToast(upper, nil, nil, if problem then RewardKit.C.Price else RewardKit.C.White, 2)
 	end
 
 	PotionController.BuildItems(itemsPage, showToast)

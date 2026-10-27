@@ -3,6 +3,7 @@
 -- blocks, Luckiest Guy titles with the ink drop, rays, sparkles, confetti. Sizes are design px on a 1920x1080 screen.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -300,11 +301,20 @@ function MomentKit.LevelUp(): (number, number?, number?) -> ()
 	end
 end
 
+-- An icon by name: "Hud:Crate" = a HUD Kit icon, anything else = a UI Kit icon ("GoldenPin", "Gem", "Zone")
+function MomentKit.IconImage(parent: Instance, icon: string, size: number): ImageLabel
+	local hud = icon:match("^Hud:(.+)$")
+	local image = if hud then HudKit.Image(parent, hud, size) else UiKit.Icon(parent, icon, size)
+	image.Name = "Icon"
+	return image
+end
+
 -- ===== Slam banner: a coloured lip ribbon with a big title and an optional navy chip under it, ~2 s =====
--- show(text, paint (RewardKit.Paint name), sub?)
-function MomentKit.Banner(gui: ScreenGui): (string, string, string?) -> ()
+-- show(text, paint (RewardKit.Paint name), sub?, icon? (an IconImage name, on a disc at the ribbon's left end),
+-- seconds? (2)). y = its height on screen (0.34 = the trial banners' spot).
+function MomentKit.Banner(gui: ScreenGui, y: number?): (string, string, string?, string?, number?) -> ()
 	local W, H = 620, 190
-	local stage = stageOf(gui, W, H, 0.34)
+	local stage = stageOf(gui, W, H, y or 0.34)
 	local pop = make("Frame", { Name = "Pop", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1) }, stage)
 	local popScale = UiKit.ScaleOf(pop)
 	local ribbon = UiKit.Block(pop, {
@@ -330,23 +340,56 @@ function MomentKit.Banner(gui: ScreenGui): (string, string, string?) -> ()
 		Radius = 25,
 		Outline = 3,
 	})
-	chip.Holder.Position = UDim2.fromOffset((W - 380) / 2, 124)
+	chip.Holder.AnchorPoint = Vector2.new(0.5, 0)
+	chip.Holder.Position = UDim2.fromOffset(W / 2, 124)
 	local chipText = UiKit.Text(chip.Face, "", UiKit.Head, 24, C.White, 2.5)
 	make("UIPadding", { PaddingTop = UDim.new(0, 3) }, chipText)
+	-- Icon disc over the ribbon's left end: navy with an ink lip and a ring in the ribbon's colour
+	local disc = UiKit.Block(pop, {
+		Name = "Disc",
+		Size = Vector2.new(116, 116),
+		Fill = C.Cover,
+		Lip = C.Ink,
+		LipPx = 6,
+		Radius = 58,
+		Outline = 5,
+	})
+	disc.Holder.Position = UDim2.fromOffset(0, 0)
+	disc.Holder.ZIndex = 3
+	local discRing =
+		make("UIStroke", { Color = C.Lime, Thickness = 4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, disc.Face)
+	local discIcon: ImageLabel? = nil
 
 	local token = 0
-	return function(text: string, paint: string, sub: string?)
+	return function(text: string, paint: string, sub: string?, icon: string?, seconds: number?)
 		token += 1
 		local mine = token
 		local colours = RewardKit.Paint[paint] or RewardKit.Paint.Lime
 		ribbon.Face.BackgroundColor3 = colours[1]
 		ribbon.Body.BackgroundColor3 = colours[2]
 		title.Text = text
-		RewardKit.Fit(title, 78, 520, 100)
+		disc.Holder.Visible = icon ~= nil
+		if discIcon then
+			discIcon:Destroy()
+			discIcon = nil
+		end
+		if icon then
+			discRing.Color = colours[1]
+			discIcon = MomentKit.IconImage(disc.Face, icon, 72)
+			discIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+			discIcon.Position = UDim2.fromScale(0.5, 0.5)
+		end
+		-- with an icon the title sits right of the disc
+		titleBox.Position = UDim2.fromOffset(if icon then 80 else 0, 0)
+		titleBox.Size = UDim2.new(1, if icon then -90 else 0, 1, 0)
+		RewardKit.Fit(title, 78, if icon then 440 else 520, 100)
 		chip.Holder.Visible = sub ~= nil
 		chipText.Text = sub or ""
 		chipText.TextColor3 = colours[1]
-		RewardKit.Fit(chipText, 24, 350, 44)
+		-- the chip grows with its words (lane events have long lines), up to the stage width
+		local chipW = math.clamp(CrateKit.TextWidth(chipText.ContentText, UiKit.Head, 24) + 48, 380, W)
+		chip.Holder.Size = UDim2.fromOffset(chipW, 50)
+		RewardKit.Fit(chipText, 24, chipW - 30, 44)
 		stage.Visible = true
 		pop.Rotation = -6
 		popScale.Scale = 2.4
@@ -355,7 +398,14 @@ function MomentKit.Banner(gui: ScreenGui): (string, string, string?) -> ()
 		if paint == "Lime" or paint == "Gold" then
 			CrateKit.Confetti(pop, 0, 0, 26, 320, 0.8)
 		end
-		task.delay(2, function()
+		if icon then
+			local discScale = UiKit.ScaleOf(disc.Holder)
+			discScale.Scale = 0.01
+			task.delay(0.2, function()
+				tween(discScale, 0.3, Enum.EasingStyle.Back, { Scale = 1 })
+			end)
+		end
+		task.delay(seconds or 2, function()
 			if token ~= mine then
 				return
 			end
@@ -365,6 +415,223 @@ function MomentKit.Banner(gui: ScreenGui): (string, string, string?) -> ()
 			end
 		end)
 	end
+end
+
+-- ===== Lane popup: near the top centre, an icon on rays, a big title with the ink drop, a navy chip =====
+-- show(opts): Text, Color, Sub?, SubColor?, Icon? (IconImage name), Big? (slams in tilted, stays longer).
+-- Returns how long it stays on screen (the caller's queue waits that long).
+function MomentKit.Popup(gui: ScreenGui): ({ [string]: any }) -> number
+	local W, H = 760, 170
+	local stage = stageOf(gui, W, H, 0.23)
+	local pop = make("Frame", { Name = "Pop", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1) }, stage)
+	local popScale = UiKit.ScaleOf(pop)
+	local iconSpot = make("Frame", {
+		Name = "IconSpot",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Size = UDim2.fromOffset(84, 84),
+		ZIndex = 3,
+	}, pop)
+	local rays = RewardKit.Rays(iconSpot, GOLD, 180, 5)
+	rays.ZIndex = 1
+	local titleBox = make("Frame", {
+		Name = "TitleBox",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0, 0.5),
+		Size = UDim2.fromOffset(600, 96),
+		ZIndex = 3,
+	}, pop)
+	local title = CrateKit.Title(titleBox, "", 66, GOLD, 4.5, 6)
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	local chip = UiKit.Block(pop, {
+		Name = "Chip",
+		Size = Vector2.new(420, 48),
+		Fill = C.Cover,
+		Lip = C.Ink,
+		LipPx = 5,
+		Radius = 24,
+		Outline = 3,
+	})
+	chip.Holder.AnchorPoint = Vector2.new(0.5, 0)
+	chip.Holder.Position = UDim2.fromOffset(W / 2, 104)
+	local chipText = UiKit.Text(chip.Face, "", UiKit.Head, 22, C.White, 2.5)
+	make("UIPadding", { PaddingTop = UDim.new(0, 3) }, chipText)
+	local icon: ImageLabel? = nil
+
+	local token = 0
+	return function(opts: { [string]: any }): number
+		token += 1
+		local mine = token
+		local color = opts.Color or GOLD
+		local big = opts.Big == true
+		local size = if big then 66 else 54
+		title.Text = opts.Text or ""
+		title.TextColor3 = color
+		if icon then
+			icon:Destroy()
+			icon = nil
+		end
+		iconSpot.Visible = opts.Icon ~= nil
+		if opts.Icon then
+			icon = MomentKit.IconImage(iconSpot, opts.Icon, 76)
+			icon.AnchorPoint = Vector2.new(0.5, 0.5)
+			icon.Position = UDim2.fromScale(0.5, 0.5)
+			icon.ZIndex = 3
+			rays.ImageColor3 = color
+		end
+		-- icon + title centred as one group
+		local textW = math.min(CrateKit.TextWidth(title.ContentText, CrateKit.Head, size) + 14, 620)
+		local iconW = if opts.Icon then 96 else 0
+		local left = (W - iconW - textW) / 2
+		iconSpot.Position = UDim2.fromOffset(left + 42, 48)
+		titleBox.Position = UDim2.fromOffset(left + iconW, 48)
+		titleBox.Size = UDim2.fromOffset(textW, 96)
+		title.TextSize = size
+		RewardKit.Fit(title, size, textW, 90)
+		local sub = opts.Sub or ""
+		chip.Holder.Visible = sub ~= ""
+		chipText.Text = sub
+		chipText.TextColor3 = opts.SubColor or C.White
+		local chipW = math.clamp(CrateKit.TextWidth(chipText.ContentText, UiKit.Head, 22) + 48, 200, 680)
+		chip.Holder.Size = UDim2.fromOffset(chipW, 48)
+		RewardKit.Fit(chipText, 22, chipW - 36, 42)
+
+		stage.Visible = true
+		pop.Rotation = if big then -8 else 0
+		popScale.Scale = if big then 2.4 else 0.4
+		tween(popScale, if big then 0.4 else 0.25, Enum.EasingStyle.Back, { Scale = 1 })
+		tween(pop, 0.4, Enum.EasingStyle.Back, { Rotation = 0 })
+		local iconScale = UiKit.ScaleOf(iconSpot)
+		iconScale.Scale = 0.01
+		task.delay(0.12, function()
+			tween(iconScale, 0.3, Enum.EasingStyle.Back, { Scale = 1 })
+		end)
+		if big then
+			CrateKit.Confetti(pop, 0, -10, 18, 260, 0.6)
+		end
+		local hold = if big then 2 else 1.3
+		task.delay(hold, function()
+			if token ~= mine then
+				return
+			end
+			tween(popScale, 0.2, Enum.EasingStyle.Back, { Scale = 0 }, Enum.EasingDirection.In).Completed:Wait()
+			if token == mine then
+				stage.Visible = false
+			end
+		end)
+		return hold + 0.25
+	end
+end
+
+-- ===== Callout: a gold lip bubble with a pointed tail that points at something on screen =====
+-- side "Left" = the tail sticks out of the bubble's left side (anchor = its tip, middle left);
+-- side "Down" = the tail hangs under it (anchor = its tip, bottom centre). Returns the holder and set(text, sub).
+function MomentKit.Callout(parent: Instance, text: string, sub: string?, side: string): (Frame, (string, string?) -> ())
+	local W, H = if sub then 236 else 220, if sub then 68 else 52
+	local left = side == "Left"
+	local holder = make("Frame", {
+		Name = "Callout",
+		BackgroundTransparency = 1,
+		AnchorPoint = if left then Vector2.new(0, 0.5) else Vector2.new(0.5, 1),
+		ZIndex = 50,
+	}, parent)
+	local bubble = UiKit.Block(holder, {
+		Name = "Bubble",
+		Size = Vector2.new(W, H),
+		Fill = C.Gold,
+		Lip = C.GoldLip,
+		LipPx = 5,
+		Radius = 16,
+		Outline = 3,
+	})
+	-- the tail: a gold diamond with an ink edge, half under the bubble, its point sticking out; a gold patch hides
+	-- the bubble's outline where they join
+	local T = 30
+	local tail = make("Frame", {
+		Name = "Tail",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Size = UDim2.fromOffset(T, T),
+		Rotation = 45,
+		BackgroundColor3 = if left then C.Gold else C.GoldLip,
+		ZIndex = 0,
+	}, holder)
+	UiKit.Corner(tail, 4)
+	UiKit.Outline(tail, C.Ink, 3)
+	local patch = make("Frame", {
+		Name = "Join",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundColor3 = if left then C.Gold else C.GoldLip,
+		BorderSizePixel = 0,
+		ZIndex = 4,
+	}, holder)
+	local tipOut = math.floor(T * 0.707) -- how far the point sticks out past the bubble's edge
+	if left then
+		-- tip at the holder's middle left; the tail's middle sits on the bubble's left edge, level with its face
+		holder.Size = UDim2.fromOffset(W + tipOut - 3, H)
+		bubble.Holder.Position = UDim2.fromOffset(tipOut - 3, 0)
+		tail.Position = UDim2.fromOffset(tipOut, (H - 5) / 2)
+		patch.Position = UDim2.fromOffset(tipOut - 1, (H - 5) / 2)
+		patch.Size = UDim2.fromOffset(6, T * 0.8)
+	else
+		-- tip at the holder's bottom centre; the tail hangs from the bubble's lip
+		holder.Size = UDim2.fromOffset(W, H - 3 + tipOut)
+		tail.Position = UDim2.new(0.5, 0, 0, H - 3)
+		patch.Position = UDim2.new(0.5, 0, 0, H - 2)
+		patch.Size = UDim2.fromOffset(T * 0.8, 6)
+	end
+	local main = UiKit.Text(bubble.Face, text, UiKit.Head, 24, C.White, 2.5)
+	main.Name = "Main"
+	main.Position = UDim2.fromOffset(10, if sub then 5 else 4)
+	main.Size = UDim2.new(1, -20, 0, if sub then 30 else H - 10)
+	local small = UiKit.Text(bubble.Face, sub or "", UiKit.Head, 16, C.Ink, 0)
+	small.Name = "Sub"
+	small.Position = UDim2.fromOffset(10, 35)
+	small.Size = UDim2.new(1, -20, 0, 20)
+	small.Visible = sub ~= nil
+	local function set(newText: string, newSub: string?)
+		main.Text = newText
+		RewardKit.Fit(main, 24, W - 26, if sub then 30 else H - 12)
+		small.Text = newSub or ""
+		RewardKit.Fit(small, 16, W - 26, 20)
+	end
+	set(text, sub)
+	return holder, set
+end
+
+-- ===== World marker: a navy pill with a coloured word and a bobbing gold arrow under it, for a BillboardGui =====
+-- (the GO HERE over Rizzo, the zone door signs). Returns the BillboardGui (not parented yet) and its word label.
+function MomentKit.WorldMarker(text: string, color: Color3): (BillboardGui, TextLabel)
+	local W = math.clamp(CrateKit.TextWidth(text, CrateKit.Head, 30) + 52, 150, 320)
+	local sign = make("BillboardGui", {
+		Name = "Marker",
+		AlwaysOnTop = true,
+		LightInfluence = 0,
+		Size = UDim2.fromOffset(W, 116),
+	}) :: BillboardGui
+	local pill = UiKit.Block(sign, {
+		Name = "Pill",
+		Size = Vector2.new(W, 60),
+		Fill = C.Cover,
+		Lip = C.Ink,
+		LipPx = 6,
+		Radius = 30,
+		Outline = 4,
+	})
+	make("UIStroke", { Color = color, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, pill.Face)
+	local word = UiKit.Text(pill.Face, text, UiKit.Head, 30, color, 3)
+	word.Name = "Word"
+	make("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }, word)
+	local arrow = UiKit.Text(sign, "▼", UiKit.Head, 44, C.Gold, 3)
+	arrow.Name = "Arrow"
+	arrow.AnchorPoint = Vector2.new(0.5, 0)
+	arrow.Position = UDim2.fromOffset(W / 2, 62)
+	arrow.Size = UDim2.fromOffset(60, 50)
+	TweenService:Create(
+		arrow,
+		TweenInfo.new(0.45, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		{ Position = UDim2.fromOffset(W / 2, 52) }
+	):Play()
+	return sign, word
 end
 
 -- ===== Rank up: full screen, the new badge on rays, its name, what it gives, confetti and CONTINUE =====

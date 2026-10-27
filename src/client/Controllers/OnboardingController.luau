@@ -3,7 +3,8 @@
 --   the big "HOLD... THEN LET GO!" callout on the assisted first throw,
 --   a bouncing "BUY POWER LV 2!" callout next to the Power Level button once Level 2 is affordable,
 --   the gift crate opening (with an EQUIP button), and the camera swing to a locked ball in the lobby showcase.
--- Built in code (not in Studio), so it lives in git.
+-- Built in code (not in Studio), so it lives in git. Kit look since UI pass batch 3 (2026-10-28): titles with the
+-- ink drop, navy chips, a gold callout bubble with the kit arrow, the slam banner for the gift.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -17,15 +18,17 @@ local PowerLevels = require(Shared.Modules.PowerLevels)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
+local UiKit = require(Modules.UiKit)
+local CrateKit = require(Modules.CrateKit)
+local RewardKit = require(Modules.RewardKit)
+local MomentKit = require(Modules.MomentKit)
 local CrateController = require(script.Parent.CrateController)
 local ShowcaseController = require(script.Parent.ShowcaseController)
 local ThrowController = require(script.Parent.ThrowController)
 
 local SETTINGS = Config.Onboarding
-local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
-local INK = Color3.fromHex("06060F")
-local GOLD = Color3.fromRGB(255, 200, 40)
-local CYAN = Color3.fromRGB(70, 230, 255)
+local GOLD = UiKit.C.Gold
+local CYAN = UiKit.C.Cyan
 
 local player = Players.LocalPlayer
 
@@ -34,31 +37,77 @@ local OnboardingController = {}
 OnboardingController.LegendsDone = false
 
 local screen: ScreenGui -- this script's own screen (OnboardingUI)
+local giftBanner: (string, string, string?, string?, number?) -> () -- the kit slam banner (made in Start)
 local panning = false -- the camera is away at the showcase
 
-local function bigLabel(parent: Instance, text: string, color: Color3): TextLabel
-	local label = Instance.new("TextLabel")
-	label.BackgroundTransparency = 1
-	label.FontFace = FONT
-	label.TextScaled = true
-	label.TextColor3 = color
-	label.Text = text
-	label.ZIndex = 30
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = INK
-	stroke.Thickness = 3
-	stroke.Parent = label
-	label.Parent = parent
-	return label
+-- A kit headline: the title with the ink drop and (optional) a navy chip under it, centred at (0.5, y) of the screen
+-- in a w x 140 design box that shrinks on phones. Returns the holder, the title and the chip's label.
+local function kitTitle(parent: ScreenGui, text: string, color: Color3, sub: string?, subColor: Color3?, y: number, w: number)
+	local holder = UiKit.Make("Frame", {
+		Name = "KitTitle",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, y),
+		Size = UDim2.fromOffset(w, 140),
+		ZIndex = 30,
+	}, parent)
+	local fit = UiKit.Make("UIScale", {}, holder) :: UIScale
+	local function refit()
+		local area = parent.AbsoluteSize
+		if area.X > 0 then
+			fit.Scale = math.max(0.4, math.min(1, (area.X - 24) / w, area.Y / 1080 * 1.4))
+		end
+	end
+	parent:GetPropertyChangedSignal("AbsoluteSize"):Connect(refit)
+	refit()
+	local titleBox = UiKit.Make("Frame", {
+		Name = "TitleBox",
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, 84),
+	}, holder)
+	local title = CrateKit.Title(titleBox, text, 72, color, 4.5, 6)
+	RewardKit.Fit(title, 72, w - 20, 84)
+	local chipText: TextLabel? = nil
+	if sub then
+		local chipW = math.clamp(CrateKit.TextWidth(sub, UiKit.Head, 26) + 52, 240, w)
+		local chip = UiKit.Block(holder, {
+			Name = "Chip",
+			Size = Vector2.new(chipW, 52),
+			Fill = UiKit.C.Cover,
+			Lip = UiKit.C.Ink,
+			LipPx = 5,
+			Radius = 26,
+			Outline = 3,
+		})
+		chip.Holder.AnchorPoint = Vector2.new(0.5, 0)
+		chip.Holder.Position = UDim2.new(0.5, 0, 0, 86)
+		chipText = UiKit.Text(chip.Face, sub, UiKit.Head, 26, subColor or CYAN, 2.5)
+		UiKit.Make("UIPadding", { PaddingTop = UDim.new(0, 3) }, chipText)
+	end
+	return holder, title, chipText
 end
 
-local function fadeOut(label: TextLabel, time: number)
-	TweenService:Create(label, TweenInfo.new(time), { TextTransparency = 1 }):Play()
-	local stroke = label:FindFirstChildOfClass("UIStroke")
-	if stroke then
-		TweenService:Create(stroke, TweenInfo.new(time), { Transparency = 1 }):Play()
+-- Pops a kit headline in (scale 2 -> 1, Back Out) and later shrinks it away and destroys it
+local function popIn(holder: GuiObject)
+	local scale = UiKit.ScaleOf(holder:FindFirstChild("TitleBox") :: GuiObject)
+	scale.Scale = 2
+	UiKit.Tween(scale, 0.4, Enum.EasingStyle.Back, { Scale = 1 })
+	local chip = holder:FindFirstChild("Chip") :: GuiObject?
+	if chip then
+		local chipScale = UiKit.ScaleOf(chip)
+		chipScale.Scale = 0.01
+		task.delay(0.15, function()
+			UiKit.Tween(chipScale, 0.25, Enum.EasingStyle.Back, { Scale = 1 })
+		end)
 	end
-	task.delay(time + 0.05, label.Destroy, label)
+end
+local function popOut(holder: GuiObject, time: number)
+	for _, child in holder:GetChildren() do
+		if child:IsA("GuiObject") then
+			UiKit.Tween(UiKit.ScaleOf(child), time, Enum.EasingStyle.Back, { Scale = 0 }, Enum.EasingDirection.In)
+		end
+	end
+	task.delay(time + 0.05, holder.Destroy, holder)
 end
 
 -- Waits until the player isn't in the middle of a throw (and the throw camera has handed back),
@@ -88,17 +137,10 @@ local function showGift(data)
 		return
 	end
 	waitForCalm()
-	local layer = UiFx.Layer()
-	local banner = bigLabel(layer, "A GIFT FOR YOU!", GOLD)
-	banner.AnchorPoint = Vector2.new(0.5, 0.5)
-	banner.Position = UDim2.fromScale(0.5, 0.4)
-	banner.Size = UDim2.new(0.7, 0, 0, 80)
-	UiFx.Pop(banner, 2, 0.45)
+	giftBanner("A GIFT FOR YOU!", "Gold", "FROM THE BOWLING GODS", "Hud:GiftDaily", 1.4)
 	UiFx.Flash(GOLD, 0.35, 0.4)
 	Sfx.Play("RevealBig", 1.1)
-	task.wait(1.4)
-	fadeOut(banner, 0.25)
-	task.wait(0.25)
+	task.wait(1.65)
 	CrateController.PlayOpening(crate, data.Result, true)
 end
 
@@ -140,16 +182,16 @@ local function showLegends()
 	task.wait(1)
 
 	local rarity = Balls.GetRarity(target.Ball.Rarity)
-	local title = bigLabel(screen, ("A LOCKED %s BALL!"):format(target.Ball.Rarity:upper()), rarity.Color)
-	title.AnchorPoint = Vector2.new(0.5, 0.5)
-	title.Position = UDim2.fromScale(0.5, 0.18)
-	title.Size = UDim2.new(0.7, 0, 0, 64)
-	local sub = bigLabel(screen, "REACH THE NEXT ZONE TO WIN IT!", CYAN)
-	sub.AnchorPoint = Vector2.new(0.5, 0.5)
-	sub.Position = UDim2.new(0.5, 0, 0.18, 52)
-	sub.Size = UDim2.new(0.6, 0, 0, 30)
-	UiFx.Pop(title, 1.8, 0.45)
-	UiFx.Pop(sub, 0.4, 0.45)
+	local headline = kitTitle(
+		screen,
+		("A LOCKED %s BALL!"):format(target.Ball.Rarity:upper()),
+		CrateKit.RarityColor(target.Ball.Rarity) or rarity.Color,
+		"REACH THE NEXT ZONE TO WIN IT!",
+		CYAN,
+		0.17,
+		900
+	)
+	popIn(headline)
 	Sfx.Play("RevealBig", 0.8)
 	-- Slowly drift closer while it shows
 	TweenService:Create(camera, TweenInfo.new(SETTINGS.LegendsPanTime, Enum.EasingStyle.Linear), {
@@ -157,8 +199,7 @@ local function showLegends()
 	}):Play()
 	task.wait(SETTINGS.LegendsPanTime)
 
-	fadeOut(title, 0.3)
-	fadeOut(sub, 0.3)
+	popOut(headline, 0.25)
 	local home = TweenService:Create(camera, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
 		CFrame = back,
 	})
@@ -186,30 +227,16 @@ function OnboardingController:Start()
 	gui.DisplayOrder = 20
 	gui.IgnoreGuiInset = hud.IgnoreGuiInset -- same as the Power Level button, so the BUY arrow lines up with it
 
-	-- First throw: a big callout above the bowler
-	local throwCall = bigLabel(gui, "HOLD... THEN LET GO!", GOLD)
-	throwCall.AnchorPoint = Vector2.new(0.5, 0.5)
-	throwCall.Position = UDim2.fromScale(0.5, 0.26)
-	throwCall.Size = UDim2.new(0.6, 0, 0, 64)
+	-- First throw: a big kit headline above the bowler, the YOUR FIRST THROW chip under it
+	local throwCall, throwTitle = kitTitle(gui, "HOLD... THEN LET GO!", GOLD, "YOUR FIRST THROW", CYAN, 0.22, 680)
 	throwCall.Visible = false
-	local throwSub = bigLabel(throwCall, "YOUR FIRST THROW", CYAN)
-	throwSub.AnchorPoint = Vector2.new(0.5, 1)
-	throwSub.Position = UDim2.fromScale(0.5, 0)
-	throwSub.Size = UDim2.new(0.6, 0, 0, 26)
 
-	-- Level 2 affordable: a small bouncing arrow next to the Power Level button (kept small so it never
-	-- covers the screen or the power arc)
-	local buyCall = bigLabel(gui, "< BUY LV 2!", GOLD)
-	buyCall.AnchorPoint = Vector2.new(0, 0.5)
-	buyCall.Size = UDim2.fromOffset(120, 24)
-	buyCall.TextXAlignment = Enum.TextXAlignment.Left
+	-- Level 2 affordable: a gold callout bubble with the kit arrow pointing at the Power Level button (kept small so
+	-- it never covers the screen or the power arc; shrinks on phones)
+	local buyCall = MomentKit.Callout(gui, "BUY POWER LV 2!", "NEW BALL LOOK!", "Left")
 	buyCall.Visible = false
-	buyCall:FindFirstChildOfClass("UIStroke").Thickness = 2
-	local buySub = bigLabel(buyCall, "  NEW BALL LOOK!", CYAN)
-	buySub.Position = UDim2.fromScale(0, 1)
-	buySub.Size = UDim2.new(1, 0, 0, 14)
-	buySub:FindFirstChildOfClass("UIStroke").Thickness = 2
-	buySub.TextXAlignment = Enum.TextXAlignment.Left
+	local buyScale = UiKit.ScaleOf(buyCall)
+	giftBanner = MomentKit.Banner(MomentKit.Layer("GiftBannerUI", 46), 0.4)
 
 	local levelTwo = PowerLevels.Get(2)
 	local buyShown = false
@@ -219,9 +246,15 @@ function OnboardingController:Start()
 		-- Assisted first throw
 		local state = ThrowController.State()
 		local firstThrow = player:GetAttribute("Onboarding") == 0 and (state == "Ready" or state == "Charging")
+		if firstThrow and not throwCall.Visible then
+			popIn(throwCall)
+		end
 		throwCall.Visible = firstThrow
 		if firstThrow then
-			throwCall.Text = if state == "Charging" then "LET GO - ANY TIME!" else "HOLD... THEN LET GO!"
+			local want = if state == "Charging" then "LET GO - ANY TIME!" else "HOLD... THEN LET GO!"
+			if throwTitle.Text ~= want then
+				throwTitle.Text = want
+			end
 			throwCall.Rotation = math.sin(t * 3) * 3
 		end
 
@@ -234,14 +267,16 @@ function OnboardingController:Start()
 			and (player:GetAttribute("Coins") or 0) >= levelTwo.Price
 		buyCall.Visible = wantBuy
 		if wantBuy and button then
+			local compact = gui.AbsoluteSize.Y < Config.Ui.CompactHeight
 			if not buyShown then
-				UiFx.Pop(buyCall, 1.3, 0.4)
+				buyScale.Scale = 0.3
+				UiKit.Tween(buyScale, 0.35, Enum.EasingStyle.Back, { Scale = if compact then 0.62 else 1 })
 				Sfx.Play("StreakUp", 1.3)
 			end
-			local bounce = math.abs(math.sin(t * 5)) * 14
+			local bounce = math.abs(math.sin(t * 5)) * 10
 			buyCall.Position = UDim2.fromOffset(
-				button.AbsolutePosition.X + button.AbsoluteSize.X + 6 + bounce * 0.6,
-				button.AbsolutePosition.Y + button.AbsoluteSize.Y / 2 - 6
+				button.AbsolutePosition.X + button.AbsoluteSize.X + 4 + bounce,
+				button.AbsolutePosition.Y + button.AbsoluteSize.Y / 2
 			)
 		end
 		buyShown = wantBuy

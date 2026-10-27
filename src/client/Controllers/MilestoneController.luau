@@ -1,7 +1,8 @@
--- Zone milestones on screen (Phase X Part 1, Config.Milestones): the challenge tracker (left side, under the
--- Power Level button) while you bowl in the challenge's zone, the "next level reward" preview under it, and the
--- popup when a level reward or a challenge pays out (then the crate opens). Built in code. The server decides
--- everything (MilestoneService).
+-- Zone milestones on screen (Phase X Part 1, Config.Milestones): the challenge tracker (under the streak box on a
+-- computer, under the Power Level button on a phone) while you bowl in the challenge's zone, the "next level reward"
+-- card under it, and the payout popup when a level reward or a challenge pays out (then the crate opens). Built in
+-- code in the owner's kit look (UI pass batch 3, 2026-10-28: navy lip cards, ink outlines, gold pips, real 3D crates).
+-- The server decides everything (MilestoneService).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -14,86 +15,53 @@ local LaneUtil = require(Shared.Modules.LaneUtil)
 local CrateController = require(script.Parent.CrateController)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules:WaitForChild("Sfx"))
-local UiFx = require(Modules:WaitForChild("UiFx"))
+local UiKit = require(Modules:WaitForChild("UiKit"))
+local CrateKit = require(Modules:WaitForChild("CrateKit"))
+local RewardKit = require(Modules:WaitForChild("RewardKit"))
 
 local player = Players.LocalPlayer
 
 local MILESTONES = Config.Milestones
+local C = UiKit.C
+local make = UiKit.Make
+local tween = UiKit.Tween
 
-local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
-local BODY_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
-local INK = Color3.fromHex("06060F")
-local PANEL = Color3.fromRGB(18, 12, 38)
-local PINK = Color3.fromRGB(255, 60, 210)
-local CYAN = Color3.fromRGB(70, 230, 255)
-local GOLD = Color3.fromRGB(255, 200, 40)
-local GREY = Color3.fromRGB(150, 140, 180)
-
+-- Design sizes (px on a 1920x1080 screen); phones shrink them with a UIScale
+local TRACKER_W, TRACKER_H = 250, 104
+local PREVIEW_H = 60
 -- Computers: right side, under the streak box and the free-crate bar (the left column holds the Power Level button
 -- and, in Studio, its TEST buttons). Phones: left column under the Power Level button (ScreenLayout's compact spots).
-local TRACKER_NORMAL =
-	{ Anchor = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 378), Size = UDim2.fromOffset(222, 74) }
-local TRACKER_COMPACT =
-	{ Anchor = Vector2.new(0, 0), Position = UDim2.fromOffset(12, 250), Size = UDim2.fromOffset(150, 60) }
+local TRACKER_NORMAL = { Anchor = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 378), Scale = 1 }
+local TRACKER_COMPACT = { Anchor = Vector2.new(0, 0), Position = UDim2.fromOffset(12, 250), Scale = 0.62 }
 
 local MilestoneController = {}
 
-local function stroke(parent: Instance, color: Color3, thickness: number, border: boolean?)
-	local s = Instance.new("UIStroke")
-	s.Color = color
-	s.Thickness = thickness
-	s.ApplyStrokeMode = if border then Enum.ApplyStrokeMode.Border else Enum.ApplyStrokeMode.Contextual
-	s.Parent = parent
-	return s
-end
-
-local function corner(parent: Instance, radius: number)
-	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0, radius)
-	c.Parent = parent
-end
-
-local function text(parent: Instance, name: string, font: Font, color: Color3, position: UDim2, size: UDim2): TextLabel
-	local label = Instance.new("TextLabel")
-	label.Name = name
-	label.BackgroundTransparency = 1
-	label.FontFace = font
-	label.TextScaled = true
-	label.TextColor3 = color
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.Position = position
-	label.Size = size
-	label.Parent = parent
-	stroke(label, INK, 1.5)
-	return label
-end
-
 local function potionName(id: string): string
-	for _, potion in Config.Potions.List do
-		if potion.Id == id then
-			return potion.Name
-		end
-	end
-	return "POTION"
+	local potion = RewardKit.PotionById(id)
+	return if potion then potion.Name else "POTION"
 end
 
--- "+50K COINS", "2 COIN POTIONS", "BRONZE CRATE"
-local function rewardLines(reward, coins: number?): { string }
-	local lines = {}
+-- What a reward gives, one item per thing: { Kind, Value, Text } ("+50K COINS", "2 COIN POTIONS", "BRONZE CRATE")
+local function rewardItems(reward, coins: number?): { { Kind: string, Value: any, Text: string } }
+	local items = {}
 	local shownCoins = coins or reward.Coins
 	if shownCoins and shownCoins > 0 then
-		table.insert(lines, ("+%s COINS"):format(Currency.Format(shownCoins)))
+		table.insert(items, { Kind = "Coins", Text = ("+%s COINS"):format(Currency.Format(shownCoins)) })
 	end
 	for _, potion in reward.Potions or {} do
 		local count = potion.Count or 1
-		table.insert(lines, ("%d %s%s"):format(count, potionName(potion.Id), if count > 1 then "S" else ""))
+		table.insert(items, {
+			Kind = "Potion",
+			Value = potion.Id,
+			Text = ("%d %s%s"):format(count, potionName(potion.Id), if count > 1 then "S" else ""):upper(),
+		})
 	end
 	local crate = reward.CrateId or reward.Crate
 	if type(crate) == "string" then
 		local row = Balls.GetCrate(crate)
-		table.insert(lines, string.upper(if row then row.Name else crate))
+		table.insert(items, { Kind = "Crate", Value = crate, Text = string.upper(if row then row.Name else crate) })
 	end
-	return lines
+	return items
 end
 
 -- The next level reward above this level, or nil
@@ -112,6 +80,13 @@ local function clock(seconds: number): string
 	return ("%d:%02d"):format(seconds // 60, seconds % 60)
 end
 
+-- A left-aligned kit label at design x, y, w, h
+local function label(parent: Instance, text: string, font: Font, size: number, color: Color3, stroke: number, x, y, w, h)
+	local l = RewardKit.Label(parent, text, font, size, color, stroke, x, y, w, h)
+	l.TextXAlignment = Enum.TextXAlignment.Left
+	return l
+end
+
 function MilestoneController:Start()
 	if not MILESTONES.Enabled then
 		return
@@ -123,74 +98,126 @@ function MilestoneController:Start()
 	gui.DisplayOrder = 4
 	gui.Parent = player:WaitForChild("PlayerGui")
 
-	-- Challenge tracker
-	local tracker = Instance.new("Frame")
-	tracker.Name = "Tracker"
-	tracker.BackgroundColor3 = PANEL
-	tracker.BackgroundTransparency = 0.15
-	tracker.Visible = false
-	tracker.Parent = gui
-	corner(tracker, 10)
-	stroke(tracker, PINK, 2, true)
-	local title = text(tracker, "Title", FONT, PINK, UDim2.new(0, 8, 0, 4), UDim2.new(1, -16, 0.22, 0))
-	local goal =
-		text(tracker, "Goal", BODY_FONT, Color3.new(1, 1, 1), UDim2.new(0, 8, 0.26, 0), UDim2.new(1, -16, 0.2, 0))
-	local dots = Instance.new("Frame")
-	dots.Name = "Dots"
-	dots.BackgroundTransparency = 1
-	dots.Position = UDim2.new(0, 8, 0.5, 0)
-	dots.Size = UDim2.new(1, -16, 0.2, 0)
-	dots.Parent = tracker
-	local list = Instance.new("UIListLayout")
-	list.FillDirection = Enum.FillDirection.Horizontal
-	list.Padding = UDim.new(0, 4)
-	list.VerticalAlignment = Enum.VerticalAlignment.Center
-	list.Parent = dots
-	local prize = text(tracker, "Prize", BODY_FONT, GOLD, UDim2.new(0, 8, 0.74, 0), UDim2.new(1, -16, 0.2, 0))
+	-- ===== Challenge tracker: navy lip card with a pink ring, CHALLENGE + count, the goal, gold pips, the prize =====
+	local tracker = UiKit.Block(gui, {
+		Name = "Tracker",
+		Size = Vector2.new(TRACKER_W, TRACKER_H),
+		Fill = C.Cover,
+		Lip = C.Ink,
+		LipPx = 5,
+		Radius = 16,
+		Outline = 3,
+		Ring = C.Pink,
+	})
+	local trackerScale = UiKit.ScaleOf(tracker.Holder)
+	tracker.Holder.Visible = false
+	local face = tracker.Face
+	local title = label(face, "CHALLENGE", UiKit.Head, 20, C.Pink, 2, 12, 8, 150, 24)
+	local count = RewardKit.Label(face, "0/3", UiKit.Num, 22, C.White, 2, TRACKER_W - 78, 6, 64, 26)
+	count.TextXAlignment = Enum.TextXAlignment.Right
+	local goal = label(face, "", UiKit.Body, 13, C.Label, 0, 12, 33, TRACKER_W - 26, 16)
+	local dots = make("Frame", {
+		Name = "Dots",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(12, 52),
+		Size = UDim2.fromOffset(TRACKER_W - 26, 20),
+	}, face)
+	make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		Padding = UDim.new(0, 6),
+		VerticalAlignment = Enum.VerticalAlignment.Center,
+	}, dots)
+	local prize = label(face, "", UiKit.Head, 16, C.Gold, 2, 12, 74, TRACKER_W - 26, 20)
 
-	-- Next level reward preview, under the tracker (also shown on its own outside the challenge's zone)
-	local preview = Instance.new("Frame")
-	preview.Name = "Preview"
-	preview.BackgroundColor3 = PANEL
-	preview.BackgroundTransparency = 0.15
-	preview.Visible = false
-	preview.Parent = gui
-	corner(preview, 8)
-	stroke(preview, CYAN, 1.5, true)
-	local previewText = text(preview, "Text", BODY_FONT, CYAN, UDim2.new(0, 8, 0, 3), UDim2.new(1, -16, 1, -6))
+	-- ===== Next level reward card: the reward's icon (the real 3D crate), NEXT LEVEL REWARD, LV n + what it gives =====
+	local preview = UiKit.Block(gui, {
+		Name = "Preview",
+		Size = Vector2.new(TRACKER_W, PREVIEW_H),
+		Fill = C.Card,
+		Lip = C.Ink,
+		LipPx = 5,
+		Radius = 14,
+		Outline = 3,
+		Ring = C.Cyan,
+	})
+	local previewScale = UiKit.ScaleOf(preview.Holder)
+	preview.Holder.Visible = false
+	local previewIcon = make("Frame", {
+		Name = "IconSpot",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(8, 4),
+		Size = UDim2.fromOffset(46, 46),
+	}, preview.Face)
+	label(preview.Face, "NEXT LEVEL REWARD", UiKit.Head, 13, C.Cyan, 1.5, 60, 6, TRACKER_W - 72, 16)
+	local previewText = label(preview.Face, "", UiKit.Head, 18, C.White, 2, 60, 24, TRACKER_W - 72, 24)
 
-	-- Reward popup (centre of the screen)
-	local popup = Instance.new("Frame")
-	popup.Name = "Popup"
-	popup.AnchorPoint = Vector2.new(0.5, 0.5)
-	popup.Position = UDim2.fromScale(0.5, 0.42)
-	popup.Size = UDim2.fromOffset(360, 170)
-	popup.BackgroundColor3 = PANEL
-	popup.Visible = false
-	popup.Parent = gui
-	corner(popup, 16)
-	stroke(popup, GOLD, 3, true)
-	local popupTitle = text(popup, "Title", FONT, GOLD, UDim2.new(0, 14, 0, 10), UDim2.new(1, -28, 0, 44))
-	popupTitle.TextXAlignment = Enum.TextXAlignment.Center
-	local popupLines =
-		text(popup, "Lines", BODY_FONT, Color3.new(1, 1, 1), UDim2.new(0, 14, 0, 62), UDim2.new(1, -28, 0, 96))
-	popupLines.TextXAlignment = Enum.TextXAlignment.Center
-	popupLines.TextScaled = false
-	popupLines.TextSize = 22
-	popupLines.TextWrapped = true
+	-- ===== Payout popup (centre): rays, a gold title with the ink drop, one row per reward; taps pass through =====
+	local POP_W = 460
+	local stage = make("Frame", {
+		Name = "Popup",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.42),
+		Size = UDim2.fromOffset(POP_W, 300),
+		Visible = false,
+	}, gui)
+	local stageFit = make("UIScale", {}, stage)
+	local pop = make("Frame", { Name = "Pop", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1) }, stage)
+	local popScale = UiKit.ScaleOf(pop)
+	local rays = RewardKit.Rays(pop, C.Gold, 520, 9)
+	rays.Position = UDim2.fromOffset(POP_W / 2, 60)
+	rays.ZIndex = 0
+	local card = UiKit.Block(pop, {
+		Name = "Card",
+		Size = Vector2.new(POP_W, 300),
+		Fill = C.Cover,
+		Lip = C.Ink,
+		LipPx = 6,
+		Radius = 22,
+		Outline = 4,
+		Ring = C.Gold,
+	})
+	local titleBox = make("Frame", {
+		Name = "TitleBox",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(16, 16),
+		Size = UDim2.fromOffset(POP_W - 32, 58),
+	}, card.Face)
+	local popupTitle = CrateKit.Title(titleBox, "", 46, C.Gold, 3.5, 4)
+	local rows = make("Frame", {
+		Name = "Rows",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(30, 86),
+		Size = UDim2.new(1, -60, 1, -100),
+	}, card.Face)
+	make("UIListLayout", { Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Center }, rows)
 
 	local function layout()
 		local camera = Workspace.CurrentCamera
 		local compact = camera ~= nil and camera.ViewportSize.Y < Config.Ui.CompactHeight
 		local spot = if compact then TRACKER_COMPACT else TRACKER_NORMAL
-		tracker.AnchorPoint = spot.Anchor
-		preview.AnchorPoint = spot.Anchor
-		tracker.Position = spot.Position
-		tracker.Size = spot.Size
-		local below = spot.Position + UDim2.fromOffset(0, spot.Size.Y.Offset + 6)
-		preview.Size = UDim2.fromOffset(spot.Size.X.Offset, if compact then 20 else 24)
-		popup.Size = if compact then UDim2.fromOffset(300, 140) else UDim2.fromOffset(360, 170)
-		return spot.Position, below
+		for _, block in { tracker.Holder, preview.Holder } do
+			block.AnchorPoint = spot.Anchor
+		end
+		trackerScale.Scale = spot.Scale
+		previewScale.Scale = spot.Scale
+		local position = spot.Position
+		if not compact then
+			-- computers: never under the next-goal bar on the right (it moves with the screen size)
+			local eventUi = player.PlayerGui:FindFirstChild("EventUI")
+			local goalBar = eventUi and eventUi:FindFirstChild("AlmostBar") :: GuiObject?
+			if goalBar and goalBar.Visible then
+				local bottom = goalBar.AbsolutePosition.Y + goalBar.AbsoluteSize.Y - gui.AbsolutePosition.Y
+				position = UDim2.new(1, -16, 0, math.max(position.Y.Offset, math.ceil(bottom) + 12))
+			end
+		end
+		tracker.Holder.Position = position
+		local below = position + UDim2.fromOffset(0, math.floor((TRACKER_H + 8) * spot.Scale))
+		if camera then
+			local view = camera.ViewportSize
+			stageFit.Scale = math.max(0.45, math.min(1, (view.X - 24) / POP_W, (view.Y - 60) / 320))
+		end
+		return position, below
 	end
 
 	local function currentZone(): number
@@ -199,26 +226,38 @@ function MilestoneController:Start()
 	end
 
 	local shownDots = -1
-	local function setDots(count: number, goalCount: number)
-		if shownDots == count * 100 + goalCount then
+	local function setDots(filled: number, goalCount: number)
+		count.Text = ("%d/%d"):format(filled, goalCount)
+		if shownDots == filled * 100 + goalCount then
 			return
 		end
-		shownDots = count * 100 + goalCount
+		local grew = shownDots >= 0 and filled * 100 + goalCount > shownDots and shownDots // 100 < filled
+		shownDots = filled * 100 + goalCount
 		for _, child in dots:GetChildren() do
 			if child:IsA("Frame") then
 				child:Destroy()
 			end
 		end
 		for i = 1, goalCount do
-			local dot = Instance.new("Frame")
-			dot.Size = UDim2.new(0, 14, 0, 14)
-			dot.BackgroundColor3 = if i <= count then GOLD else Color3.fromRGB(60, 50, 90)
-			dot.Parent = dots
-			corner(dot, 7)
-			stroke(dot, INK, 1.5)
+			local on = i <= filled
+			local pip = make("Frame", {
+				Name = "Pip",
+				Size = UDim2.fromOffset(20, 20),
+				BackgroundColor3 = if on then C.Gold else C.Slot,
+				LayoutOrder = i,
+			}, dots)
+			make("UICorner", { CornerRadius = UDim.new(0.5, 0) }, pip)
+			UiKit.Outline(pip, if on then C.Ink else C.Dash, 2)
+			if on and grew and i == filled then
+				-- the pip you just earned pops
+				local s = UiKit.ScaleOf(pip)
+				s.Scale = 1.8
+				tween(s, 0.3, Enum.EasingStyle.Back, { Scale = 1 })
+			end
 		end
 	end
 
+	local previewRow = nil
 	local function refresh()
 		local top, below = layout()
 		local zone = currentZone()
@@ -230,29 +269,46 @@ function MilestoneController:Start()
 				break
 			end
 		end
-		tracker.Visible = active ~= nil
+		tracker.Holder.Visible = active ~= nil
 		if active then
 			local readyAt = player:GetAttribute("ChallengeReady_" .. active.Id) or 0
-			local count = player:GetAttribute("Challenge_" .. active.Id) or 0
-			title.Text = "CHALLENGE"
+			local done = player:GetAttribute("Challenge_" .. active.Id) or 0
 			goal.Text = active.Text:format(active.Goal)
 			if now < readyAt then
 				setDots(active.Goal, active.Goal)
-				prize.Text = "DONE! AGAIN IN " .. clock(readyAt - now)
-				prize.TextColor3 = GREY
+				title.Text = "CHALLENGE DONE!"
+				title.TextColor3 = C.Lime
+				prize.Text = "AGAIN IN " .. clock(readyAt - now)
+				prize.TextColor3 = C.Muted
 			else
-				setDots(math.min(count, active.Goal), active.Goal)
+				setDots(math.min(done, active.Goal), active.Goal)
+				title.Text = "CHALLENGE"
+				title.TextColor3 = C.Pink
 				prize.Text = active.RewardText
-				prize.TextColor3 = GOLD
+				prize.TextColor3 = C.Gold
 			end
 		end
 
 		local nextRow = if MILESTONES.Preview then nextLevelReward(player:GetAttribute("RankLevel") or 1) else nil
 		-- Only from zone 2 on: in the Back Alley the next goal bar already points the way
-		preview.Visible = nextRow ~= nil and zone >= 2
+		preview.Holder.Visible = nextRow ~= nil and zone >= 2
 		if nextRow then
-			previewText.Text = ("NEXT: LV %d = %s"):format(nextRow.Level, table.concat(rewardLines(nextRow), " + "))
-			preview.Position = if active then below else top
+			if nextRow ~= previewRow then
+				previewRow = nextRow
+				local items = rewardItems(nextRow)
+				local texts = {}
+				for _, item in items do
+					table.insert(texts, item.Text)
+				end
+				previewText.Text = ("LV %d · %s"):format(nextRow.Level, table.concat(texts, " + "))
+				-- the best thing it gives: a crate, else a potion, else coins
+				previewIcon:ClearAllChildren()
+				local show = items[#items]
+				if show then
+					RewardKit.Icon(previewIcon, show.Kind, show.Value, 46, UDim2.fromScale(0.5, 0.5))
+				end
+			end
+			preview.Holder.Position = if active then below else top
 		end
 	end
 
@@ -270,12 +326,47 @@ function MilestoneController:Start()
 			elseif data.Kind == "Boss" then "BOSS DEFEATED!"
 			elseif data.Kind == "Away" then "WELCOME BACK!"
 			else "CHALLENGE DONE!"
-		popupLines.Text = table.concat(rewardLines(data, data.Coins), "\n")
+		RewardKit.Fit(popupTitle, 46, POP_W - 40, 56)
+		for _, child in rows:GetChildren() do
+			if child:IsA("GuiObject") then
+				child:Destroy()
+			end
+		end
+		local items = rewardItems(data, data.Coins)
+		local rowObjects = {}
+		for i, item in items do
+			local row = UiKit.Block(rows, {
+				Name = "Row",
+				Size = Vector2.new(POP_W - 60, 54),
+				Fill = C.Card,
+				Lip = C.Ink,
+				LipPx = 5,
+				Radius = 16,
+				Outline = 3,
+			})
+			row.Holder.LayoutOrder = i
+			RewardKit.Icon(row.Face, item.Kind, item.Value, 42, UDim2.fromOffset(32, 23))
+			local text = label(row.Face, item.Text, UiKit.Head, 26, if item.Kind == "Coins" then C.Gold else C.White, 2.5, 62, 6, POP_W - 140, 34)
+			text.Name = "Text"
+			table.insert(rowObjects, row.Holder)
+		end
+		local height = 100 + #items * 64
+		stage.Size = UDim2.fromOffset(POP_W, height)
+		card.Holder.Size = UDim2.fromOffset(POP_W, height)
+		rays.Position = UDim2.fromOffset(POP_W / 2, height / 2)
+		layout()
 		Sfx.Play("Reveal")
-		UiFx.Open(popup)
-		UiFx.Confetti(nil, 30)
+		stage.Visible = true
+		popScale.Scale = 0.6
+		tween(popScale, 0.22, Enum.EasingStyle.Back, { Scale = 1.05 }).Completed:Once(function()
+			tween(popScale, 0.1, Enum.EasingStyle.Quad, { Scale = 1 })
+		end)
+		RewardKit.Stamp(titleBox)
+		RewardKit.Stagger(rowObjects, 0.08, 0.2)
+		CrateKit.Confetti(pop, 0, -40, 26, 260, 0.7)
 		task.delay(MILESTONES.PopupTime, function()
-			UiFx.Close(popup)
+			tween(popScale, 0.2, Enum.EasingStyle.Back, { Scale = 0 }, Enum.EasingDirection.In).Completed:Wait()
+			stage.Visible = false
 			local crate = Balls.GetCrate(data.CrateId)
 			if crate and data.Crate and CrateController.PlayOpening then
 				task.wait(0.3)

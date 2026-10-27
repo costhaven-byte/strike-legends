@@ -21,6 +21,7 @@ local UiFx = require(Modules.UiFx)
 local UiKit = require(Modules.UiKit)
 local BallView = require(Modules.BallView)
 local CrateKit = require(Modules.CrateKit)
+local RewardKit = require(Modules.RewardKit)
 
 local player = Players.LocalPlayer
 
@@ -146,22 +147,14 @@ function CrateController:Start()
 	opening.ZIndex = 30
 
 	local busy = false
-	local toastToken = 0
+	-- Messages ("NOT ENOUGH COINS", "ALSO GOT: ..."): the kit's navy toast at the top centre (UI pass batch 3); the
+	-- old Studio toast label stays hidden
+	toast.Visible = false
+	local kitToast = RewardKit.Toast(gui)
 	local function showToast(text: string)
-		toastToken += 1
-		local token = toastToken
-		toast.Text = text:upper()
-		toast.Visible = true
-		toast.Rotation = 0
-		for _, angle in { -4, 4, -2, 2, 0 } do
-			tween(toast, 0.05, Enum.EasingStyle.Linear, { Rotation = angle })
-			task.wait(0.05)
-		end
-		task.delay(1.5, function()
-			if token == toastToken then
-				toast.Visible = false
-			end
-		end)
+		local message = text:upper()
+		local problem = message:find("NOT ENOUGH") or message:find("TRY AGAIN") or message:find("LOCK")
+		kitToast(message, if message:find("COINS") then "Coins" else nil, nil, if problem then UiKit.C.Price else UiKit.C.White, 2)
 	end
 
 	-- Free crates (from strikes and Golden Pins) are used before coins on their crate type

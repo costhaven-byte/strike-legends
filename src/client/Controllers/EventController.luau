@@ -27,7 +27,6 @@ local K = HudKit.C
 
 local GOLD = Config.GoldenPin.Color
 local CRATE_COLOR = Color3.fromRGB(60, 230, 255)
-local GEM_COLOR = Color3.fromRGB(255, 90, 200)
 local POWER_COLOR = Color3.fromRGB(255, 43, 214)
 local REBIRTH_COLOR = Color3.fromRGB(125, 255, 60) -- the REBIRTH button's lime
 
@@ -35,10 +34,10 @@ local short = Currency.Format -- Config.Numbers
 
 -- Lane modifier pill look per modifier (owner's HUD Kit): icon and colour
 local MODIFIER_LOOKS = {
-	MovingPins = { Icon = "Coin", Color = K.Gold },
-	DoubleCoins = { Icon = "Coins2", Color = K.Lime },
-	GiantPins = { Icon = "Pin", Color = K.Pink },
-	BonusGems = { Icon = "Gem", Color = K.Cyan },
+	MovingPins = { Icon = "Coin", Color = K.Gold, Paint = "Gold" },
+	DoubleCoins = { Icon = "Coins2", Color = K.Lime, Paint = "Lime" },
+	GiantPins = { Icon = "Pin", Color = K.Pink, Paint = "Pink" },
+	BonusGems = { Icon = "Gem", Color = K.Cyan, Paint = "Cyan" },
 }
 
 -- Restyles the Studio pill and goal bar in the HUD Kit look, keeping the children EventController fills in
@@ -200,19 +199,21 @@ function EventController:Start()
 	local gui = player:WaitForChild("PlayerGui"):WaitForChild("EventUI")
 	local pill = gui:WaitForChild("ModifierPill") :: Frame
 	local banner = gui:WaitForChild("Banner") :: Frame
-	local bannerScale = banner:WaitForChild("UIScale") :: UIScale
 	local bar = gui:WaitForChild("AlmostBar") :: Frame
 	local barScale = bar:WaitForChild("UIScale") :: UIScale
-	local popup = gui:WaitForChild("Popup") :: TextLabel
-	local popupScale = popup:WaitForChild("UIScale") :: UIScale
 	local pillRing, pillIcon, goalIcon, setGoalReady = kitPieces(pill, bar)
+	-- The old Studio popup text and modifier banner stay in EventUI but are never shown: the kit's lane popup and
+	-- slam banner (MomentKit, UI pass batch 3) replace them
+	gui:WaitForChild("Popup").Visible = false
+	banner.Visible = false
+	local kitLayer = MomentKit.Layer("LanePopupUI", 44)
+	local kitPopup = MomentKit.Popup(kitLayer)
+	local kitBanner = MomentKit.Banner(kitLayer, 0.3)
 
 	-- Popups: one at a time, queued so two surprises on one throw both get their moment
 	local queue = {}
 	local showing = false
 	local holdPopupsUntil = 0 -- the LEVEL UP burst has the centre until then
-	local defaultSubColor = popup.Sub.TextColor3 -- the sub line's own colour, used when a popup doesn't pick one
-	local fades: { Tween } = {}
 	local function runQueue()
 		if showing then
 			return
@@ -222,40 +223,13 @@ function EventController:Start()
 			task.wait(0.1)
 		end
 		while #queue > 0 do
-			local item = table.remove(queue, 1)
-			-- Stop the last popup's fade first: if it finished a frame late it would turn this one invisible,
-			-- leaving only the black outline
-			for _, fade in fades do
-				fade:Cancel()
-			end
-			popup.Text = item.Text
-			popup.TextColor3 = item.Color
-			popup.Sub.Text = item.Sub or ""
-			popup.Sub.TextColor3 = item.SubColor or defaultSubColor
-			popup.TextTransparency = 0
-			popup.Sub.TextTransparency = 0
-			popup.Visible = true
-			popupScale.Scale = item.Big and 2.6 or 1.8
-			popup.Rotation = if item.Big then -8 else 0
-			local slam = TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-			TweenService:Create(popupScale, slam, { Scale = 1 }):Play()
-			TweenService:Create(popup, slam, { Rotation = 0 }):Play()
-			task.wait(item.Big and 2 or 1.3)
-			local fade = TweenInfo.new(0.25)
-			fades = {
-				TweenService:Create(popup, fade, { TextTransparency = 1 }),
-				TweenService:Create(popup.Sub, fade, { TextTransparency = 1 }),
-			}
-			for _, tween in fades do
-				tween:Play()
-			end
-			fades[1].Completed:Wait()
+			task.wait(kitPopup(table.remove(queue, 1)))
 		end
-		popup.Visible = false
 		showing = false
 	end
-	local function showPopup(text: string, color: Color3, sub: string?, big: boolean?, subColor: Color3?)
-		table.insert(queue, { Text = text, Color = color, Sub = sub, Big = big, SubColor = subColor })
+	-- icon = a MomentKit.IconImage name ("GoldenPin", "Hud:Crate")
+	local function showPopup(text: string, color: Color3, sub: string?, big: boolean?, subColor: Color3?, icon: string?)
+		table.insert(queue, { Text = text, Color = color, Sub = sub, Big = big, SubColor = subColor, Icon = icon })
 		task.spawn(runQueue)
 	end
 
@@ -294,31 +268,14 @@ function EventController:Start()
 		if not announce then
 			return
 		end
-		banner.Title.Text = modifier.Name
-		banner.Title.TextColor3 = modifier.Color
-		banner.Sub.Text = modifier.Text
-		banner.Visible = true
-		bannerScale.Scale = 0.3
-		TweenService:Create(bannerScale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Scale = 1,
-		}):Play()
+		-- Announce: the kit's slam banner in the modifier's colour, its icon on the disc, what it does on the chip
+		kitBanner(modifier.Name:upper(), look.Paint or "Gold", modifier.Text:upper(), "Hud:" .. look.Icon, 3)
 		Sfx.Play("StreakUp", 0.9, 1.2)
-		task.delay(3, function()
-			local shrink = TweenService:Create(
-				bannerScale,
-				TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-				{ Scale = 0 }
-			)
-			shrink:Play()
-			shrink.Completed:Wait()
-			banner.Visible = false
-		end)
 	end
 	Workspace:GetAttributeChangedSignal("LaneModifier"):Connect(function()
 		onModifier(true)
 	end)
 	onModifier(false)
-	banner.Visible = false
 
 	RunService.Heartbeat:Connect(function()
 		if pill.Visible then
@@ -438,39 +395,12 @@ function EventController:Start()
 		part.Transparency = 1
 		part.Size = Vector3.one
 		part.Position = gate.Walls[1].Center
-		local sign = Instance.new("BillboardGui")
+		-- the kit's world marker (UI pass batch 3): the zone's name on a navy pill in its colour, a bobbing gold arrow
+		local sign = MomentKit.WorldMarker(Zones.Name(zone):upper(), gate.WallColor)
 		sign.Name = "Arrow"
-		sign.AlwaysOnTop = true
-		sign.LightInfluence = 0
-		sign.Size = UDim2.fromOffset(220, 110)
 		sign.StudsOffset = Vector3.new(0, 7, 0)
 		sign.Enabled = false
 		sign.Parent = part
-		local name = Instance.new("TextLabel")
-		name.Name = "ZoneName"
-		name.BackgroundTransparency = 1
-		name.Size = UDim2.fromScale(1, 0.4)
-		name.FontFace = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
-		name.TextScaled = true
-		name.TextColor3 = gate.WallColor
-		name.Text = Zones.Name(zone):upper()
-		name.Parent = sign
-		local nameStroke = Instance.new("UIStroke")
-		nameStroke.Thickness = 3
-		nameStroke.Color = Color3.fromHex("06060F")
-		nameStroke.Parent = name
-		local arrow = name:Clone()
-		arrow.Name = "Down"
-		arrow.Text = "▼"
-		arrow.TextColor3 = GOLD
-		arrow.Position = UDim2.fromScale(0, 0.4)
-		arrow.Size = UDim2.fromScale(1, 0.6)
-		arrow.Parent = sign
-		TweenService:Create(
-			sign,
-			TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-			{ StudsOffset = Vector3.new(0, 5.5, 0) }
-		):Play()
 		part.Parent = doorFolder
 		doors[zone] = part
 		return part
@@ -623,14 +553,16 @@ function EventController:Start()
 				"REBIRTH IS READY!",
 				REBIRTH_COLOR,
 				("TAP REBIRTH AT THE TOP TO OPEN %s"):format(Zones.Name(Rebirth.OpensZone(0) or 2):upper()),
-				true
+				true,
+				nil,
+				"Hud:Rebirth"
 			)
 		end
 		-- The moment the first crate is the goal and affordable: a big callout pointing at Rizzo, once a session
 		local guideNow = best.Guide == true
 		if guideNow and not wantGuide and not calledOut then
 			calledOut = true
-			showPopup("RIZZO HAS A CRATE FOR YOU!", GOLD, "FOLLOW THE GOLD BEAM TO HIS CART", true)
+			showPopup("RIZZO HAS A CRATE FOR YOU!", GOLD, "FOLLOW THE GOLD BEAM TO HIS CART", true, nil, "Hud:Crate")
 		end
 		-- Rizzo draws his own beam (RizzoController, same moment as his "!"); this one is only the kiosk fallback.
 		-- Walking to a new zone: the beam leads to the next door on the way, with its arrow on.
@@ -700,7 +632,9 @@ function EventController:Start()
 				("WELCOME TO %s!"):format(Zones.Name(visited):upper()),
 				if gate then gate.WallColor else GOLD,
 				"STEP ON ANY OPEN LANE TO CLAIM IT",
-				true
+				true,
+				nil,
+				"Zone"
 			)
 			Sfx.Play("RevealBig", 1)
 		end
@@ -712,7 +646,7 @@ function EventController:Start()
 	local function refreshBadge()
 		local count = player:GetAttribute("FreeCrates") or 0
 		if count > freeCrates then
-			showPopup("FREE CRATE!", CRATE_COLOR, "Open it at Rizzo's cart", true)
+			showPopup("FREE CRATE!", K.Pink, "OPEN IT AT RIZZO'S CART", true, nil, "Hud:Crate")
 			Sfx.Play("RevealBig", 1.1)
 		end
 		freeCrates = count
@@ -742,9 +676,10 @@ function EventController:Start()
 			local lucky = lane:GetAttribute("GoldenLucky") == true
 			local luckyTrait = Balls.GetTrait("Lucky")
 			if lucky and luckyTrait then
-				TraitFx.Lucky(lane) -- clover, sparkles, sound and "LUCKY!"
+				TraitFx.Lucky(lane) -- clover over the pins, sparkles, sound
+				showPopup("LUCKY!", K.Lime, "YOUR BALL FOUND A GOLDEN PIN", false, nil, "Hud:Clover")
 			else
-				showPopup("GOLDEN PIN!", GOLD, "Knock it down for a big bonus")
+				showPopup("GOLDEN PIN!", GOLD, "KNOCK IT DOWN FOR A BIG BONUS", false, nil, "GoldenPin")
 				Sfx.Play("Coin", 0.8, 1.5)
 			end
 		end)
@@ -768,12 +703,13 @@ function EventController:Start()
 				if golden.Crate then
 					table.insert(extras, "+FREE CRATE")
 				end
-				showPopup("GOLDEN PIN!", GOLD, table.concat(extras, "   "), true)
+				showPopup("GOLDEN PIN!", GOLD, table.concat(extras, "  ·  "), true, nil, "GoldenPin")
 				Sfx.Play("PerfectSting", 1.1)
 				Sfx.Play("Cheer", 1.2)
 			end
 			if (data.ModifierGems or 0) > 0 then
-				showPopup("BONUS GEM!", GEM_COLOR, ("+%d GEM"):format(data.ModifierGems))
+				local gems = data.ModifierGems
+				showPopup(("+%d BONUS GEM%s"):format(gems, if gems == 1 then "" else "S"), K.Cyan, nil, false, nil, "Gem")
 				Sfx.Play("Coin", 1.5)
 			end
 		end)

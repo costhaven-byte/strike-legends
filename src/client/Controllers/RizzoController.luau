@@ -12,9 +12,11 @@ local Config = require(Shared.Config)
 local Currency = require(Shared.Modules.Currency)
 local Balls = require(Shared.Modules.Balls)
 local CrateController = require(script.Parent.CrateController)
+local Modules = script.Parent.Parent:WaitForChild("Modules")
+local UiKit = require(Modules:WaitForChild("UiKit"))
+local MomentKit = require(Modules:WaitForChild("MomentKit"))
 
 local RIZZO = Config.Rizzo
-local FONT = "rbxasset://fonts/families/GothamSSm.json"
 local GOLD = Color3.fromRGB(255, 200, 40)
 local WAVE_PARTS = { "RightUpperArm_Node", "RightLowerArm_Node", "RightHand_Node", "Acc_SleeveR", "Acc_GloveR" }
 
@@ -25,37 +27,63 @@ local RizzoController = {}
 -- Every number on screen uses the shared formatter (Config.Numbers)
 local formatNumber = Currency.Format
 
--- A speech bubble over his head that types each line out
+-- A speech bubble over his head that types each line out: the kit's comic bubble (UI pass batch 3) - white, a
+-- thick ink outline, a tail pointing down at him, ink letters
 local function buildBubble(head: BasePart)
+	local C = UiKit.C
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "RizzoBubble"
 	gui.Adornee = head
-	gui.Size = UDim2.fromScale(9, 2.6)
-	gui.StudsOffsetWorldSpace = Vector3.new(0, 3.2, 0)
+	gui.Size = UDim2.fromScale(9, 3.1)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, 3.4, 0)
 	gui.MaxDistance = 60
 	gui.AlwaysOnTop = true -- never hidden behind the shop or walls
+	gui.LightInfluence = 0
 	gui.Enabled = false
+	local BUBBLE = 0.78 -- the bubble's share of the height; the tail hangs under it
+	-- tail: a white diamond with an ink edge, half hidden under the bubble
+	local tail = Instance.new("Frame")
+	tail.Name = "Tail"
+	tail.AnchorPoint = Vector2.new(0.5, 0.5)
+	tail.Position = UDim2.fromScale(0.5, BUBBLE - 0.04)
+	tail.Size = UDim2.fromScale(0.3, 0.3)
+	tail.SizeConstraint = Enum.SizeConstraint.RelativeYY
+	tail.Rotation = 45
+	tail.BackgroundColor3 = C.White
+	tail.ZIndex = 1
+	tail.Parent = gui
+	UiKit.Outline(tail, C.Ink, 3)
 	local frame = Instance.new("Frame")
-	frame.Size = UDim2.fromScale(1, 1)
-	frame.BackgroundColor3 = Color3.fromRGB(28, 24, 36)
-	frame.BackgroundTransparency = 0.1
+	frame.Name = "Bubble"
+	frame.Size = UDim2.fromScale(1, BUBBLE)
+	frame.BackgroundColor3 = C.White
+	frame.ZIndex = 2
 	frame.Parent = gui
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0.25, 0)
+	corner.CornerRadius = UDim.new(0.3, 0)
 	corner.Parent = frame
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = Color3.fromHex("ff4fb0")
-	stroke.Thickness = 2
-	stroke.Parent = frame
+	UiKit.Outline(frame, C.Ink, 3)
+	-- a white patch hides the bubble's outline where the tail joins it
+	local patch = Instance.new("Frame")
+	patch.Name = "Join"
+	patch.AnchorPoint = Vector2.new(0.5, 0.5)
+	patch.Position = UDim2.fromScale(0.5, BUBBLE)
+	patch.Size = UDim2.new(0.3, 0, 0, 9)
+	patch.SizeConstraint = Enum.SizeConstraint.RelativeYY
+	patch.BackgroundColor3 = C.White
+	patch.BorderSizePixel = 0
+	patch.ZIndex = 3
+	patch.Parent = gui
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(0.9, 0.84)
-	label.Position = UDim2.fromScale(0.05, 0.08)
+	label.Size = UDim2.fromScale(0.88, 0.8)
+	label.Position = UDim2.fromScale(0.06, 0.1)
 	label.BackgroundTransparency = 1
-	label.FontFace = Font.new(FONT, Enum.FontWeight.Bold)
-	label.TextColor3 = Color3.new(1, 1, 1)
+	label.FontFace = UiKit.Num
+	label.TextColor3 = C.Ink
 	label.TextScaled = true
 	label.TextWrapped = true
 	label.Text = ""
+	label.ZIndex = 4
 	label.Parent = frame
 	gui.Parent = player:WaitForChild("PlayerGui")
 
@@ -153,8 +181,17 @@ function RizzoController:Start()
 	dealFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 	dealFrame.Position = UDim2.fromScale(0.5, 0.5)
 	dealFrame.Size = UDim2.fromScale(1, 1)
-	dealFrame.BackgroundColor3 = Color3.fromHex("ff4fb0")
+	dealFrame.BackgroundColor3 = UiKit.C.PinkLip -- the kit's lip shows as a darker band under the pink face
 	dealFrame.Parent = deal
+	local dealFace = Instance.new("Frame")
+	dealFace.Name = "Face"
+	dealFace.Size = UDim2.new(1, 0, 1, -7)
+	dealFace.BackgroundColor3 = UiKit.C.Pink
+	dealFace.BorderSizePixel = 0
+	dealFace.Parent = dealFrame
+	local dealFaceCorner = Instance.new("UICorner")
+	dealFaceCorner.CornerRadius = UDim.new(0, 14)
+	dealFaceCorner.Parent = dealFace
 	local dealCorner = Instance.new("UICorner")
 	dealCorner.CornerRadius = UDim.new(0, 14)
 	dealCorner.Parent = dealFrame
@@ -173,6 +210,7 @@ function RizzoController:Start()
 		label.TextScaled = true
 		label.RichText = true
 		label.TextColor3 = color
+		label.ZIndex = 2
 		local outline = Instance.new("UIStroke")
 		outline.Color = Color3.fromHex("06060F")
 		outline.Thickness = 2
@@ -181,7 +219,7 @@ function RizzoController:Start()
 		return label
 	end
 	local dealTitle = dealText("Title", 0.06, 0.48, Color3.new(1, 1, 1))
-	local dealPrice = dealText("Price", 0.54, 0.4, GOLD)
+	local dealPrice = dealText("Price", 0.5, 0.38, GOLD)
 	deal.Parent = stand
 
 	local function refreshPrompt()
@@ -276,27 +314,13 @@ function RizzoController:Start()
 
 	-- Your first crate is affordable: a bouncing "!" over his head (seen through walls, from your lane, above his
 	-- speech bubble) and a gold beam from you to his buy pad, and he calls you over, until you've bought a crate
-	local marker = Instance.new("BillboardGui")
+	-- (the kit's world marker since UI pass batch 3: a navy GO HERE! pill with a bobbing gold arrow)
+	local marker = MomentKit.WorldMarker("GO HERE!", GOLD)
 	marker.Name = "CallMarker"
 	marker.Adornee = head
-	marker.AlwaysOnTop = true
-	marker.LightInfluence = 0
-	marker.Size = UDim2.fromOffset(80, 80)
-	marker.StudsOffsetWorldSpace = Vector3.new(0, 6.6, 0)
+	marker.StudsOffsetWorldSpace = Vector3.new(0, 7.4, 0)
 	marker.Enabled = false
-	local bang = Instance.new("TextLabel")
-	bang.Name = "Bang"
-	bang.BackgroundTransparency = 1
-	bang.Size = UDim2.new(1, 0, 0, 62)
-	bang.FontFace = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
-	bang.TextScaled = true
-	bang.Text = "!"
-	bang.TextColor3 = GOLD
-	local bangStroke = Instance.new("UIStroke")
-	bangStroke.Color = Color3.fromHex("06060F")
-	bangStroke.Thickness = 3
-	bangStroke.Parent = bang
-	bang.Parent = marker
+	local bang = marker:FindFirstChild("Pill") :: GuiObject
 	marker.Parent = stand
 
 	local beamTo = Instance.new("Attachment")
@@ -379,8 +403,7 @@ function RizzoController:Start()
 	RunService.RenderStepped:Connect(function()
 		if calling then
 			local t = os.clock()
-			bang.Position = UDim2.fromOffset(0, -math.abs(math.sin(t * 4)) * 14)
-			bang.Rotation = math.sin(t * 6) * 8
+			bang.Rotation = math.sin(t * 6) * 4
 		end
 		if deal.Enabled then -- the deal sign breathes and tilts a little
 			local t = os.clock()
