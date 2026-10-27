@@ -105,11 +105,12 @@ local function onPlayerAdded(player: Player)
 	if not noSave and RunService:IsStudio() and Config.Onboarding.StudioUnlockAll == true and SaveStore.Enabled then
 		untouched = SaveStore.DeepCopy(data)
 		local built = Config.Zones.BuiltZones
-		local level = Config.Economy.Zones[built].Rank
+		local level = Config.Economy.Zones[built].Rank -- a mid-game level, so level-locked things open too
 		local tier = math.ceil(level / Config.Economy.Ranks.LevelsPerTier)
 		data.Rank = math.max(data.Rank or 1, tier)
 		data.RankLevel = math.max(data.RankLevel or 1, level)
 		data.XP = math.max(data.XP or 0, Progression.LevelXP(data.RankLevel))
+		data.ZonesOpen = math.max(data.ZonesOpen or 1, built)
 		data.ZoneSeen = math.max(data.ZoneSeen or 1, built)
 		data.Onboarding = math.max(data.Onboarding or 0, 3)
 		data.CratesBought = math.max(data.CratesBought or 0, 1)

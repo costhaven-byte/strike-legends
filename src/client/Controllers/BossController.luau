@@ -873,7 +873,7 @@ function BossController:Start()
 		local eventState = state:GetAttribute("State")
 		local opensAt = state:GetAttribute("OpensAt") or 0
 		local boardingEnds = state:GetAttribute("BoardingEndsAt") or 0
-		local unlocked = Zones.Unlocked(player:GetAttribute("RankLevel"), BOSS.Zone)
+		local unlocked = Zones.Unlocked(player:GetAttribute("ZonesOpen"), BOSS.Zone)
 		local fighting = player:GetAttribute("BossFighting") == true
 		local boarded = player:GetAttribute("BossBoarded") == true
 

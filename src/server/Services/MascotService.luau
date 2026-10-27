@@ -44,9 +44,9 @@ local function slots(player: Player): number
 	)
 end
 
--- The highest zone the player's rank level has opened (eggs with a Zone unlock there)
+-- The highest zone the player has open (eggs with a Zone unlock there)
 local function zone(player: Player): number
-	return Zones.Highest(PlayerDataService.Get(player, "RankLevel"))
+	return Zones.Highest(PlayerDataService.Get(player, "ZonesOpen"))
 end
 
 -- Keeps the equipped list valid: real mascots, never more copies than owned, never more than the slots
@@ -452,7 +452,10 @@ function MascotService:Start()
 				return
 			end
 			local egg = Config.Economy.Eggs[1]
-			local level = math.max(egg.Rank or 1, if egg.Zone then Zones.UnlockLevel(egg.Zone) else 1)
+			local level = egg.Rank or 1
+			if egg.Zone and (PlayerDataService.Get(player, "ZonesOpen") or 1) < egg.Zone then
+				PlayerDataService.Set(player, "ZonesOpen", egg.Zone) -- Studio test only: opens the egg's zone
+			end
 			if (PlayerDataService.Get(player, "RankLevel") or 1) < level then
 				local xp = PlayerDataService.Get(player, "XP") or 0
 				ProgressionService.AddXP(player, math.max(Progression.LevelXP(level) - xp, 1))

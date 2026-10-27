@@ -1017,7 +1017,7 @@ local function board(player: Player)
 	if state:GetAttribute("State") ~= "Boarding" then
 		return { Ok = false, Error = "Boarding is closed" }
 	end
-	if not Zones.Unlocked(PlayerDataService.Get(player, "RankLevel"), BOSS.Zone) then
+	if not Zones.Unlocked(PlayerDataService.Get(player, "ZonesOpen"), BOSS.Zone) then
 		return { Ok = false, Error = "Unlocks in " .. Zones.Name(BOSS.Zone) }
 	end
 	if boarders[player] then

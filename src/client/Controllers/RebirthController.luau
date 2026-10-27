@@ -1,7 +1,7 @@
 -- REBIRTH button on the HUD (owner 2026-10-25: a button, not a station in the world), right of the level bar at the
--- top of the screen. It shows once zone 2 is open (or after a first rebirth) and stays locked (grey, "ZONE 3") until
--- the player reaches Main Street Lanes. Tapping it opens the rebirth window: what you go back to, what you keep, the
--- boost you get forever and what the next rebirth needs. REBIRTH needs a second tap to confirm.
+-- top of the screen. Owner 2026-10-27: rebirths open the zones, so it shows from zone 1 once the first 3 minutes are
+-- done (Onboarding 3). Tapping it opens the rebirth window: what you go back to, what you keep, the boost you get
+-- forever (and the zone it opens) and what the next rebirth needs. REBIRTH needs a second tap to confirm.
 -- Built in code (not in Studio), so it lives in git. The server decides everything (RebirthService).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -75,8 +75,7 @@ function RebirthController:Start()
 	gui.Parent = playerGui
 
 	-- ===== The button =====
-	-- Right of the level bar (owner's HUD Kit): grey with a lock and "ZONE 3" until Main Street Lanes, then lime;
-	-- ready = a glow, a red dot and the arrows turning
+	-- Right of the level bar (owner's HUD Kit): lime; ready = a glow, a red dot and the arrows turning
 	local rebirthKit = HudKit.Square(gui, { Name = "RebirthButton", Paint = "Lime", Icon = "Rebirth", Key = "Rebirth" })
 	local openButton = rebirthKit.Holder :: TextButton
 	openButton.Visible = false
@@ -92,15 +91,9 @@ function RebirthController:Start()
 			return
 		end
 		kitState = newState
-		if newState == "Locked" then
-			rebirthKit:Paint("Grey")
-			rebirthKit:SetIcon("Lock", 30)
-			rebirthKit:SetCaption(("ZONE %d"):format(REBIRTH.Zone), nil, nil, 11)
-		else
-			rebirthKit:Paint("Lime")
-			rebirthKit:SetIcon("Rebirth")
-			rebirthKit:SetCaption("REBIRTH", nil, nil, 10)
-		end
+		rebirthKit:Paint("Lime")
+		rebirthKit:SetIcon("Rebirth")
+		rebirthKit:SetCaption("REBIRTH", nil, nil, 10)
 		local ready = newState == "Ready"
 		rebirthKit:SetGlow(if ready then HudKit.C.Lime else nil)
 		rebirthKit:SetDot(ready)
@@ -164,8 +157,8 @@ function RebirthController:Start()
 		body.RichText = true
 		rows[i] = body
 	end
-	rows[1].Text = "LEVEL 1, POWER LEVEL 1, 0 COINS (zones lock again)"
-	rows[2].Text = "BALLS, PETS, GEMS AND POTIONS"
+	rows[1].Text = "POWER LEVEL 1 AND 0 COINS"
+	rows[2].Text = "LEVEL, BALLS, PETS, GEMS, POTIONS AND ZONES"
 
 	local go = Instance.new("TextButton")
 	go.Name = "Go"
@@ -192,10 +185,9 @@ function RebirthController:Start()
 		local done = player:GetAttribute("Rebirths") or 0
 		local level = player:GetAttribute("RankLevel") or 1
 		local needLevel, cost = Rebirth.Level(done), Rebirth.Cost(done)
-		local zoneOpen = Zones.Unlocked(level, REBIRTH.Zone)
 		local hasLevel = level >= needLevel
 		local hasCoins = Currency.CanAfford(player:GetAttribute("Coins"), cost)
-		return done, needLevel, cost, zoneOpen, hasLevel, hasCoins
+		return done, needLevel, cost, hasLevel, hasCoins
 	end
 
 	local function hex(color: Color3): string
@@ -203,15 +195,16 @@ function RebirthController:Start()
 	end
 
 	local function refresh()
-		local done, needLevel, cost, zoneOpen, hasLevel, hasCoins = state()
-		openButton.Visible = done > 0 or Zones.Unlocked(player:GetAttribute("RankLevel"), 2)
-		-- The button: grey and "ZONE 3" until Main Street Lanes is reached
-		local ready = REBIRTH.Enabled and zoneOpen and hasLevel and hasCoins
-		setLook(if not zoneOpen then "Locked" elseif ready then "Ready" else "Normal")
+		local done, needLevel, cost, hasLevel, hasCoins = state()
+		openButton.Visible = done > 0 or (player:GetAttribute("Onboarding") or 0) >= 3
+		local ready = REBIRTH.Enabled and hasLevel and hasCoins
+		setLook(if ready then "Ready" else "Normal")
 
 		-- The window
 		title.Text = if done > 0 then ("REBIRTH %d"):format(done + 1) else "REBIRTH"
-		rows[3].Text = ("COINS %s  ->  %s,  XP %s  ->  %s"):format(
+		local opens = Rebirth.OpensZone(done)
+		rows[3].Text = (if opens then ("OPENS %s!  "):format(Zones.Name(opens):upper()) else "")
+			.. ("COINS %s  ->  %s,  XP %s  ->  %s"):format(
 			Currency.FormatMultiplier(Rebirth.CoinMultiplier(done)),
 			Currency.FormatMultiplier(Rebirth.CoinMultiplier(done + 1)),
 			Currency.FormatMultiplier(Rebirth.XpMultiplier(done)),
@@ -225,8 +218,6 @@ function RebirthController:Start()
 		)
 		if not REBIRTH.Enabled then
 			go.Text = "COMING SOON"
-		elseif not zoneOpen then
-			go.Text = ("REACH %s"):format(Zones.Name(REBIRTH.Zone):upper())
 		elseif not hasLevel then
 			go.Text = ("REACH LEVEL %d"):format(needLevel)
 		elseif not hasCoins then
@@ -256,8 +247,8 @@ function RebirthController:Start()
 		setOpen(false)
 	end)
 	go.Activated:Connect(function()
-		local _, _, _, zoneOpen, hasLevel, hasCoins = state()
-		if busy or not (REBIRTH.Enabled and zoneOpen and hasLevel and hasCoins) then
+		local _, _, _, hasLevel, hasCoins = state()
+		if busy or not (REBIRTH.Enabled and hasLevel and hasCoins) then
 			return
 		end
 		-- A rebirth can't be undone: the first tap asks, the second (within a few seconds) does it
@@ -283,7 +274,7 @@ function RebirthController:Start()
 		end
 	end)
 
-	for _, key in { "RankLevel", "Coins", "Rebirths" } do
+	for _, key in { "RankLevel", "Coins", "Rebirths", "Onboarding" } do
 		player:GetAttributeChangedSignal(key):Connect(refresh)
 	end
 	refresh()

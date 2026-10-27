@@ -83,7 +83,7 @@ local function claim(player: Player)
 	SessionLog.Moment(player, ("Daily reward day %d claimed"):format(day))
 	local crateResult
 	-- A crate from a zone you haven't unlocked yet comes as your zone's crate
-	local crate = Balls.GetCrate(Zones.RewardCrateId(reward.Crate, PlayerDataService.Get(player, "RankLevel")))
+	local crate = Balls.GetCrate(Zones.RewardCrateId(reward.Crate, PlayerDataService.Get(player, "ZonesOpen")))
 	if crate then
 		crateResult = BallService.GiveCrate(player, crate)
 	end

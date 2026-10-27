@@ -51,9 +51,9 @@ local function fusion()
 	local p = prompt(part, "PET FUSION")
 	p.ActionText = "Merge 3 pets into a Shiny"
 	local function refresh()
-		p.Enabled = Zones.Unlocked(player:GetAttribute("RankLevel"), FUSION.Zone)
+		p.Enabled = Zones.Unlocked(player:GetAttribute("ZonesOpen"), FUSION.Zone)
 	end
-	player:GetAttributeChangedSignal("RankLevel"):Connect(refresh)
+	player:GetAttributeChangedSignal("ZonesOpen"):Connect(refresh)
 	refresh()
 	p.Triggered:Connect(function()
 		if MascotController.OpenPets then

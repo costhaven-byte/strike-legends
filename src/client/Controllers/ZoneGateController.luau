@@ -1,7 +1,7 @@
 -- Later zones on your screen (Config.Zones.Gated, Config.ZoneUnlock):
---   while a zone is locked, a glowing wall (only on your screen) keeps you out, with "REACH LEVEL N" on it
+--   while a zone is locked, a glowing wall (only on your screen) keeps you out, with "NEEDS N REBIRTHS" on it
 --   (zone 2: it plugs the Back Alley door into the building);
---   the moment your rank level opens it, a "ZONE UNLOCKED" window shows what's waiting there in 3D
+--   the moment a rebirth opens it, a "ZONE UNLOCKED" window shows what's waiting there in 3D
 --   (its pets, crates and balls), once per zone (save ZoneSeen). "TAKE ME THERE" teleports you inside the zone.
 -- Claiming a lane there happens on the server (LaneService): step onto any OPEN lane.
 local Players = game:GetService("Players")
@@ -97,7 +97,7 @@ local function buildWall(gate): Folder
 			{ Text = Zones.Name(gate.Zone):upper(), Height = 0.22, Color = gate.WallColor },
 			{ Text = ("ZONE %d"):format(gate.Zone), Height = 0.14, Color = gate.WallColor },
 			{
-				Text = ("REACH LEVEL %d"):format(Zones.UnlockLevel(gate.Zone)),
+				Text = ("NEEDS %s"):format(Zones.NeedText(gate.Zone)),
 				Height = 0.17,
 				Color = Color3.new(1, 1, 1),
 			},
@@ -241,9 +241,9 @@ function ZoneGateController:Start()
 	-- Walls: up while locked, gone once unlocked
 	local walls: { [number]: Folder } = {}
 	local function refreshWalls()
-		local level = player:GetAttribute("RankLevel")
+		local zonesOpen = player:GetAttribute("ZonesOpen")
 		for index, gate in Config.Zones.Gated do
-			local locked = not Zones.Unlocked(level, gate.Zone)
+			local locked = not Zones.Unlocked(zonesOpen, gate.Zone)
 			if locked and not walls[index] then
 				walls[index] = buildWall(gate)
 				walls[index].Parent = Workspace
@@ -525,16 +525,16 @@ function ZoneGateController:Start()
 		if showing then
 			return
 		end
-		local level = player:GetAttribute("RankLevel")
+		local zonesOpen = player:GetAttribute("ZonesOpen")
 		local seen = player:GetAttribute("ZoneSeen") or 1
 		for _, gate in Config.Zones.Gated do
-			if gate.Zone > seen and Zones.Unlocked(level, gate.Zone) then
+			if gate.Zone > seen and Zones.Unlocked(zonesOpen, gate.Zone) then
 				task.spawn(showUnlock, gate)
 				return
 			end
 		end
 	end
-	player:GetAttributeChangedSignal("RankLevel"):Connect(refresh)
+	player:GetAttributeChangedSignal("ZonesOpen"):Connect(refresh)
 	refresh()
 end
 

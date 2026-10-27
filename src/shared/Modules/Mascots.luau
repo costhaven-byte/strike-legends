@@ -143,14 +143,14 @@ function Mascots.NextSlotText(rankLevel: number): string?
 	return nil
 end
 
--- Can this player hatch the egg? Returns false and the reason ("LEVEL 3", "ZONE 2") when locked.
--- Zones 2 to 6 aren't built yet, so zone eggs stay locked for now.
+-- Can this player hatch the egg? Returns false and the reason ("LEVEL 3", "1 REBIRTH") when locked.
+-- zone = the player's highest open zone (Zones.Highest).
 function Mascots.EggUnlocked(egg, rankLevel: number, zone: number): (boolean, string?)
 	if egg.Rank and rankLevel < egg.Rank then
 		return false, ("LEVEL %d"):format(egg.Rank)
 	end
 	if egg.Zone and zone < egg.Zone then
-		return false, ("LEVEL %d"):format(Zones.UnlockLevel(egg.Zone))
+		return false, Zones.NeedText(egg.Zone)
 	end
 	return true, nil
 end

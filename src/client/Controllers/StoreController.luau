@@ -2057,7 +2057,7 @@ function StoreController:Start()
 			while true do
 				task.wait(1)
 				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-				local level = player:GetAttribute("RankLevel")
+				local zonesOpen = player:GetAttribute("ZonesOpen")
 				if root then
 					for _, gate in Config.Zones.Gated do
 						-- Asks once each time you walk up (walking away and back asks again; the server only
@@ -2069,7 +2069,7 @@ function StoreController:Start()
 							near = near or distance <= reach
 							away = away and distance > reach + 10
 						end
-						if near and not asked[gate.Zone] and not Zones.Unlocked(level, gate.Zone) then
+						if near and not asked[gate.Zone] and not Zones.Unlocked(zonesOpen, gate.Zone) then
 							asked[gate.Zone] = true
 							offerAsk:FireServer(gate.Zone)
 						elseif away then

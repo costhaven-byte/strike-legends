@@ -116,7 +116,7 @@ end
 local function eggState(egg: any?): (boolean, string?, boolean)
 	egg = egg or EGG
 	local level = player:GetAttribute("RankLevel") or 1
-	local unlocked, why = Mascots.EggUnlocked(egg, level, Zones.Highest(level))
+	local unlocked, why = Mascots.EggUnlocked(egg, level, Zones.Highest(player:GetAttribute("ZonesOpen")))
 	local affordable = (player:GetAttribute("Coins") or 0) >= egg.Price or freeEggs(egg) > 0
 	return unlocked, why, affordable
 end
@@ -1006,7 +1006,7 @@ function MascotController:Start()
 	hud:GetPropertyChangedSignal("AbsoluteSize"):Connect(layout)
 	layout()
 
-	for _, key in { "Mascots", "EquippedMascots", "MascotSlots", "MascotBonus", "Coins", "RankLevel" } do
+	for _, key in { "Mascots", "EquippedMascots", "MascotSlots", "MascotBonus", "Coins", "RankLevel", "ZonesOpen" } do
 		player:GetAttributeChangedSignal(key):Connect(function()
 			refreshButton()
 			if panel.Visible or key ~= "Coins" then
@@ -1099,6 +1099,7 @@ function MascotController:Start()
 				else ("Hatch (%s)"):format(formatNumber(egg.Price))
 		end
 		player:GetAttributeChangedSignal("RankLevel"):Connect(refreshStand)
+		player:GetAttributeChangedSignal("ZonesOpen"):Connect(refreshStand)
 		player:GetAttributeChangedSignal("FreeEgg_" .. egg.Id):Connect(refreshStand)
 		refreshStand()
 

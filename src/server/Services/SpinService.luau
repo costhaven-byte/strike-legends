@@ -63,8 +63,8 @@ local function spin(player: Player)
 	if not SPIN.Enabled or not PlayerDataService.IsLoaded(player) then
 		return { Ok = false, Error = "Something went wrong" }
 	end
-	local rankLevel = PlayerDataService.Get(player, "RankLevel")
-	if not Zones.Unlocked(rankLevel, SPIN.Zone) then
+	local zonesOpen = PlayerDataService.Get(player, "ZonesOpen")
+	if not Zones.Unlocked(zonesOpen, SPIN.Zone) then
 		return { Ok = false, Error = "Unlocks in " .. Zones.Name(SPIN.Zone) }
 	end
 	if not nearWheel(player) then
@@ -95,7 +95,7 @@ local function spin(player: Player)
 		result.Egg = slice.Egg
 	elseif slice.Crate then
 		-- SECRET BALL = exactly that rarity from that crate; a plain crate from a later zone comes as your zone's
-		local crate = Balls.GetCrate(if slice.Ball then slice.Crate else Zones.RewardCrateId(slice.Crate, rankLevel))
+		local crate = Balls.GetCrate(if slice.Ball then slice.Crate else Zones.RewardCrateId(slice.Crate, zonesOpen))
 		if crate then
 			kind = if slice.Ball then "Ball" else "Crate"
 			result.CrateId = crate.Id

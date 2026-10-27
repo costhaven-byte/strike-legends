@@ -215,13 +215,13 @@ function ElevatorController:Start()
 
 	-- The prompts only show once the roof is open to you
 	local function refresh()
-		local open = Zones.Unlocked(player:GetAttribute("RankLevel"), ELEVATORS.Zone)
+		local open = Zones.Unlocked(player:GetAttribute("ZonesOpen"), ELEVATORS.Zone)
 		for _, car in cars do
 			car.Prompt.Enabled = open
 		end
 	end
 	refresh()
-	player:GetAttributeChangedSignal("RankLevel"):Connect(refresh)
+	player:GetAttributeChangedSignal("ZonesOpen"):Connect(refresh)
 
 	-- The dark ride screen
 	local gui = Instance.new("ScreenGui")

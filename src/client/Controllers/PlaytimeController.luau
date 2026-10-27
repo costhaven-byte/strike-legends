@@ -173,7 +173,7 @@ end
 local function rewardCrate(reward)
 	local id = if reward.Exact
 		then reward.Crate
-		else Zones.RewardCrateId(reward.Crate, player:GetAttribute("RankLevel"))
+		else Zones.RewardCrateId(reward.Crate, player:GetAttribute("ZonesOpen"))
 	return Balls.GetCrate(id)
 end
 
@@ -459,7 +459,7 @@ function PlaytimeController:Start()
 		elseif result.Egg then
 			local egg = Mascots.GetEgg(result.Egg)
 			local level = player:GetAttribute("RankLevel") or 1
-			local unlocked = egg ~= nil and Mascots.EggUnlocked(egg, level, Zones.Highest(level))
+			local unlocked = egg ~= nil and Mascots.EggUnlocked(egg, level, Zones.Highest(player:GetAttribute("ZonesOpen")))
 			local look = Config.EggLooks[result.Egg]
 			local eggName = string.upper(if look then look.Name else "EGG")
 			showToast(
@@ -541,6 +541,7 @@ function PlaytimeController:Start()
 	player:GetAttributeChangedSignal("PlaytimeStart"):Connect(refresh)
 	player:GetAttributeChangedSignal("PlaytimeClaimed"):Connect(refresh)
 	player:GetAttributeChangedSignal("RankLevel"):Connect(refresh)
+	player:GetAttributeChangedSignal("ZonesOpen"):Connect(refresh)
 	refresh()
 	gui.Parent = playerGui
 

@@ -282,7 +282,7 @@ local function onHardStop(player: Player, zone: any)
 	local shown = hardStopsShown[player]
 	if
 		not gate
-		or Zones.Unlocked(PlayerDataService.Get(player, "RankLevel"), zone)
+		or Zones.Unlocked(PlayerDataService.Get(player, "ZonesOpen"), zone)
 		or (shown and shown[zone])
 		or not mayPrompt(player)
 	then
@@ -298,11 +298,12 @@ local function onHardStop(player: Player, zone: any)
 	if not near then
 		return
 	end
-	local step = Store.NextStep(player, "Xp")
+	-- Zones open by rebirths (owner 2026-10-27) and rebirths cost coins, so the offer is a coin boost
+	local step = Store.NextStep(player, "Coins")
 	local pass = Store.Pass("DoubleCoins")
 	local id, what
 	if step then
-		id, what = step.Id, "XP BOOST " .. Store.MultText(step.Mult) .. " gets you there faster, forever."
+		id, what = step.Id, "COIN BOOST " .. Store.MultText(step.Mult) .. " gets you there faster, forever."
 	elseif pass and not Store.Owns(player, pass.Id) then
 		id, what = pass.Id, pass.Name .. " gets you there twice as fast, forever."
 	else
@@ -314,7 +315,7 @@ local function onHardStop(player: Player, zone: any)
 		Kind = "HardStop",
 		Id = id,
 		Title = ("ZONE %d IS LOCKED"):format(zone),
-		Text = ("%s opens at LEVEL %d. %s"):format(Zones.Name(zone):upper(), Zones.UnlockLevel(zone), what),
+		Text = ("%s opens after %s. %s"):format(Zones.Name(zone):upper(), Zones.NeedText(zone), what),
 	})
 end
 

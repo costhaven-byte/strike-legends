@@ -51,7 +51,7 @@ end
 local function rewardText(reward): string
 	local parts = {}
 	-- A crate from a zone you haven't unlocked yet comes as your zone's crate (same rule as the server)
-	local crate = Balls.GetCrate(Zones.RewardCrateId(reward.Crate, player:GetAttribute("RankLevel")))
+	local crate = Balls.GetCrate(Zones.RewardCrateId(reward.Crate, player:GetAttribute("ZonesOpen")))
 	if crate then
 		table.insert(parts, crate.Name:upper())
 	end
@@ -197,13 +197,13 @@ function DailyRewardController:Start()
 		end
 		local function paint()
 			tile.Amount.Text = rewardText(reward)
-			local crate = Balls.GetCrate(Zones.RewardCrateId(reward.Crate, player:GetAttribute("RankLevel")))
+			local crate = Balls.GetCrate(Zones.RewardCrateId(reward.Crate, player:GetAttribute("ZonesOpen")))
 			if crate then
 				tile.Icons.Crate.BackgroundColor3 = crate.Color
 			end
 		end
 		paint()
-		player:GetAttributeChangedSignal("RankLevel"):Connect(paint)
+		player:GetAttributeChangedSignal("ZonesOpen"):Connect(paint)
 		player:GetAttributeChangedSignal("PowerLevel"):Connect(paint)
 		tile.Parent = days
 		tiles[day] = tile

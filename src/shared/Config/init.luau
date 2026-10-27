@@ -221,12 +221,13 @@ Config.StartingData = {
 	VipGiftDay = 0, -- the day number (see Calendar.Day) the VIP daily gems were last given (v21)
 	Cosmetics = {}, -- looks owned (Config.Cosmetics), by Id: { FireTrail = true } (v23)
 	EquippedCosmetics = {}, -- the look worn per kind: { Trail = "FireTrail", LaneSkin = "CandyLane" } (v23)
+	ZonesOpen = 1, -- highest zone open (zones open by rebirths, Config.Economy.Zones Rebirths; v24). Never goes down
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 23, -- v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 24, -- v24 ZonesOpen (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -3947,7 +3948,7 @@ Config.Elevators = {
 	},
 }
 
--- The "ZONE UNLOCKED" window (ZoneGateController): pops up once when your rank level opens a zone (save ZoneSeen),
+-- The "ZONE UNLOCKED" window (ZoneGateController): pops up once when a rebirth opens a zone (save ZoneSeen),
 -- with what's waiting there in 3D. Crates = Config.Crates Ids, Balls = Config.Balls Ids (best first).
 Config.ZoneUnlock = {
 	[2] = {
@@ -4030,7 +4031,8 @@ Config.Economy.Zones = {
 		Pins = 10,
 		PinValue = 10,
 		XpPerPin = 1,
-		Rank = 1,
+		Rank = 1, -- old unlock level, only read to upgrade old saves (v24)
+		Rebirths = 0, -- rebirths this zone opens at (owner 2026-10-27)
 		CoinPay = 1,
 		XpPay = 1,
 	},
@@ -4040,7 +4042,8 @@ Config.Economy.Zones = {
 		Pins = 30,
 		PinValue = 50,
 		XpPerPin = 2,
-		Rank = 5,
+		Rank = 5, -- old unlock level, only read to upgrade old saves (v24)
+		Rebirths = 1, -- rebirths this zone opens at (owner 2026-10-27)
 		CoinPay = 4,
 		XpPay = 1.2,
 	},
@@ -4050,7 +4053,8 @@ Config.Economy.Zones = {
 		Pins = 100,
 		PinValue = 250,
 		XpPerPin = 4,
-		Rank = 12,
+		Rank = 12, -- old unlock level, only read to upgrade old saves (v24)
+		Rebirths = 3, -- rebirths this zone opens at (owner 2026-10-27)
 		CoinPay = 16,
 		XpPay = 2.5,
 	}, -- was Arcade Arena (owner 2026-10-22)
@@ -4060,7 +4064,8 @@ Config.Economy.Zones = {
 		Pins = 300,
 		PinValue = 1250,
 		XpPerPin = 8,
-		Rank = 22,
+		Rank = 22, -- old unlock level, only read to upgrade old saves (v24)
+		Rebirths = 5, -- rebirths this zone opens at (owner 2026-10-27)
 		CoinPay = 64,
 		XpPay = 6,
 	},
@@ -4070,7 +4075,8 @@ Config.Economy.Zones = {
 		Pins = 1000,
 		PinValue = 6000,
 		XpPerPin = 16,
-		Rank = 35,
+		Rank = 35, -- old unlock level, only read to upgrade old saves (v24)
+		Rebirths = 8, -- rebirths this zone opens at (owner 2026-10-27)
 		CoinPay = 1,
 		XpPay = 1,
 	},
@@ -4080,7 +4086,8 @@ Config.Economy.Zones = {
 		Pins = 3000,
 		PinValue = 30000,
 		XpPerPin = 32,
-		Rank = 50,
+		Rank = 50, -- old unlock level, only read to upgrade old saves (v24)
+		Rebirths = 12, -- rebirths this zone opens at (owner 2026-10-27)
 		CoinPay = 1,
 		XpPay = 1,
 	},
@@ -4261,10 +4268,13 @@ Config.Economy.Ranks = {
 -- slowing to 30-60 minutes from about rebirth 22.
 Config.Economy.Rebirth = {
 	Enabled = true, -- the owner flips this (switched ON by the owner 2026-10-26)
-	Zone = 3, -- the first rebirth needs this zone's level (Config.Economy.Zones Rank, 12)...
-	RankStep = 1, -- ...and this many more levels for each one after
-	FirstCost = 20000000, -- coins needed for the first rebirth (20M, about 20 min of zone 3 coins)...
-	CostGrowth = 1.6, -- ...times this for each one after (E3b: was 2, which made rebirths 17+ take 1.5-3 hours of coins)
+	-- Owner 2026-10-27: zones open by rebirths (Config.Economy.Zones Rebirths), so the first rebirth happens in zone 1.
+	-- A rebirth resets only coins and Power Level (level, rank and throw style stay).
+	-- R1 STAND-IN NUMBERS: the economy pass (R2) sets the real level/cost curve with the simulator.
+	Level = 4, -- the first rebirth needs this rank level...
+	RankStep = 2, -- ...and this many more levels for each one after
+	FirstCost = 100000, -- coins needed for the first rebirth...
+	CostGrowth = 3, -- ...times this for each one after
 	DiscountLevels = 5, -- NOT BUILT (old plan, nothing reads it): after a rebirth, Power Levels up to this one...
 	DiscountPrice = 0.1, -- ...cost this share of their price
 	XpBonus = 1, -- +100% XP per rebirth (owner approved). Not in the plan's formula: without it a second run is barely faster

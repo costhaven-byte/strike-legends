@@ -46,7 +46,7 @@ local function ride(remote: RemoteEvent, player: Player, carId: any)
 	if not (car and target) or not nearDoor(player, car) then
 		return
 	end
-	if not Zones.Unlocked(PlayerDataService.Get(player, "RankLevel"), ELEVATORS.Zone) then
+	if not Zones.Unlocked(PlayerDataService.Get(player, "ZonesOpen"), ELEVATORS.Zone) then
 		return
 	end
 	riding[player] = true

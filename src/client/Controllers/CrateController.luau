@@ -57,14 +57,14 @@ local formatNumber = Currency.Format
 
 -- Locked crates (their zone isn't open yet) can't be opened
 function CrateController.Locked(crate): boolean
-	return not Zones.CrateUnlocked(crate, player:GetAttribute("RankLevel"))
+	return not Zones.CrateUnlocked(crate, player:GetAttribute("ZonesOpen"))
 end
 
--- "UNLOCKS IN NEON LANES" + the rank level it opens at
+-- "UNLOCKS IN NEON LANES" + the rebirths it opens at
 function CrateController.LockText(crate): (string, string)
 	local zone = crate.Zone or 1
 	return ("UNLOCKS IN %s"):format(Zones.Name(zone):upper()),
-		("ZONE %d  ·  REACH LEVEL %d"):format(zone, Zones.UnlockLevel(zone))
+		("ZONE %d  ·  NEEDS %s"):format(zone, Zones.NeedText(zone))
 end
 
 -- A random ball using the crate's odds, for the filler tiles on the reel
@@ -1330,7 +1330,7 @@ function CrateController:Start()
 			end
 		end
 	end
-	for _, attr in { "Coins", "FreeCrates", "CratesBought", "RankLevel", "Passes", "OwnedBalls" } do
+	for _, attr in { "Coins", "FreeCrates", "CratesBought", "ZonesOpen", "Passes", "OwnedBalls" } do
 		player:GetAttributeChangedSignal(attr):Connect(refreshShop)
 	end
 	for _, crate in Config.Crates do

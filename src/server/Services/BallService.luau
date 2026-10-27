@@ -380,7 +380,7 @@ local function openCrate(player: Player, crateId: any)
 	if not PlayerDataService.IsLoaded(player) then
 		return { Ok = false, Error = "Still loading" }
 	end
-	if not Zones.CrateUnlocked(crate, PlayerDataService.Get(player, "RankLevel")) then
+	if not Zones.CrateUnlocked(crate, PlayerDataService.Get(player, "ZonesOpen")) then
 		return { Ok = false, Error = ("Unlocks in %s"):format(Zones.Name(crate.Zone)) }
 	end
 	-- A waiting free crate is used before any coins are spent

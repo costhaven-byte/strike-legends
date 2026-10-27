@@ -30,11 +30,11 @@ local function hook(row)
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = counter
 	local function refresh()
-		local open = Zones.Unlocked(player:GetAttribute("RankLevel"), row.Zone)
-		prompt.ActionText = if open then "Open crate shop" else ("Reach " .. Zones.Name(row.Zone))
+		local open = Zones.Unlocked(player:GetAttribute("ZonesOpen"), row.Zone)
+		prompt.ActionText = if open then "Open crate shop" else ("Needs " .. Zones.NeedText(row.Zone):lower())
 		prompt.Enabled = open
 	end
-	player:GetAttributeChangedSignal("RankLevel"):Connect(refresh)
+	player:GetAttributeChangedSignal("ZonesOpen"):Connect(refresh)
 	refresh()
 	prompt.Triggered:Connect(function()
 		if CrateController.OpenShop then

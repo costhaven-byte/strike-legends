@@ -8,6 +8,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Progression = require(Shared.Modules.Progression)
 local Currency = require(Shared.Modules.Currency)
+local Zones = require(Shared.Modules.Zones)
 
 local DATA = Config.Data
 
@@ -139,7 +140,22 @@ local function migrate(saved: any): { [string]: any }
 			data.CoinBoostLevel = math.max(tonumber(data.CoinBoostLevel) or 0, level)
 			data.RobuxBoost = 0
 		end
+		if version < 24 then
+			-- v24: zones open by rebirths now (owner 2026-10-27), not by rank level. Nobody loses a zone they already
+			-- reached: the old level rule (Config.Economy.Zones Rank) and every zone's unlock window already seen count.
+			local level = tonumber(data.RankLevel) or 1
+			local reached = math.max(1, math.floor(tonumber(data.ZoneSeen) or 1))
+			for zone = 2, Config.Zones.BuiltZones do
+				local row = Config.Economy.Zones[zone]
+				if row and row.Rank and level >= row.Rank then
+					reached = math.max(reached, zone)
+				end
+			end
+			data.ZonesOpen = math.max(tonumber(data.ZonesOpen) or 1, reached)
+		end
 	end
+	-- Rebirths done always keep their zones open (also when a later update moves a zone's rebirth count)
+	data.ZonesOpen = math.max(math.floor(tonumber(data.ZonesOpen) or 1), Zones.ForRebirths(tonumber(data.Rebirths) or 0))
 	data.Rank = math.clamp(math.floor(tonumber(data.Rank) or 1), 1, #Config.Ranks)
 	-- Money comes back through Currency, so a future number format can read old plain-number saves here
 	for _, key in Config.Numbers.Currencies do

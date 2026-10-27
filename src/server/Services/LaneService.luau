@@ -97,13 +97,13 @@ local function checkGates()
 	local now = os.clock()
 	for _, player in Players:GetPlayers() do
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		local level = PlayerDataService.Get(player, "RankLevel") or 1
+		local zonesOpen = PlayerDataService.Get(player, "ZonesOpen")
 		local away = outsideSince[player] or {}
 		outsideSince[player] = away
 		for index, gate in Config.Zones.Gated do
 			local inside = root ~= nil and Zones.InArea(gate.Area, root.Position)
 			local claimed = claimedIn(gate, player.UserId)
-			if inside and not Zones.Unlocked(level, gate.Zone) then
+			if inside and not Zones.Unlocked(zonesOpen, gate.Zone) then
 				-- The wall on their screen should stop them; this catches anyone who got past it
 				(player.Character :: Model):PivotTo(CFrame.new(gate.KickTo))
 			elseif inside then
@@ -144,7 +144,7 @@ function LaneService:Start()
 		if not PlayerDataService.IsLoaded(player) or type(zone) ~= "number" then
 			return
 		end
-		local highest = Zones.Highest(PlayerDataService.Get(player, "RankLevel"))
+		local highest = Zones.Highest(PlayerDataService.Get(player, "ZonesOpen"))
 		local seen = PlayerDataService.Get(player, "ZoneSeen") or 1
 		zone = math.clamp(math.floor(zone), 1, highest)
 		if zone > seen then

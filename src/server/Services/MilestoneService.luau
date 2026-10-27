@@ -39,7 +39,7 @@ local function give(player: Player, reward, source: string)
 		PotionService.Give(player, potion.Id, potion.Count)
 	end
 	-- A crate from a zone you haven't unlocked yet comes as your zone's crate
-	local crate = Balls.GetCrate(Zones.RewardCrateId(reward.Crate, PlayerDataService.Get(player, "RankLevel")))
+	local crate = Balls.GetCrate(Zones.RewardCrateId(reward.Crate, PlayerDataService.Get(player, "ZonesOpen")))
 	if crate then
 		shown.CrateId = crate.Id
 		shown.Crate = BallService.GiveCrate(player, crate)

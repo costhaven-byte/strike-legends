@@ -71,7 +71,7 @@ local function claim(player: Player, index: any)
 		-- A crate from a zone you haven't reached comes as your zone's crate (unless Exact)
 		local crateId = if reward.Exact
 			then reward.Crate
-			else Zones.RewardCrateId(reward.Crate, PlayerDataService.Get(player, "RankLevel"))
+			else Zones.RewardCrateId(reward.Crate, PlayerDataService.Get(player, "ZonesOpen"))
 		local crate = Balls.GetCrate(crateId)
 		if crate then
 			kind, item = "Crate", crate.Id

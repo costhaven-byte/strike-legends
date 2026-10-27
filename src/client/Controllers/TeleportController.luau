@@ -169,7 +169,7 @@ function TeleportController:Start()
 		if not root or not humanoid or humanoid.Health <= 0 or os.clock() - lastTeleport < COOLDOWN then
 			return
 		end
-		if not Zones.Unlocked(player:GetAttribute("RankLevel"), zone) then
+		if not Zones.Unlocked(player:GetAttribute("ZonesOpen"), zone) then
 			return
 		end
 		-- No teleporting out of the Pin Titan fight (BossService brings you back to the roof after it)
@@ -237,13 +237,13 @@ function TeleportController:Start()
 	end
 
 	local function refresh()
-		local level = player:GetAttribute("RankLevel") or 1
-		openButton.Visible = (player:GetAttribute("Rebirths") or 0) > 0 or Zones.Unlocked(level, 2)
+		local zonesOpen = player:GetAttribute("ZonesOpen") or 1
+		openButton.Visible = zonesOpen >= 2
 		for zone, card in cards do
-			local open = Zones.Unlocked(level, zone)
+			local open = Zones.Unlocked(zonesOpen, zone)
 			card.Go.Text = if open then "GO" else "LOCKED"
 			card.Go.BackgroundColor3 = if open then LIME else GREY
-			card.Need.Text = if zone == 1 then "YOUR LANE" else ("LEVEL %d"):format(Zones.UnlockLevel(zone))
+			card.Need.Text = if zone == 1 then "YOUR LANE" else Zones.NeedText(zone)
 			card.Stroke.Color = if open then card.Color else GREY
 		end
 	end
@@ -259,7 +259,7 @@ function TeleportController:Start()
 	close.Activated:Connect(function()
 		UiFx.Close(panel)
 	end)
-	for _, key in { "RankLevel", "Rebirths" } do
+	for _, key in { "ZonesOpen", "Rebirths" } do
 		player:GetAttributeChangedSignal(key):Connect(refresh)
 	end
 	refresh()

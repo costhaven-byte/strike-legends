@@ -1,13 +1,32 @@
--- Zone rules both server and client use: which zones a rank level has unlocked, which crates you can open
--- there, and which balls a crate can give. Unlock levels: Config.Economy.Zones Rank (a rank level, 1-60).
+-- Zone rules both server and client use: which zones a player has open, which crates you can open there, and
+-- which balls a crate can give. Zones open by REBIRTHS (owner 2026-10-27: Config.Economy.Zones Rebirths, zone 2 =
+-- 1 rebirth, zone 3 = 3, zone 4 = 5). The save keeps the highest open zone (ZonesOpen, v24), so the zone
+-- functions below take that number, not a rank level.
 local Config = require(script.Parent.Parent.Config)
 
 local Zones = {}
 
--- The rank level a zone opens at (zone 1 is always open)
-function Zones.UnlockLevel(zone: number): number
+-- Rebirths a zone opens at (zone 1 is always open)
+function Zones.UnlockRebirths(zone: number): number
 	local row = Config.Economy.Zones[zone]
-	return if row then row.Rank else math.huge
+	return if zone <= 1 then 0 elseif row and row.Rebirths then row.Rebirths else math.huge
+end
+
+-- "1 REBIRTH" / "3 REBIRTHS": what a locked zone needs, for signs and cards
+function Zones.NeedText(zone: number): string
+	local need = Zones.UnlockRebirths(zone)
+	return ("%d REBIRTH%s"):format(need, if need == 1 then "" else "S")
+end
+
+-- Highest built zone this many rebirths opens
+function Zones.ForRebirths(rebirths: number?): number
+	local highest = 1
+	for zone = 2, Config.Zones.BuiltZones do
+		if (rebirths or 0) >= Zones.UnlockRebirths(zone) then
+			highest = zone
+		end
+	end
+	return highest
 end
 
 -- How much more a throw pays in this zone than in zone 1 (Config.Economy.Zones CoinPay / XpPay, economy pass E2)
@@ -26,24 +45,19 @@ function Zones.Name(zone: number): string
 	return if row then row.Name else ("Zone %d"):format(zone)
 end
 
-function Zones.Unlocked(rankLevel: number?, zone: number): boolean
-	return zone <= 1 or (rankLevel or 1) >= Zones.UnlockLevel(zone)
+-- zonesOpen = the player's ZonesOpen (saved; attribute on the client)
+function Zones.Unlocked(zonesOpen: number?, zone: number): boolean
+	return zone <= (zonesOpen or 1)
 end
 
--- Highest zone this rank level has opened, counting only zones that are built (Config.Zones.BuiltZones)
-function Zones.Highest(rankLevel: number?): number
-	local highest = 1
-	for zone = 2, Config.Zones.BuiltZones do
-		if Zones.Unlocked(rankLevel, zone) then
-			highest = zone
-		end
-	end
-	return highest
+-- Highest open zone, counting only zones that are built (Config.Zones.BuiltZones)
+function Zones.Highest(zonesOpen: number?): number
+	return math.clamp(zonesOpen or 1, 1, Config.Zones.BuiltZones)
 end
 
 -- A crate can be opened once its zone (Config.Crates Zone) is unlocked
-function Zones.CrateUnlocked(crate, rankLevel: number?): boolean
-	return Zones.Unlocked(rankLevel, crate.Zone or 1)
+function Zones.CrateUnlocked(crate, zonesOpen: number?): boolean
+	return Zones.Unlocked(zonesOpen, crate.Zone or 1)
 end
 
 -- Can this crate give this ball? ZoneBallsOnly crates (the Alley Crate) only give their own zone's balls
@@ -60,13 +74,13 @@ end
 
 -- The crate a reward really gives: a crate from a zone you haven't unlocked yet becomes your zone's crate
 -- (the day 7 Gold Crate is an Alley Crate until Neon Lanes opens)
-function Zones.RewardCrateId(crateId: string?, rankLevel: number?): string?
+function Zones.RewardCrateId(crateId: string?, zonesOpen: number?): string?
 	if not crateId then
 		return nil
 	end
 	for _, crate in Config.Crates do
 		if crate.Id == crateId then
-			if Zones.CrateUnlocked(crate, rankLevel) then
+			if Zones.CrateUnlocked(crate, zonesOpen) then
 				return crateId
 			end
 			break
