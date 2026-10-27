@@ -20,9 +20,16 @@ function Rebirth.OpensZone(rebirths: number): number?
 	return if after > before then after else nil
 end
 
--- Coins the next rebirth costs
+-- Coins the next rebirth costs: its own price from the Costs list, then the last one x CostGrowth each
 function Rebirth.Cost(rebirths: number): number
-	return math.floor(REBIRTH.FirstCost * REBIRTH.CostGrowth ^ rebirths + 0.5)
+	local costs = REBIRTH.Costs
+	if not costs or #costs == 0 then
+		return math.floor(REBIRTH.FirstCost * REBIRTH.CostGrowth ^ rebirths + 0.5)
+	end
+	if rebirths < #costs then
+		return costs[rebirths + 1]
+	end
+	return math.floor(costs[#costs] * REBIRTH.CostGrowth ^ (rebirths + 1 - #costs) + 0.5)
 end
 
 -- Permanent coin and XP multipliers from rebirths done

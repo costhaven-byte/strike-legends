@@ -88,3 +88,20 @@ Tried and dropped: +2 levels per rebirth (zone 4 3h03 but rebirths slow down soo
 | Rebirths 17+ | 1.5-3 h each | 10-25 min, 30-60 min from about rebirth 22 |
 | Level 60 (total play) | never | about 8-10 hours |
 | Power Level 12 / Sky Gold crate | 7h10 / 7h16 | 4h30-7h / 4h40-7h30 |
+
+## R2: zones open by rebirths (2026-10-27)
+
+Owner change: zone 2 = 1 rebirth, zone 3 = 3, zone 4 = 5. A rebirth resets only coins and Power Level (level and rank stay).
+New rebirth prices (Config.Economy.Rebirth Costs): 50K, 700K, 9M, 150M, 4B, then x3 each. Level needed: 4, then +2 per rebirth.
+Simulator (16 players, 10 h; the pretend player stops buying crates/eggs once it has the level for a zone-opening rebirth, like the goal bar tells it to):
+
+| Goal | Target | Simulated |
+|---|---|---|
+| First rebirth (zone 2 opens) | 10-15 min | 11:48 |
+| First pet egg | 11-18 min | 13:40 |
+| Zone 3 (3 rebirths) | 40-60 min | 42:54 |
+| Zone 4 (5 rebirths) | 2-3 h | 2h23m |
+| Level 30 / level 60 | - | 2h34m / 9h40m |
+| Rebirths 6-10 | - | 3h01m, 3h16m, 4h12m, 5h17m, 5h59m |
+
+All 8 timeline rows OK (Power Level 2 at 0:15 is "close", unchanged). Before this, level 60 was never reached in 10 h; keeping your level through rebirths fixes that.

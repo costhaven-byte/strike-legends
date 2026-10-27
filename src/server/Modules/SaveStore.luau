@@ -152,6 +152,7 @@ local function migrate(saved: any): { [string]: any }
 				end
 			end
 			data.ZonesOpen = math.max(tonumber(data.ZonesOpen) or 1, reached)
+			data.ZoneVisited = data.ZonesOpen -- they know the way already: no walk guide for old players
 		end
 	end
 	-- Rebirths done always keep their zones open (also when a later update moves a zone's rebirth count)

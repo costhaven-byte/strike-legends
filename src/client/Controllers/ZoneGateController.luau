@@ -2,7 +2,8 @@
 --   while a zone is locked, a glowing wall (only on your screen) keeps you out, with "NEEDS N REBIRTHS" on it
 --   (zone 2: it plugs the Back Alley door into the building);
 --   the moment a rebirth opens it, a "ZONE UNLOCKED" window shows what's waiting there in 3D
---   (its pets, crates and balls), once per zone (save ZoneSeen). "TAKE ME THERE" teleports you inside the zone.
+--   (its pets, crates and balls), once per zone (save ZoneSeen). "SHOW ME THE WAY" closes it and the walk guide
+--   (EventController) draws a gold beam to the door: the first trip is on foot (owner 2026-10-27), TELEPORT after.
 -- Claiming a lane there happens on the server (LaneService): step onto any OPEN lane.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -254,24 +255,6 @@ function ZoneGateController:Start()
 		end
 	end
 
-	-- "TAKE ME THERE": straight into the zone (its Arrival spot), facing the pins
-	local function teleportTo(gate)
-		local character = player.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if not root or not humanoid or humanoid.Health <= 0 then
-			return
-		end
-		if humanoid.Sit then
-			humanoid.Sit = false
-		end
-		local spot = gate.Arrival
-		character:PivotTo(CFrame.lookAt(spot, spot - Vector3.zAxis))
-		root.AssemblyLinearVelocity = Vector3.zero
-		UiFx.Flash(Color3.new(1, 1, 1), 0.5, 0.35)
-		Sfx.Play("Reveal", 1)
-	end
-
 	-- The "ZONE UNLOCKED" window
 	local showing = false
 	local function showUnlock(gate)
@@ -497,7 +480,7 @@ function ZoneGateController:Start()
 		pulse:Play()
 
 		local closing = false
-		local function close(take: boolean)
+		local function close()
 			if closing then
 				return
 			end
@@ -508,15 +491,12 @@ function ZoneGateController:Start()
 			TweenService:Create(shade, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
 			task.delay(0.4, gui.Destroy, gui)
 			showing = false
-			if take then
-				task.spawn(teleportTo, gate)
-			end
 		end
 		go.Activated:Connect(function()
-			close(true)
+			close()
 		end)
 		later.Activated:Connect(function()
-			close(false)
+			close()
 		end)
 	end
 

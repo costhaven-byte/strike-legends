@@ -1,5 +1,6 @@
--- The surprise layer on screen: the lane modifier banner and timer, the "next goal" bar,
--- and the big popups for Golden Pins, "LUCKY!", bonus gems, level-ups and free crates.
+-- The surprise layer on screen: the lane modifier banner and timer, the "next goal" bar (with the new-player
+-- guide: REBIRTH to open the next zone, then a gold beam to its door until you walk in, owner 2026-10-27),
+-- and the big popups for Golden Pins, "LUCKY!", bonus gems, level-ups, free crates and arriving in a zone.
 -- The UI itself (StarterGui.EventUI) is built in Studio; this script fills it in and animates it.
 -- Everything shown comes from attributes and throw results the server sends.
 local Players = game:GetService("Players")
@@ -16,6 +17,8 @@ local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modifiers = require(Shared.Modules.Modifiers)
 local PowerLevels = require(Shared.Modules.PowerLevels)
 local Progression = require(Shared.Modules.Progression)
+local Rebirth = require(Shared.Modules.Rebirth)
+local Zones = require(Shared.Modules.Zones)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local TraitFx = require(Modules.TraitFx)
 local Sfx = require(Modules.Sfx)
@@ -27,6 +30,7 @@ local CRATE_COLOR = Color3.fromRGB(60, 230, 255)
 local GEM_COLOR = Color3.fromRGB(255, 90, 200)
 local LEVEL_GEM_COLOR = Color3.fromRGB(60, 230, 255) -- same blue as the "+N GEMS" after a throw (HudController)
 local POWER_COLOR = Color3.fromRGB(255, 43, 214)
+local REBIRTH_COLOR = Color3.fromRGB(125, 255, 60) -- the REBIRTH button's lime
 
 local short = Currency.Format -- Config.Numbers
 
@@ -337,11 +341,10 @@ function EventController:Start()
 			and Workspace.Hub.CrateShop.Stations:FindFirstChild(Config.Onboarding.FirstCrateGoal)
 		return station and station:FindFirstChild("BuyButton") :: BasePart?
 	end
-	local guide: { Beams: { Beam }, From: Attachment }? = nil
-	local function setGuide(on: boolean)
+	local guide: { Beams: { Beam }, From: Attachment, Target: BasePart }? = nil
+	local function setGuide(stationButton: BasePart?)
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		local stationButton = guideTarget()
-		if not on or not stationButton or not root then
+		if not stationButton or not root then
 			if guide then
 				for _, beam in guide.Beams do
 					beam:Destroy()
@@ -351,10 +354,10 @@ function EventController:Start()
 			end
 			return
 		end
-		if guide and guide.From.Parent == root then
+		if guide and guide.From.Parent == root and guide.Target == stationButton then
 			return
 		end
-		setGuide(false)
+		setGuide(nil)
 		local from = Instance.new("Attachment")
 		from.Name = "CrateGuideFrom"
 		from.Position = Vector3.new(0, -1.5, 0)
@@ -392,13 +395,103 @@ function EventController:Start()
 			beam.Parent = root
 			table.insert(beams, beam)
 		end
-		guide = { Beams = beams, From = from }
+		guide = { Beams = beams, From = from, Target = stationButton }
 	end
-	local wantGuide = false
+	local wantGuide: BasePart? = nil
 	player.CharacterAdded:Connect(function()
 		task.wait(0.5)
 		setGuide(wantGuide)
 	end)
+
+	-- Walking to a newly opened zone (owner 2026-10-27: the first trip is on foot, so new players learn where the
+	-- door is). Until you have stood inside it (save ZoneVisited), the beam leads to the next door on the way:
+	-- Back Alley -> lobby door -> Main Street Lanes door -> rooftop elevator. A bouncing arrow sits on that door.
+	local doorFolder = Instance.new("Folder")
+	doorFolder.Name = "ZoneGuide"
+	doorFolder.Parent = Workspace
+	local doors: { [number]: BasePart } = {}
+	local function gateOf(zone: number)
+		for _, gate in Config.Zones.Gated do
+			if gate.Zone == zone then
+				return gate
+			end
+		end
+		return nil
+	end
+	local function door(zone: number): BasePart?
+		if doors[zone] then
+			return doors[zone]
+		end
+		local gate = gateOf(zone)
+		if not gate or not gate.Walls[1] then
+			return nil
+		end
+		local part = Instance.new("Part")
+		part.Name = "Door" .. zone
+		part.Anchored = true
+		part.CanCollide = false
+		part.CanQuery = false
+		part.CanTouch = false
+		part.Transparency = 1
+		part.Size = Vector3.one
+		part.Position = gate.Walls[1].Center
+		local sign = Instance.new("BillboardGui")
+		sign.Name = "Arrow"
+		sign.AlwaysOnTop = true
+		sign.LightInfluence = 0
+		sign.Size = UDim2.fromOffset(220, 110)
+		sign.StudsOffset = Vector3.new(0, 7, 0)
+		sign.Enabled = false
+		sign.Parent = part
+		local name = Instance.new("TextLabel")
+		name.Name = "ZoneName"
+		name.BackgroundTransparency = 1
+		name.Size = UDim2.fromScale(1, 0.4)
+		name.FontFace = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
+		name.TextScaled = true
+		name.TextColor3 = gate.WallColor
+		name.Text = Zones.Name(zone):upper()
+		name.Parent = sign
+		local nameStroke = Instance.new("UIStroke")
+		nameStroke.Thickness = 3
+		nameStroke.Color = Color3.fromHex("06060F")
+		nameStroke.Parent = name
+		local arrow = name:Clone()
+		arrow.Name = "Down"
+		arrow.Text = "▼"
+		arrow.TextColor3 = GOLD
+		arrow.Position = UDim2.fromScale(0, 0.4)
+		arrow.Size = UDim2.fromScale(1, 0.6)
+		arrow.Parent = sign
+		TweenService:Create(
+			sign,
+			TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+			{ StudsOffset = Vector3.new(0, 5.5, 0) }
+		):Play()
+		part.Parent = doorFolder
+		doors[zone] = part
+		return part
+	end
+	-- The zone the walk guide is leading to (the first open zone not visited yet), or nil
+	local function walkZone(): number?
+		local visited = player:GetAttribute("ZoneVisited") or 1
+		local open = Zones.Highest(player:GetAttribute("ZonesOpen"))
+		return if open > visited then visited + 1 else nil
+	end
+	-- The door to head for now: the next zone's door from the zone you stand in
+	local function walkDoor(zone: number): BasePart?
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not root then
+			return nil
+		end
+		local here = 1
+		for _, gate in Config.Zones.Gated do
+			if Zones.InArea(gate.Area, root.Position) then
+				here = math.max(here, gate.Zone)
+			end
+		end
+		return if here < zone then door(here + 1) else nil
+	end
 
 	-- "Next goal": always shows the closest goal (rank progress lives in the HUD rank bar):
 	-- the next Power Level, the first-3-minutes gift crate, the first crate to buy (until one is bought),
@@ -410,8 +503,47 @@ function EventController:Start()
 	)
 	local pulsing = false
 	local calledOut = false
+	local rebirthCalledOut = false
 	local function refreshBar()
 		local options = {}
+
+		-- First trip to a newly opened zone: always the goal until you walk in
+		local walking = walkZone()
+		if walking then
+			table.insert(options, {
+				Progress = 1,
+				Priority = 2,
+				Text = ("WALK TO %s: FOLLOW THE GOLD BEAM!"):format(Zones.Name(walking):upper()),
+				Color = GOLD,
+				Icon = "Rebirth",
+				Door = walking,
+			})
+		end
+
+		-- Rebirth (it opens the zones): ready = always the goal; one that opens a zone wins once you have its level
+		local rebirth = Config.Economy.Rebirth
+		if rebirth.Enabled and (player:GetAttribute("Onboarding") or 3) >= 3 then
+			local done = player:GetAttribute("Rebirths") or 0
+			local needLevel, cost = Rebirth.Level(done), Rebirth.Cost(done)
+			local level = player:GetAttribute("RankLevel") or 1
+			local coins = player:GetAttribute("Coins") or 0
+			local coinPart = math.min(coins / math.max(cost, 1), 1)
+			local levelPart = if level >= needLevel then 1 else (level - 1) / math.max(needLevel - 1, 1)
+			local progress = math.min(coinPart, levelPart)
+			local opens = Rebirth.OpensZone(done)
+			local reward = if opens then ("OPENS %s"):format(Zones.Name(opens):upper()) else "MORE COINS FOREVER"
+			table.insert(options, {
+				Progress = progress,
+				Priority = if progress >= 1 or (opens and levelPart >= 1) then 1 else 0,
+				Text = if progress >= 1
+					then ("REBIRTH NOW: %s!"):format(reward)
+					elseif levelPart < 1 then ("NEXT: LEVEL %d TO REBIRTH (%s)"):format(needLevel, reward)
+					else ("NEXT: REBIRTH (%s)  %s / %s"):format(reward, short(coins), short(cost)),
+				Color = REBIRTH_COLOR,
+				Icon = "Rebirth",
+				RebirthReady = progress >= 1 and done == 0,
+			})
+		end
 
 		local nextLevel = PowerLevels.Next(player:GetAttribute("PowerLevel") or 1)
 		if nextLevel then
@@ -476,9 +608,20 @@ function EventController:Start()
 
 		local best = options[1]
 		for _, option in options do
-			if option.Progress > best.Progress then
+			local priority, bestPriority = option.Priority or 0, best.Priority or 0
+			if priority > bestPriority or (priority == bestPriority and option.Progress > best.Progress) then
 				best = option
 			end
+		end
+		-- The first rebirth ready: a big callout pointing at the REBIRTH button, once a session
+		if best.RebirthReady and not rebirthCalledOut then
+			rebirthCalledOut = true
+			showPopup(
+				"REBIRTH IS READY!",
+				REBIRTH_COLOR,
+				("TAP REBIRTH AT THE TOP TO OPEN %s"):format(Zones.Name(Rebirth.OpensZone(0) or 2):upper()),
+				true
+			)
 		end
 		-- The moment the first crate is the goal and affordable: a big callout pointing at Rizzo, once a session
 		local guideNow = best.Guide == true
@@ -486,8 +629,18 @@ function EventController:Start()
 			calledOut = true
 			showPopup("RIZZO HAS A CRATE FOR YOU!", GOLD, "FOLLOW THE GOLD BEAM TO HIS CART", true)
 		end
-		-- Rizzo draws his own beam (RizzoController, same moment as his "!"); this one is only the kiosk fallback
-		wantGuide = guideNow and not (guideTarget() and guideTarget().Name == "PromptPoint")
+		-- Rizzo draws his own beam (RizzoController, same moment as his "!"); this one is only the kiosk fallback.
+		-- Walking to a new zone: the beam leads to the next door on the way, with its arrow on.
+		local target: BasePart? = nil
+		if best.Door then
+			target = walkDoor(best.Door)
+		elseif guideNow and not (guideTarget() and guideTarget().Name == "PromptPoint") then
+			target = guideTarget()
+		end
+		for _, part in doors do
+			(part:FindFirstChild("Arrow") :: BillboardGui).Enabled = part == target
+		end
+		wantGuide = target
 		setGuide(wantGuide)
 		-- Ready (the goal is reached: buy it / go get it): the purple READY look with the text big
 		setGoalReady(best.Progress >= 1)
@@ -507,10 +660,47 @@ function EventController:Start()
 		end
 		pulsing = close
 	end
-	for _, key in { "CrateStrikes", "Coins", "PowerLevel", "Onboarding", "OnboardThrows", "CratesBought" } do
+	for _, key in {
+		"CrateStrikes",
+		"Coins",
+		"PowerLevel",
+		"Onboarding",
+		"OnboardThrows",
+		"CratesBought",
+		"RankLevel",
+		"Rebirths",
+		"ZonesOpen",
+		"ZoneVisited",
+	} do
 		player:GetAttributeChangedSignal(key):Connect(refreshBar)
 	end
 	refreshBar()
+	-- While walking to a new zone, the beam moves on to the next door as you pass through each one
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			if walkZone() then
+				refreshBar()
+			end
+		end
+	end)
+
+	-- Walked into a new zone for the first time: a welcome popup
+	local visitedShown = player:GetAttribute("ZoneVisited") or 1
+	player:GetAttributeChangedSignal("ZoneVisited"):Connect(function()
+		local visited = player:GetAttribute("ZoneVisited") or 1
+		if visited > visitedShown then
+			local gate = gateOf(visited)
+			showPopup(
+				("WELCOME TO %s!"):format(Zones.Name(visited):upper()),
+				if gate then gate.WallColor else GOLD,
+				"STEP ON ANY OPEN LANE TO CLAIM IT",
+				true
+			)
+			Sfx.Play("RevealBig", 1)
+		end
+		visitedShown = math.max(visitedShown, visited)
+	end)
 
 	-- Free crates: a popup when one is earned (they wait at Rizzo's cart and the Crate Shop kiosk, plaque shows FREE xN)
 	local freeCrates = player:GetAttribute("FreeCrates") or 0

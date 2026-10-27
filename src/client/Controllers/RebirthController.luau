@@ -110,6 +110,27 @@ function RebirthController:Start()
 		end
 	end
 
+	-- First rebirth ready (new-player guide): a bouncing "TAP!" arrow under the button
+	local tapArrow = Instance.new("TextLabel")
+	tapArrow.Name = "TapArrow"
+	tapArrow.BackgroundTransparency = 1
+	tapArrow.AnchorPoint = Vector2.new(0.5, 0)
+	tapArrow.Position = UDim2.new(0.5, 0, 1, 18)
+	tapArrow.Size = UDim2.fromOffset(90, 44)
+	tapArrow.FontFace = FONT
+	tapArrow.TextScaled = true
+	tapArrow.TextColor3 = LIME
+	tapArrow.Text = "▲\nTAP!"
+	tapArrow.ZIndex = 20
+	tapArrow.Visible = false
+	tapArrow.Parent = openButton
+	stroke(tapArrow, INK, 2.5)
+	TweenService:Create(
+		tapArrow,
+		TweenInfo.new(0.45, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		{ Position = UDim2.new(0.5, 0, 1, 28) }
+	):Play()
+
 	-- ===== The window =====
 	local panel = Instance.new("Frame")
 	panel.Name = "Panel"
@@ -199,6 +220,7 @@ function RebirthController:Start()
 		openButton.Visible = done > 0 or (player:GetAttribute("Onboarding") or 0) >= 3
 		local ready = REBIRTH.Enabled and hasLevel and hasCoins
 		setLook(if ready then "Ready" else "Normal")
+		tapArrow.Visible = ready and done == 0 and not panel.Visible
 
 		-- The window
 		title.Text = if done > 0 then ("REBIRTH %d"):format(done + 1) else "REBIRTH"
@@ -238,6 +260,7 @@ function RebirthController:Start()
 		else
 			UiFx.Close(panel)
 		end
+		task.delay(0.4, refresh) -- after the close animation
 	end
 
 	openButton.Activated:Connect(function()

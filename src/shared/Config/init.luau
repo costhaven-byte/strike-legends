@@ -222,12 +222,13 @@ Config.StartingData = {
 	Cosmetics = {}, -- looks owned (Config.Cosmetics), by Id: { FireTrail = true } (v23)
 	EquippedCosmetics = {}, -- the look worn per kind: { Trail = "FireTrail", LaneSkin = "CandyLane" } (v23)
 	ZonesOpen = 1, -- highest zone open (zones open by rebirths, Config.Economy.Zones Rebirths; v24). Never goes down
+	ZoneVisited = 1, -- highest zone stood in; the walk guide's gold beam leads to an open zone above it (v24)
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 24, -- v24 ZonesOpen (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 24, -- v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -3962,7 +3963,7 @@ Config.ZoneUnlock = {
 		CratesLine = "3 NEW CRATES",
 		Balls = { "Inferno", "Nebula", "Plasma", "Galaxy", "Magma", "Electric" }, -- Phase X: zone 2 tops out at Epic
 		BallsLine = "%d NEW BALLS TO WIN", -- %d = how many balls those crates can give that you don't own
-		Button = "TAKE ME THERE!",
+		Button = "SHOW ME THE WAY!",
 		Hint = "Step onto any OPEN lane to claim it.",
 		Color = Color3.fromRGB(255, 60, 210),
 		Accent = Color3.fromRGB(70, 230, 255),
@@ -3978,7 +3979,7 @@ Config.ZoneUnlock = {
 		CratesLine = "2 NEW CRATES",
 		Balls = { "Perfect300", "Championship", "TigerSwirl", "PearlPro", "BlueMarble", "LeagueBlack" },
 		BallsLine = "%d NEW BALLS TO WIN",
-		Button = "TAKE ME THERE!",
+		Button = "SHOW ME THE WAY!",
 		Hint = "Step onto any OPEN lane to claim it.",
 		Color = Color3.fromRGB(224, 165, 38),
 		Accent = Color3.fromRGB(255, 120, 110),
@@ -3994,7 +3995,7 @@ Config.ZoneUnlock = {
 		CratesLine = "3 NEW CRATES",
 		Balls = { "Daybreak", "Lightning", "SolidGold", "Sunburst", "CloudSwirl", "Crystal" },
 		BallsLine = "%d NEW BALLS TO WIN",
-		Button = "TAKE ME THERE!",
+		Button = "SHOW ME THE WAY!",
 		Hint = "Step onto any OPEN lane to claim it.",
 		Color = Color3.fromRGB(255, 79, 139),
 		Accent = Color3.fromRGB(245, 184, 46),
@@ -4270,11 +4271,12 @@ Config.Economy.Rebirth = {
 	Enabled = true, -- the owner flips this (switched ON by the owner 2026-10-26)
 	-- Owner 2026-10-27: zones open by rebirths (Config.Economy.Zones Rebirths), so the first rebirth happens in zone 1.
 	-- A rebirth resets only coins and Power Level (level, rank and throw style stay).
-	-- R1 STAND-IN NUMBERS: the economy pass (R2) sets the real level/cost curve with the simulator.
+	-- Economy pass R2 (2026-10-27, tools/EconomySim): prices below hit the timeline (Config.Economy.Timeline).
 	Level = 4, -- the first rebirth needs this rank level...
 	RankStep = 2, -- ...and this many more levels for each one after
-	FirstCost = 100000, -- coins needed for the first rebirth...
-	CostGrowth = 3, -- ...times this for each one after
+	Costs = { 50000, 700000, 9000000, 150000000, 4000000000 }, -- coins for rebirths 1, 2, 3... (R2 sim: 1st at 12 min, zone 3 at 42 min, zone 4 at 2h20m)
+	CostGrowth = 3, -- ...and each one after the list costs the last one times this
+	FirstCost = 50000, -- (old single-price rule, kept for anything reading it; Rebirth.Cost uses Costs)
 	DiscountLevels = 5, -- NOT BUILT (old plan, nothing reads it): after a rebirth, Power Levels up to this one...
 	DiscountPrice = 0.1, -- ...cost this share of their price
 	XpBonus = 1, -- +100% XP per rebirth (owner approved). Not in the plan's formula: without it a second run is barely faster
@@ -4285,11 +4287,12 @@ Config.Economy.Timeline = {
 	{ Goal = "Level2", Text = "Buy Power Level 2", From = 0.3, To = 1 }, -- Addendum 2: about 6 throws
 	{ Goal = "FirstCrateOpened", Text = "Open first crate (1,000 sale)", From = 0.5, To = 1.5 }, -- E2: was "afford" at 15K
 	{ Goal = "Rank3", Text = "Reach rank 3", From = 4, To = 5 },
-	{ Goal = "FirstEgg", Text = "Afford first pet egg", From = 9, To = 14 }, -- E2: pets open with zone 2 (was 4-5)
-	{ Goal = "Zone2", Text = "Unlock Zone 2 (rank 5)", From = 8, To = 10 },
-	{ Goal = "Zone3", Text = "Unlock Zone 3", From = 30, To = 45 },
-	{ Goal = "Zone4", Text = "Unlock Zone 4 (total play)", From = 120, To = 180, Ever = true }, -- E2; Ever = rebirths included (E3a)
-	{ Goal = "RebirthReady", Text = "First rebirth available", From = 60, To = 90, Rebirth = true }, -- skipped while rebirth is off
+	{ Goal = "FirstEgg", Text = "Afford first pet egg", From = 11, To = 18, Ever = true }, -- pets open with zone 2 (1 rebirth)
+	-- Owner 2026-10-27: zones open by rebirths (zone 2 = 1, zone 3 = 3, zone 4 = 5); Ever = total play time
+	{ Goal = "RebirthReady", Text = "First rebirth available", From = 10, To = 15, Rebirth = true }, -- skipped while rebirth is off
+	{ Goal = "Zone2", Text = "Unlock Zone 2 (1 rebirth)", From = 10, To = 16, Ever = true },
+	{ Goal = "Zone3", Text = "Unlock Zone 3 (3 rebirths)", From = 40, To = 60, Ever = true },
+	{ Goal = "Zone4", Text = "Unlock Zone 4 (5 rebirths)", From = 120, To = 180, Ever = true },
 }
 
 -- The pretend player the simulator plays as (MASTER_PLAN.md Milestone 10 step 4)
@@ -4315,3 +4318,4 @@ Config.Economy.Sim = {
 }
 
 return Config
+	SaveForRebirthAt = 0, -- stops buying eggs/crates once a zone-opening rebirth is this far paid (0 = from its level on, like the goal bar)

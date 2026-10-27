@@ -108,6 +108,10 @@ local function checkGates()
 				(player.Character :: Model):PivotTo(CFrame.new(gate.KickTo))
 			elseif inside then
 				away[index] = nil
+				-- First time in this zone: the walk guide (EventController) is done with it
+				if gate.Zone > (PlayerDataService.Get(player, "ZoneVisited") or 1) then
+					PlayerDataService.Set(player, "ZoneVisited", gate.Zone)
+				end
 				if not claimed then
 					local lane = LaneUtil.GetLaneAt(root.Position)
 					if lane and lane.Parent.Name == gate.Folder and lane:GetAttribute("OwnerId") == nil then

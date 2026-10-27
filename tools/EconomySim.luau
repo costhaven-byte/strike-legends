@@ -10,8 +10,8 @@
 --   xp       pins x Rewards.XpPerPin (a PERFECT: Rewards.PerfectStrikeXp) x zone XpPay x streak x pets x potion x rebirth
 --   ranks    rank levels 1-60 (Config.Economy.Ranks); the rank tier (Config.Ranks, 6 levels each) sets the coin
 --            multiplier; rank trials are assumed passed straight away
---   zones    open at their rank level (Config.Economy.Zones Rank, built zones only); the player always bowls in
---            the newest zone
+--   zones    open by rebirths (Config.Economy.Zones Rebirths, built zones only; owner 2026-10-27); the player
+--            always bowls in the newest zone. A rebirth resets only coins and Power Level
 --   crates   only the crates of open zones (Config.Crates), each gives only its zone's balls (Zones.BallInCrate),
 --            odds moved like Shared.Modules.Balls does, pity, first bought crate 1,000 + Uncommon, gift crate
 --   eggs     only eggs with pets, in open zones; hatch odds like MascotService (only rarities the egg has);
@@ -463,6 +463,28 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 		return egg.Zone <= s.Zone
 	end
 
+	-- The next rebirth's level and coins (same rule as Shared.Modules.Rebirth)
+	local function rebirthNeed(): (number, number)
+		local costs = E.Rebirth.Costs
+		local needCoins = if not costs or #costs == 0
+			then E.Rebirth.FirstCost * E.Rebirth.CostGrowth ^ s.Rebirths
+			elseif s.Rebirths < #costs then costs[s.Rebirths + 1]
+			else costs[#costs] * E.Rebirth.CostGrowth ^ (s.Rebirths + 1 - #costs)
+		return E.Rebirth.Level + E.Rebirth.RankStep * s.Rebirths, needCoins
+	end
+	-- Saving up for a rebirth that opens a zone: the goal bar makes it THE goal once it's half way (EventController)
+	local function savingForRebirth(): boolean
+		if s.Rebirths >= S.Rebirths then
+			return false
+		end
+		local zone = s.Zone + 1
+		if zone > P.BuiltZones or (E.Zones[zone].Rebirths or math.huge) ~= s.Rebirths + 1 then
+			return false
+		end
+		local needRank, needCoins = rebirthNeed()
+		return s.Rank >= needRank and s.Coins >= needCoins * (S.SaveForRebirthAt or 1)
+	end
+
 	local function buy()
 		-- 1. Next Power Level, as soon as it's affordable
 		while s.Level < #E.PowerLevels and s.Coins >= E.PowerLevels[s.Level + 1].Price do
@@ -471,6 +493,9 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 			mark("Level" .. s.Level)
 		end
 		local budget = if s.Level < #E.PowerLevels then nextLevelPrice() * S.SpendShare else math.huge
+		if savingForRebirth() then
+			budget = 0 -- no eggs or crates (the cut-price first crate still goes)
+		end
 		-- 2. Free hatches first, then eggs and crates that are cheap next to the next Power Level, best first
 		for eggId, count in s.FreeEggs do
 			local egg = P.EggById[eggId]
@@ -544,8 +569,13 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 				giveReward(reward)
 			end
 		end
+		refreshPets() -- more slots at some ranks
+	end
+
+	-- Zones open by rebirths (owner 2026-10-27: Config.Economy.Zones Rebirths)
+	local function openZones()
 		for zone = s.Zone + 1, P.BuiltZones do
-			if s.Rank >= E.Zones[zone].Rank then
+			if s.Rebirths >= (E.Zones[zone].Rebirths or math.huge) then
 				s.Zone = zone
 				mark("Zone" .. zone)
 				if config.Boss.Enabled and zone == config.Boss.Zone then
@@ -557,7 +587,6 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 				end
 			end
 		end
-		refreshPets() -- more slots at some ranks
 	end
 
 	-- Coins per minute in a zone: its first 100 throws
@@ -629,11 +658,7 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 
 		while s.Rank < E.Ranks.MaxRank and s.XP >= P.LevelXp[s.Rank + 1] do
 			s.Rank += 1
-			local before = s.Zone
 			onRank()
-			if s.Zone ~= before then
-				zoneOpenedAt = s.Throws
-			end
 		end
 		if s.Throws - zoneOpenedAt == #recent and not extras["CoinsPerMin" .. s.Zone] and s.Zone > 1 then
 			local sum = 0
@@ -692,21 +717,26 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 		-- The zone 4 boss: a trip every CooldownMinutes once that zone is open
 		if time >= bossAt then
 			time += S.BossTripSeconds
-			bossAt = time + config.Boss.CooldownMinutes * 60
+			bossAt = time + (config.Boss.EverySeconds or 45 * 60) -- one event every 45 minutes (Config.Boss)
 			mark("Boss")
-			giveReward(config.Boss.Reward)
+			giveReward(config.Boss.Reward or config.Boss.Tiers[3].Reward) -- a GOLD finish (a fair share of the damage)
 		end
 
 		-- Rebirth (only while the simulator is told to: Sim.Rebirths)
-		local needRank = E.Zones[E.Rebirth.Zone].Rank + E.Rebirth.RankStep * s.Rebirths
-		local needCoins = E.Rebirth.FirstCost * E.Rebirth.CostGrowth ^ s.Rebirths
+		-- Owner 2026-10-27: a rebirth resets only coins and Power Level, and opens the zones
+		local needRank, needCoins = rebirthNeed()
 		if s.Rank >= needRank and s.Coins >= needCoins then
 			mark("RebirthReady")
 			if s.Rebirths < S.Rebirths then
 				s.Rebirths += 1
 				s.RunStart = time
-				s.Coins, s.XP, s.Rank, s.Level, s.Zone, s.Streak = 0, 0, 1, 1, 1, 0
-				bossAt, playtimeNext = math.huge, 1
+				mark("Rebirth" .. s.Rebirths)
+				s.Coins, s.Level, s.Streak = 0, 1, 0
+				local before = s.Zone
+				openZones()
+				if s.Zone ~= before then
+					zoneOpenedAt = s.Throws
+				end
 				refreshPets()
 				mark("Start")
 				continue
@@ -795,11 +825,15 @@ function EconomySim.Run(config: any?): string
 	local function add(text: string)
 		table.insert(lines, text)
 	end
+	-- Total play time (rebirths included) when there is one: rebirths are part of the normal climb now
+	local function row(goal: string)
+		return results["Ever" .. goal] or results[goal]
+	end
 	local function get(goal: string): number?
-		return results[goal] and results[goal].Median
+		return row(goal) and row(goal).Median
 	end
 	local function share(goal: string): string
-		local row = results[goal]
+		local row = row(goal)
 		if row and row.Share < 1 then
 			return (" (%d%% of players)"):format(row.Share * 100)
 		end
@@ -857,8 +891,8 @@ function EconomySim.Run(config: any?): string
 			("  Zone %d %-18s opens %-8s%s   coins/min (first 5 min there) %s"):format(
 				zone,
 				E.Zones[zone].Name,
-				clock(get("Zone" .. zone)),
-				share("Zone" .. zone),
+				clock(get("EverZone" .. zone)),
+				share("EverZone" .. zone),
 				if extras["CoinsPerMin" .. zone] then short(extras["CoinsPerMin" .. zone]) else "-"
 			)
 		)
@@ -935,19 +969,13 @@ function EconomySim.Run(config: any?): string
 		table.insert(ever, ("%s %s"):format(goal[2], clock(get("Ever" .. goal[1]))))
 	end
 	add("  " .. table.concat(ever, " | "))
+	local rebirths = {}
 	for n = 1, E.Sim.Rebirths do
-		local tag = "@R" .. n
-		if results["Start" .. tag] then
-			add(
-				("  Run %d: Zone 3 %s, Zone 4 %s, next rebirth %s"):format(
-					n + 1,
-					clock(get("Zone3" .. tag)),
-					clock(get("Zone4" .. tag)),
-					clock(get("RebirthReady" .. tag))
-				)
-			)
+		if results["EverRebirth" .. n] then
+			table.insert(rebirths, ("%d at %s"):format(n, clock(get("EverRebirth" .. n))))
 		end
 	end
+	add("  REBIRTHS (total play time): " .. table.concat(rebirths, " | "))
 
 	local report = table.concat(lines, "\n")
 	print(report)
@@ -1003,7 +1031,7 @@ function EconomySim.Sheet(config: any?): string
 	end
 	local zones = {}
 	for index = 2, math.min(config.Zones.BuiltZones, #E.Zones) do
-		table.insert(zones, ("%d at %s"):format(index, clock(at("Zone" .. index))))
+		table.insert(zones, ("%d at %s"):format(index, clock(at("EverZone" .. index))))
 	end
 	add("Zones open: " .. table.concat(zones, ", "))
 	add("First rebirth ready: " .. clock(at("RebirthReady")))
