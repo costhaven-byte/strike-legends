@@ -3637,16 +3637,16 @@ Config.Monetization = {
 			Gems = 100,
 		},
 		-- Boost ladders (owner 2026-10-25; toned down 2026-10-26, owner: x16 for 30 R$ made the passes useless):
-		-- 2026-10-28 owner: 3 steps, x2 / x3 / x4 (was 4 steps x1.25-x2; the step-4 rows are gone, a player saved
+		-- 2026-10-28 owner: 3 steps, x2 / x3 / x4 for 10 / 20 / 50 R$ on both ladders (was 4 steps x1.25-x2; the step-4 rows are gone, a player saved
 		-- at level 4 just stays MAXED at x4). Bought in order, up to the last step (then MAXED). Ladder = "Coins"
 		-- or "Xp", Step = 1-3: the player's saved CoinBoostLevel / XpBoostLevel becomes Step, worth Mult forever
 		-- (the step's own Mult, not added up). The store only offers each ladder's next step.
-		{ Id = "CoinLadder1", ProductId = 0, Robux = 19, Ladder = "Coins", Step = 1, Mult = 2 },
-		{ Id = "CoinLadder2", ProductId = 0, Robux = 39, Ladder = "Coins", Step = 2, Mult = 3 },
-		{ Id = "CoinLadder3", ProductId = 0, Robux = 79, Ladder = "Coins", Step = 3, Mult = 4 },
-		{ Id = "XpLadder1", ProductId = 0, Robux = 29, Ladder = "Xp", Step = 1, Mult = 2 },
-		{ Id = "XpLadder2", ProductId = 0, Robux = 59, Ladder = "Xp", Step = 2, Mult = 3 },
-		{ Id = "XpLadder3", ProductId = 0, Robux = 99, Ladder = "Xp", Step = 3, Mult = 4 },
+		{ Id = "CoinLadder1", ProductId = 0, Robux = 10, Ladder = "Coins", Step = 1, Mult = 2 },
+		{ Id = "CoinLadder2", ProductId = 0, Robux = 20, Ladder = "Coins", Step = 2, Mult = 3 },
+		{ Id = "CoinLadder3", ProductId = 0, Robux = 50, Ladder = "Coins", Step = 3, Mult = 4 },
+		{ Id = "XpLadder1", ProductId = 0, Robux = 10, Ladder = "Xp", Step = 1, Mult = 2 },
+		{ Id = "XpLadder2", ProductId = 0, Robux = 20, Ladder = "Xp", Step = 2, Mult = 3 },
+		{ Id = "XpLadder3", ProductId = 0, Robux = 50, Ladder = "Xp", Step = 3, Mult = 4 },
 		{
 			Id = "CoinBoost", -- Id kept from 12a (the timed boost)
 			ProductId = 0,

@@ -3,7 +3,7 @@
 -- specced there (sizes include the outline, like the design); icons are AssetSlots.Images.
 -- * STORE button (gold, bag icon; right of BALLS and PETS, where DAILY was (owner 2026-10-25)), with a
 --   red "!" until the store is opened this session.
--- * Quick-buy pills on the HUD (owner 2026-10-25): each boost ladder's next step ("x2 COINS / R$ 19"), right of the
+-- * Quick-buy pills on the HUD (owner 2026-10-25): each boost ladder's next step ("x2 COINS / R$ 10"), right of the
 --   coin multiplier badge; a MAXED ladder's pill shrinks away and the other moves up.
 -- * The window: BOOSTS / PASSES / LOOKS / GEMS tabs jump within one scrolling list (Starter Pack on top until bought).
 --   LOOKS (step 12b, Config.Cosmetics): trails, strike banners, pin blasts and lane skins for gems or Robux, with
