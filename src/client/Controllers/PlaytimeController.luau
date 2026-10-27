@@ -117,7 +117,8 @@ function PlaytimeController:Start()
 		elseif reward.Egg then
 			return "Egg", reward.Egg
 		end
-		return "Crate", nil
+		local crate = rewardCrate(reward)
+		return "Crate", crate and crate.Id
 	end
 
 	local tiles = {}
@@ -144,7 +145,7 @@ function PlaytimeController:Start()
 			Position = UDim2.fromOffset(4, 4),
 			Size = UDim2.fromOffset(76, TILE_H - 20),
 		}, face)
-		local rays = RewardKit.Rays(giftSpot, C.White, 104, 8)
+		local rays = RewardKit.Rays(giftSpot, UiKit.Hex("FF8A1F"), 104, 8)
 		rays.Visible = last
 		local giftSize = math.floor(44 + (index - 1) / math.max(COUNT - 1, 1) * 24)
 		local gift = RewardKit.Icon(giftSpot, if last then "GiftGold" else "Gift", nil, giftSize)
@@ -197,6 +198,7 @@ function PlaytimeController:Start()
 			Rays = rays,
 			Gift = gift,
 			Prize = prize,
+			PrizeValue = value,
 			Tick = tick,
 			Name = name,
 			Timer = timer,
@@ -259,6 +261,12 @@ function PlaytimeController:Start()
 		for index, reward in PLAYTIME.Rewards do
 			local t = tiles[index]
 			t.Name.Text = (describe(reward))
+			-- a crate gift's crate can change when a new zone opens: redraw its 3D crate then
+			local kind, value = rewardIcon(reward)
+			if kind == "Crate" and value ~= t.PrizeValue then
+				t.PrizeValue = value
+				RewardKit.Fill(t.Prize, kind, value)
+			end
 			local left = if seconds then reward.Minutes * 60 - seconds else math.huge
 			local state
 			if claimed[index] then
@@ -285,7 +293,7 @@ function PlaytimeController:Start()
 				t.Edge.Enabled = state == "Ready" or state == "Next"
 				t.Edge.Color = if state == "Ready" then C.Lime else C.Pink
 				t.Rays.Visible = state == "Ready" or (t.Last and state ~= "Claimed")
-				t.Rays.ImageColor3 = if state == "Ready" then C.Lime else C.White
+				t.Rays.ImageColor3 = if state == "Ready" then C.Lime else UiKit.Hex("FF8A1F")
 				if not t.Last then
 					t.Block:Paint(if state == "Later" or state == "Claimed" then C.Page else C.Card, C.Page)
 				end

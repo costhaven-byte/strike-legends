@@ -12,6 +12,8 @@ local UiKit = require(script.Parent:WaitForChild("UiKit"))
 local CrateKit = require(script.Parent:WaitForChild("CrateKit"))
 local HudKit = require(script.Parent:WaitForChild("HudKit"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
+local MascotView = require(script.Parent:WaitForChild("MascotView"))
+local Balls = require(Shared.Modules.Balls)
 
 local RewardKit = {}
 
@@ -213,8 +215,19 @@ end
 
 -- ===== Reward icons (HUD Kit art; eggs are drawn) =====
 
--- A cartoon egg: ink outline, the egg's colour, its spots and a white shine
-function RewardKit.Egg(parent: Instance, look, size: number): Frame
+-- The egg's real 3D model (PetModels.Egg_<id>, the one on the egg stand) in a viewport filling parent
+function RewardKit.Egg(parent: Instance, eggId: string): ViewportFrame
+	local view = MascotView.Viewport(parent, MascotView.Egg(eggId, 4), 1.45)
+	view.Name = "Egg"
+	view.ZIndex = 4
+	-- lit brighter than the pets panel: icons sit on dark cards
+	view.Ambient = Color3.fromRGB(235, 235, 245)
+	view.LightDirection = Vector3.new(-0.6, -1, -1.2)
+	return view
+end
+
+-- A cartoon egg drawn with frames (no longer used for icons: kept for screens that can't show 3D)
+function RewardKit.DrawnEgg(parent: Instance, look, size: number): Frame
 	local egg = make("Frame", {
 		Name = "Egg",
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -264,8 +277,43 @@ local function potionById(id: string?)
 end
 RewardKit.PotionById = potionById
 
--- An icon in a size x size holder, centred on position. kind: "Coins", "Gems", "Crate", "Potion" (value = potion
--- Id; MEGA potions get a gold star), "Egg" (value = Config.EggLooks key), "Gift", "GiftGold".
+-- The crate's real 3D model (ReplicatedStorage.CrateModels, the kiosk designs) turned like in the crate shop, in a
+-- viewport filling parent. Falls back to the HUD Kit crate icon when the model is missing.
+local crateModels = ReplicatedStorage:WaitForChild("CrateModels", 10)
+function RewardKit.Crate(parent: Instance, crateId: string?): GuiObject
+	local crate = Balls.GetCrate(crateId)
+	local template = crate
+		and crateModels
+		and (crateModels:FindFirstChild(crate.Id) or (crate.Model and crateModels:FindFirstChild(crate.Model)))
+	if not template then
+		return HudKit.Image(parent, "Crate", 1, { Size = UDim2.fromScale(1, 1) })
+	end
+	local view = make("ViewportFrame", {
+		Name = "Crate",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1, 1),
+		Ambient = Color3.fromRGB(225, 225, 240),
+		LightColor = Color3.new(1, 1, 1),
+		LightDirection = Vector3.new(-0.6, -1, -1.2),
+		ZIndex = 4,
+	}, parent)
+	local camera = make("Camera", { FieldOfView = 30 }, view)
+	view.CurrentCamera = camera
+	local model = template:Clone() :: Model
+	model:PivotTo(CFrame.Angles(0, math.rad(Config.CrateShop.Intro.FaceAngle), 0))
+	local box, size = model:GetBoundingBox()
+	model.Parent = view
+	local radius = math.max(size.X, size.Y, size.Z) * 0.55
+	camera.CFrame = CFrame.lookAt(
+		box.Position + Vector3.new(0, 0.35, 1).Unit * radius / math.tan(math.rad(15)),
+		box.Position
+	)
+	return view
+end
+
+-- An icon in a size x size holder, centred on position (RewardKit.Fill draws it). kind: "Coins", "Gems", "Crate"
+-- (value = crate Id: its 3D model), "Potion" (value = potion Id; MEGA potions get a gold star), "Egg" (value = egg
+-- Id: its 3D model), "Gift", "GiftGold".
 function RewardKit.Icon(parent: Instance, kind: string, value: any, size: number, position: UDim2?): Frame
 	local holder = make("Frame", {
 		Name = "Icon",
@@ -275,6 +323,18 @@ function RewardKit.Icon(parent: Instance, kind: string, value: any, size: number
 		Size = UDim2.fromOffset(size, size),
 		ZIndex = 4,
 	}, parent)
+	RewardKit.Fill(holder, kind, value)
+	return holder
+end
+
+-- (Re)draws an icon holder's picture (a crate reward changes when a new zone opens)
+function RewardKit.Fill(holder: Frame, kind: string, value: any)
+	for _, child in holder:GetChildren() do
+		if not child:IsA("UIScale") then
+			child:Destroy()
+		end
+	end
+	local size = holder.Size.X.Offset
 	local function image(name: string, scale: number?)
 		local s = size * (scale or 1)
 		return HudKit.Image(holder, name, s, {
@@ -287,7 +347,7 @@ function RewardKit.Icon(parent: Instance, kind: string, value: any, size: number
 	elseif kind == "Gems" then
 		image("Gem", 0.9)
 	elseif kind == "Crate" then
-		image("Crate")
+		RewardKit.Crate(holder, value)
 	elseif kind == "Potion" then
 		local potion = potionById(value)
 		image(if potion and potion.Boost == "XP" then "PotionXp" else "PotionCoin", 0.95)
@@ -298,13 +358,12 @@ function RewardKit.Icon(parent: Instance, kind: string, value: any, size: number
 			star.ZIndex = 6
 		end
 	elseif kind == "Egg" then
-		RewardKit.Egg(holder, Config.EggLooks[value] or { Color = C.Pink, Spots = C.Cyan }, size)
+		RewardKit.Egg(holder, value)
 	elseif kind == "GiftGold" then
 		image("GiftDaily")
 	else
 		image("GiftPink")
 	end
-	return holder
 end
 
 -- Spinning rays behind an icon (Crate Kit art), tinted. Returns the image and a stop function.

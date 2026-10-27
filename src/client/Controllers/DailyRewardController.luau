@@ -178,16 +178,17 @@ function DailyRewardController:Start()
 	-- Where each day's tile goes (design px on the cover)
 	local function spot(day: number): (number, number, number, number)
 		if day == #Config.Daily.Rewards then
-			return 508, 100, 228, 280
+			return 508, 104, 228, 280
 		end
 		local col, row = (day - 1) % 3, (day - 1) // 3
-		return 24 + col * 160, 100 + row * 146, 148, 134
+		return 24 + col * 160, 104 + row * 146, 148, 134
 	end
 
 	-- One big icon per tile: crate, else egg, else potion, else coins, else gems
 	local function mainIcon(reward): (string, any)
 		if reward.Crate then
-			return "Crate", nil
+			-- a crate from a zone you haven't unlocked yet comes as your zone's crate (same rule as the server)
+			return "Crate", Zones.RewardCrateId(reward.Crate, player:GetAttribute("ZonesOpen"))
 		elseif reward.Egg then
 			return "Egg", reward.Egg
 		elseif reward.Potions and reward.Potions[1] then
@@ -232,7 +233,7 @@ function DailyRewardController:Start()
 		)
 		local iconSize = if big then 116 else 56
 		local iconY = if big then 0.42 else 0.46
-		local rays = RewardKit.Rays(face, if big then C.White else C.Gold, if big then 220 else 108, 9)
+		local rays = RewardKit.Rays(face, if big then UiKit.Hex("FF8A1F") else C.Gold, if big then 220 else 108, 9)
 		rays.Position = UDim2.fromScale(0.5, iconY)
 		local kind, value = mainIcon(reward)
 		local icon = RewardKit.Icon(face, kind, value, iconSize, UDim2.fromScale(0.5, iconY))
@@ -279,20 +280,25 @@ function DailyRewardController:Start()
 		check.ZIndex = 9
 		local chip = UiKit.Block(cover, {
 			Name = "Today",
-			Size = Vector2.new(86, 28),
+			Size = Vector2.new(86, 24),
 			Fill = C.Gold,
 			Lip = C.GoldLip,
 			LipPx = 4,
 			Radius = 10,
 			Outline = 3,
 		})
-		chip.Holder.Position = UDim2.fromOffset(x + (w - 86) / 2, y - 22)
+		chip.Holder.Position = UDim2.fromOffset(x + (w - 86) / 2, y - 16)
 		chip.Holder.ZIndex = 6
 		chip.Holder.Visible = false
-		RewardKit.Label(chip.Face, "TODAY", UiKit.Head, 16, C.White, 2, 4, 2, 72, 18)
+		RewardKit.Label(chip.Face, "TODAY", UiKit.Head, 16, C.White, 2, 4, 2, 72, 16)
 
 		local function paint()
 			amount.Text = rewardText(reward)
+			local newKind, newValue = mainIcon(reward)
+			if newKind == "Crate" and newValue ~= value then
+				value = newValue
+				RewardKit.Fill(icon, newKind, newValue)
+			end
 		end
 		paint()
 		player:GetAttributeChangedSignal("ZonesOpen"):Connect(paint)
