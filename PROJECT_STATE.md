@@ -37,4 +37,4 @@ Restore point: git tag restore-step8b-before. Real game = cloud place 9425460960
 - Map, UI, ball/pin/crate models. Selim must save the place after Studio work.
 ## Last session
 - 2026-10-28 (61): owner: all past tests PASSED (incl. MAX POWER tuck). Fix: power arc 50 px lower + 24 px left on phones (ThrowController PHONE_DROP/PHONE_LEFT), clear of XP bar + REBIRTH NOW pill; Rojo was off, pushed to Studio via http trick. Claude-checked at 750x381. Owner test pending.
-- 2026-10-28 (60): owner: phone MORE menu + xN badge removal + phone GEMS/POWER moves PASSED. Fix ca907a4: POWER button now tucks while bowling once it shows MAX POWER! (Tuck key "PowerMax"; touch devices only, Computer tuck still off). Owner test pending.
+- 2026-10-28 (62): owner finished every 3D model (crates, z3/z4 eggs+stands+pets, Titan Jr., display cases, fusion machine, Pin Titan+arena+heli) in Documents/Strike Legends Assets. ASSET_PROMPTS.md trimmed to what is left (2C, sounds, 2D UI, icon). HANDOFF_3D_MODELS.md = brief for putting the models in the game (another account).

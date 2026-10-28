@@ -1,7 +1,7 @@
-# Asset prompts (rewritten 2026-10-27)
+# Asset prompts (updated 2026-10-28)
 
 Everything in the game that is still a placeholder, and a ready-to-paste prompt for each. Launch = zones 1 to 4.
-Old prompts that are finished (zone 1/3/4 worlds, Back Alley balls/pins/crate, Rizzo, Store, HUD, Ball Book, Crate Kit) are in git history.
+Finished prompts are in git history: zone 1/3/4 worlds, Back Alley balls/pins/crate, Rizzo, Store, HUD, Ball Book, Crate Kit, zone 3 + 4 balls, all crates and crate counters, zone 3 + 4 eggs, stands and pets, Titan Jr., display cases, pet fusion machine, Pin Titan + arena + helicopter. Part numbers kept as before (parts 3, 4 and 6 are done).
 
 **How to use:** paste the zone's Style block first, then the prompt, into Claude Design (one design project per prompt). Bring the result back to Claude Code; Claude rebuilds it in the game. Sounds and music can't be made in Claude Design (see part 5).
 
@@ -41,88 +41,46 @@ ZONE STYLE - SKYLINE LANES (zone 4, the top at launch): open-air lanes on the ro
 
 ## Part 1: what is still a placeholder (checklist)
 
-Real already (keep): zone 1-4 worlds, zone 1 balls/pins/Alley Crate/Rizzo, zone 2 balls (9) + Neon Egg + its 6 pets + egg stand, zone 3 and 4 pins, the crate kiosk, the power meter, result text, payout pop, Store Kit, HUD Kit, Ball Book + multiplier card, Crate Kit (shop, odds, reel, reveal, pull banner).
+Real already (keep): zone 1-4 worlds, zone 1 balls/pins/Alley Crate/Rizzo, zone 2 balls (9) + Neon Egg + its 6 pets + egg stand, zone 3 and 4 balls, zone 3 and 4 pins, the crate kiosk, the power meter, result text, payout pop, Store Kit, HUD Kit, Ball Book + multiplier card, Crate Kit (shop, odds, reel, reveal, pull banner).
+
+**3D models designed, waiting to go in the game (2026-10-28):** all in `Documents/Strike Legends Assets` (see "Models ready" below). No new prompt needed.
 
 | # | Placeholder now | What it is today | Prompt |
 |---|---|---|---|
-| 1 | 7 zone 3 balls (League Black, Cherry Swirl, Blue Marble, Pearl Pro, Tiger Swirl, Championship, Perfect 300) | DONE 2026-10-27 (owner's design, in game) | 2A |
-| 2 | 6 zone 4 balls (Cloud Swirl, Crystal, Sunburst, Solid Gold, Lightning, Daybreak) | DONE 2026-10-28 (owner's design, in game) | 2B |
-| 3 | 4 zone 1 commons (Bubblegum, Lime Twist, Tangerine, Deep Ocean) + Rookie Ball | real, but neon-era looks that don't match the alley | 2C (optional) |
-| 4 | Bronze, Silver, Gold crates (zone 2) | recoloured copies of one model | 3A |
-| 5 | League + Champion crates (zone 3) | borrowed model | 3B |
-| 6 | Sky Bronze, Sky Silver, Sky Gold crates (zone 4) | borrowed model | 3C |
-| 7 | Zone 3 + zone 4 crate counters | plain booths built from parts | 3B, 3C |
-| 8 | Main Street Egg + its stand (zone 3) | no model, plain pad | 4B |
-| 9 | Skyline Egg + its stand (zone 4) | no model, plain pad | 4C |
-| 10 | Wood Pup, Chrome Bat (zone 3 pets) | Lane Pup / Neon Bat repainted | 4B |
-| 11 | Cloud Bumper, Moony (zone 4 pets) | Bumper / Hambone repainted | 4C |
-| 12 | Kingpin, Blaze (in zone 3's egg) + Cosmo, Perfecto (in zone 4's egg) | real, but designed for Neon Lanes; owner chose to restyle them | 4B, 4C |
-| 13 | Titan Jr. (boss reward pet) | Pinny repainted dark | 4D |
-| 14 | Zone 3 + 4 ball display cases | the zone 2 case recoloured | 6A |
-| 15 | Pet fusion station (zone 3) | plain booth | 6B |
-| 16 | Pin Titan boss, its floating arena, the helicopter, the thrown pin | big plain pin, round platform, part-built chopper | 6C |
-| 17 | Cosmetic store pictures (trails, strike banners, pin blasts, lane skins) | Claude's made-up icons/textures | 7G |
-| 18 | 2D UI: pets panel + hatch card, daily calendar, gifts panel, spin wheel, level/rank-up, rank trial, zone unlocked, milestones, lane popups, first-3-minutes callouts, teleport, rebirth, toasts, Rizzo bubble, boss screens, offer popups | Claude's own design | 7A-7F |
-| 19 | Fonts | Montserrat Heavy Italic stands in for Rubik, Fredoka One for Lilita One | 7 (style block) |
-| 20 | All 31 sound slots (18 Creator Store picks + 13 borrowed stand-ins) | see Part 5 | 5 |
-| 21 | Background music | none at all | 5 |
-| 22 | Game icon, thumbnails, final title | none | 8 |
+| 1 | 4 zone 1 commons (Bubblegum, Lime Twist, Tangerine, Deep Ocean) + Rookie Ball | real, but neon-era looks that don't match the alley | 2C (optional) |
+| 2 | Cosmetic store pictures (trails, strike banners, pin blasts, lane skins) | Claude's made-up icons/textures | 7G |
+| 3 | 2D UI: pets panel + hatch card, daily calendar, gifts panel, spin wheel, level/rank-up, rank trial, zone unlocked, milestones, lane popups, first-3-minutes callouts, teleport, rebirth, toasts, Rizzo bubble, boss screens, offer popups | Claude's own design | 7A-7F |
+| 4 | Fonts | Montserrat Heavy Italic stands in for Rubik, Fredoka One for Lilita One | 7 (style block) |
+| 5 | All 31 sound slots (18 Creator Store picks + 13 borrowed stand-ins) | see Part 5 | 5 |
+| 6 | Background music | none at all | 5 |
+| 7 | Game icon, thumbnails, final title | none | 8 |
 
 Not for launch (skip): zones 5-6, the old Neon crate (removed).
+
+### Models ready (designed, not yet in the game)
+
+| Replaces | File(s) |
+|---|---|
+| Bronze, Silver, Gold crates (zone 2) | neon_lanes_crates.glb |
+| League + Champion crates (zone 3) | league_crate_closed/open.glb, champion_crate_closed/open.glb |
+| Zone 3 crate counter | crate_counter.glb |
+| Sky Bronze, Sky Silver, Sky Gold crates (zone 4) | sky_bronze_crate.glb, sky_silver_crate.glb, sky_gold_crate.glb |
+| Zone 4 crate counter | sky_crate_counter.glb |
+| Main Street Egg + stand (zone 3) | MainStreetEgg.glb, HatchStand.glb, HatchStand_withEgg.glb |
+| Zone 3 pets: Wood Pup, Chrome Bat, Kingpin, Blaze | WoodPup.glb, ChromeBat.glb, Kingpin.glb, Blaze.glb (all together: MainStreet_Lineup.glb) |
+| Skyline Egg + stand (zone 4) | skyline_egg.glb, skyline_stand_with_egg.glb |
+| Zone 4 pets: Cloud Bumper, Moony, Cosmo, Perfecto | cloud_bumper.glb, moony.glb, cosmo.glb, perfecto.glb (all together: skyline_lineup.glb) |
+| Titan Jr. (boss reward pet) | titan_jr.glb |
+| Zone 3 ball display cases | ballcase_mainstreet_common/rare/epic/legendary/mythic.glb (row: ballcase_mainstreet_row.glb) |
+| Zone 4 ball display case | skyline_ball_case.glb |
+| Pet fusion station (zone 3) | pet_fusion_machine.glb |
+| Pin Titan boss, arena, helicopter, thrown pin | pin_titan.glb, pin_titan_broken.glb, sky_arena.glb, arena_with_titan.glb, sky_chopper.glb, stone_pin.glb |
 
 ---
 
 ## Part 2: balls
 
 Ball rules for every ball prompt: 1.8 studs across, under 2,500 triangles, a smooth round sphere (decoration in paint and very flat detail, nothing sticking out more than 0.05 studs), the 3 finger holes, pivot at the centre. The game adds the glow, trail and sparkles itself, by rarity (Common grey, Uncommon green, Rare blue, Epic purple, Legendary gold, Mythic red-pink).
-
-### 2A. Zone 3 balls (7): paste Style Zone 3 first
-
-```
-Design 7 bowling balls for MAIN STREET LANES, zone 3 of a Roblox bowling simulator for kids and teens. These are classic league balls, the kind real bowlers own, made beautiful: glossy enamel, marble and swirl resin, pearl finishes, league patches. Each must be recognisable from 20 studs away by its colour pattern alone, and each must clearly beat the zone 2 neon balls in "realness" while staying fun.
-
-Rules: 1.8 studs across (Roblox studs), under 2,500 triangles each, a smooth round sphere (decoration in paint and very flat detail, nothing sticking out more than 0.05 studs), keep the 3 finger holes, pivot at the centre, one small texture or flat colours, no text, no real brands, no real logos.
-
-The 7 balls (rarity in brackets; better rarity = more special):
-1. "League Black" (Rare): the classic jet-black league ball, deep gloss, a thin red pinstripe ring and one small round league patch shape (no text).
-2. "Cherry Swirl" (Rare): deep cherry-red and cream marble swirl, like a soda-fountain sundae.
-3. "Blue Marble" (Rare): royal blue and white marble veins, like polished stone.
-4. "Pearl Pro" (Epic): pearl-white with a soft rainbow pearl shimmer and a gold ring around the finger holes.
-5. "Tiger Swirl" (Epic): bold orange and black tiger stripes in glossy resin, a little amber see-through depth.
-6. "Championship" (Legendary): a trophy made into a ball: polished gold with a royal-blue band, laurel leaves engraved around it.
-7. "Perfect 300" (Legendary): the perfect-game ball: deep red with 12 small gold strike marks (X shapes) circling it and a gold crown shape over the finger holes.
-
-For each ball also suggest a trail colour and one short effect idea when it rolls.
-
-Please give me:
-1. All 7 side by side, then each one from the front (finger holes visible).
-2. Hex codes for each ball's colours and suggested trail colour.
-3. The triangle count of each model.
-```
-
-### 2B. Zone 4 balls (6): paste Style Zone 4 first
-
-```
-Design 6 bowling balls for SKYLINE LANES, zone 4 and the top zone of a Roblox bowling simulator for kids and teens. These are the rarest balls in the game: premium, glittering and high-up: pearl, gold, crystal, clouds, starlight, storm. They must look clearly better than the zone 3 league balls.
-
-Rules: 1.8 studs across (Roblox studs), under 2,500 triangles each, a smooth round sphere (decoration in paint and very flat detail, nothing sticking out more than 0.05 studs), keep the 3 finger holes, pivot at the centre, one small texture or flat colours, no text, no real brands.
-
-The 6 balls:
-1. "Cloud Swirl" (Epic): soft white clouds swirling over sky blue, like looking down from a plane.
-2. "Crystal" (Epic): faceted see-through ice-blue crystal with light glinting inside.
-3. "Sunburst" (Legendary): polished gold with orange-gold rays bursting out from the finger holes.
-4. "Solid Gold" (Legendary): a heavy solid-gold bar made round, mirror shine, a few engraved lines, a tiny diamond set in the thumb hole rim.
-5. "Lightning" (Mythic): a night-navy storm ball with bright yellow-white lightning cracks across it that look like they glow from inside.
-6. "Daybreak" (Mythic): the night sky turning to sunrise across the ball: navy with stars on one side, pink-orange dawn on the other, a thin gold line where they meet.
-
-For each ball also suggest a trail colour and one short effect idea when it rolls.
-
-Please give me:
-1. All 6 side by side, then each one from the front (finger holes visible).
-2. Hex codes for each ball's colours and suggested trail colour.
-3. The triangle count of each model.
-```
-
 ### 2C. Zone 1 commons re-skin (optional): paste Style Zone 1 first
 
 These 5 are real models already, but they were made before the Back Alley existed and look like clean neon balls. Re-skinning keeps their names and nobody loses anything.
@@ -143,129 +101,6 @@ Please give me: all 5 side by side, each from the front, hex codes, triangle cou
 
 ---
 
-## Part 3: crates
-
-Crate rules for every crate prompt: about 3 studs wide, under 1,500 triangles, the lid a separate piece hinged at the back edge (the game flips it open), pivot at the bottom centre, no text. Inside each zone, the crates go up in value: the cheapest looks plain, the dearest looks amazing.
-
-### 3A. Zone 2 crates: Bronze, Silver, Gold: paste Style Zone 2 first
-
-```
-Design 3 loot crates for NEON LANES, zone 2 of a Roblox bowling simulator for kids and teens: BRONZE CRATE, SILVER CRATE and GOLD CRATE. Same family, clearly different tiers: Bronze = dark chrome box with copper-pink neon edges; Silver = brushed silver with cyan neon edges and a glowing bowling-pin shape on the front; Gold = black-and-gold with hot pink and gold neon, a holographic panel on the lid and small gold pin shapes on each corner. Each should look worth more than the one before at a glance.
-
-Rules: about 3 studs wide (Roblox studs), under 1,500 triangles each, the lid a separate piece hinged at the back edge so the game can flip it open, pivot at the bottom centre, flat colours or one small texture, no text, no real brands. Neon parts as separate pieces so the game can make them glow.
-
-Please give me: the 3 side by side, each closed and open with light spilling out, hex codes, triangle counts.
-```
-
-### 3B. Zone 3 crates: League + Champion, and the crate counter: paste Style Zone 3 first
-
-```
-Design 2 loot crates and 1 counter for MAIN STREET LANES, zone 3 of a Roblox bowling simulator for kids and teens.
-
-1. "LEAGUE CRATE": a sturdy bowling-bag-meets-wooden-crate: polished wood with red and royal-blue painted stripes, brass corners, a leather strap and buckle across the lid.
-2. "CHAMPION CRATE" (the better one): a trophy case crate: royal blue with gold trim, a glass window on the front with a small gold trophy shape inside, a gold star on the lid.
-Rules for both: about 3 studs wide, under 1,500 triangles, the lid a separate piece hinged at the back edge, pivot at the bottom centre, no text, no real brands.
-
-3. THE CRATE COUNTER where players buy these crates: the bowling centre's prize counter. About 10 studs wide, 4 studs deep, 4 studs tall, glass-front display with the two crates inside, a red and cream striped awning, a little bell on the counter, a spot in front where the player stands. Under 3,000 triangles. Pivot at the bottom centre.
-
-Please give me: both crates closed and open, the counter from the front and 3/4, hex codes, triangle counts.
-```
-
-### 3C. Zone 4 crates: Sky Bronze, Sky Silver, Sky Gold, and the crate counter: paste Style Zone 4 first
-
-```
-Design 3 loot crates and 1 counter for SKYLINE LANES, zone 4 and the top zone of a Roblox bowling simulator for kids and teens. These are the most expensive crates in the game and must look it.
-
-1. "SKY BRONZE CRATE": pearl-white case with rose-bronze trim and a small cloud shape on the lid.
-2. "SKY SILVER CRATE": pearl-white and moonlight silver, a ring of small stars around the lid.
-3. "SKY GOLD CRATE": a floating-looking pearl and gold vault, small gold wings on the sides (flat, close to the body), a crystal set in the lid.
-Rules for all 3: about 3 studs wide, under 1,500 triangles, the lid a separate piece hinged at the back edge, pivot at the bottom centre, no text, no real brands.
-
-4. THE CRATE COUNTER on the roof: a luxury concierge desk. About 10 studs wide, 4 deep, 4 tall, pearl-white with gold trim, a glass display holding the 3 crates, two small gold lamps, a spot in front where the player stands. Under 3,000 triangles. Pivot at the bottom centre.
-
-Please give me: the 3 crates closed and open, the counter from the front and 3/4, hex codes, triangle counts.
-```
-
----
-
-## Part 4: pets and eggs
-
-Players see "PETS". Every pet is about 1.6 studs across, follows the player, stands on the ground (or floats if it flies), and has a simple idle move the game animates from separate parts (wings, tails, ears, rings).
-
-**What exists:** the Neon Egg (zone 2) and its 6 pets are real and fit Neon Lanes: Pinny, Lane Pup, Strikey, Splitz, Hambone, Neon Bat.
-
-**The problem in zones 3 and 4:** each egg has 4 pets, and none of them were designed for that zone:
-- Main Street Egg (zone 3): Wood Pup (Rare) and Chrome Bat (Epic) are repainted Lane Pup / Neon Bat. Kingpin and Blaze (Legendary) are real models, but they were designed as Neon Egg pets and moved here.
-- Skyline Egg (zone 4): Cloud Bumper (Epic) and Moony (Legendary, was Sunny) are repainted Bumper / Hambone. Cosmo and Perfecto (Mythic) are real, but also from the Neon Egg.
-- Neither egg has its own egg model or stand.
-- Titan Jr. (boss reward) is a repainted Pinny.
-
-**Decided (owner 2026-10-27):** all 8 zone 3 and 4 pets get new zone-style looks as below, plus each zone gets its own egg and stand. The pet IDs stay the same, so anyone who owns a pet gets the new look automatically and loses nothing. Sunny is renamed Moony (already renamed in the game).
-
-| Zone 3 Main Street Egg | Today | Proposed new look |
-|---|---|---|
-| Wood Pup (Rare) | repainted Lane Pup | a puppy carved from polished lane wood, arrow markings on its back, a red bandana |
-| Chrome Bat (Epic) | repainted Neon Bat | a retro diner bat: chrome body, red vinyl wings, a little jukebox-light belly |
-| Kingpin (Legendary) | neon-era model | a classic white pin with red stripes, a gold crown and a red velvet cape: the king of league night |
-| Blaze (Legendary) | neon-era fire fox | a fox in a 1950s bowling-shirt flame pattern (painted flames, not real fire), a cream and red jacket |
-
-| Zone 4 Skyline Egg | Today | Proposed new look |
-|---|---|---|
-| Cloud Bumper (Epic) | repainted Bumper | a fluffy cloud puff with little gold bumper rails like lane guards |
-| Moony (Legendary, was Sunny) | repainted Hambone | a sleepy moon-cat curled in a silver crescent |
-| Cosmo (Mythic) | neon-era model | a star creature made of a small constellation, gold star joints, a navy body full of tiny stars |
-| Perfecto (Mythic) | neon-era model | a pearl and gold perfect-game spirit: a floating 300 trophy with wings and a halo |
-
-Titan Jr.: a chibi Pin Titan: a small stone-grey pin with cracked armour plates and one glowing core eye.
-
-### 4A. Neon Egg (zone 2): nothing to do. Already real.
-
-### 4B. Main Street Egg + stand + 4 pets: paste Style Zone 3 first
-
-```
-Design a pet egg, its hatching stand and 4 pets for MAIN STREET LANES, zone 3 of a Roblox bowling simulator for kids and teens. Pets follow the player around and must be cute, chunky and readable from far away, never scary.
-
-Pet rules: about 1.6 studs across (Roblox studs), under 2,000 triangles each, pivot at the bottom centre, each moving part a separate named piece so the game can animate it (wing_L, wing_R, tail, ear_L, ear_R, cape, crown...), big readable eyes, flat colours or one small texture, no text, no real brands. Say which pets walk and which fly.
-
-The egg: "MAIN STREET EGG", 2.5 studs tall, cream with a red and royal-blue bowling-shirt stripe and a gold pin shape. Under 1,000 triangles.
-The stand: a round prize-counter pedestal about 6 studs across, polished wood and chrome, a red velvet top where the egg sits, a little scoreboard shape behind it (no text). Under 2,500 triangles.
-
-The 4 pets (rarity in brackets):
-1. "Wood Pup" (Rare): a puppy carved from polished lane wood, arrow markings on its back, a red bandana. Walks. Idle: wags its tail.
-2. "Chrome Bat" (Epic): a retro diner bat, chrome body, red vinyl wings, a glowing jukebox-light belly. Flies. Idle: slow wing flaps.
-3. "Kingpin" (Legendary): a classic white bowling pin with red stripes, a gold crown and a short red velvet cape, little arms. Walks. Idle: adjusts its crown.
-4. "Blaze" (Legendary): a fox wearing a 1950s bowling-shirt flame pattern (painted, not real fire), cream and red. Walks. Idle: swishes its big tail.
-
-Please give me: all 4 pets side by side next to the egg, each pet front + side, the egg, the stand with the egg on it, hex codes, triangle counts.
-```
-
-### 4C. Skyline Egg + stand + 4 pets: paste Style Zone 4 first
-
-```
-Design a pet egg, its hatching stand and 4 pets for SKYLINE LANES, zone 4 and the top zone of a Roblox bowling simulator for kids and teens. These are the rarest pets in the game: glittering and magical, still cute and chunky.
-
-Pet rules: about 1.6 studs across (Roblox studs), under 2,000 triangles each, pivot at the bottom centre, each moving part a separate named piece (wing_L, wing_R, tail, ring, halo...), big readable eyes, flat colours or one small texture, no text, no real brands. Say which pets walk and which fly.
-
-The egg: "SKYLINE EGG", 2.5 studs tall, pearl-white with a gold band and a small night-sky window showing stars. Under 1,000 triangles.
-The stand: a floating gold ring pedestal about 6 studs across over a pearl base, small cloud puffs around the bottom. Under 2,500 triangles.
-
-The 4 pets:
-1. "Cloud Bumper" (Epic): a fluffy cloud puff with little gold bumper rails along its sides. Floats. Idle: puffs up and down.
-2. "Moony" (Legendary): a sleepy moon-cat curled in a silver crescent moon, soft lilac and moonlight silver, a tiny gold star on its collar. Floats. Idle: the crescent rocks slowly like a cradle and its eyes blink.
-3. "Cosmo" (Mythic): a little star creature made of a constellation, navy body full of tiny stars, gold star joints. Floats. Idle: its stars twinkle.
-4. "Perfecto" (Mythic): a pearl and gold perfect-game spirit: a small floating trophy with wings and a halo. Floats. Idle: wings beat, halo turns.
-
-Please give me: all 4 pets side by side next to the egg, each pet front + side, the egg, the stand with the egg on it, hex codes, triangle counts.
-```
-
-### 4D. Titan Jr. (boss reward pet): paste Style Zone 4 first
-
-```
-Design one pet for a Roblox bowling simulator for kids and teens: "Titan Jr." (Legendary), the reward for beating the Pin Titan boss on the Skyline Lanes roof. A chibi version of the boss: a short, chunky stone-grey bowling pin with cracked armour plates, gold rivets, one big glowing gold core eye and tiny stubby arms. Cute, proud, not scary. About 1.6 studs across, under 2,000 triangles, pivot at the bottom centre, arms as separate pieces (arm_L, arm_R). Walks. Idle: flexes. Give me front + side, hex codes and the triangle count.
-```
-
----
-
 ## Part 5: sounds and music (outside Claude Design)
 
 Claude can't listen to sound, so you pick these. Easiest: Roblox Studio > Toolbox > Audio (Creator Store, free), or an AI sound tool, then upload. Send Claude the IDs and it puts each one in place. Short and punchy is best (under 1 second unless marked).
@@ -281,36 +116,6 @@ Claude can't listen to sound, so you pick these. Easiest: Roblox Studio > Toolbo
 - Skyline Lanes: smooth night-time funk / city-pop with sparkle.
 - Boss fight: fast, heavy drums and brass (1 loop).
 Roblox has a free licensed music library in the Toolbox (filter: Music); those tracks are safe to use.
-
----
-
-## Part 6: zone pieces still placeholder
-
-### 6A. Display cases for zones 3 and 4: paste the zone's Style first (one project each)
-
-```
-Design one ball display case for [MAIN STREET LANES / SKYLINE LANES] in a Roblox bowling simulator for kids and teens. A row of these shows every ball in the zone: owned balls float lit up inside, missing ones are dark silhouettes. Main Street version: a wooden trophy cabinet with a glass front, brass trim, a red velvet pedestal and a small blank plaque. Skyline version: a pearl and gold glass column with a floating ring pedestal and a soft light from above.
-About 4 studs wide, 4 deep, 8 tall. Under 2,500 triangles. Glass as a separate piece. The ball (1.8 studs) floats in the middle, so leave the space empty. Pivot at the bottom centre. Also show how the case changes by rarity: a coloured band at the base (Rare blue, Epic purple, Legendary gold, Mythic red-pink), plus gold posts and a diamond on top for Legendary and Mythic.
-Please give me: the case alone, a row of 4 with different rarity bands, hex codes, triangle count.
-```
-
-### 6B. Pet fusion station (zone 3): paste Style Zone 3 first
-
-```
-Design a "PET FUSION" machine for MAIN STREET LANES in a Roblox bowling simulator for kids and teens: players put 3 copies of a pet in and get a shiny one. Make it a retro ball-polishing machine crossed with a claw machine: cream and red body, chrome, 3 round glass pods on top where pets sit, a big lever, a sign shape on top with room for the words "PET FUSION" (the game adds the text). About 8 studs wide, 5 deep, 9 tall. Under 3,000 triangles. Pivot at the bottom centre. The pods and lever as separate pieces. Give me front and 3/4 views, hex codes and the triangle count.
-```
-
-### 6C. Pin Titan boss, arena, helicopter: paste Style Zone 4 first
-
-```
-Design a boss and its arena for a Roblox bowling simulator for kids and teens. Every so often players fly by helicopter from the Skyline Lanes roof to a floating platform in the night sky and bowl at a giant boss together.
-
-1. "THE PIN TITAN": a giant stone bowling pin, 30 studs tall, cracked grey stone body with gold rivets, 6 armour plates that break off one by one (each a separate piece: plate_1..plate_6), a core in its chest that opens (core_door separate) to show a glowing gold core, two big stubby arms (separate) that slam the ground, angry but cartoon-funny eyes. Under 10,000 triangles.
-2. The arena: a round floating platform 120 studs across, pearl-white and gold edge, gold lane markings radiating to the middle, rocks and clouds under it. Under 6,000 triangles.
-3. The helicopter: a chunky cartoon chopper, white and gold, room for 4 players, rotor as a separate piece. About 20 studs long. Under 4,000 triangles.
-4. The pin it throws: a 3-stud stone pin with a gold band. Under 400 triangles.
-Pivot at the bottom centre for all. Please give me: the Titan front and side, the Titan with plates broken off and core open, the arena from above and at an angle with the Titan on it, the helicopter, hex codes, triangle counts.
-```
 
 ---
 
