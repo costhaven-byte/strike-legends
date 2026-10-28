@@ -95,17 +95,7 @@ end
 
 -- Where a reaction has the mascot `p` of the way through it (0 to 1): lift in studs, and a turn
 local function reactionPose(reaction: string?, p: number): (number, CFrame)
-	local arc = math.sin(math.pi * p)
-	if reaction == "Spin" then
-		local eased = 1 - (1 - p) ^ 3
-		return arc * FX.ReactHeight * 0.5, CFrame.Angles(0, eased * math.pi * 2, 0)
-	elseif reaction == "Flip" then
-		return arc * FX.ReactHeight * 0.8, CFrame.Angles(-p * math.pi * 2, 0, 0)
-	elseif reaction == "Wiggle" then
-		return arc * FX.ReactHeight * 0.3, CFrame.Angles(0, 0, math.sin(p * math.pi * 6) * math.rad(28) * (1 - p))
-	end
-	-- Hop (and anything unknown): straight up with a happy squash at the top
-	return arc * FX.ReactHeight, CFrame.Angles(math.rad(-15) * arc, 0, 0)
+	return PetIdle.ReactionPose(reaction, p, FX.ReactHeight)
 end
 
 -- Where each mascot stands while cheering: on the gutter edges in front of the pins, both sides in turn,

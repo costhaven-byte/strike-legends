@@ -1,3 +1,4 @@
+-- A1 (2026-10-28): Legendary + Mythic pets from the egg hatch use it too (PetText).
 -- Server banner for Epic and better crate pulls (Addendum 2 step 11b, Config.PullBanner): "SAM PULLED THE VOID
 -- (MYTHIC)!" just under the level bar, one at a time. The server sends it (BallService, remote PullBanner) to everyone
 -- in the server. Look = the owner's Crate Kit PULL BANNER (2026-10-26): dark pill with an inner line in the rarity
@@ -8,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
+local Mascots = require(Shared.Modules.Mascots)
 local CrateKit = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("CrateKit"))
 
 local player = Players.LocalPlayer
@@ -43,7 +45,7 @@ function PullBannerController:Start()
 		return UDim2.fromOffset(barPos.X - guiTop.X + barSize.X / 2, barPos.Y - guiTop.Y + barSize.Y + 12 + h / 2)
 	end
 
-	-- Builds one banner (a CanvasGroup, so it fades out as a whole)
+	-- Builds one banner (a CanvasGroup, so it fades out as a whole). item = the ball or pet ({ Name, Rarity })
 	local function build(data, ball)
 		local phone, w, h = size()
 		local rc = CrateKit.RarityColor(ball.Rarity)
@@ -112,7 +114,7 @@ function PullBannerController:Start()
 		CrateKit.Icon(row, "Sparkle", sparkle).ZIndex = 2
 		local text = CrateKit.Text(
 			row,
-			BANNER.Text:format(
+			(if data.PetId then BANNER.PetText else BANNER.Text):format(
 				('<font color="#FFFFFF">%s</font>'):format(tostring(data.Name):upper()),
 				ball.Name:upper(),
 				ball.Rarity:upper()
@@ -148,7 +150,8 @@ function PullBannerController:Start()
 		end
 		showing = true
 		local data = table.remove(queue, 1)
-		local ball = Balls.Get(data.BallId)
+		-- A1: pets from the egg hatch come as PetId (MascotService), balls as BallId
+		local ball = if data.PetId then Mascots.Get(data.PetId) else Balls.Get(data.BallId)
 		if not ball then
 			showing = false
 			showNext()

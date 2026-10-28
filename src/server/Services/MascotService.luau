@@ -232,6 +232,18 @@ local function hatch(player: Player, eggId: any)
 		table.insert(extraResults, { MascotId = other.Id, IsNew = otherNew })
 	end
 
+	-- A Legendary or Mythic pet: the crate pull banner for everyone in the server (Config.PullBanner), after the reveal
+	local banner = Config.PullBanner
+	if banner.Enabled and banner.PetRarities[mascot.Rarity] then
+		local remote = ReplicatedStorage:FindFirstChild("Remotes")
+		local event = remote and remote:FindFirstChild("PullBanner")
+		if event and event:IsA("RemoteEvent") then
+			task.delay(banner.PetDelay, function()
+				event:FireAllClients({ Name = player.DisplayName, PetId = mascot.Id })
+			end)
+		end
+	end
+
 	local hatched = PlayerDataService.Get(player, "EggsHatched") or 0
 	if not free then
 		Analytics.Currency(player, "Coins", -egg.Price * count, "Shop", egg.Id .. "Egg")

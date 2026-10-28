@@ -29,9 +29,10 @@ AssetSlots.Sounds = {
 	Overcooked = { Id = nil, Volume = 0.6, StandIn = "StreakLost", StandInPitch = 0.7 }, -- the gamble failed: gutter
 	-- Power Levels (Config.Economy.PowerLevels). Not picked yet.
 	PowerUp = { Id = nil, Volume = 0.8, StandIn = "RankUp", StandInPitch = 1.25 }, -- bought a Power Level
-	-- Egg hatch (Client Modules/HatchScene). Not picked yet.
-	HatchCharge = { Id = nil, Volume = 0.6, StandIn = "Charge", StandInPitch = 1.3 }, -- stand flares, charge climbs
-	HatchCrack = { Id = nil, Volume = 0.8, StandIn = "PinHit", StandInPitch = 1.6 }, -- each crack snaps open
+	-- Egg hatch (Client Modules/HatchScene). A1 2026-10-28: Creator Store stand-ins (Pro Sound Effects, APM)
+	HatchCharge = { Id = 9125635442, Volume = 0.5 }, -- stand flares: magical sparkling chimes under the wobbles
+	HatchCrack = { Id = 9113959343, Volume = 0.8 }, -- each crack snaps open (crunchy egg crack)
+	HatchFanfare = { Id = 1846251701, Volume = 0.6 }, -- Legendary + Mythic reveal (game show "win" sting)
 	HatchBurst = { Id = nil, Volume = 0.9, StandIn = "StrikeCrash", StandInPitch = 1.3 }, -- the shell bursts
 	ElevatorDing = { Id = nil, Volume = 0.6, StandIn = "Coin", StandInPitch = 0.6 }, -- elevator doors open (zone 3 <-> roof)
 	-- Pin Titan boss event (Config.Boss). Not picked yet.

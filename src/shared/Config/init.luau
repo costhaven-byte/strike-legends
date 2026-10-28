@@ -2821,6 +2821,10 @@ Config.PullBanner = {
 	Delay = 4,
 	Seconds = 4, -- each banner stays this long; more pulls wait their turn
 	Text = "%s PULLED %s (%s)!", -- player's display name, ball name, rarity
+	-- A1 (2026-10-28): pets too, from the egg hatch (MascotService); after the hatch's reveal
+	PetRarities = { Legendary = true, Mythic = true },
+	PetDelay = 3.5,
+	PetText = "%s HATCHED %s (%s)!",
 }
 
 Config.CrateShop = {
@@ -3214,7 +3218,26 @@ Config.MascotFx = {
 		PetSettle = 0.45, -- seconds to settle (with a little overshoot)
 		CardAt = 0.3, -- seconds into the reveal the name card pops in
 		SkipFrom = 0.7, -- tap to skip from this many seconds in
-		AutoSkipAfter = 5, -- after this many hatches in one session, it skips straight to the reveal
+		AutoSkipAfter = 5, -- after this many hatches in one session (and on AUTO HATCH) it plays the quick version
+		-- A1 hatch upgrade (2026-10-28): rising tease, mood, camera push, rays + reaction on the reveal
+		ExtraWobbles = { -- rarer pets keep shaking: Epic 4 wobbles, Legendary 5, Mythic 6 (one rarity colour per wobble)
+			{ Angle = 17, Time = 0.21, Core = 2.3 },
+			{ Angle = 19, Time = 0.2, Core = 2.6 },
+			{ Angle = 22, Time = 0.19, Core = 3 },
+		},
+		DimBrightness = -0.15, -- the world darkens while the egg hatches (0 = off)
+		DimTint = Color3.fromRGB(200, 205, 255),
+		DimTime = 0.5,
+		Spotlight = 5, -- brightness of the light shining down on the egg (in the climbing rarity colour)
+		Motes = 14, -- floating light specks per second around the stand
+		Push = 0.14, -- the camera creeps this share of the way to the stand during the wobbles
+		Punch = 0.22, -- ... and snaps in this far at the crack, then pulls back for the burst
+		RaysSize = 3.4, -- turning rays behind the pet, x the pet's size (Legendary + Mythic get a 2nd layer)
+		ReactLift = 0.45, -- the pet's own reaction (Hop/Spin/Flip/Wiggle) on the reveal lifts it this x its size
+		ReactDelay = 0.15, -- seconds after settling before it reacts (twice)
+		QuickPace = 0.5, -- the quick version plays the tease at this speed (times x 0.5)
+		CountUp = 0.7, -- seconds the COINS bonus on the card counts up
+		Confetti = { Common = 12, Uncommon = 20, Rare = 35, Epic = 70, Legendary = 100, Mythic = 140 },
 		AutoNextDelay = 1.2, -- Polish P2: AUTO HATCH waits this long on the finished card before the next egg
 		-- Burst grows with rarity, colours stay cyan/magenta. Extra = added seconds (pillar beat), Hold = stand-still
 		TierOf = { Epic = "Epic", Legendary = "Legendary", Mythic = "Mythic" }, -- everything else = Base

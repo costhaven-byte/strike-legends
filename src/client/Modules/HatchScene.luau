@@ -4,7 +4,13 @@
 --   core flashes, sparks leak) · 4 Crack 0.40s (cracks snap open, light beams out, lines overload, arch flashes,
 --   short hold) · 5 Burst 0.35s (flash, shards fly, energy rings) · 6 Reveal 0.80s (pet rises, sparkles fall).
 -- Burst colours stay cyan/magenta for every pet; Epic, Legendary and Mythic only make it bigger (Config.MascotFx.Hatch
--- Tiers). Frames 1 to 3 look the same for every pet (apart from a few more sparks), so rarity shows at the crack.
+-- Tiers).
+-- A1 upgrade (owner 2026-10-28, "more full of life"): the world dims, a spotlight shines on the egg and light specks
+-- drift up around the stand; the glow climbs one rarity colour per wobble, honestly, up to the pet's real rarity
+-- (rarer pets wobble more: Epic 4, Legendary 5, Mythic 6), with a chime and a ring on each step up; the camera creeps
+-- in during the wobbles, snaps in at the crack and pulls back for the burst; the pet rises in front of turning rays in
+-- its rarity colour and does its own reaction. The quick version (AUTO HATCH, after 5 hatches) plays the same at
+-- double speed instead of jumping straight to the reveal.
 -- Client only: the server already rolled the pet (MascotService). Every extra part lives in one folder that goes
 -- when the scene ends, and the stand and egg get their own colours back.
 local Players = game:GetService("Players")
@@ -15,6 +21,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local CrateKitAssets = require(Shared.CrateKitAssets)
 local Mascots = require(Shared.Modules.Mascots)
 local MascotView = require(script.Parent.MascotView)
 local PetIdle = require(script.Parent.PetIdle)
@@ -39,7 +46,7 @@ export type Context = {
 	Egg: Model, -- the egg in the cradle (its idle pulse is paused while this plays)
 	Mascot: any, -- the pet that hatched
 	SkipAt: number?, -- os.clock() of the player's last tap (taps from SkipFrom on jump to the reveal)
-	AutoSkip: boolean?, -- jump to the reveal straight after Activation
+	AutoSkip: boolean?, -- the quick version: no idle beat, the tease at QuickPace speed
 	OnCard: (() -> ())?, -- the name card should pop in now
 	EdgePulse: ((Color3) -> ())?, -- Mythic: pulse the screen edges in this colour
 	Camera: any?, -- AUTO HATCH: the camera from before the first hatch of the run (Play fills it in when left out)
@@ -112,10 +119,20 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 	local mascot = ctx.Mascot
 	local tier = HatchScene.TierOf(mascot.Rarity)
 	local rarityColor = Mascots.RarityColor(mascot.Rarity)
+	local rarityIndex = Mascots.RarityIndex(mascot.Rarity)
+	local quick = ctx.AutoSkip == true
+	local pace = if quick then SETTINGS.QuickPace else 1
 	local camera = Workspace.CurrentCamera
 	local folder = Instance.new("Folder")
 	folder.Name = "HatchFx"
 	folder.Parent = Workspace
+
+	-- The camera once the wobbles start: the close shot, pushed in by camPush (share of the way to the stand),
+	-- shaken by camShake studs
+	local shot = CFrame.identity
+	local driveCamera = false
+	local camPush, camShake = 0, 0
+	local pushDistance = 0
 
 	-- Running effects: each one is a function of how far through it is (0 to 1), stepped every frame
 	local effects: { { Start: number, Time: number, Step: (number) -> () } } = {}
@@ -128,6 +145,13 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 			if u >= 1 then
 				table.remove(effects, i)
 			end
+		end
+		if driveCamera then
+			local cf = shot * CFrame.new(0, 0, -pushDistance * camPush)
+			if camShake > 0 then
+				cf *= CFrame.new((math.random() - 0.5) * camShake, (math.random() - 0.5) * camShake, 0)
+			end
+			camera.CFrame = cf
 		end
 	end)
 	local function animate(time: number, step: (number) -> ())
@@ -202,16 +226,20 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 			line.Part.Color = eggLooks[line.Part].Color:Lerp(WHITE, math.clamp(amount, 0, 1))
 		end
 	end
+	-- The rarity colour the glow has climbed to (A1), and how much the core and halo take it on
+	local teaseColor = Mascots.RarityColor(Mascots.Rarities[1])
+	local teaseAmount = 0
 	-- The core: 1 = its own glow, 2 = twice as bright and a bit bigger
 	local function paintCore(level: number)
 		local over = math.max(0, level - 1)
 		if core then
 			local look = eggLooks[core]
-			core.Color = look.Color:Lerp(WHITE, math.clamp(over * 0.6, 0, 1))
+			core.Color = look.Color:Lerp(teaseColor, teaseAmount):Lerp(WHITE, math.clamp(over * 0.6, 0, 1))
 			core.Transparency = 0
 		end
 		if halo then
 			local look = eggLooks[halo]
+			halo.Color = look.Color:Lerp(teaseColor, teaseAmount)
 			halo.Transparency = math.clamp(look.Transparency - over * 0.35, 0.25, 1)
 			halo.Size = look.Size * (1 + over * 0.25)
 		end
@@ -241,7 +269,8 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 	local lookAt = Vector3.new(center.X, standCf.Position.Y, center.Z)
 	local fov = SETTINGS.CameraFov
 	local distance = standSize.Y / SETTINGS.CameraFill / (2 * math.tan(math.rad(fov / 2)))
-	local shot = CFrame.lookAt(lookAt + facing * distance + Vector3.yAxis * SETTINGS.CameraHeight, lookAt)
+	shot = CFrame.lookAt(lookAt + facing * distance + Vector3.yAxis * SETTINGS.CameraHeight, lookAt)
+	pushDistance = (shot.Position - lookAt).Magnitude
 	local right = shot.RightVector
 	camera.CameraType = Enum.CameraType.Scriptable
 	TweenService:Create(camera, TweenInfo.new(SETTINGS.CameraIn, Enum.EasingStyle.Sine), {
@@ -308,6 +337,76 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 			sparkAttachment.WorldPosition = if pad then pad.Position else center
 			sparks:Emit(1)
 		end
+	end
+
+	-- ===== Mood (A1): the world dims, a spotlight on the egg, light specks drifting up around the stand =====
+	-- The dim lives on the camera (ZoneLookController owns Lighting's colour correction); AUTO HATCH keeps it
+	-- between eggs in the saved camera so the world doesn't flash bright in between
+	local dim = savedCamera.Dim
+	if not dim or not dim.Parent then
+		dim = Instance.new("ColorCorrectionEffect")
+		dim.Name = "HatchDim"
+		dim.Parent = camera
+		savedCamera.Dim = dim
+	end
+	TweenService:Create(dim, TweenInfo.new(SETTINGS.DimTime * pace, Enum.EasingStyle.Sine), {
+		Brightness = SETTINGS.DimBrightness,
+		TintColor = SETTINGS.DimTint,
+	}):Play()
+
+	local spotPart = newPart(
+		folder,
+		"Spotlight",
+		Vector3.one * 0.1,
+		WHITE,
+		CFrame.lookAt(center + Vector3.yAxis * height * 2.4 + facing * height * 0.6, center)
+	)
+	spotPart.Transparency = 1
+	local spot = Instance.new("SpotLight")
+	spot.Face = Enum.NormalId.Front
+	spot.Angle = 50
+	spot.Range = height * 4
+	spot.Brightness = 0
+	spot.Shadows = false
+	spot.Color = teaseColor
+	spot.Parent = spotPart
+	animate(SETTINGS.DimTime * pace, function(u)
+		spot.Brightness = SETTINGS.Spotlight * u
+	end)
+
+	local moteBox = newPart(
+		folder,
+		"Motes",
+		Vector3.new(math.min(standSize.X, height * 2.6), height * 1.4, math.min(standSize.Z, height * 2.6)),
+		WHITE,
+		CFrame.new(center)
+	)
+	moteBox.Transparency = 1
+	local motes = Instance.new("ParticleEmitter")
+	motes.Texture = SPARKLE
+	motes.Shape = Enum.ParticleEmitterShape.Box
+	motes.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+	motes.EmissionDirection = Enum.NormalId.Top
+	motes.Rate = SETTINGS.Motes
+	motes.Lifetime = NumberRange.new(1.4, 2.4)
+	motes.Speed = NumberRange.new(0.4, 1)
+	motes.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.3, 0.18),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	motes.LightEmission = 1
+	motes.LightInfluence = 0
+	motes.Color = ColorSequence.new(WHITE)
+	motes.Parent = moteBox
+
+	-- The glow's rarity colour: core, halo, egg light, spotlight, specks and the leaking sparks
+	local function setTease(color: Color3)
+		teaseColor = color
+		spot.Color = color:Lerp(WHITE, 0.35)
+		motes.Color = ColorSequence.new(color:Lerp(WHITE, 0.3))
+		sparks.Color = colors(WHITE, color)
+		light.Color = color
 	end
 
 	-- A point on the egg's surface: `side` turns away from the camera's view (radians), `up` from -1 to 1
@@ -409,6 +508,8 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 		end
 	end
 
+	local shimmer: Sound? = nil -- the charge's sparkling chimes (faded out at the burst)
+
 	-- ===== The reveal: the pet rises out of the light and settles above the stand =====
 	local pet: Model? = nil
 	local petRig = nil
@@ -417,7 +518,8 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 		-- Skipped: whatever was still going (cracks, beams, pillar) clears. Either way the egg is gone
 		if skipped then
 			for _, child in folder:GetChildren() do
-				if (child ~= lightPart and child:IsA("BasePart")) or child:IsA("Beam") then
+				local keep = child == lightPart or child == spotPart or child == moteBox
+				if (not keep and child:IsA("BasePart")) or child:IsA("Beam") then
 					child:Destroy()
 				end
 			end
@@ -430,8 +532,11 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 		if skipped then
 			UiFx.Flash(WHITE, 0.5, 0.25)
 			Sfx.Play("HatchBurst", 1.1, 0.7)
+			Sfx.FadeOut(shimmer, 0.25)
 			energyRing(CYAN)
 		end
+		setTease(rarityColor)
+		motes:Emit(24)
 
 		local size = height * SETTINGS.PetSize
 		local model = MascotView.Mascot(mascot, size)
@@ -447,6 +552,40 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 		pet = model
 		petRig =
 			PetIdle.Rig(model, (mascot.Base or mascot).Model or (mascot.Base or mascot).Id, size / Config.MascotFx.Size)
+
+		-- Rays (A1): the Crate Kit's reveal rays in the rarity colour, turning behind the pet (Legendary and Mythic
+		-- get a 2nd, bigger layer turning the other way). A BillboardGui in the world, so the pet stays in front.
+		local raysAt = Instance.new("Attachment")
+		raysAt.WorldPosition = rest + Vector3.yAxis * size * 0.1 - face * size * 0.9
+		raysAt.Parent = Workspace.Terrain
+		folder.Destroying:Once(function()
+			raysAt:Destroy()
+		end)
+		local rays: { ImageLabel } = {}
+		local layers = if rarityIndex >= Mascots.RarityIndex("Legendary") then 2 else 1
+		for layer = 1, layers do
+			local across = size * SETTINGS.RaysSize * (if layer == 2 then 1.35 else 1)
+			local board = Instance.new("BillboardGui")
+			board.Name = "HatchRays"
+			board.Size = UDim2.fromScale(across, across) -- a BillboardGui's scale is studs
+			board.LightInfluence = 0
+			board.AlwaysOnTop = false
+			board.Parent = raysAt
+			local image = Instance.new("ImageLabel")
+			image.BackgroundTransparency = 1
+			image.Image = CrateKitAssets.Image("Rays")
+			image.ImageColor3 = rarityColor:Lerp(WHITE, if layer == 2 then 0.3 else 0.1)
+			image.ImageTransparency = if layer == 2 then 0.45 else 0.15
+			image.AnchorPoint = Vector2.new(0.5, 0.5)
+			image.Position = UDim2.fromScale(0.5, 0.5)
+			image.Size = UDim2.fromScale(1, 1)
+			image.Parent = board
+			local grow = Instance.new("UIScale")
+			grow.Scale = 0
+			grow.Parent = image
+			TweenService:Create(grow, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+			table.insert(rays, image)
+		end
 
 		-- The light it comes out of
 		local orb = newPart(folder, "Orb", Vector3.one * height * 1.1, WHITE, CFrame.new(center), Enum.PartType.Ball)
@@ -487,8 +626,12 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 			light.Brightness = 3 * (1 - u)
 		end)
 
-		-- Rise 0.4 studs out of the light, overshoot a little, settle by 0.45s; then it idles and slowly turns
+		-- Rise 0.4 studs out of the light, overshoot a little, settle by 0.45s; then it does its own reaction twice
+		-- (Hop/Spin/Flip/Wiggle, Config.Mascots) and idles and slowly turns
 		local riseStart = os.clock()
+		local reaction = mascot.Reaction or (mascot.Base or mascot).Reaction
+		local reactFrom = SETTINGS.PetSettle + SETTINGS.ReactDelay
+		local reactTime = Config.MascotFx.ReactTime
 		petLoop = RunService.RenderStepped:Connect(function()
 			local t = os.clock() - riseStart
 			local rise = ease(t / SETTINGS.PetSettle, Enum.EasingStyle.Back)
@@ -499,6 +642,15 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 				if t > SETTINGS.PetSettle then
 					lift, tilt = petRig:Body(os.clock())
 				end
+			end
+			if t > reactFrom and t < reactFrom + reactTime * 2 then
+				local reactLift, pose =
+					PetIdle.ReactionPose(reaction, ((t - reactFrom) / reactTime) % 1, size * SETTINGS.ReactLift)
+				lift += reactLift
+				tilt *= pose
+			end
+			for index, image in rays do
+				image.Rotation = t * (if index == 1 then 30 else -20)
 			end
 			place(at + Vector3.yAxis * lift, CFrame.Angles(0, math.sin(t * 0.8) * 0.35, 0) * tilt)
 		end)
@@ -516,22 +668,25 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 		end
 		if rarity >= Mascots.RarityIndex("Legendary") then
 			Sfx.Play("Firework", 1, 0.8)
+			Sfx.Play("HatchFanfare")
 		end
 		task.wait(SETTINGS.RevealTime)
 	end
 
 	-- ===== The sequence =====
 	local function sequence(): boolean
-		-- 1 · Idle (0.30s): the camera settles in, the core keeps its slow beat
-		hold(SETTINGS.Idle, function(_, elapsed)
-			paintCore(1 + 0.2 * math.sin(elapsed * math.pi * 2 / 1.6))
-		end)
+		-- 1 · Idle (0.30s): the camera settles in, the core keeps its slow beat (the quick version skips it)
+		if not quick then
+			hold(SETTINGS.Idle, function(_, elapsed)
+				paintCore(1 + 0.2 * math.sin(elapsed * math.pi * 2 / 1.6))
+			end)
+		end
 
 		-- 2 · Activation (0.40s): stand flares and the sign flickers at 0.08s; a white charge climbs the lines
-		Sfx.Play("HatchCharge", 1)
+		shimmer = Sfx.Play("HatchCharge", 1)
 		local flickered = false
 		if
-			not hold(SETTINGS.Activation, function(_, elapsed)
+			not hold(SETTINGS.Activation * pace, function(_, elapsed)
 				if elapsed >= 0.08 then
 					-- Flare to "200%": jump bright, then hold a strong glow
 					standFlare = math.max(0.35, 0.75 - (elapsed - 0.08) * 1.5)
@@ -565,23 +720,40 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 		end
 		charge = 2
 		paintCircuits()
-		if ctx.AutoSkip then
-			return false
-		end
 
-		-- 3 · Shake (0.75s): 3 wobbles pivoting on the base, each harder and shorter; core flashes on each hit
+		-- 3 · Shake (0.75s): 3 wobbles pivoting on the base, each harder and shorter; core flashes on each hit.
+		-- A1: rarer pets wobble more (ExtraWobbles), and the glow climbs one rarity colour per wobble up to the
+		-- pet's real rarity (never past it); each step up chimes, flashes and sends a ring across the platform.
+		-- The camera creeps in as it goes.
+		local wobbles = table.clone(SETTINGS.Wobbles)
+		for i = 1, math.clamp(rarityIndex - #wobbles, 0, #SETTINGS.ExtraWobbles) do
+			table.insert(wobbles, SETTINGS.ExtraWobbles[i])
+		end
+		driveCamera = true
+		teaseAmount = 0.85
+		local shownRarity = 0
 		local axis = facing
 		local base = bottom
-		for index, wobble in SETTINGS.Wobbles do
+		for index, wobble in wobbles do
+			local shown = math.min(index, rarityIndex)
+			local color = Mascots.RarityColor(Mascots.Rarities[shown])
+			setTease(color)
+			if shown > shownRarity and index > 1 then
+				Sfx.Play("StreakUp", 0.8 + shown * 0.1, 0.7)
+				UiFx.Flash(color, 0.12, 0.2)
+				energyRing(color)
+			end
+			shownRarity = shown
 			Sfx.Play("ReelTick", 0.85 + index * 0.15)
 			leakSparks(tier.SparksPerHit)
 			light.Brightness = 1.5 * wobble.Core
 			if
-				not hold(wobble.Time, function(u)
+				not hold(wobble.Time * pace, function(u)
 					local angle = math.rad(wobble.Angle) * math.sin(u * math.pi * 2) * (1 - u * 0.25)
 					egg:PivotTo(CFrame.new(base) * CFrame.fromAxisAngle(axis, angle) * CFrame.new(-base) * eggPivot)
 					paintCore(1 + (wobble.Core - 1) * (1 - u) + 0.15)
 					light.Brightness = 1.5 + 1.5 * wobble.Core * (1 - u)
+					camPush = SETTINGS.Push * ((index - 1 + u) / #wobbles)
 				end)
 			then
 				return false
@@ -607,6 +779,10 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 		local flashed = 0
 		local pillarDone = false
 		local crackTime = SETTINGS.CrackTime + (tier.Extra or 0) - (tier.Hold or SETTINGS.Hold)
+		-- The camera snaps in (A1)
+		animate(0.14, function(u)
+			camPush = SETTINGS.Push + (SETTINGS.Punch - SETTINGS.Push) * ease(u, Enum.EasingStyle.Back)
+		end)
 		if
 			not hold(crackTime, function(_, elapsed)
 				while done < steps and elapsed >= done * 0.12 do
@@ -648,8 +824,7 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 					end)
 					Sfx.Play("StreakUp", 0.8, 0.8)
 					animate(tier.CamShake or 0.1, function(u)
-						local k = (1 - u) * 0.18
-						camera.CFrame = shot * CFrame.new((math.random() - 0.5) * k, (math.random() - 0.5) * k, 0)
+						camShake = (1 - u) * 0.18
 					end)
 					if tier.EdgePulse and ctx.EdgePulse then
 						ctx.EdgePulse(rarityColor)
@@ -659,7 +834,7 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 		then
 			return false
 		end
-		camera.CFrame = shot
+		camShake = 0
 		-- The screen holds still for a moment (longer for Mythic)
 		if not hold(tier.Hold or SETTINGS.Hold) then
 			return false
@@ -671,6 +846,11 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 		local flash = tier.Flash
 		UiFx.Flash(WHITE, math.min(0.9, 0.5 * flash), 0.18)
 		Sfx.Play("HatchBurst", 1)
+		Sfx.FadeOut(shimmer, 0.3)
+		-- The camera pulls back out to the close shot as the shell flies (A1)
+		animate(SETTINGS.BurstTime, function(u)
+			camPush = SETTINGS.Punch * (1 - ease(u, Enum.EasingStyle.Quad))
+		end)
 		light.Color = WHITE
 		light.Range = 24
 		animate(SETTINGS.BurstTime, function(u)
@@ -738,6 +918,8 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 	end
 
 	local finished = sequence()
+	driveCamera = false
+	camPush, camShake = 0, 0
 	camera.CFrame = shot
 	egg:PivotTo(eggPivot)
 	reveal(not finished)
@@ -775,6 +957,19 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 		if keepCamera then
 			pet = nil
 			return
+		end
+		-- The world brightens again
+		local lastDim = savedCamera.Dim
+		savedCamera.Dim = nil
+		if lastDim then
+			local undim = TweenService:Create(lastDim, TweenInfo.new(0.45, Enum.EasingStyle.Sine), {
+				Brightness = 0,
+				TintColor = WHITE,
+			})
+			undim.Completed:Once(function()
+				lastDim:Destroy()
+			end)
+			undim:Play()
 		end
 		if controls then
 			pcall(function()

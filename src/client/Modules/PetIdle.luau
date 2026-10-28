@@ -284,4 +284,20 @@ function PetIdle.Rig(model: Model, id: string, scale: number): Rig?
 	return rig :: any
 end
 
+-- A pet's strike reaction (Config.Mascots Reaction) at p (0 to 1 through it): how high it lifts (x `height`) and
+-- its turn. Used by the pets following you (MascotFollowController) and the hatch reveal (HatchScene).
+function PetIdle.ReactionPose(reaction: string?, p: number, height: number): (number, CFrame)
+	local arc = math.sin(math.pi * p)
+	if reaction == "Spin" then
+		local eased = 1 - (1 - p) ^ 3
+		return arc * height * 0.5, CFrame.Angles(0, eased * math.pi * 2, 0)
+	elseif reaction == "Flip" then
+		return arc * height * 0.8, CFrame.Angles(-p * math.pi * 2, 0, 0)
+	elseif reaction == "Wiggle" then
+		return arc * height * 0.3, CFrame.Angles(0, 0, math.sin(p * math.pi * 6) * math.rad(28) * (1 - p))
+	end
+	-- Hop (and anything unknown): straight up with a happy squash at the top
+	return arc * height, CFrame.Angles(math.rad(-15) * arc, 0, 0)
+end
+
 return PetIdle

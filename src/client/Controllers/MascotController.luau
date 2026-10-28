@@ -581,11 +581,15 @@ function MascotController:Start()
 		UDim2.fromScale(0.3, 0.71),
 		UDim2.fromScale(0.4, 0.04)
 	)
-	for _, label in { revealNew, revealName, revealInfo, revealOdds } do
+	-- A1 (2026-10-28): the rarity slams in big over the pet on the stand hatch ("LEGENDARY!")
+	-- (the overlay starts above the screen's top edge, so 0.11 keeps it clear of the top bar)
+	local revealRarity = text(overlay, "Rarity", FONT, GOLD, UDim2.fromScale(0.2, 0.11), UDim2.fromScale(0.6, 0.1))
+	revealRarity.Visible = false
+	for _, label in { revealNew, revealName, revealInfo, revealOdds, revealRarity } do
 		label.ZIndex = 35
 		local s = label:FindFirstChildOfClass("UIStroke")
 		if s then
-			s.Thickness = 3
+			s.Thickness = if label == revealRarity then 4 else 3
 		end
 	end
 	local doneButton = button(overlay, "Done", "CLOSE", GREY, UDim2.new(0.5, -65, 0.79, 0), UDim2.fromOffset(130, 46))
@@ -610,7 +614,13 @@ function MascotController:Start()
 
 	-- The name card sits lower on the stand hatch, so the pet above the stand stays clear
 	local function cardLayout(onStand: boolean)
-		revealNew.Position = UDim2.fromScale(0.3, if onStand then 0.08 else 0.13)
+		-- On the stand the rarity title takes the top and NEW PET! sits under it as a tilted stamp
+		revealRarity.Visible = onStand
+		revealRarity.Text = ""
+		revealNew.Visible = true
+		revealNew.Position = if onStand then UDim2.fromScale(0.38, 0.205) else UDim2.fromScale(0.3, 0.13)
+		revealNew.Size = if onStand then UDim2.fromScale(0.24, 0.05) else UDim2.fromScale(0.4, 0.07)
+		revealNew.Rotation = if onStand then -6 else 0
 		revealName.Position = UDim2.fromScale(0.25, if onStand then 0.655 else 0.62)
 		revealOdds.Position = UDim2.fromScale(0.3, if onStand then 0.72 else 0.685)
 		revealInfo.Position = UDim2.fromScale(0.25, if onStand then 0.755 else 0.72)
@@ -695,26 +705,59 @@ function MascotController:Start()
 		autoButton.TextColor3 = if autoHatch then INK else Color3.new(1, 1, 1)
 	end
 
+	local cardToken = nil
 	local function showCard(result, mascot)
-		local rarity = Mascots.RarityIndex(mascot.Rarity)
+		local color = Mascots.RarityColor(mascot.Rarity)
 		revealNew.Text = if result.IsNew then "NEW PET!" else "ANOTHER ONE!"
 		revealNew.TextColor3 = if result.IsNew then LIME else Color3.fromRGB(200, 190, 230)
 		revealName.Text = string.upper(mascot.Name)
-		revealName.TextColor3 = Mascots.RarityColor(mascot.Rarity)
+		revealName.TextColor3 = color
 		revealOdds.Text = oddsText(result.Chance)
-		revealInfo.Text = ("%s  -  %s COINS%s"):format(
-			string.upper(mascot.Rarity),
-			Mascots.BonusText(Mascots.Bonus(mascot)),
-			if result.Equipped then "  -  EQUIPPED!" else ""
-		)
-		for _, label in { revealNew, revealName, revealOdds, revealInfo } do
+		local function info(bonus: number): string
+			return ("%s  -  %s COINS%s"):format(
+				string.upper(mascot.Rarity),
+				Mascots.BonusText(bonus),
+				if result.Equipped then "  -  EQUIPPED!" else ""
+			)
+		end
+		-- A1: the COINS bonus counts up from +0%
+		local bonus = Mascots.Bonus(mascot)
+		local token = {}
+		cardToken = token
+		revealInfo.Text = info(0)
+		task.spawn(function()
+			local started = os.clock()
+			while cardToken == token do
+				local u = math.min((os.clock() - started) / FX.Hatch.CountUp, 1)
+				revealInfo.Text = info(bonus * (1 - (1 - u) ^ 2))
+				if u >= 1 then
+					break
+				end
+				RunService.RenderStepped:Wait()
+			end
+		end)
+		for _, label in { revealName, revealOdds, revealInfo } do
 			UiFx.Pop(label, 1.5, 0.35)
 		end
-		if rarity >= Mascots.RarityIndex("Epic") then
-			UiFx.Confetti(nil, 70)
-		elseif rarity >= Mascots.RarityIndex("Rare") then
-			UiFx.Confetti(nil, 35)
+		-- The rarity title slams in tilted and straightens; NEW PET! stamps on a beat later
+		if revealRarity.Visible then
+			revealRarity.Text = string.upper(mascot.Rarity) .. "!"
+			revealRarity.TextColor3 = color
+			revealRarity.Rotation = -10
+			UiFx.Pop(revealRarity, 2.2, 0.35)
+			TweenService:Create(revealRarity, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Rotation = 0 }):Play()
+			revealNew.Visible = false
+			task.delay(0.25, function()
+				if cardToken == token then
+					revealNew.Visible = true
+					UiFx.Pop(revealNew, 1.8, 0.3)
+				end
+			end)
+		else
+			UiFx.Pop(revealNew, 1.5, 0.35)
 		end
+		-- Confetti in the rarity's colours, more the rarer it is
+		UiFx.Confetti(nil, FX.Hatch.Confetti[mascot.Rarity] or 20, { color, color:Lerp(Color3.new(1, 1, 1), 0.5), GOLD })
 		skipHint.Visible = false
 		doneButton.Visible = true
 		UiFx.Pop(doneButton, 0.6, 0.3)
