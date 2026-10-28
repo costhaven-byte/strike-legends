@@ -451,6 +451,9 @@ Config.Ui = {
 	-- under it (in this order; hidden ones skip their place), and the lane event + goal bar step aside while it is open.
 	-- A red dot on MORE = one of them has news. HideZeroStreak = the streak panel only shows from 1 strike on phones.
 	-- Computers keep every button where it is.
+	-- The gold xN multiplier badge right of the coins (owner 2026-10-28: removed on computer + phone). The breakdown
+	-- card still opens from PROFILE.
+	MultiplierBadge = false,
 	PhoneMenu = {
 		Enabled = true,
 		Keys = { "Daily", "Gifts", "Teleport", "Profile" },

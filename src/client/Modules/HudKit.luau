@@ -83,15 +83,18 @@ local SCREENS = {
 HudKit.Layout = {
 	Boosts = { Pc = { 32, 72, nil, nil, "L", "T" }, Phone = { 12, 42, nil, nil, "L", "T" } },
 	Coins = { Pc = { 22, 124, 240, 68, "L", "T" }, Phone = { 8, 89, 118, 40, "L", "T" } },
+	-- The xN badge is hidden (Config.Ui.MultiplierBadge, owner 2026-10-28); its spot still places AUTO under it
 	Multiplier = { Pc = { 272, 136, 96, 44, "L", "T" }, Phone = { 132, 92, 60, 34, "L", "T" } },
 	-- Coins per minute (polish P1, not in the kit): a green line under the coin pill; the column under it moved
 	-- down to make room (computer +24, phone +14)
 	Income = { Pc = { 40, 186, 220, 26, "L", "T" }, Phone = { 14, 126, 120, 16, "L", "T" } },
-	Gems = { Pc = { 24, 220, 170, 58, "L", "T" }, Phone = { 198, 91, 70, 36, "L", "T" } },
+	-- Phones: GEMS sits right next to the coins (owner 2026-10-28, took the xN badge's place)
+	Gems = { Pc = { 24, 220, 170, 58, "L", "T" }, Phone = { 132, 91, 70, 36, "L", "T" } },
 	Balls = { Pc = { 32, 290, 56, 56, "L", "T" }, Phone = { 12, 148, 44, 46, "L", "T" } },
 	Pets = { Pc = { 100, 290, 56, 56, "L", "T" }, Phone = { 62, 148, 44, 46, "L", "T" } },
 	Store = { Pc = { 168, 290, 56, 56, "L", "T" }, Phone = { 112, 148, 44, 46, "L", "T" } },
-	Power = { Pc = { 32, 362, 176, 66, "L", "T" }, Phone = { 162, 148, 118, 46, "L", "T" } },
+	-- Phones: POWER under BALLS/PETS/STORE, as wide as that row (owner 2026-10-28; PROFILE lives in MORE there)
+	Power = { Pc = { 32, 362, 176, 66, "L", "T" }, Phone = { 12, 200, 144, 46, "L", "T" } },
 	Daily = { Pc = { 32, 444, 56, 56, "L", "T" }, Phone = { 736, 40, 44, 46, "R", "T" } },
 	-- PROFILE (polish P5, not in the kit): right of DAILY on computers, under BALLS on phones
 	Profile = { Pc = { 100, 444, 56, 56, "L", "T" }, Phone = { 12, 200, 44, 46, "L", "T" } },

@@ -131,6 +131,7 @@ function MultiplierController:Start()
 		hit.Visible = phone
 	end)
 	HudKit.Place(badge, "Multiplier")
+	badge.Visible = Config.Ui.MultiplierBadge
 
 	-- ===== The breakdown card =====
 	-- The owner's UI Kit COIN MULTIPLIER card (claude.ai/design 'Strike Legends UI Kit', 2026-10-26; Modules/UiKit):
