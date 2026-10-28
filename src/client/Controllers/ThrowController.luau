@@ -57,6 +57,7 @@ local SIDE_SIDE = 250 -- pixels right of the screen centre to the middle of the 
 local METER_WIDTH = if IS_SIDE then ARC_HEIGHT else ARC_HEIGHT * 2
 local METER_HEIGHT = if IS_SIDE then ARC_HEIGHT * 2 else ARC_HEIGHT
 local METER_SIDE = if IS_SIDE then SIDE_SIDE else ARC_SIDE
+local PHONE_DROP = 50 -- screen pixels lower on phones, so the top stays clear of the XP bar and rebirth prompt
 
 -- Popups that must be closed before you can throw (ScreenGui, frame), so a tap meant for one never rolls the
 -- ball by accident and costs a streak
@@ -282,7 +283,9 @@ function ThrowController:Start()
 	hintStroke.Thickness = 2
 	hintStroke.Parent = hint
 	local holdSize = 28
+	local phoneLayout = false
 	HudKit.OnLayout(function(phone)
+		phoneLayout = phone
 		panel.Position = UDim2.new(0.5, 0, 1, if phone then -12 else -46)
 		local _, size = HudKit.Spot("Hold", phone)
 		button.Size = size :: UDim2
@@ -1004,9 +1007,10 @@ function ThrowController:Start()
 		-- Smaller arc on short screens (phones held sideways)
 		local screenScale = math.clamp(Workspace.CurrentCamera.ViewportSize.Y / 720, 0.6, 1)
 		holderScale.Scale = screenScale
-		holder.Position = UDim2.new(0.5, METER_SIDE * screenScale, 0, -ARC_LIFT * screenScale)
+		local drop = if phoneLayout then PHONE_DROP else 0
+		holder.Position = UDim2.new(0.5, METER_SIDE * screenScale, 0, -ARC_LIFT * screenScale + drop)
 		perfectSpot.Position =
-			UDim2.new(0.5, METER_SIDE * screenScale, 0, -(METER_HEIGHT + ARC_LIFT + 70) * screenScale)
+			UDim2.new(0.5, METER_SIDE * screenScale, 0, -(METER_HEIGHT + ARC_LIFT + 70) * screenScale + drop)
 		perfectSpotScale.Scale = screenScale
 		resultScreenScale.Scale = screenScale
 
