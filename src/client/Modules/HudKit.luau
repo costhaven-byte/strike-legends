@@ -102,6 +102,8 @@ HudKit.Layout = {
 	AfterThrow = { Pc = { 660, 140, 600, 30, "C", "T" }, Phone = { 272, 84, 300, 18, "C", "T" } },
 	Gifts = { Pc = { 1832, 72, 56, 56, "R", "T" }, Phone = { 788, 40, 44, 46, "R", "T" } },
 	Teleport = { Pc = { 1832, 146, 56, 56, "R", "T" }, Phone = { 788, 94, 44, 46, "R", "T" } },
+	-- MORE (phones only, Config.Ui.PhoneMenu): DAILY, GIFTS, TELEPORT and PROFILE fold into it; they open in a column under it
+	More = { Pc = { 1832, 72, 56, 56, "R", "T" }, Phone = { 788, 40, 44, 46, "R", "T" } },
 	-- Rank Trial (not in the kit): right of the multiplier badge on computers, under the goal bar on phones
 	Trial = { Pc = { 380, 136, 300, 38, "L", "T" }, Phone = { 640, 224, 140, 40, "R", "T" } },
 	TrialTracker = { Pc = { 380, 136, 260, 116, "L", "T" }, Phone = { 640, 224, 140, 40, "R", "T" } },
@@ -157,6 +159,11 @@ function HudKit.Spot(key: string, phone: boolean?): (UDim2, UDim2?, { any })
 	end
 	local screen = if phone then SCREENS.Phone else SCREENS.Pc
 	local row = HudKit.Layout[key][if phone then "Phone" else "Pc"]
+	if phone and HudKit.InMenu(key) then
+		-- Folded into MORE: waits just past the right edge, on the MORE button's line, until the menu opens
+		local more = HudKit.Layout.More.Phone
+		return UDim2.new(1, 30, 0, more[2] - screen.Bar), UDim2.fromOffset(row[3], row[4]), row
+	end
 	local x, y, w, h, edgeX, edgeY = row[1], row[2], row[3], row[4], row[5], row[6]
 	local px = if edgeX == "R"
 		then UDim.new(1, x - screen.W)
@@ -201,9 +208,10 @@ local tucked = false
 local lastBowl = -math.huge
 
 local function moveTo(object: GuiObject, target: UDim2): Tween
-	local tween = TweenService:Create(object, TweenInfo.new(TUCK.Time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Position = target,
-	})
+	local tween =
+		TweenService:Create(object, TweenInfo.new(TUCK.Time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position = target,
+		})
 	tween:Play()
 	return tween
 end
@@ -246,13 +254,153 @@ local function tuckAllowed(): boolean
 	return if touch or HudKit.Phone() then TUCK.Touch else TUCK.Computer
 end
 
+-- ===== Phone MORE menu (owner 2026-10-28: the phone HUD was still too busy) =====
+-- On phones the buttons in Config.Ui.PhoneMenu.Keys wait off the right edge; MORE slides them out in a column.
+local MENU = Config.Ui.PhoneMenu
+local menuMembers: { { Key: string, Object: GuiObject } } = {}
+local asideObjects: { GuiObject } = {}
+local menuOpen = false
+local moreKit: any = nil
+
+function HudKit.InMenu(key: string): boolean
+	return MENU.Enabled and table.find(MENU.Keys, key) ~= nil
+end
+
+local function menuActive(): boolean
+	return MENU.Enabled and HudKit.Phone()
+end
+
+local function isMember(object: GuiObject): boolean
+	for _, member in menuMembers do
+		if member.Object == object then
+			return true
+		end
+	end
+	return false
+end
+
+local function setMenu(open: boolean)
+	if open and not menuActive() then
+		open = false
+	end
+	if open == menuOpen then
+		return
+	end
+	menuOpen = open
+	if moreKit then
+		-- The three bars turn into an X while open
+		local lines = moreKit.Lines
+		local info = TweenInfo.new(TUCK.Time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		TweenService:Create(lines[1], info, {
+			Position = UDim2.fromScale(0.5, if open then 0.5 else 0.2),
+			Rotation = if open then 45 else 0,
+		}):Play()
+		TweenService:Create(lines[3], info, {
+			Position = UDim2.fromScale(0.5, if open then 0.5 else 0.8),
+			Rotation = if open then -45 else 0,
+		}):Play()
+		lines[2].Visible = not open
+		moreKit:SetCaption(if open then "CLOSE" else "MORE")
+	end
+	local more = HudKit.Layout.More.Phone
+	local bar = SCREENS.Phone.Bar
+	local slot = 0
+	for _, member in menuMembers do
+		local object = member.Object
+		if object.Parent then
+			local away = HudKit.Spot(member.Key, true)
+			if open and object.Visible then
+				slot += 1
+				local y = UDim.new(0, more[2] - bar + slot * MENU.Gap)
+				object.Position = UDim2.new(away.X, y)
+				moveTo(object, UDim2.new(UDim.new(1, more[1] - SCREENS.Phone.W), y))
+			elseif not open then
+				moveTo(object, UDim2.new(away.X, object.Position.Y))
+			end
+		end
+	end
+	for _, object in asideObjects do
+		if object.Parent then
+			tuckOne(object, open)
+		end
+	end
+end
+
+-- Red dot on MORE while any folded button shows its dot or count badge
+local function menuNews(): boolean
+	for _, member in menuMembers do
+		local object = member.Object
+		if object.Parent and object.Visible then
+			for _, child in object:GetDescendants() do
+				if (child.Name == "Dot" or child.Name == "Badge") and child:IsA("Frame") and child.Visible then
+					return true
+				end
+			end
+		end
+	end
+	return false
+end
+
+-- Builds the MORE button (HudController calls this once); hidden on computers
+function HudKit.MoreButton(parent: Instance)
+	if not MENU.Enabled or moreKit then
+		return
+	end
+	local kit = HudKit.Square(
+		parent,
+		{ Name = "MoreButton", Paint = "Purple", Icon = "Close", Caption = "MORE", Key = "More" }
+	) :: any
+	kit.Icon.Visible = false
+	-- Three white bars (the menu sign) in the icon's place
+	local bars = Instance.new("Frame")
+	bars.Name = "Bars"
+	bars.BackgroundTransparency = 1
+	bars.Size = UDim2.fromScale(1, 1)
+	bars.ZIndex = 5
+	bars.Parent = kit.Slot
+	local lines = {}
+	for i = 0, 2 do
+		local line = Instance.new("Frame")
+		line.AnchorPoint = Vector2.new(0.5, 0.5)
+		line.Position = UDim2.fromScale(0.5, 0.2 + i * 0.3)
+		line.Size = UDim2.fromScale(0.85, 0.17)
+		line.BackgroundColor3 = C.White
+		line.ZIndex = 5
+		line.Parent = bars
+		HudKit.Corner(line, 4)
+		HudKit.Outline(line, C.Ink, 1.5)
+		table.insert(lines, line)
+	end
+	kit.Lines = lines
+	moreKit = kit
+	local button = if kit.Holder:IsA("GuiButton")
+		then kit.Holder
+		else kit.Holder:FindFirstChildWhichIsA("GuiButton", true)
+	if button then
+		(button :: GuiButton).Activated:Connect(function()
+			setMenu(not menuOpen)
+		end)
+	end
+	HudKit.OnLayout(function(phone)
+		setMenu(false)
+		kit.Holder.Visible = phone
+	end)
+	kit.Holder.Visible = menuActive()
+	task.spawn(function()
+		while kit.Holder.Parent do
+			kit:SetDot(not menuOpen and menuActive() and menuNews())
+			task.wait(0.5)
+		end
+	end)
+end
+
 local function setTucked(on: boolean)
 	if on == tucked then
 		return
 	end
 	tucked = on
 	for object in tuckables do
-		if object.Parent then
+		if object.Parent and not (menuActive() and isMember(object)) then
 			tuckOne(object, on)
 		end
 	end
@@ -274,12 +422,27 @@ end
 
 -- A HUD piece that slides away while you bowl, if its key is in Config.Ui.Tuck.Keys
 function HudKit.Tuckable(object: GuiObject, key: string)
+	if HudKit.InMenu(key) then
+		-- A MORE menu button: tapping it also folds the menu away
+		table.insert(menuMembers, { Key = key, Object = object })
+		table.sort(menuMembers, function(a, b) -- the column follows Config.Ui.PhoneMenu.Keys
+			return (table.find(MENU.Keys, a.Key) :: number) < (table.find(MENU.Keys, b.Key) :: number)
+		end)
+		local button = if object:IsA("GuiButton") then object else object:FindFirstChildWhichIsA("GuiButton", true)
+		if button then
+			(button :: GuiButton).Activated:Connect(function()
+				task.defer(setMenu, false)
+			end)
+		end
+	elseif MENU.Enabled and table.find(MENU.Aside, key) then
+		table.insert(asideObjects, object)
+	end
 	if not table.find(TUCK.Keys, key) then
 		return
 	end
 	tuckables[object] = true
 	startTuckLoop()
-	if tucked then
+	if tucked and not (menuActive() and isMember(object)) then
 		task.defer(tuckOne, object, true)
 	end
 end
@@ -287,6 +450,7 @@ end
 -- ThrowController calls this when you start a throw (and the HUD tucks away until you stop bowling)
 function HudKit.Bowled()
 	lastBowl = os.clock()
+	setMenu(false)
 	if tuckAllowed() then
 		setTucked(true)
 	end

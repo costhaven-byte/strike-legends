@@ -151,7 +151,8 @@ local function bindIncome(bar: Frame)
 		label.Text = "+" .. formatNumber(value) .. "/min"
 		if value > last and last > 0 then
 			scale.Scale = 1.2
-			TweenService:Create(scale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+			TweenService
+				:Create(scale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
 				:Play()
 		end
 		last = value
@@ -416,7 +417,15 @@ local function bindStreak(panel: Frame)
 	HudKit.Place(panel, "Streak")
 
 	local previous = player:GetAttribute("Streak") or 0
+	-- Phones (Config.Ui.PhoneMenu.HideZeroStreak): no panel at 0 strikes, except while STREAK LOST shows
+	local losing = false
+	local function fit()
+		local streak = player:GetAttribute("Streak") or 0
+		panel.Visible = not (Config.Ui.PhoneMenu.HideZeroStreak and HudKit.Phone() and streak == 0 and not losing)
+	end
+	HudKit.OnLayout(fit)
 	local function show(streak: number)
+		fit()
 		local index = tierIndex(streak)
 		local tier = Config.Streaks[index]
 		local color = if tier and tier.Name ~= "" then tier.Color else NO_STREAK_COLOR
@@ -441,6 +450,8 @@ local function bindStreak(panel: Frame)
 			-- STREAK LOST in red, the number shakes, then back to normal
 			tierName.Text = "STREAK LOST"
 			tierName.TextColor3 = BROKEN_COLOR
+			losing = true
+			fit()
 			local home = count.Position
 			for _, dx in { -4, 4, -4, 4, -4, 0 } do
 				count.Position = home + UDim2.fromOffset(dx, 0)
@@ -448,6 +459,7 @@ local function bindStreak(panel: Frame)
 			end
 			count.Position = home
 			task.delay(1.2, function()
+				losing = false
 				if (player:GetAttribute("Streak") or 0) == 0 then
 					show(0)
 				end
@@ -628,6 +640,7 @@ function HudController:Start()
 	end
 	bindRankBar(gui:WaitForChild("RankBar"))
 	bindStreak(gui:WaitForChild("Streak"))
+	HudKit.MoreButton(gui)
 
 	-- The old Studio "+XP" label is replaced by the HUD Kit line
 	local oldPopup = gui:WaitForChild("RewardPopup") :: TextLabel

@@ -444,7 +444,19 @@ Config.Ui = {
 		Computer = false,
 		IdleSeconds = 4,
 		Time = 0.25,
-		Keys = { "Boosts", "Income", "Gems", "Balls", "Pets", "Store", "Daily", "Profile", "Gifts", "Teleport", "Rebirth", "Potions" },
+		Keys = { "Boosts", "Income", "Gems", "Balls", "Pets", "Store", "Daily", "Profile", "Gifts", "Teleport", "Rebirth", "Potions", "More" },
+	},
+	-- Phone MORE menu (owner 2026-10-28: the phone HUD was still too busy). On phones (short screens) the buttons in
+	-- Keys leave the HUD and fold into one MORE button in the top-right corner; tapping it slides them out in a column
+	-- under it (in this order; hidden ones skip their place), and the lane event + goal bar step aside while it is open.
+	-- A red dot on MORE = one of them has news. HideZeroStreak = the streak panel only shows from 1 strike on phones.
+	-- Computers keep every button where it is.
+	PhoneMenu = {
+		Enabled = true,
+		Keys = { "Daily", "Gifts", "Teleport", "Profile" },
+		Aside = { "Modifier", "Goal" },
+		Gap = 52, -- px between buttons in the open column
+		HideZeroStreak = true,
 	},
 	CountTime = 0.6, -- seconds for a HUD number to tick up to its new value
 	RankUpShowTime = 4, -- seconds before the rank-up screen closes by itself
