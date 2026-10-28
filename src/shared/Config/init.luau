@@ -3154,6 +3154,7 @@ Config.MascotFx = {
 		CardAt = 0.3, -- seconds into the reveal the name card pops in
 		SkipFrom = 0.7, -- tap to skip from this many seconds in
 		AutoSkipAfter = 5, -- after this many hatches in one session, it skips straight to the reveal
+		AutoNextDelay = 1.2, -- Polish P2: AUTO HATCH waits this long on the finished card before the next egg
 		-- Burst grows with rarity, colours stay cyan/magenta. Extra = added seconds (pillar beat), Hold = stand-still
 		TierOf = { Epic = "Epic", Legendary = "Legendary", Mythic = "Mythic" }, -- everything else = Base
 		Tiers = {

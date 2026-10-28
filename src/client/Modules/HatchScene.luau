@@ -42,6 +42,7 @@ export type Context = {
 	AutoSkip: boolean?, -- jump to the reveal straight after Activation
 	OnCard: (() -> ())?, -- the name card should pop in now
 	EdgePulse: ((Color3) -> ())?, -- Mythic: pulse the screen edges in this colour
+	Camera: any?, -- AUTO HATCH: the camera from before the first hatch of the run (Play fills it in when left out)
 }
 
 local function ease(u: number, style: Enum.EasingStyle, direction: Enum.EasingDirection?): number
@@ -107,7 +108,7 @@ end
 
 -- Plays the hatch up to the settled reveal. Returns the function that ends the scene (camera, stand and egg back
 -- to normal) for when the player closes the card.
-function HatchScene.Play(ctx: Context): () -> ()
+function HatchScene.Play(ctx: Context): (boolean?) -> ()
 	local mascot = ctx.Mascot
 	local tier = HatchScene.TierOf(mascot.Rarity)
 	local rarityColor = Mascots.RarityColor(mascot.Rarity)
@@ -226,7 +227,8 @@ function HatchScene.Play(ctx: Context): () -> ()
 	light.Parent = lightPart
 
 	-- ===== Camera: a close shot of egg and stand, sign on screen =====
-	local savedCamera = { Type = camera.CameraType, CFrame = camera.CFrame, Fov = camera.FieldOfView }
+	local savedCamera = ctx.Camera or { Type = camera.CameraType, CFrame = camera.CFrame, Fov = camera.FieldOfView }
+	ctx.Camera = savedCamera
 	local standCf, standSize = ctx.Stand:GetBoundingBox()
 	local facing: Vector3
 	local frame = ctx.Stand:FindFirstChild("sign_frame", true) :: BasePart?
@@ -741,8 +743,9 @@ function HatchScene.Play(ctx: Context): () -> ()
 	reveal(not finished)
 
 	-- Ends the scene: pet gone, egg back in its cradle, stand back to normal, camera home
+	-- (keepCamera = AUTO HATCH goes straight into the next egg, so the camera stays on the stand)
 	local ended = false
-	return function()
+	return function(keepCamera: boolean?)
 		if ended then
 			return
 		end
@@ -768,6 +771,10 @@ function HatchScene.Play(ctx: Context): () -> ()
 			if d.Parent then
 				(d :: any).LocalTransparencyModifier = 0
 			end
+		end
+		if keepCamera then
+			pet = nil
+			return
 		end
 		if controls then
 			pcall(function()

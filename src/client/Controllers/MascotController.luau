@@ -571,7 +571,10 @@ function MascotController:Start()
 	local revealName =
 		text(overlay, "Name", FONT, Color3.new(1, 1, 1), UDim2.fromScale(0.25, 0.64), UDim2.fromScale(0.5, 0.08))
 	local revealInfo = text(overlay, "Info", FONT, GOLD, UDim2.fromScale(0.25, 0.72), UDim2.fromScale(0.5, 0.05))
-	for _, label in { revealNew, revealName, revealInfo } do
+	-- Polish P2: "1 IN X" odds of this exact pet, under its name
+	local revealOdds =
+		text(overlay, "Odds", FONT, Color3.fromRGB(200, 190, 230), UDim2.fromScale(0.3, 0.71), UDim2.fromScale(0.4, 0.04))
+	for _, label in { revealNew, revealName, revealInfo, revealOdds } do
 		label.ZIndex = 35
 		local s = label:FindFirstChildOfClass("UIStroke")
 		if s then
@@ -581,13 +584,39 @@ function MascotController:Start()
 	local doneButton = button(overlay, "Done", "CLOSE", GREY, UDim2.new(0.5, -65, 0.79, 0), UDim2.fromOffset(130, 46))
 	doneButton.TextColor3 = Color3.new(1, 1, 1)
 	doneButton.ZIndex = 36
+	-- Polish P2: AUTO HATCH (stand hatches only): keeps hatching while you can pay; tap it again, CLOSE or the screen to stop
+	local autoButton = button(overlay, "Auto", "AUTO: OFF", GREY, UDim2.new(0.5, 5, 0.81, 0), UDim2.fromOffset(150, 46))
+	autoButton.TextColor3 = Color3.new(1, 1, 1)
+	autoButton.ZIndex = 36
+	autoButton.Visible = false
+	local skipHint =
+		text(overlay, "SkipHint", FONT, Color3.fromRGB(200, 190, 230), UDim2.fromScale(0.35, 0.86), UDim2.fromScale(0.3, 0.035))
+	skipHint.Text = "TAP TO SKIP"
+	skipHint.ZIndex = 35
+	skipHint.Visible = false
 
 	-- The name card sits lower on the stand hatch, so the pet above the stand stays clear
 	local function cardLayout(onStand: boolean)
 		revealNew.Position = UDim2.fromScale(0.3, if onStand then 0.08 else 0.13)
-		revealName.Position = UDim2.fromScale(0.25, if onStand then 0.68 else 0.64)
+		revealName.Position = UDim2.fromScale(0.25, if onStand then 0.655 else 0.62)
+		revealOdds.Position = UDim2.fromScale(0.3, if onStand then 0.72 else 0.685)
 		revealInfo.Position = UDim2.fromScale(0.25, if onStand then 0.755 else 0.72)
-		doneButton.Position = UDim2.new(0.5, -65, if onStand then 0.81 else 0.79, 0) -- stays on short screens too
+		-- On the stand CLOSE and AUTO sit side by side; stays on short screens too
+		doneButton.Position = UDim2.new(0.5, if onStand then -155 else -65, if onStand then 0.81 else 0.79, 0)
+		autoButton.Visible = false
+		skipHint.Visible = false
+	end
+
+	-- "1 IN 4", "1 IN 2.5", "1 IN 1.2K" (chance = 0..1 from the server)
+	local function oddsText(chance: number?): string
+		if not chance or chance <= 0 then
+			return ""
+		end
+		local x = 1 / chance
+		if x < 10 then
+			return "1 IN " .. (("%.1f"):format(x):gsub("%.0$", ""))
+		end
+		return "1 IN " .. formatNumber(math.floor(x + 0.5))
 	end
 
 	local function setGlow(color: Color3, strength: number)
@@ -645,18 +674,27 @@ function MascotController:Start()
 
 	local doHatch: (egg: any?) -> ()
 
+	local autoHatch = false
+	local autoNext: () -> ()
+	local function paintAuto()
+		autoButton.Text = if autoHatch then "AUTO: ON" else "AUTO: OFF"
+		autoButton.BackgroundColor3 = if autoHatch then LIME else GREY
+		autoButton.TextColor3 = if autoHatch then INK else Color3.new(1, 1, 1)
+	end
+
 	local function showCard(result, mascot)
 		local rarity = Mascots.RarityIndex(mascot.Rarity)
 		revealNew.Text = if result.IsNew then "NEW PET!" else "ANOTHER ONE!"
 		revealNew.TextColor3 = if result.IsNew then LIME else Color3.fromRGB(200, 190, 230)
 		revealName.Text = string.upper(mascot.Name)
 		revealName.TextColor3 = Mascots.RarityColor(mascot.Rarity)
+		revealOdds.Text = oddsText(result.Chance)
 		revealInfo.Text = ("%s  -  %s COINS%s"):format(
 			string.upper(mascot.Rarity),
 			Mascots.BonusText(Mascots.Bonus(mascot)),
 			if result.Equipped then "  -  EQUIPPED!" else ""
 		)
-		for _, label in { revealNew, revealName, revealInfo } do
+		for _, label in { revealNew, revealName, revealOdds, revealInfo } do
 			UiFx.Pop(label, 1.5, 0.35)
 		end
 		if rarity >= Mascots.RarityIndex("Epic") then
@@ -664,21 +702,54 @@ function MascotController:Start()
 		elseif rarity >= Mascots.RarityIndex("Rare") then
 			UiFx.Confetti(nil, 35)
 		end
+		skipHint.Visible = false
 		doneButton.Visible = true
 		UiFx.Pop(doneButton, 0.6, 0.3)
+		if sceneContext then
+			paintAuto()
+			autoButton.Visible = true
+			if not autoHatch then
+				UiFx.Pop(autoButton, 0.6, 0.3)
+			end
+		end
+	end
+
+	-- Ends a stand hatch: GUIs back, prompt back, camera home (keepCamera = AUTO goes straight into the next egg)
+	local function finishStand(keepCamera: boolean?)
+		local finish = endScene
+		endScene = nil
+		if finish then
+			finish(keepCamera)
+		end
+		if keepCamera then
+			return
+		end
+		for _, other in hiddenGuis do
+			other.Enabled = true
+		end
+		table.clear(hiddenGuis)
+		standBusy = false
+		refreshButton()
+		local stand = stands[currentEgg.Id]
+		if stand then
+			stand.Prompt.Enabled = true
+		end
 	end
 
 	-- The hatch on the real stand (owner's storyboard): the camera swings in, the egg activates, shakes, cracks,
 	-- bursts and the pet rises above the stand. Tap to skip from 0.7s; tap again (or CLOSE) once the card is up.
-	local function playOnStand(result, mascot, site)
+	-- camera = AUTO HATCH's next egg: the scene is already up (GUIs hidden, camera on the stand)
+	local function playOnStand(result, mascot, site, camera: any?)
 		hatchesThisSession += 1
 		standBusy = true
 		site.Prompt.Enabled = false
-		table.clear(hiddenGuis)
-		for _, other in playerGui:GetChildren() do
-			if other:IsA("ScreenGui") and other ~= gui and other.Name ~= "FxUI" and other.Enabled then
-				other.Enabled = false
-				table.insert(hiddenGuis, other)
+		if not camera then
+			table.clear(hiddenGuis)
+			for _, other in playerGui:GetChildren() do
+				if other:IsA("ScreenGui") and other ~= gui and other.Name ~= "FxUI" and other.Enabled then
+					other.Enabled = false
+					table.insert(hiddenGuis, other)
+				end
 			end
 		end
 		petsButton.Visible = false
@@ -688,28 +759,92 @@ function MascotController:Start()
 		setGlow(GOLD, 0)
 		overlay.Visible = true
 		doneButton.Visible = false
+		autoButton.Visible = autoHatch -- stays up during AUTO so it can be turned off
+		skipHint.Visible = not autoHatch
 		revealNew.Text = ""
 		revealName.Text = ""
+		revealOdds.Text = ""
 		revealInfo.Text = ""
 		clearStage()
-		sceneContext = {
+		local context = {
 			Stand = site.Stand,
 			Spot = site.Spot,
 			Egg = site.Egg,
 			Mascot = mascot,
-			AutoSkip = hatchesThisSession > FX.Hatch.AutoSkipAfter,
+			AutoSkip = autoHatch or hatchesThisSession > FX.Hatch.AutoSkipAfter,
 			EdgePulse = edgePulse,
+			Camera = camera,
 			OnCard = function()
 				showCard(result, mascot)
 			end,
 		}
-		local ok, finish = pcall(HatchScene.Play, sceneContext)
+		sceneContext = context
+		local ok, finish = pcall(HatchScene.Play, context)
 		if ok then
 			endScene = finish
+			if sceneContext ~= context then
+				finishStand() -- closed while the reveal was still playing
+				return
+			end
+			if autoHatch then
+				task.delay(FX.Hatch.AutoNextDelay, function()
+					if autoHatch and sceneContext == context then
+						autoNext()
+					end
+				end)
+			end
 		else
 			warn("[MascotController] hatch scene failed: " .. tostring(finish))
 			showCard(result, mascot)
 		end
+	end
+
+	-- AUTO HATCH: the next egg straight from the card. Stops when you can't pay or the server says no.
+	local function stopAuto(message: string?)
+		autoHatch = false
+		paintAuto()
+		if message then
+			showToast(message)
+		end
+	end
+	local function extrasToast(result)
+		if not result.Extras then
+			return
+		end
+		-- TRIPLE HATCH: the other pets from this hatch
+		local names = {}
+		for _, extra in result.Extras do
+			local other = Mascots.Get(extra.MascotId)
+			table.insert(names, (if other then other.Name:upper() else "?") .. (if extra.IsNew then " (NEW)" else ""))
+		end
+		task.spawn(showToast, "ALSO HATCHED: " .. table.concat(names, ", "))
+	end
+	autoNext = function()
+		local context = sceneContext
+		local site = stands[currentEgg.Id]
+		if hatching or not context or not site then
+			return
+		end
+		local unlocked, _, affordable = eggState(currentEgg)
+		if not unlocked or not affordable then
+			stopAuto("AUTO HATCH STOPPED: NOT ENOUGH COINS")
+			return
+		end
+		hatching = true
+		local ok, result = pcall(hatchRemote.InvokeServer, hatchRemote, currentEgg.Id)
+		hatching = false
+		local mascot = ok and result and result.Ok and Mascots.Get(result.MascotId)
+		if sceneContext ~= context then
+			return -- closed while waiting (the pet is still yours)
+		end
+		if not mascot then
+			stopAuto(if ok and result and result.Error then result.Error else "Try again")
+			return
+		end
+		extrasToast(result)
+		local camera = context.Camera
+		finishStand(true)
+		playOnStand(result, mascot, site, camera)
 	end
 
 	local function play(result)
@@ -730,6 +865,7 @@ function MascotController:Start()
 		revealNew.Text = ""
 		revealName.Text = ""
 		revealInfo.Text = ""
+		revealOdds.Text = ""
 		setGlow(Mascots.RarityColor("Common"), 0.3)
 		clearStage()
 
@@ -775,12 +911,13 @@ function MascotController:Start()
 		revealNew.TextColor3 = if result.IsNew then LIME else Color3.fromRGB(200, 190, 230)
 		revealName.Text = string.upper(mascot.Name)
 		revealName.TextColor3 = Mascots.RarityColor(mascot.Rarity)
+		revealOdds.Text = oddsText(result.Chance)
 		revealInfo.Text = ("%s  -  %s COINS%s"):format(
 			string.upper(mascot.Rarity),
 			Mascots.BonusText(Mascots.Bonus(mascot)),
 			if result.Equipped then "  -  EQUIPPED!" else ""
 		)
-		for _, label in { revealNew, revealName, revealInfo } do
+		for _, label in { revealNew, revealName, revealOdds, revealInfo } do
 			UiFx.Pop(label, 1.5, 0.35)
 		end
 		if rarity >= Mascots.RarityIndex("Epic") then
@@ -816,18 +953,7 @@ function MascotController:Start()
 		hatching = true
 		local ok, result = pcall(hatchRemote.InvokeServer, hatchRemote, egg.Id)
 		if ok and result and result.Ok then
-			if result.Extras then
-				-- TRIPLE HATCH: the other pets from this hatch
-				local names = {}
-				for _, extra in result.Extras do
-					local other = Mascots.Get(extra.MascotId)
-					table.insert(
-						names,
-						(if other then other.Name:upper() else "?") .. (if extra.IsNew then " (NEW)" else "")
-					)
-				end
-				task.spawn(showToast, "ALSO HATCHED: " .. table.concat(names, ", "))
-			end
+			extrasToast(result)
 			play(result)
 		else
 			showToast(if ok and result and result.Error then result.Error else "Try again")
@@ -856,6 +982,7 @@ function MascotController:Start()
 		revealNew.Text = ""
 		revealName.Text = ""
 		revealInfo.Text = ""
+		revealOdds.Text = ""
 		clearStage()
 		local trio = Instance.new("Model")
 		local copies = {}
@@ -918,25 +1045,25 @@ function MascotController:Start()
 
 	local function closeOverlay()
 		overlay.Visible = false
+		autoButton.Visible = false
+		skipHint.Visible = false
 		clearStage()
 		sceneContext = nil
+		if autoHatch then
+			stopAuto()
+		end
 		if endScene then
-			local finish = endScene
-			endScene = nil
-			finish()
-			for _, other in hiddenGuis do
-				other.Enabled = true
-			end
-			table.clear(hiddenGuis)
-			standBusy = false
-			refreshButton()
-			local stand = stands[currentEgg.Id]
-			if stand then
-				stand.Prompt.Enabled = true
-			end
+			finishStand()
 		end
 	end
 	doneButton.Activated:Connect(closeOverlay)
+	autoButton.Activated:Connect(function()
+		autoHatch = not autoHatch
+		paintAuto()
+		if autoHatch and doneButton.Visible and endScene then
+			autoNext() -- the card is up: go now
+		end
+	end)
 	-- During a stand hatch: a tap skips to the reveal (from 0.7s), and once the card is up a tap closes it
 	overlay.Activated:Connect(function()
 		if not sceneContext then
