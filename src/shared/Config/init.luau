@@ -436,15 +436,16 @@ Config.Ui = {
 	CompactHeight = 500, -- screens shorter than this (phones held sideways) use the compact phone layout
 	-- Tuck while bowling (owner 2026-10-28: on phones the HUD hid the lane): from the moment you start a throw, these
 	-- HUD pieces slide off the nearest screen edge; IdleSeconds after your last throw they slide back (Time = slide
-	-- seconds). Coins, the level bar, POWER, the streak and the goal bar always stay. Touch = phones + tablets,
-	-- Computer = mouse + keyboard. Never during the first 3 minutes.
+	-- seconds). Coins, the level bar, POWER, the streak and the goal bar always stay, except POWER tucks too once it
+	-- shows MAX POWER! (key "PowerMax"; nothing left to buy). Touch = phones + tablets, Computer = mouse + keyboard.
+	-- Never during the first 3 minutes.
 	Tuck = {
 		Enabled = true,
 		Touch = true,
 		Computer = false,
 		IdleSeconds = 4,
 		Time = 0.25,
-		Keys = { "Boosts", "Income", "Gems", "Balls", "Pets", "Store", "Daily", "Profile", "Gifts", "Teleport", "Rebirth", "Potions", "More" },
+		Keys = { "Boosts", "Income", "Gems", "Balls", "Pets", "Store", "Daily", "Profile", "Gifts", "Teleport", "Rebirth", "Potions", "More", "PowerMax" },
 	},
 	-- Phone MORE menu (owner 2026-10-28: the phone HUD was still too busy). On phones (short screens) the buttons in
 	-- Keys leave the HUD and fold into one MORE button in the top-right corner; tapping it slides them out in a column

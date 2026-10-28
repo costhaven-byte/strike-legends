@@ -237,6 +237,12 @@ function PowerLevelController:Start()
 				Scale = 1,
 			}):Play()
 		end
+		-- MAX POWER! has nothing left to buy, so it tucks away with the rest of the HUD while you bowl
+		if newMode == "Max" then
+			HudKit.Tuckable(button, "PowerMax")
+		else
+			HudKit.Untuckable(button)
+		end
 		arrange()
 	end
 

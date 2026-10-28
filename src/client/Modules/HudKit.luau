@@ -450,6 +450,15 @@ function HudKit.Tuckable(object: GuiObject, key: string)
 	end
 end
 
+-- Stops a HUD piece from tucking (and brings it home if it is away)
+function HudKit.Untuckable(object: GuiObject)
+	if not tuckables[object] then
+		return
+	end
+	tuckables[object] = nil
+	tuckOne(object, false)
+end
+
 -- ThrowController calls this when you start a throw (and the HUD tucks away until you stop bowling)
 function HudKit.Bowled()
 	lastBowl = os.clock()
