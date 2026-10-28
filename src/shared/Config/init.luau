@@ -3100,6 +3100,21 @@ Config.EggStands = {
 	{ Egg = "Skyline", Path = { "SkylineLanes", "EggPad" } },
 }
 
+-- Polish P3: odds bubbles float over each egg stand when you walk near: every pet the egg can hatch (3D) and its
+-- chance (LUCKY passes included, same maths as the hatch: Mascots.Chance). Sizes are in studs so they look the same
+-- on a phone and a computer. Client only (MascotController).
+Config.EggOdds = {
+	ShowDistance = 24, -- studs (flat) from the stand: closer than this, the bubbles fade in
+	HideDistance = 30, -- further than this, they fade out (the gap stops flicker at the edge)
+	FadeTime = 0.35, -- seconds to fade fully in or out
+	Height = 8.8, -- studs from the egg's middle up to the bubbles' bottom edge (clears the stand's PET EGGS sign)
+	CardSize = 2.2, -- studs: each pet's bubble is this wide (and a little taller for its %)
+	Gap = 0.3, -- studs between bubbles
+	PerRow = 6, -- bubbles per row (more pets wrap onto a second row)
+	PetFill = 0.85, -- how much of its bubble the pet fills
+	Spin = 30, -- degrees per second the pets turn in their bubbles (0 = still)
+}
+
 -- How mascots look and move, and the hatching moment
 Config.MascotFx = {
 	Size = 1.6, -- studs across

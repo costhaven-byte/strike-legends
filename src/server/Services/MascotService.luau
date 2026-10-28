@@ -130,26 +130,10 @@ local function roll(eggId: string, luck: number)
 	return inEgg[1]
 end
 
--- Polish P2: the chance one hatch of this egg gives exactly this pet (same maths as roll), shown as "1 in X"
+-- Polish P2: the chance one hatch of this egg gives exactly this pet (same maths as roll), shown as "1 in X".
+-- P3: the maths lives in Mascots.Chance so the stand's odds bubbles show the very same numbers.
 local function chance(eggId: string, mascot, luck: number): number
-	local inEgg = Mascots.InEgg(eggId)
-	local present = {}
-	local same = 0
-	for _, other in inEgg do
-		present[other.Rarity] = true
-		if other.Rarity == mascot.Rarity then
-			same += 1
-		end
-	end
-	local odds = Store.LuckyOdds(ODDS, luck)
-	local total = 0
-	for _, name in Mascots.Rarities do
-		total += if present[name] then odds[name] or 0 else 0
-	end
-	if total <= 0 or same == 0 then
-		return 0
-	end
-	return (odds[mascot.Rarity] or 0) / total / same
+	return Mascots.Chance(eggId, mascot, Store.LuckyOdds(ODDS, luck))
 end
 
 -- Adds one mascot to the player's pets. A free slot gets it straight away, so the bonus shows on the very next throw.

@@ -16,6 +16,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Currency = require(Shared.Modules.Currency)
 local Mascots = require(Shared.Modules.Mascots)
+local Store = require(Shared.Modules.Store)
 local Zones = require(Shared.Modules.Zones)
 local PotionController = require(script.Parent.PotionController)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
@@ -572,8 +573,14 @@ function MascotController:Start()
 		text(overlay, "Name", FONT, Color3.new(1, 1, 1), UDim2.fromScale(0.25, 0.64), UDim2.fromScale(0.5, 0.08))
 	local revealInfo = text(overlay, "Info", FONT, GOLD, UDim2.fromScale(0.25, 0.72), UDim2.fromScale(0.5, 0.05))
 	-- Polish P2: "1 IN X" odds of this exact pet, under its name
-	local revealOdds =
-		text(overlay, "Odds", FONT, Color3.fromRGB(200, 190, 230), UDim2.fromScale(0.3, 0.71), UDim2.fromScale(0.4, 0.04))
+	local revealOdds = text(
+		overlay,
+		"Odds",
+		FONT,
+		Color3.fromRGB(200, 190, 230),
+		UDim2.fromScale(0.3, 0.71),
+		UDim2.fromScale(0.4, 0.04)
+	)
 	for _, label in { revealNew, revealName, revealInfo, revealOdds } do
 		label.ZIndex = 35
 		local s = label:FindFirstChildOfClass("UIStroke")
@@ -589,8 +596,14 @@ function MascotController:Start()
 	autoButton.TextColor3 = Color3.new(1, 1, 1)
 	autoButton.ZIndex = 36
 	autoButton.Visible = false
-	local skipHint =
-		text(overlay, "SkipHint", FONT, Color3.fromRGB(200, 190, 230), UDim2.fromScale(0.35, 0.86), UDim2.fromScale(0.3, 0.035))
+	local skipHint = text(
+		overlay,
+		"SkipHint",
+		FONT,
+		Color3.fromRGB(200, 190, 230),
+		UDim2.fromScale(0.35, 0.86),
+		UDim2.fromScale(0.3, 0.035)
+	)
 	skipHint.Text = "TAP TO SKIP"
 	skipHint.ZIndex = 35
 	skipHint.Visible = false
@@ -1220,6 +1233,154 @@ function MascotController:Start()
 		player:GetAttributeChangedSignal("ZonesOpen"):Connect(refreshStand)
 		player:GetAttributeChangedSignal("FreeEgg_" .. egg.Id):Connect(refreshStand)
 		refreshStand()
+
+		-- Polish P3: odds bubbles over the stand (Config.EggOdds): each pet this egg hatches, turning in 3D, with its
+		-- chance (same maths as the server's roll, LUCKY passes included). They fade in when you walk near.
+		local ODDS_FX = Config.EggOdds
+		local pets = Mascots.InEgg(egg.Id)
+		local oddsBoard = Instance.new("BillboardGui")
+		oddsBoard.Name = "EggOdds"
+		local perRow = math.min(#pets, ODDS_FX.PerRow)
+		local rows = math.ceil(#pets / ODDS_FX.PerRow)
+		local cardW, cardH = ODDS_FX.CardSize, ODDS_FX.CardSize * 1.3
+		local boardW = perRow * cardW + (perRow - 1) * ODDS_FX.Gap
+		local boardH = rows * cardH + (rows - 1) * ODDS_FX.Gap + 0.8 -- + the LUCKY line on top
+		oddsBoard.Size = UDim2.fromScale(boardW, boardH) -- scale = studs, so it is the same size on every screen
+		oddsBoard.StudsOffset = Vector3.new(0, ODDS_FX.Height + boardH / 2, 0) -- bottom edge at Height
+		oddsBoard.LightInfluence = 0
+
+		oddsBoard.Enabled = false
+		oddsBoard.Parent = shell
+
+		-- Everything that fades, with its fully-shown transparency
+		local fading: { { any } } = {}
+		local function fadeWith(instance: Instance, property: string)
+			table.insert(fading, { instance, property, (instance :: any)[property] })
+		end
+		local luckLine = text(oddsBoard, "Luck", FONT, LIME, UDim2.new(), UDim2.fromScale(1, 0.8 / boardH))
+		luckLine.TextScaled = true
+		fadeWith(luckLine, "TextTransparency")
+		local luckStroke = luckLine:FindFirstChildOfClass("UIStroke")
+		if luckStroke then
+			fadeWith(luckStroke, "Transparency")
+		end
+
+		table.sort(pets, function(first, second)
+			local a, b = Mascots.RarityIndex(first.Rarity), Mascots.RarityIndex(second.Rarity)
+			if a ~= b then
+				return a < b
+			end
+			return first.Id < second.Id
+		end)
+		local percents: { [any]: TextLabel } = {}
+		local spinners: { Model } = {}
+		for index, mascot in pets do
+			local column = (index - 1) % ODDS_FX.PerRow
+			local line = (index - 1) // ODDS_FX.PerRow
+			local inRow = if line == rows - 1 then #pets - line * ODDS_FX.PerRow else perRow
+			local rowStart = (boardW - (inRow * cardW + (inRow - 1) * ODDS_FX.Gap)) / 2 -- last row is centred
+			local color = Mascots.RarityColor(mascot.Rarity)
+			local card = Instance.new("Frame")
+			card.Name = mascot.Id
+			card.BackgroundColor3 = CARD
+			card.BackgroundTransparency = 0.25
+			card.Position = UDim2.fromScale(
+				(rowStart + column * (cardW + ODDS_FX.Gap)) / boardW,
+				(0.8 + line * (cardH + ODDS_FX.Gap)) / boardH
+			)
+			card.Size = UDim2.fromScale(cardW / boardW, cardH / boardH)
+			card.Parent = oddsBoard
+			fadeWith(card, "BackgroundTransparency")
+			local round = Instance.new("UICorner")
+			round.CornerRadius = UDim.new(0.18, 0)
+			round.Parent = card
+			local rim = Instance.new("UIStroke")
+			rim.Color = color
+			rim.Thickness = 3
+			rim.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			rim.Parent = card
+			fadeWith(rim, "Transparency")
+			local holder = Instance.new("Frame")
+			holder.Name = "Pet"
+			holder.BackgroundTransparency = 1
+			holder.Size = UDim2.fromScale(1, cardW / cardH)
+			holder.Parent = card
+			local model = MascotView.Mascot(mascot, 2, false)
+			local view = MascotView.Viewport(holder, model, ODDS_FX.PetFill)
+			fadeWith(view, "ImageTransparency")
+			table.insert(spinners, model)
+			local percent = text(
+				card,
+				"Chance",
+				FONT,
+				color,
+				UDim2.fromScale(0.04, cardW / cardH - 0.06),
+				UDim2.fromScale(0.92, 1 - cardW / cardH + 0.02)
+			)
+			percent.TextScaled = true
+			fadeWith(percent, "TextTransparency")
+			local percentStroke = percent:FindFirstChildOfClass("UIStroke")
+			if percentStroke then
+				fadeWith(percentStroke, "Transparency")
+			end
+			percents[mascot] = percent
+		end
+
+		-- "40%", "2.5%", "0.25%", "0.01%": always short enough for a bubble
+		local function percentText(chance: number): string
+			local value = chance * 100
+			local shown = if value >= 10
+				then ("%d"):format(math.floor(value + 0.5))
+				elseif value >= 1 then ("%.1f"):format(value)
+				elseif value >= 0.01 then ("%.2f"):format(value)
+				else ("%.3f"):format(value)
+			shown = shown:gsub("(%.%d-)0+$", "%1"):gsub("%.$", "")
+			return shown .. "%"
+		end
+		local function refreshOdds()
+			local luck = Store.Luck(player)
+			local odds = Store.LuckyOdds(ECONOMY.Odds, luck)
+			for mascot, label in percents do
+				label.Text = percentText(Mascots.Chance(egg.Id, mascot, odds))
+			end
+			luckLine.Text = if luck > 1 then ("LUCKY x%s ODDS"):format((("%.1f"):format(luck):gsub("%.0$", ""))) else ""
+		end
+		player:GetAttributeChangedSignal("Passes"):Connect(refreshOdds)
+		refreshOdds()
+
+		local function setAlpha(alpha: number)
+			for _, entry in fading do
+				local shown = entry[3]
+				entry[1][entry[2]] = shown + (1 - shown) * (1 - alpha)
+			end
+			oddsBoard.Enabled = alpha > 0.001
+		end
+		setAlpha(0)
+		local alpha = 0
+		local showing = false
+		local spin = 0
+		RunService.RenderStepped:Connect(function(dt)
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local distance = if root then ((root.Position - base) * Vector3.new(1, 0, 1)).Magnitude else math.huge
+			if distance <= ODDS_FX.ShowDistance then
+				showing = true
+			elseif distance > ODDS_FX.HideDistance then
+				showing = false
+			end
+			local target = if showing and not standBusy then 1 else 0
+			if alpha ~= target then
+				local step = dt / math.max(ODDS_FX.FadeTime, 0.01)
+				alpha = if target > alpha then math.min(target, alpha + step) else math.max(target, alpha - step)
+				setAlpha(alpha)
+			end
+			if alpha > 0 and ODDS_FX.Spin ~= 0 then
+				spin += math.rad(ODDS_FX.Spin) * dt
+				local turn = CFrame.Angles(0, spin, 0)
+				for _, model in spinners do
+					model:PivotTo(turn)
+				end
+			end
+		end)
 
 		-- Idle (hatch storyboard frame 1): the core pulses slowly while the camera is near
 		local rig = PetIdle.Rig(standEgg, "Egg_" .. egg.Id, 1)

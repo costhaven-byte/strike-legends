@@ -94,6 +94,28 @@ for _, mascot in Config.Mascots do
 	end
 end
 
+-- The chance one hatch of this egg gives exactly this pet, from rarity odds (already with any luck applied, see
+-- Store.LuckyOdds). Only rarities the egg has pets of count; pets of one rarity are equally likely. The server's
+-- roll uses the same maths; the hatch card ("1 IN X", Polish P2) and the stand's odds bubbles (P3) show it.
+function Mascots.Chance(eggId: string, mascot, odds: { [string]: number }): number
+	local present = {}
+	local same = 0
+	for _, other in Mascots.InEgg(eggId) do
+		present[other.Rarity] = true
+		if other.Rarity == mascot.Rarity then
+			same += 1
+		end
+	end
+	local total = 0
+	for _, rarity in Config.Rarities do
+		total += if present[rarity.Name] then odds[rarity.Name] or 0 else 0
+	end
+	if total <= 0 or same == 0 then
+		return 0
+	end
+	return (odds[mascot.Rarity] or 0) / total / same
+end
+
 -- An egg has mascots to hatch (eggs for zones 2 to 5 get theirs later)
 function Mascots.EggReady(eggId: string): boolean
 	return #Mascots.InEgg(eggId) > 0
