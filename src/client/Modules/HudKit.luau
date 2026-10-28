@@ -182,10 +182,113 @@ function HudKit.Place(object: GuiObject, key: string, keepSize: boolean?)
 		end
 	end
 	HudKit.OnLayout(place)
+	HudKit.Tuckable(object, key)
 	if HudKit.Layout[key].Pc[6] == "M" then
 		hud():GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 			task.defer(place, HudKit.Phone())
 		end)
+	end
+end
+
+-- ===== Tuck while bowling (owner 2026-10-28: on phones the HUD hid the lane) =====
+-- While you bowl, the HUD pieces named in Config.Ui.Tuck.Keys slide off the nearest screen edge (left, right or up);
+-- IdleSeconds after your last throw they slide back. Coins, the level bar, POWER, the streak and the goal stay.
+-- Only on the devices Config.Ui.Tuck allows, and never during the first 3 minutes (onboarding points at buttons).
+local TUCK = Config.Ui.Tuck
+local tuckables: { [GuiObject]: boolean } = setmetatable({}, { __mode = "k" }) :: any
+local tuckState: { [GuiObject]: { Home: UDim2, Away: UDim2, Tween: Tween? } } = setmetatable({}, { __mode = "k" }) :: any
+local tucked = false
+local lastBowl = -math.huge
+
+local function moveTo(object: GuiObject, target: UDim2): Tween
+	local tween = TweenService:Create(object, TweenInfo.new(TUCK.Time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Position = target,
+	})
+	tween:Play()
+	return tween
+end
+
+local function tuckOne(object: GuiObject, on: boolean)
+	local state = tuckState[object]
+	if on and not state then
+		local screen = hud().AbsoluteSize
+		local position, size = object.AbsolutePosition, object.AbsoluteSize
+		local middle = position.X + size.X / 2
+		local offset = if middle < screen.X / 3
+			then UDim2.fromOffset(-(position.X + size.X + 30), 0)
+			elseif middle > screen.X * 2 / 3 then UDim2.fromOffset(screen.X - position.X + 30, 0)
+			else UDim2.fromOffset(0, -(position.Y + size.Y + 80))
+		local home = object.Position
+		state = { Home = home, Away = home + offset }
+		tuckState[object] = state
+		state.Tween = moveTo(object, state.Away)
+	elseif not on and state then
+		tuckState[object] = nil
+		local moving = state.Tween and state.Tween.PlaybackState == Enum.PlaybackState.Playing
+		if state.Tween then
+			state.Tween:Cancel()
+		end
+		-- Only slide back if nobody else moved it while it was away (a layout switch already put it home)
+		if moving or object.Position == state.Away then
+			moveTo(object, state.Home)
+		end
+	end
+end
+
+local function tuckAllowed(): boolean
+	if not TUCK.Enabled then
+		return false
+	end
+	if Config.Onboarding.Enabled and (player:GetAttribute("Onboarding") or 3) < 3 then
+		return false
+	end
+	local touch = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+	return if touch or HudKit.Phone() then TUCK.Touch else TUCK.Computer
+end
+
+local function setTucked(on: boolean)
+	if on == tucked then
+		return
+	end
+	tucked = on
+	for object in tuckables do
+		if object.Parent then
+			tuckOne(object, on)
+		end
+	end
+end
+
+local tuckLoop = false
+local function startTuckLoop()
+	if tuckLoop then
+		return
+	end
+	tuckLoop = true
+	task.spawn(function()
+		while true do
+			task.wait(0.25)
+			setTucked(tuckAllowed() and os.clock() - lastBowl < TUCK.IdleSeconds)
+		end
+	end)
+end
+
+-- A HUD piece that slides away while you bowl, if its key is in Config.Ui.Tuck.Keys
+function HudKit.Tuckable(object: GuiObject, key: string)
+	if not table.find(TUCK.Keys, key) then
+		return
+	end
+	tuckables[object] = true
+	startTuckLoop()
+	if tucked then
+		task.defer(tuckOne, object, true)
+	end
+end
+
+-- ThrowController calls this when you start a throw (and the HUD tucks away until you stop bowling)
+function HudKit.Bowled()
+	lastBowl = os.clock()
+	if tuckAllowed() then
+		setTucked(true)
 	end
 end
 
@@ -634,6 +737,7 @@ function HudKit.Square(parent: Instance?, opts: { [string]: any }): Square
 			block.Holder.AnchorPoint = Vector2.zero
 			block.Holder.Position = position
 		end)
+		HudKit.Tuckable(block.Holder, opts.Key)
 	else
 		block:Resize(HudKit.Phone())
 	end
@@ -672,6 +776,9 @@ function HudKit.Adopt(button: GuiButton, opts: { [string]: any }): Square
 			button.Position = HudKit.Spot(opts.Key, phone)
 		end
 	end)
+	if opts.Key and opts.Place ~= false then
+		HudKit.Tuckable(button, opts.Key)
+	end
 	return kit
 end
 

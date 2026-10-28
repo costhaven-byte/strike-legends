@@ -29,6 +29,7 @@ local ThrowResolver = require(script.Parent.Parent.Modules.ThrowResolver)
 local RewardResolver = require(script.Parent.Parent.Modules.RewardResolver)
 local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
 local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
+local StoreService = require(script.Parent.StoreService)
 
 local GOLDEN = Config.GoldenPin
 local THROW = Config.Throw
@@ -257,6 +258,7 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 			end
 			if not auto then
 				TrialService.OnThrow(player, trialAttempt, result.Tier, saved)
+				StoreService.OnThrow(player, isStrike)
 			end
 			MilestoneService.OnThrow(player, LaneUtil.ZoneOf(lane), isStrike and not auto, saved)
 			BallService.AddCrateThrow(player)

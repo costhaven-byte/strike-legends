@@ -177,6 +177,7 @@ function CollectionBookController:Start()
 		menu.Position = position
 		menu.Size = size :: UDim2
 	end)
+	HudKit.Tuckable(menu, "Balls")
 	swatch.BackgroundTransparency = 1
 	local buttonView = Instance.new("ViewportFrame")
 	buttonView.Name = "Ball3D"

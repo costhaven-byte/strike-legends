@@ -4,7 +4,8 @@
 -- (";DoubleCoins;VIP;"), which every perk reads through Shared.Modules.Store.
 -- Products: handed out in ProcessReceipt. Each purchase id is saved (Purchases), so a purchase is never given twice,
 -- and the save is written straight away before Roblox is told it went through.
--- Starter Pack: offered once (StarterOffered), after StarterAfterMinutes of play in total, at a quiet moment.
+-- Starter Pack: offered once (StarterOffered), only when the player is stuck: StarterMissStreak throws in a row
+-- without a strike (owner 2026-10-28; was a timed popup), at a quiet moment.
 -- Ladder products (COIN BOOST / XP BOOST) are bought in order: each step boosts more, up to x4
 -- (CoinBoostLevel / XpBoostLevel).
 -- Looks (Cosmetic = a Config.Cosmetics Id): bought once, handed to CosmeticService (step 12b).
@@ -35,7 +36,7 @@ local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
 local MONEY = Config.Monetization
 local OFFERS = MONEY.Offers
-local OFFER_CHECK = 15 -- seconds between Starter Pack and VIP gift checks
+local OFFER_CHECK = 15 -- seconds between VIP gift checks
 
 local StoreService = {}
 
@@ -44,6 +45,7 @@ local resultEvent: RemoteEvent? = nil
 local offerEvent: RemoteEvent? = nil
 local lastPrompt: { [Player]: number } = {} -- os.clock() of this player's last offer popup (Starter Pack too)
 local hardStopsShown: { [Player]: { [number]: boolean } } = {} -- zones already offered this visit
+local missesInRow: { [Player]: number } = {} -- throws in a row without a strike (Starter Pack trigger)
 
 local passByNumber = {}
 for _, pass in MONEY.Passes do
@@ -243,12 +245,13 @@ local function sendOffer(player: Player, offer)
 	end
 end
 
--- Starter Pack popup: once, after enough play, never for someone who bought it
+-- Starter Pack popup: once, only after StarterMissStreak throws in a row without a strike, never for someone who
+-- bought it
 local function checkOffer(player: Player)
 	if
-		(PlayerDataService.Get(player, "StarterPack") or 0) > 0
+		(missesInRow[player] or 0) < MONEY.StarterMissStreak
+		or (PlayerDataService.Get(player, "StarterPack") or 0) > 0
 		or (PlayerDataService.Get(player, "StarterOffered") or 0) > 0
-		or Analytics.MinutesPlayed(player) < MONEY.StarterAfterMinutes
 		or not mayPrompt(player, true)
 	then
 		return
@@ -258,6 +261,19 @@ local function checkOffer(player: Player)
 	local offer = ReplicatedStorage.Remotes:FindFirstChild("StarterOffer") :: RemoteEvent?
 	if offer then
 		offer:FireClient(player)
+	end
+end
+
+-- Every hand-thrown lane throw (ThrowService): counts misses in a row for the Starter Pack popup
+function StoreService.OnThrow(player: Player, isStrike: boolean)
+	if isStrike then
+		missesInRow[player] = 0
+		return
+	end
+	missesInRow[player] = (missesInRow[player] or 0) + 1
+	local ok, err = pcall(checkOffer, player)
+	if not ok then
+		warn("[StoreService] " .. tostring(err))
 	end
 end
 
@@ -430,6 +446,7 @@ function StoreService:Start()
 		owned[player] = nil
 		lastPrompt[player] = nil
 		hardStopsShown[player] = nil
+		missesInRow[player] = nil
 	end)
 
 	task.spawn(function()
@@ -438,10 +455,6 @@ function StoreService:Start()
 			for _, player in Players:GetPlayers() do
 				if PlayerDataService.IsLoaded(player) then
 					pcall(vipGift, player)
-					local ok, err = pcall(checkOffer, player)
-					if not ok then
-						warn("[StoreService] " .. tostring(err))
-					end
 				end
 			end
 		end

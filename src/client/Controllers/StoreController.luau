@@ -581,6 +581,7 @@ function StoreController:Start()
 		-- Right of BALLS and PETS (HUD Kit spot)
 		holder.AnchorPoint = Vector2.new(0, 0)
 		holder.Position = HudKit.Spot("Store", compact())
+		HudKit.Tuckable(holder, "Store")
 	end
 
 	-- Idle: the icon pops every 5 s, the "!" wiggles every 3 s (paused while the store is open)
@@ -693,6 +694,7 @@ function StoreController:Start()
 				end
 			end)
 			table.insert(pills, { Holder = holder, Top = top, Price = price, Ladder = ladder, Shown = nil, Slot = nil })
+			HudKit.Tuckable(holder, "Boosts")
 		end
 	end
 	-- Side by side above the coin counter (owner 2026-10-25), on the HUD Kit's spot: 10 px apart (6 on phones)

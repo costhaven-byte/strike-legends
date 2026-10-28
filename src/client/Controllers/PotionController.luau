@@ -485,6 +485,7 @@ function PotionController:Start()
 		timers.Position = position
 	end
 	HudKit.OnLayout(arrange)
+	HudKit.Tuckable(timers, "Potions")
 
 	player:GetAttributeChangedSignal("Potions"):Connect(refresh)
 	player:GetAttributeChangedSignal("Boosts"):Connect(refresh)

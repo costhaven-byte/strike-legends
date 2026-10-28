@@ -434,6 +434,18 @@ Config.Juice = {
 -- Screen layout
 Config.Ui = {
 	CompactHeight = 500, -- screens shorter than this (phones held sideways) use the compact phone layout
+	-- Tuck while bowling (owner 2026-10-28: on phones the HUD hid the lane): from the moment you start a throw, these
+	-- HUD pieces slide off the nearest screen edge; IdleSeconds after your last throw they slide back (Time = slide
+	-- seconds). Coins, the level bar, POWER, the streak and the goal bar always stay. Touch = phones + tablets,
+	-- Computer = mouse + keyboard. Never during the first 3 minutes.
+	Tuck = {
+		Enabled = true,
+		Touch = true,
+		Computer = false,
+		IdleSeconds = 4,
+		Time = 0.25,
+		Keys = { "Boosts", "Income", "Gems", "Balls", "Pets", "Store", "Daily", "Profile", "Gifts", "Teleport", "Rebirth", "Potions" },
+	},
 	CountTime = 0.6, -- seconds for a HUD number to tick up to its new value
 	RankUpShowTime = 4, -- seconds before the rank-up screen closes by itself
 	RankUpConfetti = 40, -- confetti pieces on the rank-up screen
@@ -3806,7 +3818,7 @@ Config.Monetization = {
 	-- Luck (LUCKY passes): every rarity from LuckFrom up gets its chance multiplied by the player's luck, then all
 	-- chances are scaled back to 100% (so commons drop a little). Pity and exact guarantees don't change.
 	LuckFrom = "Rare",
-	StarterAfterMinutes = 10, -- the Starter Pack popup shows once, after this many minutes of play in total...
+	StarterMissStreak = 6, -- the Starter Pack popup shows once, only after this many throws in a row with no strike...
 	QuietSeconds = 3, -- ...at a quiet moment: this long after the player's last throw (never mid-throw)
 	-- Offer popups (Addendum 2 section 7, step 12b-2): a soft offer at a natural moment, always with NO THANKS.
 	-- HardStop: you walk up to a locked zone (its glowing wall or the elevator): the next XP BOOST step to reach the
@@ -3922,6 +3934,7 @@ Config.Milestones = {
 	},
 	Preview = true, -- show "NEXT: LV 9 REWARD" under the challenge (false = hide it)
 	PopupTime = 3.5, -- seconds a level reward popup stays up
+	WelcomeBackSeconds = 4, -- seconds the small WELCOME BACK text (away coins) stays before it fades out
 }
 
 -- Potions (owner 2026-10-22): drink one for a 15 minute boost. Coin potions multiply coins, XP potions multiply XP.

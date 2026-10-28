@@ -814,6 +814,7 @@ function ThrowController:Start()
 			charge, holdStartedAt = 0, os.clock()
 			wasInRed = false
 			throwHold:FireServer() -- the server starts its own clock for this hold
+			HudKit.Bowled()
 			lastAction = os.clock()
 			setHint("LET GO IN THE GOLD!")
 			setButton("LET GO!", "Held")

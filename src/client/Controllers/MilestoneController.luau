@@ -377,7 +377,44 @@ function MilestoneController:Start()
 		end)
 	end
 
+	-- WELCOME BACK (away coins): no popup (owner 2026-10-28: too in your face), just one line of small white text that
+	-- fades in near the top of the screen, stays a few seconds and fades out
+	local toastGui = make("ScreenGui", {
+		Name = "WelcomeBackUI",
+		ResetOnSpawn = false,
+		IgnoreGuiInset = false,
+		DisplayOrder = 60, -- over popup backdrops (the daily calendar opens at the same moment)
+	}, player:WaitForChild("PlayerGui"))
+	local function welcomeBack(coins: number)
+		local text = make("TextLabel", {
+			Name = "WelcomeBack",
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 0, 14),
+			Size = UDim2.new(0.9, 0, 0, 26),
+			BackgroundTransparency = 1,
+			FontFace = UiKit.Body,
+			TextSize = 20,
+			TextColor3 = C.White,
+			TextTransparency = 1,
+			TextStrokeTransparency = 1,
+			TextStrokeColor3 = Color3.new(0, 0, 0),
+			Text = ("Welcome back! You earned %s coins while away"):format(Currency.Format(coins)),
+			ZIndex = 50,
+		}, toastGui)
+		make("UITextSizeConstraint", { MaxTextSize = 20, MinTextSize = 12 }, text)
+		text.TextScaled = true
+		tween(text, 0.6, Enum.EasingStyle.Quad, { TextTransparency = 0, TextStrokeTransparency = 0.55 })
+		task.delay(0.6 + MILESTONES.WelcomeBackSeconds, function()
+			tween(text, 0.8, Enum.EasingStyle.Quad, { TextTransparency = 1, TextStrokeTransparency = 1 }).Completed:Wait()
+			text:Destroy()
+		end)
+	end
+
 	ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("MilestoneReward").OnClientEvent:Connect(function(data)
+		if data.Kind == "Away" then
+			welcomeBack(data.Coins or 0)
+			return
+		end
 		table.insert(queue, data)
 		showNext()
 		refresh()
