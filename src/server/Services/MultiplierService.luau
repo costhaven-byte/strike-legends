@@ -54,6 +54,30 @@ function MultiplierService.Coins(player: Player, ball, level, streak: number, mo
 	}
 end
 
+-- Every XP multiplier for a throw (moved here from ThrowService in Polish P5 so the Profile panel lists the same
+-- numbers that pay; published as the Player attribute XpMultipliers). Pets boost XP by the same amount they boost
+-- coins (owner 2026-10-22).
+local XP_ORDER = { "Zone", "Pets", "Potion", "Rebirth", "Passes", "XpBoost", "Streak" }
+function MultiplierService.Xp(player: Player, streak: number, zone: number): { [string]: number }
+	return {
+		Zone = Zones.XpPay(zone), -- later zones pay more XP (Config.Economy.Zones XpPay, economy pass E2)
+		Streak = Progression.GetStreakXpMultiplier(streak),
+		Pets = MascotService.GetMultiplier(player),
+		Potion = PotionService.Multiplier(player, "XP"), -- XP Potion x2 / Mega XP Potion x4 (Config.Potions)
+		Rebirth = Rebirth.XpMultiplier(PlayerDataService.Get(player, "Rebirths")), -- Phase X rebirth stub
+		Passes = Store.XpMultiplier(player), -- 2X COINS + 2X XP and VIP game passes (Config.Monetization)
+		XpBoost = Store.XpBoostMultiplier(player), -- the XP BOOST ladder bought with Robux (up to x2)
+	}
+end
+
+local function encode(all: { [string]: number }, order: { string }): string
+	local parts = {}
+	for _, name in order do
+		table.insert(parts, ("%s=%s"):format(name, tostring(math.floor((all[name] or 1) * 1000 + 0.5) / 1000)))
+	end
+	return table.concat(parts, ";")
+end
+
 -- Multipliers that are on between throws (everything in ORDER but Streak and lane Modifier), multiplied together.
 -- Coins per minute takes these out of past throws and puts today's back in, so an upgrade shows at once.
 local NOT_STEADY = { Streak = true, Modifier = true }
@@ -88,13 +112,14 @@ local function publish(player: Player)
 		false,
 		zone
 	)
-	local parts = {}
-	for _, name in ORDER do
-		table.insert(parts, ("%s=%s"):format(name, tostring(math.floor((all[name] or 1) * 1000 + 0.5) / 1000)))
-	end
-	local text = table.concat(parts, ";")
+	local text = encode(all, ORDER)
 	if player:GetAttribute("CoinMultipliers") ~= text then
 		player:SetAttribute("CoinMultipliers", text)
+	end
+	-- XP sources for the Profile panel (Polish P5)
+	local xpText = encode(MultiplierService.Xp(player, player:GetAttribute("Streak") or 0, zone), XP_ORDER)
+	if player:GetAttribute("XpMultipliers") ~= xpText then
+		player:SetAttribute("XpMultipliers", xpText)
 	end
 	if Config.Income.Enabled then
 		local perMinute = AwayService.PerMinute(player, MultiplierService.Steady(all))

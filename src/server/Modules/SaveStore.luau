@@ -127,6 +127,9 @@ local function migrate(saved: any): { [string]: any }
 		-- v20 Purchases, StarterPack and StarterOffered, v21 RobuxBoost and VipGiftDay: same, they start empty / at 0
 		-- v23 added Cosmetics and EquippedCosmetics (step 12b): they start empty, nothing to upgrade
 		-- v25 added EquipBestHinted (Polish P4): it starts at 0, nothing to upgrade
+		-- v26 added TotalThrows, TotalStrikes, TotalPerfects, LifetimeCoins, BossWins and AchievementTiers (Polish P5
+		-- profile): they start at 0 / empty and count from now on (pins, eggs, crates, streak, rebirths, play time were
+		-- already saved, so those achievements count everything an old player did)
 		if version < 22 then
 			-- v22: the COIN BOOST became a doubling ladder (x2, x4, x8, x16). An old adding boost (coins x (1 +
 			-- RobuxBoost)) becomes the highest step it already reached or passed, so nobody loses what they paid for.

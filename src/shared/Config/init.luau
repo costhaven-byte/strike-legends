@@ -224,12 +224,19 @@ Config.StartingData = {
 	ZonesOpen = 1, -- highest zone open (zones open by rebirths, Config.Economy.Zones Rebirths; v24). Never goes down
 	ZoneVisited = 1, -- highest zone stood in; the walk guide's gold beam leads to an open zone above it (v24)
 	EquipBestHinted = 0, -- 1 = the pointing hand on EQUIP BEST was used (Polish P4, Config.EquipBestHint; v25)
+	-- Profile panel (Polish P5, Config.Profile; v26): lifetime counters that had no save field yet, all start at 0
+	TotalThrows = 0, -- lane throws ever (auto throws too; not boss throws)
+	TotalStrikes = 0, -- strikes ever
+	TotalPerfects = 0, -- PERFECT throws ever
+	LifetimeCoins = 0, -- coins earned ever, from anything (never goes down: spending and rebirths don't touch it)
+	BossWins = 0, -- Pin Titan fights won (with enough hits to get a reward)
+	AchievementTiers = {}, -- achievement tiers claimed, by Config.Profile.Achievements Id: { Throws = 2 }
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 25, -- v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 26, -- v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -305,6 +312,7 @@ Config.RateLimits = {
 	BuyCosmetic = 0.5,
 	EquipCosmetic = 0.2,
 	OfferAsk = 3,
+	ClaimAchievement = 0.4, -- Profile panel CLAIM (Polish P5)
 }
 
 -- Gems on/off switch. Addendum 1 keeps gems (earned only, a gem sink comes later); set Enabled = false to hide them.
@@ -441,7 +449,7 @@ Config.Numbers = {
 	Suffixes = { "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc", "Ud", "Dd", "Td", "Qad", "Qid" },
 	ShortFrom = 1000, -- smaller numbers show whole, with commas ("950")
 	Decimals = 2, -- "12.34M"; numbers of 100 or more in a unit get one less ("123.4M"); trailing zeros are trimmed
-	Currencies = { "Coins", "Gems", "WeeklyCoins" }, -- saved values that are money: they go through Currency
+	Currencies = { "Coins", "Gems", "WeeklyCoins", "LifetimeCoins" }, -- saved values that are money: they go through Currency
 	-- Precision guard: plain Roblox numbers stop counting whole coins exactly at about 9 quadrillion (9e15).
 	-- Any coin value at WarnAt or above logs a warning (once per place in the code), long before that limit.
 	SafeMax = 9e15,
@@ -4062,6 +4070,7 @@ Config.Analytics = {
 		"BossDefeated", -- later (Milestone 15)
 		"BossTrip", -- boarded the Pin Titan helicopter (Config.Boss)
 		"BossWon", -- labels = reward tier
+		"Achievement", -- value = tier claimed; labels = achievement Id (Profile panel, Polish P5)
 		"BossDrop", -- the boss-only drop; labels = its Id
 		"BossLost", -- the Titan escaped (time ran out); labels = reward tier
 		"PityHit", -- labels = crate, rarity
@@ -4615,6 +4624,71 @@ Config.Economy.Sim = {
 	BossTripSeconds = 40, -- a boss trip (helicopter, fight, ride back) costs this much throwing time
 	SpinAtZone = 2, -- the one daily spin of the session happens when this zone opens
 	ToleranceShare = 0.2, -- a result more than 20% outside a timeline window counts as a mismatch
+}
+
+-- Profile panel (Polish P5, POLISH_PLAN.md): a PROFILE button on the HUD opens BOOSTS (every coin and XP multiplier,
+-- the same numbers that pay throws: MultiplierService), STATS (lifetime numbers) and ACHIEVEMENTS (tiers with progress
+-- bars and a small gem reward you CLAIM; the server counts, checks and pays: AchievementService, ProfileController).
+-- Stat = which number an achievement counts (Config.Profile.Stats Key). Tiers = { Goal, Gems } in order; add rows or
+-- tiers freely (claimed tiers are saved per Id in AchievementTiers, so never rename an Id).
+-- Gem check (2026-10-28): everything together pays 317 gems over the whole game. Compare: level-ups 2 gems each
+-- (~118 to level 60) + rank tier gems (345) + VIP 25/day; sinks: cosmetics 40/120/300, Polish 4-40 per level.
+-- A player's first hour reaches about 8-10 tier-1 rows and a few tier-2 rows = about 20-25 gems (half a 40-gem
+-- cosmetic); the big tiers (12 gems) need 10+ hours each. Gem packs: 60 gems = 99 Robux, so this never undercuts them.
+Config.Profile = {
+	Enabled = true,
+	-- The STATS page, in order. Format: "Number" (1,234 / 12.5K), "Time" (seconds -> 3h 20m)
+	Stats = {
+		{ Key = "Throws", Name = "THROWS", Icon = "Ball", Format = "Number" },
+		{ Key = "Strikes", Name = "STRIKES", Icon = "Pin", Format = "Number" },
+		{ Key = "Perfects", Name = "PERFECTS", Icon = "Xp", Format = "Number" },
+		{ Key = "Pins", Name = "PINS KNOCKED", Icon = "Pin", Format = "Number" },
+		{ Key = "BestStreak", Name = "BEST STREAK", Icon = "Flame", Format = "Number" },
+		{ Key = "Coins", Name = "COINS EARNED", Icon = "Coin", Format = "Number" },
+		{ Key = "Eggs", Name = "EGGS HATCHED", Icon = "Paw", Format = "Number" },
+		{ Key = "Crates", Name = "CRATES OPENED", Icon = "Crate", Format = "Number" },
+		{ Key = "Balls", Name = "BALLS OWNED", Icon = "Ball", Format = "Number" },
+		{ Key = "Pets", Name = "PETS FOUND", Icon = "Paw", Format = "Number" },
+		{ Key = "Rebirths", Name = "REBIRTHS", Icon = "Rebirth", Format = "Number" },
+		{ Key = "BossWins", Name = "TITAN WINS", Icon = "Bolt", Format = "Number" },
+		{ Key = "Level", Name = "LEVEL", Icon = "Xp", Format = "Number" },
+		{ Key = "Zones", Name = "ZONES OPEN", Icon = "Portal", Format = "Number" },
+		{ Key = "PlayTime", Name = "TIME PLAYED", Icon = "GiftDaily", Format = "Time" },
+	},
+	-- 15 achievements, 58 tiers. Text: %s = the tier's goal; One = the text when the goal is 1.
+	Achievements = {
+		{ Id = "Throws", Name = "BOWLER", Stat = "Throws", Text = "Throw %s balls", Tiers = {
+			{ Goal = 100, Gems = 1 }, { Goal = 1000, Gems = 3 }, { Goal = 5000, Gems = 6 }, { Goal = 25000, Gems = 12 } } },
+		{ Id = "Strikes", Name = "STRIKE MACHINE", Stat = "Strikes", Text = "Bowl %s strikes", Tiers = {
+			{ Goal = 25, Gems = 1 }, { Goal = 250, Gems = 3 }, { Goal = 2500, Gems = 6 }, { Goal = 10000, Gems = 12 } } },
+		{ Id = "Perfects", Name = "PERFECTIONIST", Stat = "Perfects", Text = "Hit %s PERFECTS", Tiers = {
+			{ Goal = 10, Gems = 1 }, { Goal = 100, Gems = 3 }, { Goal = 1000, Gems = 6 }, { Goal = 5000, Gems = 12 } } },
+		{ Id = "Pins", Name = "PIN CRUSHER", Stat = "Pins", Text = "Knock down %s pins", Tiers = {
+			{ Goal = 1000, Gems = 1 }, { Goal = 10000, Gems = 3 }, { Goal = 100000, Gems = 6 }, { Goal = 500000, Gems = 12 } } },
+		{ Id = "Streak", Name = "ON FIRE", Stat = "BestStreak", Text = "Get %s strikes in a row", Tiers = {
+			{ Goal = 3, Gems = 1 }, { Goal = 5, Gems = 3 }, { Goal = 10, Gems = 6 }, { Goal = 20, Gems = 12 } } },
+		{ Id = "Coins", Name = "MONEY MAKER", Stat = "Coins", Text = "Earn %s coins", Tiers = {
+			{ Goal = 100000, Gems = 1 }, { Goal = 10000000, Gems = 3 }, { Goal = 1000000000, Gems = 6 }, { Goal = 1000000000000, Gems = 12 } } },
+		{ Id = "Eggs", Name = "EGG HUNTER", Stat = "Eggs", Text = "Hatch %s eggs", One = "Hatch your first egg", Tiers = {
+			{ Goal = 1, Gems = 1 }, { Goal = 10, Gems = 3 }, { Goal = 50, Gems = 6 }, { Goal = 200, Gems = 12 } } },
+		{ Id = "Crates", Name = "CRATE CRACKER", Stat = "Crates", Text = "Open %s crates", One = "Open your first crate", Tiers = {
+			{ Goal = 1, Gems = 1 }, { Goal = 10, Gems = 3 }, { Goal = 50, Gems = 6 }, { Goal = 200, Gems = 12 } } },
+		{ Id = "Balls", Name = "COLLECTOR", Stat = "Balls", Text = "Own %s different balls", Tiers = {
+			{ Goal = 5, Gems = 1 }, { Goal = 12, Gems = 3 }, { Goal = 20, Gems = 6 }, { Goal = 30, Gems = 12 } } },
+		{ Id = "Pets", Name = "PET PAL", Stat = "Pets", Text = "Find %s different pets", Tiers = {
+			{ Goal = 3, Gems = 1 }, { Goal = 6, Gems = 3 }, { Goal = 10, Gems = 6 }, { Goal = 14, Gems = 12 } } },
+		{ Id = "Rebirths", Name = "REBORN", Stat = "Rebirths", Text = "Rebirth %s times", One = "Rebirth for the first time", Tiers = {
+			{ Goal = 1, Gems = 1 }, { Goal = 3, Gems = 3 }, { Goal = 5, Gems = 6 }, { Goal = 10, Gems = 12 } } },
+		{ Id = "Titan", Name = "TITAN SLAYER", Stat = "BossWins", Text = "Beat the Pin Titan %s times", One = "Beat the Pin Titan", Tiers = {
+			{ Goal = 1, Gems = 3 }, { Goal = 5, Gems = 6 }, { Goal = 25, Gems = 12 } } },
+		{ Id = "Level", Name = "CLIMBER", Stat = "Level", Text = "Reach level %s", Tiers = {
+			{ Goal = 10, Gems = 1 }, { Goal = 25, Gems = 3 }, { Goal = 40, Gems = 6 }, { Goal = 60, Gems = 12 } } },
+		{ Id = "Zones", Name = "EXPLORER", Stat = "Zones", Text = "Open zone %s", Tiers = {
+			{ Goal = 2, Gems = 1 }, { Goal = 3, Gems = 3 }, { Goal = 4, Gems = 6 } } },
+		{ Id = "PlayTime", Name = "DEDICATED", Stat = "PlayTime", Text = "Play for %s", Tiers = {
+			{ Goal = 1800, Gems = 1 }, { Goal = 7200, Gems = 3 }, { Goal = 36000, Gems = 6 }, { Goal = 180000, Gems = 12 } } },
+	},
+	PublishEvery = 1, -- seconds between the server's stat/achievement updates to the panel
 }
 
 return Config

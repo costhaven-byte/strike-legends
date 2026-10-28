@@ -193,6 +193,11 @@ function PlayerDataService.Add(player: Player, key: string, amount: number): boo
 		profile.Data[key] += amount
 	end
 	player:SetAttribute(key, profile.Data[key])
+	-- Coins earned ever (Profile panel stats + MONEY MAKER achievement, Polish P5): every coin that comes in counts
+	if key == "Coins" and amount > 0 and profile.Data.LifetimeCoins ~= nil then
+		profile.Data.LifetimeCoins = Currency.Add(profile.Data.LifetimeCoins, amount, "LifetimeCoins")
+		player:SetAttribute("LifetimeCoins", profile.Data.LifetimeCoins)
+	end
 	return true
 end
 

@@ -93,6 +93,8 @@ HudKit.Layout = {
 	Store = { Pc = { 168, 290, 56, 56, "L", "T" }, Phone = { 112, 148, 44, 46, "L", "T" } },
 	Power = { Pc = { 32, 362, 176, 66, "L", "T" }, Phone = { 162, 148, 118, 46, "L", "T" } },
 	Daily = { Pc = { 32, 444, 56, 56, "L", "T" }, Phone = { 736, 40, 44, 46, "R", "T" } },
+	-- PROFILE (polish P5, not in the kit): right of DAILY on computers, under BALLS on phones
+	Profile = { Pc = { 100, 444, 56, 56, "L", "T" }, Phone = { 12, 200, 44, 46, "L", "T" } },
 	Breakdown = { Pc = { 272, 190, 330, nil, "L", "T" }, Phone = { 272, 50, 300, nil, "C", "T" } },
 	-- Level bar + REBIRTH sit in the strip at the very top (next to Roblox's own buttons), so the boss pill fits under them
 	LevelBar = { Pc = { 650, 14, 620, 52, "C", "T" }, Phone = { 262, 6, 320, 34, "C", "T" } },

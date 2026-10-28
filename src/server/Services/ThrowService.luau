@@ -12,22 +12,17 @@ local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modifiers = require(Shared.Modules.Modifiers)
 local Store = require(Shared.Modules.Store)
 local PowerLevels = require(Shared.Modules.PowerLevels)
-local Progression = require(Shared.Modules.Progression)
-local Rebirth = require(Shared.Modules.Rebirth)
 local ThrowRules = require(Shared.Modules.ThrowRules)
-local Zones = require(Shared.Modules.Zones)
 local Analytics = require(script.Parent.Analytics)
 local AwayService = require(script.Parent.AwayService)
 local BallService = require(script.Parent.BallService)
 local BossService = require(script.Parent.BossService)
 local GoldenPinService = require(script.Parent.GoldenPinService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
-local MascotService = require(script.Parent.MascotService)
 local MilestoneService = require(script.Parent.MilestoneService)
 local MultiplierService = require(script.Parent.MultiplierService)
 local OnboardingService = require(script.Parent.OnboardingService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
-local PotionService = require(script.Parent.PotionService)
 local ProgressionService = require(script.Parent.ProgressionService)
 local TrialService = require(script.Parent.TrialService)
 local ThrowResolver = require(script.Parent.Parent.Modules.ThrowResolver)
@@ -66,16 +61,9 @@ end
 
 -- Every XP multiplier for this player. Future boosts (like a 2x XP gamepass) get added here.
 -- Pets boost XP by the same amount they boost coins (owner 2026-10-22).
+-- (Polish P5: the list lives in MultiplierService.Xp, so the Profile panel shows the same numbers that pay)
 local function getXpMultipliers(player: Player, streak: number, zone: number): { [string]: number }
-	return {
-		Zone = Zones.XpPay(zone), -- later zones pay more XP (Config.Economy.Zones XpPay, economy pass E2)
-		Streak = Progression.GetStreakXpMultiplier(streak),
-		Pets = MascotService.GetMultiplier(player),
-		Potion = PotionService.Multiplier(player, "XP"), -- XP Potion x2 / Mega XP Potion x4 (Config.Potions)
-		Rebirth = Rebirth.XpMultiplier(PlayerDataService.Get(player, "Rebirths")), -- Phase X rebirth stub
-		Passes = Store.XpMultiplier(player), -- 2X COINS + 2X XP and VIP game passes (Config.Monetization)
-		XpBoost = Store.XpBoostMultiplier(player), -- the XP BOOST ladder bought with Robux (up to x2)
-	}
+	return MultiplierService.Xp(player, streak, zone)
 end
 
 local function isValidNumber(value: any): boolean
@@ -259,6 +247,14 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 			ProgressionService.ShowStreak(player, streak)
 			ProgressionService.AddXP(player, reward.XP)
 			LeaderboardService.RecordThrow(player, result.Count, reward.Coins)
+			-- Lifetime counters for the Profile panel (Polish P5)
+			PlayerDataService.Add(player, "TotalThrows", 1)
+			if isStrike then
+				PlayerDataService.Add(player, "TotalStrikes", 1)
+			end
+			if result.Perfect then
+				PlayerDataService.Add(player, "TotalPerfects", 1)
+			end
 			if not auto then
 				TrialService.OnThrow(player, trialAttempt, result.Tier, saved)
 			end

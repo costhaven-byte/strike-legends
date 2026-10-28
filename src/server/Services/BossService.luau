@@ -808,6 +808,9 @@ local function payRewards(won: boolean)
 				Analytics.Event(player, "BossDrop", 1, { mine.Drop.Id })
 			end
 			Analytics.Event(player, if won then "BossWon" else "BossLost", 1, { tier.Name })
+			if won then
+				PlayerDataService.Add(player, "BossWins", 1) -- Profile panel stat + TITAN SLAYER (Polish P5)
+			end
 			SessionLog.Moment(
 				player,
 				("Boss %s: %d damage, rank %d, %s"):format(if won then "won" else "over", f.Damage, rank, tier.Name)

@@ -45,6 +45,8 @@ local SOURCES = {
 }
 
 local MultiplierController = {}
+-- The Profile panel's BOOSTS page lists the same sources (Polish P5)
+MultiplierController.Sources = SOURCES
 
 -- 2.345 -> "x2.35", 3 -> "x3", 1500 -> "x1,500"
 local format = Currency.FormatMultiplier
@@ -58,6 +60,7 @@ local function decode(text: any): { [string]: number }
 	end
 	return values
 end
+MultiplierController.Decode = decode -- "Zone=4;Ball=1.1" -> { Zone = 4, Ball = 1.1 } (also used by the Profile panel)
 
 local function corner(parent: Instance, radius: number?)
 	local c = Instance.new("UICorner")
