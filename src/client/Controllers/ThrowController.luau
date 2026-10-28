@@ -57,7 +57,8 @@ local SIDE_SIDE = 250 -- pixels right of the screen centre to the middle of the 
 local METER_WIDTH = if IS_SIDE then ARC_HEIGHT else ARC_HEIGHT * 2
 local METER_HEIGHT = if IS_SIDE then ARC_HEIGHT * 2 else ARC_HEIGHT
 local METER_SIDE = if IS_SIDE then SIDE_SIDE else ARC_SIDE
-local PHONE_DROP = 50 -- screen pixels lower on phones, so the top stays clear of the XP bar and rebirth prompt
+local PHONE_DROP = 50 -- screen pixels lower on phones, so the top stays clear of the XP bar
+local PHONE_LEFT = 24 -- and a little to the left, clear of the REBIRTH NOW pill on the right
 
 -- Popups that must be closed before you can throw (ScreenGui, frame), so a tap meant for one never rolls the
 -- ball by accident and costs a streak
@@ -1008,9 +1009,9 @@ function ThrowController:Start()
 		local screenScale = math.clamp(Workspace.CurrentCamera.ViewportSize.Y / 720, 0.6, 1)
 		holderScale.Scale = screenScale
 		local drop = if phoneLayout then PHONE_DROP else 0
-		holder.Position = UDim2.new(0.5, METER_SIDE * screenScale, 0, -ARC_LIFT * screenScale + drop)
-		perfectSpot.Position =
-			UDim2.new(0.5, METER_SIDE * screenScale, 0, -(METER_HEIGHT + ARC_LIFT + 70) * screenScale + drop)
+		local side = METER_SIDE * screenScale - (if phoneLayout then PHONE_LEFT else 0)
+		holder.Position = UDim2.new(0.5, side, 0, -ARC_LIFT * screenScale + drop)
+		perfectSpot.Position = UDim2.new(0.5, side, 0, -(METER_HEIGHT + ARC_LIFT + 70) * screenScale + drop)
 		perfectSpotScale.Scale = screenScale
 		resultScreenScale.Scale = screenScale
 
