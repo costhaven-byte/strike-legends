@@ -3069,7 +3069,7 @@ Config.Mascots = {
 		Accent = Color3.fromRGB(255, 60, 210),
 		Reaction = "Flip",
 	},
-	-- Phase X placeholders: zone 3 (Main Street Egg) and zone 4 (Skyline Egg) pets that borrow a model
+	-- Phase X: zone 3 (Main Street Egg) and zone 4 (Skyline Egg) pets (owner's designs since 2026-10-28/29)
 	{
 		Id = "WoodPup",
 		Name = "Wood Pup",
@@ -3095,9 +3095,7 @@ Config.Mascots = {
 		Rarity = "Epic",
 		Color = Color3.fromRGB(225, 238, 255),
 		Accent = Color3.fromRGB(120, 190, 255),
-		Reaction = "Spin",
-		Model = "Bumper", -- PLACEHOLDER look: Bumper's model repainted (Tint) until real art exists
-		Tint = Color3.fromRGB(225, 238, 255),
+		Reaction = "Spin", -- own model since 2026-10-29 (owner's cloud_bumper.glb)
 	},
 	{
 		Id = "SunnyHam",
@@ -3106,9 +3104,7 @@ Config.Mascots = {
 		Rarity = "Legendary",
 		Color = Color3.fromRGB(255, 180, 60),
 		Accent = Color3.fromRGB(255, 79, 139),
-		Reaction = "Hop",
-		Model = "Hambone", -- PLACEHOLDER look: Hambone's model repainted (Tint) until real art exists
-		Tint = Color3.fromRGB(255, 180, 60),
+		Reaction = "Hop", -- own model since 2026-10-29 (owner's moony.glb; PetModels.SunnyHam)
 	},
 	-- Boss-only pet (Config.Boss.Drop): no egg hatches it, only the Pin Titan drops it
 	{
@@ -3119,9 +3115,7 @@ Config.Mascots = {
 		Rarity = "Legendary",
 		Color = Color3.fromRGB(70, 60, 80),
 		Accent = Color3.fromRGB(255, 50, 80),
-		Reaction = "Flip",
-		Model = "Pinny", -- PLACEHOLDER look: Pinny's model repainted (Tint) until real art exists
-		Tint = Color3.fromRGB(70, 60, 80),
+		Reaction = "Flip", -- own model since 2026-10-29 (owner's titan_jr.glb)
 	},
 }
 
@@ -3147,7 +3141,7 @@ Config.EggLooks = {
 
 -- Where each egg is hatched (Phase X: one stand per zone). Path = the stand's folder under Workspace; it holds a
 -- NeonStand model with an EggSpot part (the lobby's stand is the owner's design; zone 3's is the owner's Main Street
--- hatch stand since 2026-10-28, still named NeonStand; zone 4's is a repainted copy until its design is in). You hatch an egg only within Config.MascotFx.HatchRange of its stand.
+-- hatch stand since 2026-10-28, zone 4's the owner's Skyline stand since 2026-10-29, both still named NeonStand). You hatch an egg only within Config.MascotFx.HatchRange of its stand.
 Config.EggStands = {
 	{ Egg = "Alley", Path = { "Hub", "EggPad" } },
 	{ Egg = "Arcade", Path = { "MainStreetLanes", "EggPad" } },
@@ -3575,49 +3569,60 @@ Config.PetIdle = {
 			},
 		},
 	},
+	-- Zone 4 pets, the owner's Skyline designs (2026-10-29)
+	CloudBumper = {
+		Floats = true,
+		Body = { Bob = 0.2, BobSpeed = 0.5, Sway = 3, SwaySpeed = 0.35 },
+		Moves = {
+			{ Kind = "Swing", Parts = { "^puff_L", "^puff_R", "^puff_top_" }, Axis = Vector3.zAxis, Angle = 5, Speed = 0.7, Mirror = true },
+			{ Kind = "Spin", Parts = { "^sparkle_" }, Axis = Vector3.yAxis, Speed = 0.15, Pivot = "Root" },
+			{ Kind = "Twinkle", Parts = { "^sparkle_" }, Speed = 1.2, Min = 0.2, Max = 1 },
+			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.4 },
+		},
+	},
+	SunnyHam = { -- Moony
+		Floats = true,
+		Body = { Bob = 0.18, BobSpeed = 0.4, Sway = 4, SwaySpeed = 0.3 },
+		Moves = {
+			{ Kind = "Swing", Parts = { "^tail" }, Axis = Vector3.zAxis, Angle = 18, Speed = 0.8 },
+			{ Kind = "Swing", Parts = { "^ear_" }, Axis = Vector3.zAxis, Angle = 10, Speed = 1.3, Mirror = true },
+			{ Kind = "Twinkle", Parts = { "^collar_star" }, Speed = 0.8, Min = 0.4, Max = 1 },
+			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.6 },
+		},
+	},
 	Cosmo = {
 		Floats = true,
 		Body = { Bob = 0.2, BobSpeed = 0.5, Sway = 3, SwaySpeed = 0.35 },
 		Moves = {
-			-- The two tilted orbit rings (their tilt measured from the design file)
-			{
-				Kind = "Spin",
-				Parts = { "^planet_ringed", "^planet_violet" },
-				Axis = Vector3.new(0.18, 0.926, -0.331),
-				Speed = 0.12,
-				Pivot = "Root",
-			},
-			{
-				Kind = "Spin",
-				Parts = { "^planet_pink", "^pin_moon" },
-				Axis = Vector3.new(-0.311, 0.928, 0.207),
-				Speed = -0.08,
-				Pivot = "Root",
-			},
-			{ Kind = "Spin", Parts = { "^crown_star" }, Axis = Vector3.yAxis, Speed = 0.3, Pivot = "Center" },
-			{ Kind = "Swing", Parts = { "^tail_" }, Axis = Vector3.zAxis, Angle = 12, Speed = 0.6 },
-			{ Kind = "Twinkle", Parts = { "^surface_star" }, Speed = 1.5, Min = 0.2, Max = 1 },
-			{ Kind = "Spin", Parts = { "^mote" }, Axis = Vector3.yAxis, Speed = 0.05, Pivot = "Root" },
+			{ Kind = "Pulse", Parts = { "^aura" }, Speed = 0.5, Min = 0.6, Max = 1 },
+			{ Kind = "Twinkle", Parts = { "^star_" }, Speed = 1.5, Min = 0.2, Max = 1 },
+			{ Kind = "Swing", Parts = { "^joint_" }, Axis = Vector3.zAxis, Angle = 10, Speed = 0.6 },
+			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.8 },
 		},
 	},
 	Perfecto = {
 		Floats = true,
 		Body = { Bob = 0.2, BobSpeed = 0.45, Sway = 3, SwaySpeed = 0.3 },
 		Moves = {
-			{
-				Kind = "Spin",
-				Parts = { "^halo_", "^perfect_gem" },
-				Axis = Vector3.new(-0.026, 0.976, -0.217),
-				Speed = 0.25,
-				Pivot = "Center",
-			},
-			{
-				Kind = "Rainbow",
-				Parts = { "^neon_line_", "^neck_stripe_", "^plinth_neon_", "^halo_ring_", "^hover_ring_" },
-				Speed = 0.1,
-			},
-			{ Kind = "Spin", Parts = { "^sparkle_" }, Axis = Vector3.yAxis, Speed = -0.2, Pivot = "Root" },
-			{ Kind = "Twinkle", Parts = { "^sparkle_" }, Speed = 1.2, Min = 0.2, Max = 1 },
+			{ Kind = "Swing", Parts = { "^wing_" }, Axis = Vector3.yAxis, Angle = 22, Speed = 1.8, Mirror = true },
+			{ Kind = "Spin", Parts = { "^halo_" }, Axis = Vector3.yAxis, Speed = 0.25, Pivot = "Center" },
+			{ Kind = "Twinkle", Parts = { "^base_gem" }, Speed = 0.9, Min = 0.5, Max = 1 },
+			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.5 },
+		},
+	},
+	TitanJr = {
+		Body = { Bob = 0.04, BobSpeed = 0.5, Sway = 2, SwaySpeed = 0.3 },
+		Moves = {
+			{ Kind = "Swing", Parts = { "^arm_" }, Axis = Vector3.xAxis, Angle = 14, Speed = 0.6, Mirror = true },
+			{ Kind = "Lift", Parts = { "^foot_R" }, Height = 0.08, Speed = 0.9 },
+			{ Kind = "Lift", Parts = { "^foot_L" }, Height = 0.08, Speed = 0.9, Phase = 0.5 },
+			{ Kind = "Pulse", Parts = { "^crack_", "^core_eye" }, Speed = 0.6, Min = 0.55, Max = 1 },
+		},
+	},
+	-- The Skyline Egg on its stand: the window's stars twinkle
+	Egg_Skyline = {
+		Moves = {
+			{ Kind = "Twinkle", Parts = { "^window_star" }, Speed = 0.9, Min = 0.3, Max = 1 },
 		},
 	},
 	-- The Neon Egg on its stand: the core pulses on a 1.6s beat (glow 60 to 100%), the lines breathe 15%

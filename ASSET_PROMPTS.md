@@ -61,9 +61,6 @@ Not for launch (skip): zones 5-6, the old Neon crate (removed).
 
 | Replaces | File(s) |
 |---|---|
-| Skyline Egg + stand (zone 4) | skyline_egg.glb, skyline_stand_with_egg.glb |
-| Zone 4 pets: Cloud Bumper, Moony, Cosmo, Perfecto | cloud_bumper.glb, moony.glb, cosmo.glb, perfecto.glb (all together: skyline_lineup.glb) |
-| Titan Jr. (boss reward pet) | titan_jr.glb |
 | Zone 3 ball display cases | ballcase_mainstreet_common/rare/epic/legendary/mythic.glb (row: ballcase_mainstreet_row.glb) |
 | Zone 4 ball display case | skyline_ball_case.glb |
 | Pet fusion station (zone 3) | pet_fusion_machine.glb |
