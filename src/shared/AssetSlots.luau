@@ -23,6 +23,7 @@ AssetSlots.Sounds = {
 	ReelTick = { Id = 88442833509532, Volume = 0.6 },
 	Reveal = { Id = 6079105785, Volume = 0.6 },
 	RevealBig = { Id = 128460880879263, Volume = 0.8 },
+	ReelHeartbeat = { Id = nil, Volume = 0.8, StandIn = "PinHit", StandInPitch = 0.45 }, -- A2: crate reel's last stretch
 	-- Overcharge (Config.Throw.Overcharge). Not picked yet: they borrow other sounds.
 	OverchargeWarn = { Id = nil, Volume = 0.5, StandIn = "Charge", StandInPitch = 1.8 }, -- bar enters the red cap
 	OverchargeBlast = { Id = nil, Volume = 1, StandIn = "StrikeCrash", StandInPitch = 0.55 }, -- the gamble paid off

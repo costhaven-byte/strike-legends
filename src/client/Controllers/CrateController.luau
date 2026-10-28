@@ -154,7 +154,13 @@ function CrateController:Start()
 	local function showToast(text: string)
 		local message = text:upper()
 		local problem = message:find("NOT ENOUGH") or message:find("TRY AGAIN") or message:find("LOCK")
-		kitToast(message, if message:find("COINS") then "Coins" else nil, nil, if problem then UiKit.C.Price else UiKit.C.White, 2)
+		kitToast(
+			message,
+			if message:find("COINS") then "Coins" else nil,
+			nil,
+			if problem then UiKit.C.Price else UiKit.C.White,
+			2
+		)
 	end
 
 	-- Free crates (from strikes and Golden Pins) are used before coins on their crate type
@@ -1481,8 +1487,27 @@ function CrateController:Start()
 		return CFrame.new(0, lowY, backZ)
 	end
 
+	-- A ring of light that spreads out of the stage centre and fades (a step up in the tease)
+	local function introRing(color: Color3, size: number)
+		local ring = make("Frame", {
+			Name = "Ring",
+			BackgroundTransparency = 1,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromScale(0.3, 0.3),
+			ZIndex = 5,
+		}, introStage)
+		make("UICorner", { CornerRadius = UDim.new(0.5, 0) }, ring)
+		local stroke = make("UIStroke", { Color = color, Thickness = 10 }, ring)
+		tween(ring, INTRO.RingTime, Enum.EasingStyle.Quad, { Size = UDim2.fromScale(size, size) })
+		tween(stroke, INTRO.RingTime, Enum.EasingStyle.Quad, { Transparency = 1, Thickness = 2 })
+		task.delay(INTRO.RingTime, ring.Destroy, ring)
+	end
+
 	-- title: the reel screen's crate name (pops when the crate lands)
-	local function playIntro(crate, title: GuiObject?)
+	-- rarityIndex: the prize's rarity. A2: the light leaking out of the crate climbs one rarity colour per hop up to
+	-- the real one (never past it), and rarer prizes hop more (Epic 4, Legendary 5, Mythic 6).
+	local function playIntro(crate, title: GuiObject?, rarityIndex: number)
 		local template = crateModels
 			and (crateModels:FindFirstChild(crate.Id) or (crate.Model and crateModels:FindFirstChild(crate.Model)))
 		if not template then
@@ -1518,13 +1543,22 @@ function CrateController:Start()
 		beam.Parent = model
 		local lootGlow = model:FindFirstChild("Loot_Glow", true)
 
-		local color = crate.Color
 		local white = Color3.new(1, 1, 1)
-		introGlow.BackgroundColor3 = color
-		glowStroke.Color = color:Lerp(white, 0.5)
-		for _, bar in rayBars do
-			bar.Ray.BackgroundColor3 = if bar.Even then color else color:Lerp(white, 0.6)
+		local color = crate.Color
+		local function paintTease(c: Color3)
+			color = c
+			introGlow.BackgroundColor3 = c
+			glowStroke.Color = c:Lerp(white, 0.5)
+			for _, bar in rayBars do
+				bar.Ray.BackgroundColor3 = if bar.Even then c else c:Lerp(white, 0.6)
+			end
+			core.Color = c:Lerp(white, 0.35)
+			beam.Color = c:Lerp(white, 0.5)
 		end
+		paintTease(color)
+		local hops = math.clamp(rarityIndex, INTRO.Hops, INTRO.Hops + INTRO.ExtraHops)
+		local lidPeek = INTRO.LidPeek * INTRO.Hops / hops -- the lid ends up just as open however many hops
+		local shownRarity = 0
 		introView.ImageColor3 = white
 		introView.ImageTransparency = 1
 		introRays.Visible = false
@@ -1535,7 +1569,7 @@ function CrateController:Start()
 		end
 
 		local turn = math.rad(INTRO.HopTurn)
-		local hopsEnd = INTRO.DropTime + INTRO.Hops * INTRO.HopTime
+		local hopsEnd = INTRO.DropTime + hops * INTRO.HopTime
 		local total = hopsEnd + INTRO.BlastTime
 		local start = os.clock()
 		local lastFrame = start
@@ -1574,6 +1608,18 @@ function CrateController:Start()
 				if index + 1 ~= hop then
 					hop = index + 1
 					Sfx.Play("ReelTick", 0.9 + hop * 0.2)
+					local shown = math.min(hop, rarityIndex)
+					if shown ~= shownRarity then
+						paintTease(CrateKit.RarityColor(Config.Rarities[shown].Name))
+						if shownRarity > 0 then
+							-- a step up: chime, flash and a ring in the new colour
+							Sfx.Play("StreakUp", 0.8 + shown * 0.1, 0.7)
+							UiFx.Flash(color, 0.12, 0.2)
+							introRing(color, 1.1 + shown * 0.08)
+							UiFx.Pop(introGlow, 1.8, 0.3)
+						end
+						shownRarity = shown
+					end
 					if index > 0 then
 						-- landed the previous hop: thump
 						kick, shake = 0.6 + index * 0.2, 0.5 + index * 0.25
@@ -1581,24 +1627,24 @@ function CrateController:Start()
 						raysScale.Scale = 1.2 + index * 0.1
 					end
 				end
-				heat = (index + k) / INTRO.Hops
+				heat = (index + k) / hops
 				local height = INTRO.HopHeight * (1 + index * INTRO.HopGrow)
 				lift = height * 4 * k * (1 - k)
 				spin = (index + easeOut(k)) * turn
 				tilt = math.sin(k * math.pi * 2) * math.rad(INTRO.HopWiggle) * (if index % 2 == 0 then 1 else -1)
 				-- The lid flaps while airborne and rests a little more open after each hop
-				lidAngle = INTRO.LidPeek * (index + math.sin(k * math.pi) * 1.5)
+				lidAngle = lidPeek * (index + math.sin(k * math.pi) * 1.5)
 			else
 				-- Blast: crouch and rattle, then the lid rockets off and a beam of light shoots out
 				local k = (t - hopsEnd) / INTRO.BlastTime
-				spin = INTRO.Hops * turn
+				spin = hops * turn
 				heat = 1
 				if k < INTRO.CrouchShare then
 					local c = k / INTRO.CrouchShare
 					lift = -0.15 * c
 					shake = math.max(shake, 0.6 + c)
 					tilt = (math.random() - 0.5) * 0.1 * c
-					lidAngle = INTRO.LidPeek * INTRO.Hops * (1 - c * 0.7)
+					lidAngle = lidPeek * hops * (1 - c * 0.7)
 				else
 					local b = (k - INTRO.CrouchShare) / (1 - INTRO.CrouchShare)
 					if not blasted then
@@ -1609,6 +1655,7 @@ function CrateController:Start()
 						UiFx.Flash(color, 0.5, 0.3)
 						UiFx.Confetti(opening, INTRO.Confetti, { color, white, color:Lerp(white, 0.5) })
 						UiFx.Pop(introGlow, 2.2, 0.4)
+						introRing(color, 1.6)
 					end
 					lidLift = INTRO.LidFly * easeOut(b)
 					lidSpin = INTRO.LidSpin * 2 * math.pi * b
@@ -1804,8 +1851,13 @@ function CrateController:Start()
 				MarkBottom = 674,
 				MarkLine = 3,
 			}
-		local content =
-			make("Frame", { Name = "Content", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1) }, S.Stage)
+		local content = make("Frame", {
+			Name = "Content",
+			BackgroundTransparency = 1,
+			AnchorPoint = Vector2.new(0.5, 0.5), -- centred so the A2 zoom scales around the middle
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromScale(1, 1),
+		}, S.Stage)
 		local top = function(y: number): number
 			return y - S.H / 2
 		end
@@ -1852,6 +1904,23 @@ function CrateController:Start()
 			Position = UDim2.fromScale(0.5, 0.5),
 			ZIndex = 2,
 		}, band)
+		-- A2: speed streaks over the tiles while the reel is fast (moved and faded every frame by playOpening)
+		local streaks = {}
+		for i = 1, SHOP.Juice.Streaks do
+			table.insert(
+				streaks,
+				make("Frame", {
+					Name = "Streak",
+					BackgroundColor3 = C.White,
+					BackgroundTransparency = 1,
+					BorderSizePixel = 0,
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(math.random(), (i - 0.5) / SHOP.Juice.Streaks),
+					Size = UDim2.fromOffset(M.TileW * (0.6 + math.random() * 0.9), if phone then 2 else 3),
+					ZIndex = 4,
+				}, band)
+			)
+		end
 		for side = 0, 1 do
 			local fade = make("Frame", {
 				Name = "Fade",
@@ -1936,6 +2005,8 @@ function CrateController:Start()
 			Icons = icons,
 			Skip = skip,
 			Hint = hint,
+			Streaks = streaks,
+			Top = top,
 			M = M,
 		}
 	end
@@ -1982,7 +2053,7 @@ function CrateController:Start()
 		b.LayoutOrder = 2
 		b.AutomaticSize = Enum.AutomaticSize.X
 		b.Size = UDim2.new(0, 0, 1, 0)
-		return chip.Holder
+		return chip.Holder, b
 	end
 
 	-- The reveal (the kit's D4/D5, P4/P5). Returns when it closes (OK, EQUIP, or a tap outside after 1 s).
@@ -2075,9 +2146,16 @@ function CrateController:Start()
 		view.ZIndex = 2
 		view.Parent = content
 
-		if big then
-			CrateKit.Confetti(content, left(cx), top(cy), 40, if phone then 300 else 700, if phone then 0.5 else 1)
-		end
+		-- A2: confetti for every pull, more for rarer, in the prize's colours (the kit's mix for Legendary+)
+		CrateKit.Confetti(
+			content,
+			left(cx),
+			top(cy),
+			SHOP.Juice.Confetti[ball.Rarity] or 20,
+			if phone then 300 else 700,
+			if phone then 0.5 else 1,
+			if big then nil else { rc, rc:Lerp(C.White, 0.5), C.White, C.Gold }
+		)
 
 		-- Title, name, chips, duplicate line
 		local titleText = ball.Rarity:upper() .. "!"
@@ -2186,21 +2264,15 @@ function CrateController:Start()
 
 		-- Chips: the coin multiplier, then each trait in its own colour
 		local order = 1
-		local chipList = {
-			traitChip(
-				chips,
-				"COINS",
-				("x%g"):format(math.floor(Balls.Multiplier(ball, result.PolishLevel) * 100 + 0.5) / 100),
-				C.White,
-				phone,
-				order
-			),
-		}
+		local coinMult = math.floor(Balls.Multiplier(ball, result.PolishLevel) * 100 + 0.5) / 100
+		local coinText = ("x%g"):format(coinMult)
+		local coinChip, coinValue = traitChip(chips, "COINS", coinText, C.White, phone, order)
+		local chipList = { coinChip }
 		for _, entry in Balls.GetTraits(ball) do
 			order += 1
 			local shown = math.floor(entry.Value * entry.Trait.Display + 0.5)
 			local value = if (entry.Trait.Short :: string):find("%%%%") then shown .. "%" else "+" .. shown
-			table.insert(chipList, traitChip(chips, entry.Trait.Name:upper(), value, entry.Trait.Color, phone, order))
+			table.insert(chipList, (traitChip(chips, entry.Trait.Name:upper(), value, entry.Trait.Color, phone, order)))
 		end
 
 		-- Duplicate: POLISH n/10 with pips, or POLISH MAXED! +coins with every pip lime
@@ -2365,17 +2437,13 @@ function CrateController:Start()
 
 		-- ===== Reveal animation =====
 		screen.Visible = true
-		local flash = make(
-			"Frame",
-			{
-				Name = "Flash",
-				BackgroundColor3 = C.White,
-				BorderSizePixel = 0,
-				Size = UDim2.fromScale(1, 1),
-				ZIndex = 9,
-			},
-			screen
-		)
+		local flash = make("Frame", {
+			Name = "Flash",
+			BackgroundColor3 = C.White,
+			BorderSizePixel = 0,
+			Size = UDim2.fromScale(1, 1),
+			ZIndex = 9,
+		}, screen)
 		tween(flash, 0.25, Enum.EasingStyle.Linear, { BackgroundTransparency = 1 })
 		Sfx.Play(if rarityIndex >= 4 then "RevealBig" else "Reveal")
 		if big then
@@ -2420,6 +2488,34 @@ function CrateController:Start()
 			task.delay(0.15, function()
 				tween(nameLabel, 0.25, Enum.EasingStyle.Quad, { TextTransparency = 0 })
 			end)
+		end
+		-- A2: the ball springs out of the flash
+		local ballScale = CrateKit.ScaleOf(view)
+		ballScale.Scale = 0.2
+		tween(ballScale, 0.4, Enum.EasingStyle.Back, { Scale = 1 })
+		-- A2: the COINS value counts up from x1 (same decimals as the final number, so the chip never grows)
+		if coinMult > 1 then
+			local decimals = #(coinText:match("%.(%d+)") or "")
+			local format = "x%." .. decimals .. "f"
+			task.delay(0.2, function()
+				local start = os.clock()
+				local lastShown = ""
+				while content.Parent do
+					local k = math.min((os.clock() - start) / SHOP.Juice.CountUp, 1)
+					local shown = if k >= 1 then coinText else format:format(1 + (coinMult - 1) * easeOut(k))
+					if shown ~= lastShown then
+						lastShown = shown
+						coinValue.Text = shown
+						Sfx.Play("Coin", 1 + k * 0.5, 0.5)
+					end
+					if k >= 1 then
+						UiFx.Pop(coinChip, 1.2, 0.25)
+						break
+					end
+					task.wait(0.05)
+				end
+			end)
+			coinValue.Text = format:format(1)
 		end
 		-- Trait chips pop in 0.06 apart
 		for i, chip in chipList do
@@ -2532,7 +2628,7 @@ function CrateController:Start()
 		reelShade.BackgroundTransparency = 1
 		tween(reelShade, 0.2, Enum.EasingStyle.Linear, { BackgroundTransparency = 0.1 })
 		local reel = buildReel(crate)
-		playIntro(crate, reel.Title.Parent)
+		playIntro(crate, reel.Title.Parent, rarityIndex)
 
 		-- The strip: tile i's centre sits under the marker when the strip is at stripX(i)
 		local M = reel.M
@@ -2580,10 +2676,47 @@ function CrateController:Start()
 				spin:Cancel()
 			end
 		end)
-		-- A tick and a marker pop (1 -> 1.15 -> 1, 0.08) every time a tile passes
+		-- A tick and a marker pop (1 -> 1.15 -> 1, 0.08) every time a tile passes.
+		-- A2: speed streaks while it's fast; in the last stretch a heartbeat thumps and the reel slowly zooms in
+		-- (honest: the reel just slows down to the real prize, no fake near-stops).
+		local J = SHOP.Juice
+		local zoom = CrateKit.ScaleOf(reel.Content)
+		local spinStart = os.clock()
+		local lastX = reel.Strip.Position.X.Offset
+		local nextBeat = spinTime - J.HeartbeatFrom
+		local zoomBase, punch = 1, 0
 		local lastTile = nil
-		local tick = RunService.RenderStepped:Connect(function()
-			local index = math.floor(-reel.Strip.Position.X.Offset / pitch) + 1
+		local tick = RunService.RenderStepped:Connect(function(dt)
+			local x = reel.Strip.Position.X.Offset
+			local speed = math.abs(x - lastX) / math.max(dt, 1 / 240)
+			lastX = x
+			local fast = math.clamp((speed - J.StreakFrom) / (J.StreakFull - J.StreakFrom), 0, 1)
+			local width = math.max(reel.Band.AbsoluteSize.X, 1)
+			for i, streak in reel.Streaks do
+				-- each streak drifts left a bit slower than the tiles and wraps round
+				local px = streak.Position.X.Scale - speed * dt * (0.35 + (i % 3) * 0.15) / width
+				if px < -0.15 then
+					px += 1.3
+				end
+				streak.Position = UDim2.fromScale(px, streak.Position.Y.Scale)
+				streak.BackgroundTransparency = 1 - fast * J.StreakAlpha
+			end
+			local t = os.clock() - spinStart
+			if not stopped then
+				local late = math.clamp((t - (spinTime - J.HeartbeatFrom)) / J.HeartbeatFrom, 0, 1)
+				zoomBase = 1 + J.ZoomIn * late * late
+				if t >= nextBeat then
+					nextBeat += J.HeartbeatEvery * (1 - late * J.HeartbeatSpeedUp) -- the heart races at the end
+					Sfx.Play("ReelHeartbeat", 1, 0.6 + late * 0.4)
+					punch = J.BeatPunch
+					for _, icon in reel.Icons do
+						UiFx.Pop(icon, 1.35, 0.2)
+					end
+				end
+			end
+			punch = math.max(punch - dt * J.BeatPunch * 6, 0)
+			zoom.Scale = zoomBase + punch
+			local index = math.floor(-x / pitch) + 1
 			if index ~= lastTile then
 				lastTile = index
 				Sfx.Play("ReelTick", 0.9 + math.clamp(index / REEL_WIN_INDEX, 0, 1) * 0.4)
@@ -2603,6 +2736,47 @@ function CrateController:Start()
 		tick:Disconnect()
 		reel.Skip.Holder.Visible = false
 		reel.Hint.Visible = false
+		-- A2 landing: a shockwave ring in the prize's colour out of the marker, the screen shakes (harder for rarer)
+		local rc = CrateKit.RarityColor(ball.Rarity)
+		local bandMiddle = reel.Top(M.BandY + M.BandH / 2)
+		for i = 1, (if rarityIndex >= 4 then 2 else 1) do
+			local ring = make("Frame", {
+				Name = "Shockwave",
+				BackgroundTransparency = 1,
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.new(0.5, 0, 0.5, bandMiddle),
+				Size = UDim2.fromOffset(M.TileW, M.TileW),
+				ZIndex = 8,
+			}, reel.Content)
+			make("UICorner", { CornerRadius = UDim.new(0.5, 0) }, ring)
+			local stroke = make("UIStroke", { Color = rc, Thickness = M.Out * 4 }, ring)
+			local grow = M.TileW * (J.ShockwaveSize + rarityIndex * 0.6) * (if i == 2 then 1.5 else 1)
+			task.delay((i - 1) * 0.12, function()
+				tween(ring, J.ShockwaveTime, Enum.EasingStyle.Quad, { Size = UDim2.fromOffset(grow, grow) })
+				tween(stroke, J.ShockwaveTime, Enum.EasingStyle.Quad, { Transparency = 1, Thickness = 1 })
+			end)
+			task.delay(J.ShockwaveTime + 0.2, ring.Destroy, ring)
+		end
+		Sfx.Play("PinHit", 0.9 + rarityIndex * 0.05, 0.8)
+		if rarityIndex >= 3 then
+			Sfx.Play("StreakUp", 0.8 + rarityIndex * 0.1, 0.6)
+			UiFx.Flash(rc, 0.1 + rarityIndex * 0.03, 0.25)
+		end
+		task.spawn(function()
+			local shakeEnd = os.clock() + J.ShakeTime
+			local strength = J.Shake * (0.5 + rarityIndex / 6)
+			while os.clock() < shakeEnd and reel.Content.Parent do
+				local k = (shakeEnd - os.clock()) / J.ShakeTime
+				reel.Content.Position = UDim2.new(
+					0.5,
+					(math.random() - 0.5) * 2 * strength * k,
+					0.5,
+					(math.random() - 0.5) * 2 * strength * k
+				)
+				RunService.RenderStepped:Wait()
+			end
+			reel.Content.Position = UDim2.fromScale(0.5, 0.5)
+		end)
 		-- Landed tile UIScale 1 -> 1.12 (0.2 Back Out), the others fade back, hold, then the reveal
 		tween(CrateKit.ScaleOf(winTile), 0.2, Enum.EasingStyle.Back, { Scale = 1.12 })
 		for _, t in tiles do

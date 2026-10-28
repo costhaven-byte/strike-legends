@@ -2873,6 +2873,27 @@ Config.CrateShop = {
 		RaySpin = 0.1, -- turns per second when calm
 		RaySpinHot = 0.6, -- extra turns per second when it's about to blow
 		Confetti = 35, -- pieces at the blast
+		-- A2 (2026-10-28): the light climbs one rarity colour per hop up to the prize's real rarity (never past it)
+		ExtraHops = 3, -- rarer prizes hop more: Epic 4 hops, Legendary 5, Mythic 6
+		RingTime = 0.45, -- seconds a ring of light spreads out on each step up
+	},
+	-- A2 crate opening juice (2026-10-28). Honest: the reel only ever slows down to the real prize.
+	Juice = {
+		Streaks = 9, -- speed lines over the reel while it's fast
+		StreakFrom = 400, -- design px per second where they start to show
+		StreakFull = 2500, -- ... and are fully on
+		StreakAlpha = 0.55, -- how see-through they are at full speed (0 = invisible, 1 = solid)
+		HeartbeatFrom = 1.8, -- seconds before the reel stops that the heartbeat starts
+		HeartbeatEvery = 0.45, -- seconds between beats at first
+		HeartbeatSpeedUp = 0.35, -- beats come this share faster by the end
+		BeatPunch = 0.025, -- the reel jumps this much bigger on each beat
+		ZoomIn = 0.08, -- the reel slowly zooms in by this share during the heartbeat
+		ShockwaveTime = 0.5, -- seconds the landing ring spreads out
+		ShockwaveSize = 2.2, -- ring size in tile widths (+0.6 per rarity step)
+		Shake = 10, -- design px the reel shakes on landing (more for rarer)
+		ShakeTime = 0.3,
+		CountUp = 0.6, -- seconds the COINS number on the reveal counts up
+		Confetti = { Common = 14, Uncommon = 20, Rare = 30, Epic = 40, Legendary = 60, Mythic = 80 },
 	},
 	SpinTime = 4.5, -- seconds the crate reel spins before it stops on the result
 	-- Owner's Crate Kit (2026-10-26): reel and shop timings

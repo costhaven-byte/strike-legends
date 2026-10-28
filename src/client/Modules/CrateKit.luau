@@ -432,18 +432,28 @@ function CrateKit.Place(stage: Stage, object: GuiObject, x: number, y: number, w
 	end
 end
 
--- Confetti (Legendary/Mythic reveal): pieces start at (x, y), burst up 150-300 px (0.3 Quad Out), fall +700 px
+-- Confetti (every crate reveal since A2, and reward pops): pieces start at (x, y), burst up 150-300 px (0.3 Quad Out), fall +700 px
 -- (2.2 Quad In) spinning up to 540 degrees, and fade out over the last 0.5
 local CONFETTI_COLORS = { C.Gold, C.Cyan, C.Pink, C.Lime, C.Red, C.White }
-function CrateKit.Confetti(parent: GuiObject, x: number, y: number, count: number, spread: number, scale: number?)
+-- colors: optional palette (default = the kit's gold/cyan/pink/lime/red/white)
+function CrateKit.Confetti(
+	parent: GuiObject,
+	x: number,
+	y: number,
+	count: number,
+	spread: number,
+	scale: number?,
+	colors: { Color3 }?
+)
 	local k = scale or 1
+	local palette = colors or CONFETTI_COLORS
 	for i = 1, count do
 		local dot = math.random() < 0.3
 		local piece = make("ImageLabel", {
 			Name = "Confetti",
 			BackgroundTransparency = 1,
 			Image = CrateKit.Image(if dot then "ConfettiDot" else "ConfettiRect"),
-			ImageColor3 = CONFETTI_COLORS[(i - 1) % #CONFETTI_COLORS + 1],
+			ImageColor3 = palette[(i - 1) % #palette + 1],
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.new(0.5, x, 0.5, y),
 			Size = UDim2.fromOffset((if dot then 22 else 30) * k, (if dot then 22 else 30) * k),
