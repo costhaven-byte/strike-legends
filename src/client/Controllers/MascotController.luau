@@ -1088,7 +1088,55 @@ function MascotController:Start()
 			sceneContext.SkipAt = os.clock()
 		end
 	end)
+	-- Polish P4: a pointing hand on EQUIP BEST the first time it would change your pets (Config.EquipBestHint).
+	-- It stays until EQUIP BEST is tapped once; the server remembers that in the save (EquipBestHinted).
+	local HINT = Config.EquipBestHint
+	local hintWanted = false
+	local hand = Instance.new("TextLabel")
+	hand.Name = "EquipBestHand"
+	hand.BackgroundTransparency = 1
+	hand.AnchorPoint = Vector2.new(1, 0.5)
+	hand.Size = UDim2.fromOffset(46, 46)
+	hand.Text = HINT.Hand
+	hand.TextScaled = true
+	hand.FontFace = FONT
+	hand.TextColor3 = GOLD
+	hand.ZIndex = 20
+	hand.Visible = false
+	hand.Parent = gui
+	local function refreshHint()
+		if not HINT.Enabled or player:GetAttribute("EquipBestHinted") ~= 0 then
+			hintWanted = false -- used already (or the save hasn't loaded yet)
+			return
+		end
+		-- would EQUIP BEST raise your pet bonus? (a swap between two equally good pets doesn't count)
+		local slots = player:GetAttribute("MascotSlots") or ECONOMY.StartSlots
+		local function total(list: { string }): number
+			local sum = 0
+			for _, id in list do
+				local mascot = Mascots.Get(id)
+				sum += if mascot then Mascots.Bonus(mascot) else 0
+			end
+			return sum
+		end
+		hintWanted = total(Mascots.Best(owned(), slots)) > total(equipped()) + 1e-6
+	end
+	for _, key in { "Mascots", "EquippedMascots", "MascotSlots", "EquipBestHinted" } do
+		player:GetAttributeChangedSignal(key):Connect(refreshHint)
+	end
+	refreshHint()
+	RunService.RenderStepped:Connect(function()
+		local show = hintWanted and gui.Enabled and panel.Visible and right.Visible and bestButton.Visible
+		hand.Visible = show
+		if show then
+			local pos, size = bestButton.AbsolutePosition, bestButton.AbsoluteSize
+			local push = math.abs(math.sin(os.clock() * 5)) * HINT.Bob
+			hand.Position = UDim2.fromOffset(pos.X - 2 + push, pos.Y + size.Y / 2)
+		end
+	end)
+
 	bestButton.Activated:Connect(function()
+		hintWanted = false -- the server saves it; hide the hand right away
 		bestRemote:FireServer()
 	end)
 

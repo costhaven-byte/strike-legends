@@ -425,6 +425,10 @@ local function onEquipBest(player: Player)
 		table.insert(equipped, id)
 	end
 	publish(player)
+	-- Polish P4: the pointing hand on EQUIP BEST has done its job (Config.EquipBestHint)
+	if PlayerDataService.Get(player, "EquipBestHinted") ~= 1 then
+		PlayerDataService.Set(player, "EquipBestHinted", 1)
+	end
 end
 
 function MascotService:Start()

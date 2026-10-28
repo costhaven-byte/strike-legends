@@ -223,12 +223,13 @@ Config.StartingData = {
 	EquippedCosmetics = {}, -- the look worn per kind: { Trail = "FireTrail", LaneSkin = "CandyLane" } (v23)
 	ZonesOpen = 1, -- highest zone open (zones open by rebirths, Config.Economy.Zones Rebirths; v24). Never goes down
 	ZoneVisited = 1, -- highest zone stood in; the walk guide's gold beam leads to an open zone above it (v24)
+	EquipBestHinted = 0, -- 1 = the pointing hand on EQUIP BEST was used (Polish P4, Config.EquipBestHint; v25)
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 24, -- v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 25, -- v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -3113,6 +3114,43 @@ Config.EggOdds = {
 	PerRow = 6, -- bubbles per row (more pets wrap onto a second row)
 	PetFill = 0.85, -- how much of its bubble the pet fills
 	Spin = 30, -- degrees per second the pets turn in their bubbles (0 = still)
+}
+
+-- Polish P4: big floating signs over every station so you always know where to go, even from far away or on a phone
+-- (AreaSignController, client only, built from code over the station found at Path under Workspace). The sign sits
+-- Lift studs above the station's top, moved by Offset (world studs), never into a ceiling above it, and over an egg
+-- stand always above that egg's odds bubbles (Config.EggOdds). Paint = a HUD Kit colour pair (HudKit.Paints),
+-- Icon = a HUD Kit icon (AssetSlots.Images Hud<Icon>), HideWhile = a BillboardGui in the station that takes over
+-- while it is on. The spin wheel, elevators and the boss helicopter keep their own signs; Power Level and Rebirth
+-- are HUD buttons (no spot in the world to put a sign on).
+Config.AreaSigns = {
+	Enabled = true,
+	Height = 3.4, -- studs: how tall a sign is (its width follows the word)
+	Lift = 2.5, -- studs between the station's top and the sign's bottom edge
+	CeilingGap = 0.4, -- studs kept clear under a ceiling
+	EggGap = 0.5, -- studs kept clear above an egg stand's odds bubbles
+	MinPixels = 4, -- extra screen pixels per stud, so far-away signs never shrink to nothing
+	MaxDistance = 320, -- studs: further than this, the sign is hidden
+	Bob = 0.25, -- studs up and down
+	BobSpeed = 1.6, -- bobs per second (x 2 pi)
+	Signs = {
+		{ Text = "CRATES", Paint = "Gold", Icon = "Crate", Path = { "BackAlley", "RizzoStand" }, Lift = 6, HideWhile = "CallMarker" }, -- over Rizzo; hidden while his GO HERE! marker shows
+		{ Text = "CRATES", Paint = "Gold", Icon = "Crate", Path = { "Hub", "CrateShop" }, Offset = Vector3.new(-11, -6, 0) }, -- in front of the kiosk (it reaches the ceiling)
+		{ Text = "EGGS", Paint = "Pink", Icon = "Paw", Path = { "Hub", "EggPad" }, Egg = "Alley" },
+		{ Text = "EGGS", Paint = "Pink", Icon = "Paw", Path = { "MainStreetLanes", "EggPad" }, Egg = "Arcade" },
+		{ Text = "FUSION", Paint = "Purple", Icon = "Paw", Path = { "MainStreetLanes", "FusionStation" } },
+		{ Text = "CRATES", Paint = "Gold", Icon = "Crate", Path = { "MainStreetLanes", "CrateShop" } },
+		{ Text = "EGGS", Paint = "Pink", Icon = "Paw", Path = { "SkylineLanes", "EggPad" }, Egg = "Skyline" },
+		{ Text = "CRATES", Paint = "Gold", Icon = "Crate", Path = { "SkylineLanes", "CrateShop" } },
+	},
+}
+
+-- Polish P4: a pointing hand on EQUIP BEST in the PETS panel, shown the first time EQUIP BEST would change your pets.
+-- It stays until you tap EQUIP BEST once (save EquipBestHinted).
+Config.EquipBestHint = {
+	Enabled = true,
+	Hand = "👉", -- the pointing hand (an emoji, drawn left of the button)
+	Bob = 8, -- px the hand moves toward the button and back
 }
 
 -- How mascots look and move, and the hatching moment
