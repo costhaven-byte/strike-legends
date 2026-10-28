@@ -3081,9 +3081,7 @@ Config.Mascots = {
 		Rarity = "Rare",
 		Color = Color3.fromRGB(170, 112, 64),
 		Accent = Color3.fromRGB(255, 230, 190),
-		Reaction = "Hop",
-		Model = "LanePup", -- PLACEHOLDER look: LanePup's model repainted (Tint) until real art exists
-		Tint = Color3.fromRGB(170, 112, 64),
+		Reaction = "Hop", -- own model since 2026-10-28 (owner's WoodPup.glb)
 	},
 	{
 		Id = "ChromeBat",
@@ -3092,9 +3090,7 @@ Config.Mascots = {
 		Rarity = "Epic",
 		Color = Color3.fromRGB(200, 206, 218),
 		Accent = Color3.fromRGB(224, 165, 38),
-		Reaction = "Flip",
-		Model = "NeonBat", -- PLACEHOLDER look: NeonBat's model repainted (Tint) until real art exists
-		Tint = Color3.fromRGB(200, 206, 218),
+		Reaction = "Flip", -- own model since 2026-10-28 (owner's ChromeBat.glb)
 	},
 	{
 		Id = "CloudBumper",
@@ -3154,8 +3150,8 @@ Config.EggLooks = {
 }
 
 -- Where each egg is hatched (Phase X: one stand per zone). Path = the stand's folder under Workspace; it holds a
--- NeonStand model with an EggSpot part (the lobby's stand is the owner's design; zone 3 and 4 stands are copies of
--- it, repainted, until their own designs exist). You hatch an egg only within Config.MascotFx.HatchRange of its stand.
+-- NeonStand model with an EggSpot part (the lobby's stand is the owner's design; zone 3's is the owner's Main Street
+-- hatch stand since 2026-10-28, still named NeonStand; zone 4's is a repainted copy until its design is in). You hatch an egg only within Config.MascotFx.HatchRange of its stand.
 Config.EggStands = {
 	{ Egg = "Alley", Path = { "Hub", "EggPad" } },
 	{ Egg = "Arcade", Path = { "MainStreetLanes", "EggPad" } },
@@ -3501,13 +3497,40 @@ Config.PetIdle = {
 			},
 		},
 	},
+	-- Zone 3 pets, the owner's Main Street designs (2026-10-28)
+	WoodPup = {
+		Body = { Bob = 0.04, BobSpeed = 0.6, Hop = { Every = 3, Height = 0.6, Time = 0.45 } },
+		Moves = {
+			{
+				Kind = "Swing",
+				Parts = { "^head", "^snout", "^nose", "^eye_", "^ear_" },
+				Axis = Vector3.zAxis,
+				Angle = 8,
+				Speed = 0.35,
+			},
+			{ Kind = "Swing", Parts = { "^ear_" }, Axis = Vector3.zAxis, Angle = 12, Speed = 1.5, Mirror = true },
+			{ Kind = "Swing", Parts = { "^tail" }, Axis = Vector3.yAxis, Angle = 30, Speed = 4 },
+			{ Kind = "Swing", Parts = { "^bandana_flap" }, Axis = Vector3.xAxis, Angle = 8, Speed = 1.2 },
+			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.5 },
+		},
+	},
+	ChromeBat = {
+		Floats = true,
+		Body = { Bob = 0.25, BobSpeed = 0.6, Sway = 4, SwaySpeed = 0.4 },
+		Moves = {
+			{ Kind = "Swing", Parts = { "^wing_" }, Axis = Vector3.zAxis, Angle = 28, Speed = 2.2, Mirror = true },
+			{ Kind = "Swing", Parts = { "^ear_" }, Axis = Vector3.zAxis, Angle = 8, Speed = 0.8, Mirror = true },
+			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.2 },
+		},
+	},
 	Kingpin = {
 		Body = { Bob = 0.05, BobSpeed = 0.5, Sway = 3, SwaySpeed = 0.35 },
 		Moves = {
-			{ Kind = "Spin", Parts = { "^halo" }, Axis = Vector3.zAxis, Speed = 0.12, Pivot = "Center" },
-			{ Kind = "Swing", Parts = { "^scepter_", "^ball_" }, Axis = Vector3.zAxis, Angle = 8, Speed = 0.4 },
-			{ Kind = "Pulse", Parts = { "^aura" }, Speed = 0.5, Min = 0.5, Max = 1 },
-			{ Kind = "Spin", Parts = { "^spark" }, Axis = Vector3.yAxis, Speed = 0.15, Pivot = "Root" },
+			{ Kind = "Swing", Parts = { "^arm_" }, Axis = Vector3.xAxis, Angle = 12, Speed = 0.6, Mirror = true },
+			{ Kind = "Swing", Parts = { "^cape$" }, Axis = Vector3.xAxis, Angle = 5, Speed = 0.5 },
+			{ Kind = "Lift", Parts = { "^foot_R" }, Height = 0.08, Speed = 0.9 },
+			{ Kind = "Lift", Parts = { "^foot_L" }, Height = 0.08, Speed = 0.9, Phase = 0.5 },
+			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.8 },
 		},
 	},
 	Blaze = {

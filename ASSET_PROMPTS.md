@@ -61,8 +61,6 @@ Not for launch (skip): zones 5-6, the old Neon crate (removed).
 
 | Replaces | File(s) |
 |---|---|
-| Main Street Egg + stand (zone 3) | MainStreetEgg.glb, HatchStand.glb, HatchStand_withEgg.glb |
-| Zone 3 pets: Wood Pup, Chrome Bat, Kingpin, Blaze | WoodPup.glb, ChromeBat.glb, Kingpin.glb, Blaze.glb (all together: MainStreet_Lineup.glb) |
 | Skyline Egg + stand (zone 4) | skyline_egg.glb, skyline_stand_with_egg.glb |
 | Zone 4 pets: Cloud Bumper, Moony, Cosmo, Perfecto | cloud_bumper.glb, moony.glb, cosmo.glb, perfecto.glb (all together: skyline_lineup.glb) |
 | Titan Jr. (boss reward pet) | titan_jr.glb |

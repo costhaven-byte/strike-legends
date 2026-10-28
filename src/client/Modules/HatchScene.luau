@@ -170,7 +170,10 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 			end
 		end
 	end
-	local sign = ctx.Stand:FindFirstChild("sign_face", true) :: BasePart?
+	-- The zone 3 stand's sign is its scoreboard
+	local sign = (
+		ctx.Stand:FindFirstChild("sign_face", true) or ctx.Stand:FindFirstChild("scoreboard_panel", true)
+	) :: BasePart?
 	local underglow = ctx.Stand:FindFirstChild("sign_underglow", true) :: BasePart?
 
 	local egg = ctx.Egg
@@ -259,7 +262,9 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 	ctx.Camera = savedCamera
 	local standCf, standSize = ctx.Stand:GetBoundingBox()
 	local facing: Vector3
-	local frame = ctx.Stand:FindFirstChild("sign_frame", true) :: BasePart?
+	local frame = (
+		ctx.Stand:FindFirstChild("sign_frame", true) or ctx.Stand:FindFirstChild("scoreboard_frame", true)
+	) :: BasePart?
 	if sign and frame and (sign.Position - frame.Position).Magnitude > 0.01 then
 		facing = (sign.Position - frame.Position) * Vector3.new(1, 0, 1)
 	else
