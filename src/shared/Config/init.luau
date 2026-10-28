@@ -763,6 +763,7 @@ Config.LaneModifiers = {
 -- Display cases (Phase X Part 7): one data-driven case set per zone. Each set shows every ball that drops in its zone
 -- (Config.Balls Zone, not Retired) on its Slots (parts under Workspace, ordered by their Order attribute, best ball
 -- first) and its egg's pets on its Shelf. Not owned = dark silhouette, no glow; owned = lit up.
+-- Owner 2026-10-29: no pet shelves in any zone (Shelf left out; the shelf parts are in ServerStorage.PetShelves_Backup).
 -- A case = three layers: Base structure (Themes: the zone's look, colours + materials), rarity Accent (Styles
 -- Accent: bands, padlock, sign border) and rarity FX (Styles: rings, halo, dots, beam, aura, motes). Styles are
 -- shared by every zone and keyed by rarity, so a new zone or a new rarity only needs a Themes or Styles row.
@@ -773,23 +774,18 @@ Config.Showcase = {
 		{
 			Zone = 2,
 			Slots = { "Showcase", "Slots" },
-			Shelf = { "Showcase", "MascotShelf" },
 			Egg = "Alley",
 			Theme = "Neon",
 		},
 		{
 			Zone = 3,
 			Slots = { "MainStreetLanes", "Showcase", "Slots" },
-			Shelf = { "MainStreetLanes", "Showcase", "MascotShelf" },
-			ShelfOnFloor = true, -- the shelf part sits high up with nothing under it: drop it onto the floor
 			Egg = "Arcade",
 			Theme = "MainStreet",
 		},
 		{
 			Zone = 4,
 			Slots = { "SkylineLanes", "Showcase", "Slots" },
-			Shelf = { "SkylineLanes", "Showcase", "MascotShelf" },
-			ShelfOnFloor = true,
 			Egg = "Skyline",
 			Theme = "Skyline",
 		},
