@@ -3,6 +3,7 @@
 -- server publishes as the Player attribute CoinMultipliers ("PowerLevel=2;Ball=1.1;Mascots=1.04;...").
 -- Only multipliers that are always on go in the panel; PERFECT (x2), overcharge and the Golden Pin only count
 -- on the throw that earns them (the panel lists them as "on a PERFECT" and so on).
+-- It also publishes CoinsPerMinute (polish P1, the green "+12K/min" under the coin counter; AwayService.PerMinute).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -16,6 +17,7 @@ local Rebirth = require(Shared.Modules.Rebirth)
 local Store = require(Shared.Modules.Store)
 local ThrowRules = require(Shared.Modules.ThrowRules)
 local Zones = require(Shared.Modules.Zones)
+local AwayService = require(script.Parent.AwayService)
 local BallService = require(script.Parent.BallService)
 local FriendService = require(script.Parent.FriendService)
 local MascotService = require(script.Parent.MascotService)
@@ -52,6 +54,22 @@ function MultiplierService.Coins(player: Player, ball, level, streak: number, mo
 	}
 end
 
+-- Multipliers that are on between throws (everything in ORDER but Streak and lane Modifier), multiplied together.
+-- Coins per minute takes these out of past throws and puts today's back in, so an upgrade shows at once.
+local NOT_STEADY = { Streak = true, Modifier = true }
+function MultiplierService.Steady(all): number
+	local product = 1
+	for _, name in ORDER do
+		if not NOT_STEADY[name] then
+			product *= all[name] or 1
+		end
+	end
+	return product
+end
+
+-- The zone of each player's last lane, so the rate doesn't drop while you walk around between lanes
+local lastZone: { [Player]: number } = {}
+
 local function publish(player: Player)
 	local ball = BallService.GetEquipped(player)
 	if not ball then
@@ -59,7 +77,8 @@ local function publish(player: Player)
 	end
 	local level = PowerLevels.Get(ThrowRules.Level(PlayerDataService.Get(player, "PowerLevel")))
 	local lane = LaneUtil.GetOwnedLane(player.UserId)
-	local zone = if lane then LaneUtil.ZoneOf(lane) else 1
+	local zone = if lane then LaneUtil.ZoneOf(lane) else lastZone[player] or 1
+	lastZone[player] = zone
 	local all = MultiplierService.Coins(
 		player,
 		ball,
@@ -77,9 +96,18 @@ local function publish(player: Player)
 	if player:GetAttribute("CoinMultipliers") ~= text then
 		player:SetAttribute("CoinMultipliers", text)
 	end
+	if Config.Income.Enabled then
+		local perMinute = AwayService.PerMinute(player, MultiplierService.Steady(all))
+		if player:GetAttribute("CoinsPerMinute") ~= perMinute then
+			player:SetAttribute("CoinsPerMinute", perMinute)
+		end
+	end
 end
 
 function MultiplierService:Start()
+	Players.PlayerRemoving:Connect(function(player)
+		lastZone[player] = nil
+	end)
 	task.spawn(function()
 		while true do
 			for _, player in Players:GetPlayers() do

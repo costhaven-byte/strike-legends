@@ -2,6 +2,8 @@
 -- measured over your last RateMinutes of throwing (idle time doesn't lower it); that rate is saved as AwayRate, and
 -- LastOnline is kept up to date. Coming back after at least MinMinutes pays Share x AwayRate for every second away
 -- (up to MaxHours), shown in a WELCOME BACK popup (MilestoneService reward popup, Kind "Away").
+-- The same list gives the HUD's coins per minute (polish P1, Config.Income): each throw is also kept without its
+-- always-on multipliers, so the shown rate = your recent throwing x today's multipliers and rises the moment you upgrade.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -17,7 +19,8 @@ local TICK = 60 -- seconds between LastOnline / AwayRate updates (so a crashed s
 
 local AwayService = {}
 
--- Coins earned per throw this visit: { { Time, Coins } }, oldest first, only the last RateMinutes of throwing
+-- Coins earned per throw this visit: { { Time, Coins, Base } }, oldest first, only the last RateMinutes of throwing
+-- (Base = the coins divided by the throw's always-on multipliers, MultiplierService.Steady)
 local earned: { [Player]: { { number } } } = {}
 
 -- Coins per second over the last RateMinutes of throwing, or nil if there's too little to measure
@@ -45,18 +48,46 @@ local function update(player: Player)
 	PlayerDataService.Set(player, "LastOnline", os.time())
 end
 
--- Called by ThrowService when a throw pays coins
-function AwayService.OnCoins(player: Player, coins: number)
+-- Called by ThrowService when a throw pays coins. steady = the throw's always-on multipliers multiplied together.
+function AwayService.OnCoins(player: Player, coins: number, steady: number?)
 	local list = earned[player]
 	if not list then
 		list = {}
 		earned[player] = list
 	end
 	local now = os.clock()
-	table.insert(list, { now, coins })
+	table.insert(list, { now, coins, coins / math.max(steady or 1, 1e-9) })
 	while #list > 0 and list[1][1] < now - AWAY.RateMinutes * 60 do
 		table.remove(list, 1)
 	end
+end
+
+-- Coins per minute for the HUD (Config.Income): base coins over the last WindowMinutes of throwing x steady (the
+-- multipliers that are on right now). Too few throws yet = a guess from Config.Income's typical throw.
+function AwayService.PerMinute(player: Player, steady: number): number
+	local INCOME = Config.Income
+	local list = earned[player]
+	local now = os.clock()
+	local base, first, last, count = 0, nil, nil, 0
+	if list then
+		for _, entry in list do
+			if entry[1] >= now - INCOME.WindowMinutes * 60 then
+				base += entry[3]
+				first = first or entry[1]
+				last = entry[1]
+				count += 1
+			end
+		end
+	end
+	local perMinute
+	if count < INCOME.MinThrows then
+		perMinute = INCOME.GuessPinsPerThrow * Config.Rewards.BaseCoinsPerPin * INCOME.GuessThrowsPerMinute
+	else
+		-- the span covers the throws plus one throw's time after the last (idle time doesn't lower it)
+		local span = math.max((last :: number) - (first :: number), 0) * count / (count - 1)
+		perMinute = base / math.max(span, INCOME.MinSpanSeconds) * 60
+	end
+	return Currency.Round(Currency.Scale(perMinute, steady))
 end
 
 -- Called by RebirthService: income from before the rebirth doesn't count for away coins

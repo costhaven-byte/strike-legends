@@ -252,7 +252,7 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 		if player.Parent then
 			local firstCoins = reward.Coins > 0 and (PlayerDataService.Get(player, "LifetimePins") or 0) == 0
 			PlayerDataService.Add(player, "Coins", reward.Coins)
-			AwayService.OnCoins(player, reward.Coins)
+			AwayService.OnCoins(player, reward.Coins, MultiplierService.Steady(multipliers))
 			if reward.Gems > 0 then
 				PlayerDataService.Add(player, "Gems", reward.Gems)
 			end

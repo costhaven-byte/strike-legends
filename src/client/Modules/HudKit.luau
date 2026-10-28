@@ -84,12 +84,15 @@ HudKit.Layout = {
 	Boosts = { Pc = { 32, 72, nil, nil, "L", "T" }, Phone = { 12, 42, nil, nil, "L", "T" } },
 	Coins = { Pc = { 22, 124, 240, 68, "L", "T" }, Phone = { 8, 89, 118, 40, "L", "T" } },
 	Multiplier = { Pc = { 272, 136, 96, 44, "L", "T" }, Phone = { 132, 92, 60, 34, "L", "T" } },
-	Gems = { Pc = { 24, 196, 170, 58, "L", "T" }, Phone = { 198, 91, 70, 36, "L", "T" } },
-	Balls = { Pc = { 32, 266, 56, 56, "L", "T" }, Phone = { 12, 134, 44, 46, "L", "T" } },
-	Pets = { Pc = { 100, 266, 56, 56, "L", "T" }, Phone = { 62, 134, 44, 46, "L", "T" } },
-	Store = { Pc = { 168, 266, 56, 56, "L", "T" }, Phone = { 112, 134, 44, 46, "L", "T" } },
-	Power = { Pc = { 32, 338, 176, 66, "L", "T" }, Phone = { 162, 134, 118, 46, "L", "T" } },
-	Daily = { Pc = { 32, 420, 56, 56, "L", "T" }, Phone = { 736, 40, 44, 46, "R", "T" } },
+	-- Coins per minute (polish P1, not in the kit): a green line under the coin pill; the column under it moved
+	-- down to make room (computer +24, phone +14)
+	Income = { Pc = { 40, 186, 220, 26, "L", "T" }, Phone = { 14, 126, 120, 16, "L", "T" } },
+	Gems = { Pc = { 24, 220, 170, 58, "L", "T" }, Phone = { 198, 91, 70, 36, "L", "T" } },
+	Balls = { Pc = { 32, 290, 56, 56, "L", "T" }, Phone = { 12, 148, 44, 46, "L", "T" } },
+	Pets = { Pc = { 100, 290, 56, 56, "L", "T" }, Phone = { 62, 148, 44, 46, "L", "T" } },
+	Store = { Pc = { 168, 290, 56, 56, "L", "T" }, Phone = { 112, 148, 44, 46, "L", "T" } },
+	Power = { Pc = { 32, 362, 176, 66, "L", "T" }, Phone = { 162, 148, 118, 46, "L", "T" } },
+	Daily = { Pc = { 32, 444, 56, 56, "L", "T" }, Phone = { 736, 40, 44, 46, "R", "T" } },
 	Breakdown = { Pc = { 272, 190, 330, nil, "L", "T" }, Phone = { 272, 50, 300, nil, "C", "T" } },
 	-- Level bar + REBIRTH sit in the strip at the very top (next to Roblox's own buttons), so the boss pill fits under them
 	LevelBar = { Pc = { 650, 14, 620, 52, "C", "T" }, Phone = { 262, 6, 320, 34, "C", "T" } },

@@ -123,6 +123,43 @@ local function bindStat(pill: Frame, key: string)
 	end)
 end
 
+-- Coins per minute (polish P1): green "+12K/min" under the coin counter, from the CoinsPerMinute attribute
+-- (server, Config.Income). It pops a little when it goes up (an upgrade, a pet, a potion).
+local function bindIncome(bar: Frame)
+	local holder = Instance.new("Frame")
+	holder.Name = "Income"
+	holder.BackgroundTransparency = 1
+	holder.Parent = bar
+	local label = HudKit.Text(holder, "", HudKit.Num, 24, K.Lime, 2)
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.ZIndex = 6
+	local stroke = label:FindFirstChildOfClass("UIStroke") :: UIStroke
+	local scale = Instance.new("UIScale")
+	scale.Parent = holder
+	HudKit.OnLayout(function(phone)
+		label.TextSize = if phone then 15 else 24
+		stroke.Thickness = if phone then 1.5 else 2.5
+	end)
+	HudKit.Place(holder, "Income")
+	local last = 0
+	local function refresh()
+		local value = player:GetAttribute("CoinsPerMinute")
+		holder.Visible = value ~= nil
+		if value == nil then
+			return
+		end
+		label.Text = "+" .. formatNumber(value) .. "/min"
+		if value > last and last > 0 then
+			scale.Scale = 1.2
+			TweenService:Create(scale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+				:Play()
+		end
+		last = value
+	end
+	refresh()
+	player:GetAttributeChangedSignal("CoinsPerMinute"):Connect(refresh)
+end
+
 -- Level bar (HUD Kit): dark track, lime fill with a lip and shine, XP star over the left end. A level-up turns the
 -- fill gold and says "LEVEL UP! LV n" for 1.5 s.
 local function bindRankBar(rankBar: Frame)
@@ -585,6 +622,9 @@ function HudController:Start()
 			buildCounter(bar:WaitForChild(key), key)
 			bindStat(bar:WaitForChild(key), key)
 		end
+	end
+	if Config.Income.Enabled then
+		bindIncome(bar)
 	end
 	bindRankBar(gui:WaitForChild("RankBar"))
 	bindStreak(gui:WaitForChild("Streak"))

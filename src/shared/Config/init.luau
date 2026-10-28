@@ -3536,6 +3536,18 @@ Config.Away = {
 	StudioTest = { Hours = 2, Rate = 5000 },
 }
 
+-- Coins per minute under the coin counter (polish P1, the green "+12K/min"). Server: AwayService.PerMinute.
+-- = coins of your throws in the last WindowMinutes, with the always-on multipliers taken out, x the ones on now
+-- (so buying a Power Level or a pet raises it at once). Fewer than MinThrows throws = a guess from a typical throw.
+Config.Income = {
+	Enabled = true,
+	WindowMinutes = 3,
+	MinThrows = 3,
+	MinSpanSeconds = 20, -- never divide by less than this (a fast first few throws don't spike it)
+	GuessPinsPerThrow = 6, -- the guess: 6 pins a throw (Power LV 1's cap) at about 17 throws a minute
+	GuessThrowsPerMinute = 17,
+}
+
 -- Friend coin bonus (Addendum 2 step 11a): +BonusPerFriend coins for each Roblox friend in your server, up to MaxBonus
 -- (FRIENDS row in the multiplier panel)
 Config.Friends = {
