@@ -3536,6 +3536,27 @@ Config.Away = {
 	StudioTest = { Hours = 2, Rate = 5000 },
 }
 
+-- Brightness pass (POLISH_PLAN.md, 2026-10-28; BrightnessController, client-only lights): the play area gets
+-- brighter, the backgrounds keep their mood. A light strip above every lane (from BehindStart studs behind the ball
+-- spot to PastPins past the pins, Height up, shining down) + a fill light on your own character. Zone 2 (Neon Lanes)
+-- uses the place's Lighting, whose NeonColor saturation went 0.12 -> 0.22 in Studio (Old_Saturation_20261028 attr).
+Config.Brightness = {
+	Enabled = true,
+	Height = 14,
+	Width = 12,
+	Angle = 70,
+	BehindStart = 10,
+	PastPins = 4,
+	-- per zone (Config.Zones.LaneFolders order); brighter where the zone is darker
+	LaneLight = {
+		{ Brightness = 1.1, Color = Color3.fromRGB(255, 236, 214) }, -- Back Alley (darkest)
+		{ Brightness = 0.7, Color = Color3.fromRGB(236, 230, 255) }, -- Neon Lanes
+		{ Brightness = 0.6, Color = Color3.fromRGB(255, 240, 220) }, -- Main Street (already warm and lit)
+		{ Brightness = 0.8, Color = Color3.fromRGB(240, 232, 255) }, -- Skyline Lanes
+	},
+	PlayerFill = { Brightness = 0.8, Range = 12, Color = Color3.fromRGB(255, 244, 230) },
+}
+
 -- Coins per minute under the coin counter (polish P1, the green "+12K/min"). Server: AwayService.PerMinute.
 -- = coins of your throws in the last WindowMinutes, with the always-on multipliers taken out, x the ones on now
 -- (so buying a Power Level or a pet raises it at once). Fewer than MinThrows throws = a guess from a typical throw.
@@ -4080,7 +4101,7 @@ Config.Zones = {
 				Ambient = Color3.fromRGB(18, 18, 26),
 				OutdoorAmbient = Color3.fromRGB(22, 22, 32),
 				Exposure = -0.2, -- Lighting.ExposureCompensation here (place default 0, was 0.15 before 2026-10-22); lower = darker
-				Saturation = -0.22,
+				Saturation = -0.08, -- brightness pass 2026-10-28: more colour (was -0.22)
 				Contrast = 0.06,
 				Tint = Color3.fromRGB(214, 218, 240),
 				HazeColor = Color3.fromHex("4b4a5c"),
@@ -4106,7 +4127,7 @@ Config.Zones = {
 				Ambient = Color3.fromRGB(56, 46, 37),
 				OutdoorAmbient = Color3.fromRGB(48, 42, 35),
 				Exposure = -0.25,
-				Saturation = 0.1,
+				Saturation = 0.2, -- brightness pass 2026-10-28 (was 0.1)
 				Contrast = 0.1,
 				Tint = Color3.fromRGB(255, 246, 232),
 				HazeColor = Color3.fromHex("FFE9C7"),
@@ -4126,7 +4147,7 @@ Config.Zones = {
 				Ambient = Color3.fromRGB(62, 56, 88),
 				OutdoorAmbient = Color3.fromRGB(72, 66, 102),
 				Exposure = -0.05,
-				Saturation = 0.12,
+				Saturation = 0.22, -- brightness pass 2026-10-28 (was 0.12)
 				Contrast = 0.1,
 				Tint = Color3.fromRGB(236, 228, 255),
 				HazeColor = Color3.fromHex("5B4A8A"),
