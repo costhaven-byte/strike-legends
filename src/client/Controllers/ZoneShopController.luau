@@ -1,5 +1,5 @@
 -- Crate counters in zones 3 and 4 (Phase X, Config.ZoneShops): a prompt on each counter opens the crate shop screen.
--- The booths are placeholders built in Studio; buying still goes through CrateController and the server.
+-- The counters are the owner's designs (Studio); an invisible Counter part holds the prompt; buying still goes through CrateController and the server.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")

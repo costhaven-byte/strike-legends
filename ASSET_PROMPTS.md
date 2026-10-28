@@ -61,11 +61,6 @@ Not for launch (skip): zones 5-6, the old Neon crate (removed).
 
 | Replaces | File(s) |
 |---|---|
-| Bronze, Silver, Gold crates (zone 2) | neon_lanes_crates.glb |
-| League + Champion crates (zone 3) | league_crate_closed/open.glb, champion_crate_closed/open.glb |
-| Zone 3 crate counter | crate_counter.glb |
-| Sky Bronze, Sky Silver, Sky Gold crates (zone 4) | sky_bronze_crate.glb, sky_silver_crate.glb, sky_gold_crate.glb |
-| Zone 4 crate counter | sky_crate_counter.glb |
 | Main Street Egg + stand (zone 3) | MainStreetEgg.glb, HatchStand.glb, HatchStand_withEgg.glb |
 | Zone 3 pets: Wood Pup, Chrome Bat, Kingpin, Blaze | WoodPup.glb, ChromeBat.glb, Kingpin.glb, Blaze.glb (all together: MainStreet_Lineup.glb) |
 | Skyline Egg + stand (zone 4) | skyline_egg.glb, skyline_stand_with_egg.glb |

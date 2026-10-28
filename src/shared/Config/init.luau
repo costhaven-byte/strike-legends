@@ -2564,7 +2564,7 @@ Config.Balls = {
 
 -- Crates, bought with coins: name and colour here, cheapest first. Price and Odds come from Config.Economy.Crates
 -- (filled in below it), pity from Config.Economy.CratePity, duplicates from Config.Economy.Polish.
--- Looks: ReplicatedStorage.CrateModels has one model per Id (Bronze, Silver and Gold are recoloured copies for now).
+-- Looks: ReplicatedStorage.CrateModels has one model per Id (the owner's crate designs, 2026-10-28).
 -- Zone = the zone that must be unlocked to open it (locked crates show blacked out: "UNLOCKS IN <zone>").
 -- ZoneBallsOnly = gives only balls with that Zone (Config.Balls). Owner 2026-10-21: zone 1 = the Alley Crate with
 -- the Back Alley balls only; the zone 2 crates (Bronze, Silver, Gold) give only the Neon Lanes balls.
@@ -2594,7 +2594,7 @@ Config.Crates = {
 		ZoneBallsOnly = true,
 		Tier = "Gold",
 	},
-	-- Phase X: zone 3 has 2 crates, zone 4 has 3. Model = the CrateModels look they borrow until real art exists.
+	-- Phase X: zone 3 has 2 crates, zone 4 has 3. Model = the CrateModels look used if the crate's own model is missing.
 	{
 		Id = "League",
 		Name = "League Crate",
@@ -2746,7 +2746,7 @@ Config.Boss = {
 	Drop = { Kind = "Pet", Id = "TitanJr", Chance = 0.1, TopChance = 0.25 }, -- TopChance = rank 1's chance
 }
 
--- Crate counters in zones 3 and 4 (Phase X; placeholder booths built in Studio): walk up and the prompt opens the crate
+-- Crate counters in zones 3 and 4 (Phase X; the owner's counter designs, put in Studio 2026-10-28): walk up and the prompt opens the crate
 -- shop screen, which lists every crate (each zone's crates unlock with the zone). Path = the booth under Workspace.
 Config.ZoneShops = {
 	{ Path = { "MainStreetLanes", "CrateShop" }, Zone = 3 },
