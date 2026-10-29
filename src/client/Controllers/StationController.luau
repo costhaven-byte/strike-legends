@@ -1,5 +1,6 @@
 -- Zone 3 and 4 stations (Phase X Part 6), placed in Studio:
---   Fusion station (Main Street Lanes, Config.Fusion): opens the PETS panel, where MERGE makes Shinies.
+--   Fusion station (Main Street Lanes, Config.Fusion): opens the PET FUSION window (UI pass batch 5), which merges
+--   3 of a pet into a Shiny like the MERGE button in the PETS panel.
 -- The helicopter (Pin Titan boss event) lives in BossController. Rebirth is a HUD button now (RebirthController).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -56,8 +57,8 @@ local function fusion()
 	player:GetAttributeChangedSignal("ZonesOpen"):Connect(refresh)
 	refresh()
 	p.Triggered:Connect(function()
-		if MascotController.OpenPets then
-			MascotController.OpenPets()
+		if MascotController.OpenFusion then
+			MascotController.OpenFusion()
 		end
 	end)
 end

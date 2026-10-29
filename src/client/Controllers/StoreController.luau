@@ -1988,7 +1988,8 @@ function StoreController:Start()
 	local ballsUi = playerGui:WaitForChild("BallsUI", 10)
 	local crateOpening = ballsUi and ballsUi:FindFirstChild("Opening") :: GuiObject?
 	-- Another game window on screen (daily reward, ball book, pets, spin wheel, rank-up, zone unlock...)
-	local WINDOW_NAMES = { Panel = true, Popup = true, Window = true, Book = true, DailySpinWheel = true }
+	-- (Screen = the kit windows: pets, fusion, daily, gifts, teleport, rebirth...)
+	local WINDOW_NAMES = { Panel = true, Popup = true, Window = true, Book = true, DailySpinWheel = true, Screen = true }
 	local NOT_WINDOWS = { ThrowUI = true, HUD = true } -- their "Panel" is the throw meter / HUD, always up
 	local function otherWindowOpen(): boolean
 		for _, screen in playerGui:GetChildren() do

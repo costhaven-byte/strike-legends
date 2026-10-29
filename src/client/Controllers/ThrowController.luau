@@ -72,7 +72,8 @@ local POPUPS = {
 	{ "PlaytimeUI", "Screen" },
 	{ "TrialKitUI", "Screen" },
 	{ "ZoneUnlockUI", "Screen" },
-	{ "MascotUI", "Panel" }, -- pets + potions (ITEMS tab)
+	{ "MascotUI", "Screen" }, -- pets + potions (ITEMS tab)
+	{ "FusionUI", "Screen" }, -- zone 3 pet fusion
 }
 
 local ThrowController = {}

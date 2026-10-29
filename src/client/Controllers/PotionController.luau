@@ -11,6 +11,8 @@ local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules:WaitForChild("Sfx"))
 local UiFx = require(Modules:WaitForChild("UiFx"))
 local HudKit = require(Modules:WaitForChild("HudKit"))
+local UiKit = require(Modules:WaitForChild("UiKit"))
+local RewardKit = require(Modules:WaitForChild("RewardKit"))
 local TweenService = game:GetService("TweenService")
 local K = HudKit.C
 
@@ -19,12 +21,7 @@ local player = Players.LocalPlayer
 local POTIONS = Config.Potions
 
 local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
-local BODY_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
 local INK = Color3.fromHex("06060F")
-local CARD = Color3.fromRGB(30, 20, 60)
-local PANEL = Color3.fromRGB(18, 12, 38)
-local PURPLE = Color3.fromRGB(190, 90, 255)
-local LIME = Color3.fromRGB(125, 255, 60)
 local GREY = Color3.fromRGB(120, 110, 150)
 
 -- Running timers (owner's HUD Kit): one card per running potion, bottom-left on computers, bottom middle (right of
@@ -226,17 +223,24 @@ local function refresh()
 		local left = boosts[potion.Id] or 0
 		local card = cards[potion.Id]
 		if card then
-			card.Owned.Text = if left > 0
-				then ("YOU HAVE %d  ·  %s %s"):format(
-					count,
-					if active[potion.Id] then "ON" else "WAITING",
-					clock(left)
-				)
-				else ("YOU HAVE %d"):format(count)
-			card.Owned.TextColor3 = if left > 0 then LIME elseif count > 0 then Color3.new(1, 1, 1) else GREY
-			card.Drink.BackgroundColor3 = if count > 0 then LIME else Color3.fromRGB(70, 65, 90)
-			card.Drink.TextColor3 = if count > 0 then INK else GREY
-			card.Outline.Thickness = if left > 0 then 3 else 2
+			-- UI pass batch 5: "x4" pill, a status line (ON / WAITING + time left), DRINK lime when you have one
+			card.Count.Text = ("x%d"):format(count)
+			card.Count.TextColor3 = if count > 0 then RewardKit.C.Gold else RewardKit.C.Faded
+			card.Status.Text = if left > 0
+				then ("%s  %s"):format(if active[potion.Id] then "ON" else "WAITING", clock(left))
+				elseif count > 0 then "READY TO DRINK"
+				else "NONE LEFT"
+			card.Status.TextColor3 = if left > 0
+				then RewardKit.C.Lime
+				elseif count > 0 then RewardKit.C.White
+				else RewardKit.C.Faded
+			if count > 0 then
+				card.Drink:Paint(RewardKit.C.Lime, RewardKit.C.LimeLip, RewardKit.C.White)
+			else
+				card.Drink:Paint(RewardKit.C.Grey, RewardKit.C.GreyLip, RewardKit.C.LockedText)
+			end
+			card.Drink:SetPressable(count > 0)
+			card.Outline.Thickness = if left > 0 then 5 else 3
 		end
 
 		local chip = chips[potion.Id]
@@ -294,7 +298,7 @@ function PotionController.Use(potion)
 	Sfx.Play("PowerUp")
 	UiFx.Flash(potion.Color, 0.35, 0.4)
 	if cards[potion.Id] then
-		UiFx.Pop(cards[potion.Id].Card, 1.08, 0.3)
+		UiFx.Pop(cards[potion.Id].Card, 1.06, 0.3)
 	end
 	task.defer(function()
 		local chip = chips[potion.Id]
@@ -304,50 +308,92 @@ function PotionController.Use(potion)
 	end)
 end
 
--- The ITEMS tab of the PETS panel: a hint, one card per potion with DRINK, and (Studio only) TEST: POTIONS.
--- toast = the panel's own message line.
-function PotionController.BuildItems(page: Frame, toast: (string) -> ())
+-- The ITEMS tab of the PETS panel: a hint, a 2 x 2 grid of potion cards with DRINK, and (Studio only) TEST: POTIONS.
+-- UI pass batch 5 (2026-10-29): cards in the owner's kit look (lip block ringed in the potion colour, HUD Kit potion
+-- icon, "x4" pill, lime DRINK). page = w x h design px. toast = the panel's own message line.
+function PotionController.BuildItems(page: Frame, toast: (string) -> (), w: number, h: number)
 	showToast = toast
-	local hint =
-		text(page, "Hint", BODY_FONT, Color3.fromRGB(200, 190, 230), UDim2.fromOffset(4, 0), UDim2.new(1, -8, 0, 18))
-	hint.Text = "POTIONS: drink one for 15 minutes of boost. Timers only run while you play."
+	local C = RewardKit.C
+	local hint = RewardKit.Label(
+		page,
+		"DRINK ONE FOR A BOOST. TIMERS ONLY RUN WHILE YOU PLAY.",
+		UiKit.Body,
+		15,
+		C.Label,
+		0,
+		2,
+		0,
+		w - 4,
+		20
+	)
+	hint.Name = "Hint"
 	hint.TextXAlignment = Enum.TextXAlignment.Left
 
-	local grid = Instance.new("Frame")
-	grid.Name = "Cards"
-	grid.BackgroundTransparency = 1
-	grid.Position = UDim2.fromOffset(0, 26)
-	grid.Size = UDim2.new(1, 0, 1, -60)
-	grid.Parent = page
-	local layout = Instance.new("UIGridLayout")
-	layout.CellSize = UDim2.new(0.5, -6, 0.5, -6)
-	layout.CellPadding = UDim2.fromOffset(12, 12)
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Parent = grid
-
+	local GAP = 12
+	local cardW = (w - GAP) / 2
+	local cardH = math.min(180, (h - 30 - GAP - 30) / 2)
 	for index, potion in POTIONS.List do
-		local card = Instance.new("Frame")
-		card.Name = potion.Id
-		card.LayoutOrder = index
-		card.BackgroundColor3 = CARD
-		card.Parent = grid
-		corner(card, 12)
-		local outline = stroke(card, potion.Color, 2, true)
-		flask(card, potion.Color, potion.Big, UDim2.new(0, 38, 0.5, 0), 52)
-		local name = text(card, "PotionName", FONT, potion.Color, UDim2.new(0, 74, 0, 8), UDim2.new(1, -82, 0, 22))
-		name.Text = potion.Name
+		local col, row = (index - 1) % 2, (index - 1) // 2
+		local block = UiKit.Block(page, {
+			Name = potion.Id,
+			Size = Vector2.new(cardW, cardH),
+			Fill = C.Card,
+			Lip = C.Page,
+			LipPx = 6,
+			Radius = 18,
+			Outline = 3,
+			Ring = potion.Color,
+		})
+		block.Holder.Position = UDim2.fromOffset(col * (cardW + GAP), 30 + row * (cardH + GAP))
+		local face = block.Face
+		local ring = (face:FindFirstChild("Ring") :: Frame):FindFirstChildOfClass("UIStroke") :: UIStroke
+		local faceH = cardH - 6 - 6
+		local iconSize = math.min(104, faceH - 24)
+		-- the icon on a dark round plate, so the potion colours pop
+		local plate = UiKit.Box(face, "Plate", C.Cover, iconSize / 2, 3, potion.Color)
+		UiKit.Place(plate, 16, (faceH - iconSize) / 2, iconSize, iconSize, 3)
+		RewardKit.Icon(plate, "Potion", potion.Id, iconSize * 0.8)
+		local x = 16 + iconSize + 16
+		local name = RewardKit.Label(face, potion.Name, UiKit.Head, 24, potion.Color, 2.5, x, 12, cardW - x - 70, 30)
 		name.TextXAlignment = Enum.TextXAlignment.Left
-		local info =
-			text(card, "Info", BODY_FONT, Color3.new(1, 1, 1), UDim2.new(0, 74, 0, 32), UDim2.new(1, -82, 0, 16))
-		info.Text = ("%s FOR %d MIN"):format(boostText(potion), potion.Minutes)
+		local info = RewardKit.Label(
+			face,
+			("%s FOR %s"):format(boostText(potion), clock(potion.Minutes * 60)),
+			UiKit.Body,
+			15,
+			C.White,
+			0,
+			x,
+			44,
+			cardW - x - 14,
+			20
+		)
 		info.TextXAlignment = Enum.TextXAlignment.Left
-		local owned = text(card, "Owned", BODY_FONT, GREY, UDim2.new(0, 74, 0, 50), UDim2.new(1, -82, 0, 14))
-		owned.TextXAlignment = Enum.TextXAlignment.Left
-		local drink = button(card, "Drink", "DRINK", LIME, UDim2.new(0, 74, 1, -36), UDim2.new(1, -86, 0, 28))
+		local status = RewardKit.Label(face, "", UiKit.Head, 16, C.Faded, 2, x, 66, cardW - x - 14, 22)
+		status.TextXAlignment = Enum.TextXAlignment.Left
+		-- "x4" pill, top-right
+		local pill = UiKit.Block(face, {
+			Name = "Count",
+			Size = Vector2.new(58, 32),
+			Fill = C.Cover,
+			Lip = C.Ink,
+			LipPx = 4,
+			Radius = 16,
+			Outline = 2,
+		})
+		pill.Holder.Position = UDim2.fromOffset(cardW - 6 - 58 - 10, 10)
+		local count = RewardKit.Label(pill.Face, "x0", UiKit.Num, 18, C.Gold, 2, 2, 1, 50, 24)
+		local drink = RewardKit.Button(face, "DRINK", "Lime", cardW - x - 20, 48, 24)
+		drink.Holder.Name = "Drink"
+		drink.Holder.Position = UDim2.fromOffset(x, faceH - 48 - 12)
 		drink.Activated:Connect(function()
-			PotionController.Use(potion)
+			if (decode(player:GetAttribute("Potions"))[potion.Id] or 0) > 0 then
+				PotionController.Use(potion)
+			else
+				drink:Shake()
+			end
 		end)
-		cards[potion.Id] = { Card = card, Outline = outline, Owned = owned, Drink = drink }
+		cards[potion.Id] = { Card = block.Holder, Outline = ring, Count = count, Status = status, Drink = drink }
 	end
 
 	-- Studio only: one of every potion

@@ -27,6 +27,8 @@ local Sfx = require(Modules:WaitForChild("Sfx"))
 local UiFx = require(Modules:WaitForChild("UiFx"))
 local HudKit = require(Modules:WaitForChild("HudKit"))
 local RewardKit = require(Modules:WaitForChild("RewardKit"))
+local UiKit = require(Modules:WaitForChild("UiKit"))
+local CrateKit = require(Modules:WaitForChild("CrateKit"))
 
 local player = Players.LocalPlayer
 
@@ -35,16 +37,16 @@ local ECONOMY = Config.Economy.Mascots
 local EGG = Config.Economy.Eggs[1] -- the Neon Egg (Id "Alley"); zone 3 and 4 eggs hatch at their own stands (Phase X)
 
 local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
-local BODY_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
 local INK = Color3.fromHex("06060F")
 local CARD = Color3.fromRGB(30, 20, 60)
-local SLOT = Color3.fromRGB(22, 14, 44)
 local PINK = Color3.fromRGB(255, 60, 210)
 local GOLD = Color3.fromRGB(255, 200, 40)
 local LIME = Color3.fromRGB(125, 255, 60)
 local GREY = Color3.fromRGB(120, 110, 150)
 
 local MascotController = {}
+
+local make = UiKit.Make
 
 -- Every number on screen uses the shared formatter (Config.Numbers)
 local formatNumber = Currency.Format
@@ -149,15 +151,15 @@ function MascotController:Start()
 	local bestRemote = remotes:WaitForChild("EquipBestMascots") :: RemoteEvent
 	local mergeRemote = remotes:WaitForChild("MergeMascot") :: RemoteFunction
 	local playerGui = player:WaitForChild("PlayerGui")
-	local hud = playerGui:WaitForChild("HUD") :: ScreenGui
 	local ballsUI = playerGui:WaitForChild("BallsUI") :: ScreenGui
-	local inventory = ballsUI:WaitForChild("Inventory") :: Frame
 
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "MascotUI"
 	gui.ResetOnSpawn = false
 	gui.DisplayOrder = ballsUI.DisplayOrder
 	gui.IgnoreGuiInset = ballsUI.IgnoreGuiInset
+	-- children draw over their parent (the kit pieces on the hatch screen sit above its tap-to-skip layer)
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 	-- PETS button (owner's HUD Kit: pink, paw icon). Count badge = potions to drink; red dot = an egg to hatch.
 	local petsKit =
@@ -165,115 +167,142 @@ function MascotController:Start()
 	local petsButton = petsKit.Holder :: TextButton
 	petsButton.Visible = false
 
-	-- The panel borrows the ball inventory's look (like the collection book does)
-	local panel = inventory:Clone()
-	panel.Name = "Panel"
-	panel.Visible = false
-	for _, name in { "Grid", "TileTemplate", "Detail" } do
-		local child = panel:FindFirstChild(name)
-		if child then
-			child:Destroy()
-		end
+	-- UI pass batch 5 (2026-10-29): the panel is a kit window (navy cover, PETS / ITEMS lip tabs, red X). PETS page =
+	-- a strip with the equipped slots, the total bonus and EQUIP BEST, then a grid of the pets you own.
+	local K = RewardKit.C
+	local W, H = 820, 560
+	local PAGE_X, PAGE_Y = 24, 98
+	local PAGE_W, PAGE_H = W - 48, H - PAGE_Y - 20
+	local win = RewardKit.Window(gui, W, H)
+	local cover, closeX = RewardKit.Cover(win.Panel, W, H, "PETS", "", K.Pink)
+	local titleBox = cover:FindFirstChild("TitleBox") :: Frame
+	local subLine = cover:FindFirstChild("Sub") :: TextLabel
+	local titleFront = titleBox:FindFirstChild("Front", true) :: TextLabel -- its ink drop copies the text
+	local function setTitle(value: string, color: Color3)
+		titleFront.Text = value
+		titleFront.TextColor3 = color
 	end
-	local outline = panel:FindFirstChildOfClass("UIStroke")
-	if outline then
-		outline.Color = PINK
-	end
-	local title = panel:WaitForChild("Title") :: TextLabel
-	title.Text = "PETS"
-	title.TextColor3 = PINK
-	local countLabel = panel:WaitForChild("Count") :: TextLabel
-	local close = panel:WaitForChild("Close") :: TextButton
-	panel.Parent = gui
 
-	-- Tabs: PETS and ITEMS (potions), top-right next to the close button
+	-- Tabs: PETS and ITEMS, left of the X (the open one pink, the other dark)
 	local tabs = {}
 	for index, info in { { "Pets", "PETS" }, { "Items", "ITEMS" } } do
-		local tab = button(
-			panel,
-			info[1] .. "Tab",
-			info[2],
-			CARD,
-			UDim2.new(1, -264 + (index - 1) * 102, 0, 10),
-			UDim2.fromOffset(96, 32)
-		)
-		tab.ZIndex = 3
+		local tab = RewardKit.Button(cover, info[2], "Pink", 124, 46, 24)
+		tab.Holder.Name = info[1] .. "Tab"
+		tab.Holder.Position = UDim2.fromOffset(W - 334 + (index - 1) * 134, 16)
 		tabs[info[1]] = tab
 	end
+	local function page(name: string): Frame
+		return make("Frame", {
+			Name = name,
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(PAGE_X, PAGE_Y),
+			Size = UDim2.fromOffset(PAGE_W, PAGE_H),
+			Visible = false,
+		}, cover)
+	end
 	-- The ITEMS page (filled by PotionController.BuildItems once the toast exists)
-	local itemsPage = Instance.new("Frame")
-	itemsPage.Name = "Items"
-	itemsPage.BackgroundTransparency = 1
-	itemsPage.Position = UDim2.fromOffset(12, 66)
-	itemsPage.Size = UDim2.new(1, -24, 1, -78)
-	itemsPage.Visible = false
-	itemsPage.Parent = panel
-	-- PETS page before the pets' zone opens: where pets come from
-	local lockedNote = text(panel, "PetsLocked", FONT, GREY, UDim2.new(0, 20, 0.3, 0), UDim2.new(1, -40, 0, 70))
-	lockedNote.Visible = false
+	local itemsPage = page("Items")
+	local right = page("Right") -- the PETS page
+	right.Visible = true
 
-	-- Right: equipped slots and EQUIP BEST
-	local right = Instance.new("Frame")
-	right.Name = "Right"
-	right.BackgroundTransparency = 1
-	right.Position = UDim2.fromOffset(12, 66)
-	right.Size = UDim2.new(1, -24, 1, -78)
-	right.Parent = panel
-	local slotsTitle =
-		text(right, "SlotsTitle", FONT, Color3.new(1, 1, 1), UDim2.fromOffset(4, 0), UDim2.new(0.6, 0, 0, 22))
-	slotsTitle.TextXAlignment = Enum.TextXAlignment.Left
-	slotsTitle.Text = "EQUIPPED"
-	local bestButton =
-		button(right, "EquipBest", "EQUIP BEST", LIME, UDim2.new(1, -150, 0, 0), UDim2.fromOffset(150, 30))
-	local slotRow = Instance.new("Frame")
-	slotRow.Name = "Slots"
-	slotRow.BackgroundTransparency = 1
-	slotRow.Position = UDim2.fromOffset(0, 34)
-	slotRow.Size = UDim2.new(1, 0, 0, 66)
-	slotRow.Parent = right
-	local slotLayout = Instance.new("UIListLayout")
-	slotLayout.FillDirection = Enum.FillDirection.Horizontal
-	slotLayout.Padding = UDim.new(0, 8)
-	slotLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	slotLayout.Parent = slotRow
+	-- A big icon with a title and a line, centred in a box (no pets yet / pets locked)
+	local function emptyNote(parent: Instance, icon: string, y: number, h: number): (Frame, TextLabel, TextLabel)
+		local box = make("Frame", {
+			Name = "Note",
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(0, y),
+			Size = UDim2.fromOffset(PAGE_W, h),
+			Visible = false,
+		}, parent)
+		HudKit.Image(box, icon, 96, {
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 0, h / 2 - 104),
+		})
+		local head = RewardKit.Label(box, "", UiKit.Head, 34, K.White, 3, 20, h / 2, PAGE_W - 40, 42)
+		local line = RewardKit.Label(box, "", UiKit.Body, 16, K.Label, 0, 20, h / 2 + 46, PAGE_W - 40, 22)
+		return box, head, line
+	end
+	-- PETS page before the pets' zone opens: where pets come from
+	local lockedPage = page("PetsLocked")
+	local lockedBox, lockedHead, lockedLine = emptyNote(lockedPage, "Lock", 0, PAGE_H)
+	lockedBox.Visible = true
+	local lockedNote = lockedPage
+
+	-- Top strip: equipped slots on the left, the total bonus and EQUIP BEST on the right
+	local STRIP_H = 116
+	local strip = UiKit.Block(right, {
+		Name = "Strip",
+		Size = Vector2.new(PAGE_W, STRIP_H),
+		Fill = K.Page,
+		Lip = K.Ink,
+		LipPx = 6,
+		Radius = 20,
+		Outline = 3,
+	})
+	local stripFace = strip.Face
+	local SIDE_W = 200
+	local slotRow = make("Frame", {
+		Name = "Slots",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(12, 0),
+		Size = UDim2.new(1, -SIDE_W - 76, 1, 0), -- room on the right for the EQUIP BEST hand
+	}, stripFace) :: Frame
+	make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		VerticalAlignment = Enum.VerticalAlignment.Center,
+		Padding = UDim.new(0, 10),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}, slotRow)
+	local sideX = PAGE_W - 6 - 12 - SIDE_W
+	local totalCaption = RewardKit.Label(stripFace, "TOTAL PET BONUS", UiKit.Body, 13, K.Muted, 0, sideX, 6, SIDE_W, 18)
+	totalCaption.Name = "TotalCaption"
+	local slotsTitle = RewardKit.Label(stripFace, "+0% COINS", UiKit.Head, 28, K.Gold, 2.5, sideX, 22, SIDE_W, 32)
+	slotsTitle.Name = "Total"
+	local best = RewardKit.Button(stripFace, "EQUIP BEST", "Lime", SIDE_W, 46, 22)
+	best.Holder.Name = "EquipBest"
+	best.Holder.Position = UDim2.fromOffset(sideX, 54)
+	local bestButton = best.Holder
 
 	-- The pets you own (the others stay hidden)
-	local grid = Instance.new("ScrollingFrame")
-	grid.Name = "Grid"
-	grid.BackgroundTransparency = 1
-	grid.BorderSizePixel = 0
-	grid.Position = UDim2.fromOffset(0, 108)
-	grid.Size = UDim2.new(1, 0, 1, -108)
-	grid.ScrollBarThickness = 6
-	grid.ScrollBarImageColor3 = PINK
-	grid.AutomaticCanvasSize = Enum.AutomaticSize.Y
-	grid.CanvasSize = UDim2.new()
-	grid.Parent = right
-	local gridLayout = Instance.new("UIGridLayout")
-	gridLayout.CellSize = UDim2.fromOffset(104, 138)
-	gridLayout.CellPadding = UDim2.fromOffset(8, 8)
-	gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	gridLayout.Parent = grid
-	local gridPad = Instance.new("UIPadding")
-	gridPad.PaddingTop = UDim.new(0, 4)
-	gridPad.PaddingLeft = UDim.new(0, 4)
-	gridPad.Parent = grid
-	local noPets = text(right, "NoPets", FONT, GREY, UDim2.fromOffset(0, 140), UDim2.new(1, 0, 0, 60))
-	noPets.Text = "NO PETS YET\nHATCH THE NEON EGG AT THE EGG STAND"
-	noPets.Visible = false
+	local CARD_W, CARD_H, CARD_GAP = 142, 196, 12
+	local GRID_Y = STRIP_H + 12
+	local grid = make("ScrollingFrame", {
+		Name = "Grid",
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Position = UDim2.fromOffset(0, GRID_Y),
+		Size = UDim2.fromOffset(PAGE_W, PAGE_H - GRID_Y),
+		ScrollBarThickness = 6,
+		ScrollBarImageColor3 = K.Pink,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+	}, right) :: ScrollingFrame
+	make("UIGridLayout", {
+		CellSize = UDim2.fromOffset(CARD_W, CARD_H),
+		CellPadding = UDim2.fromOffset(CARD_GAP, CARD_GAP),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}, grid)
+	make("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 2) }, grid)
+	local noPets, noPetsHead, noPetsLine = emptyNote(right, "Paw", GRID_Y, PAGE_H - GRID_Y)
+	noPetsHead.Text = "NO PETS YET"
+	noPetsLine.Text = "HATCH THE NEON EGG AT THE EGG STAND"
 
 	type Tile = {
-		Frame: Frame,
-		View: ViewportFrame,
+		Frame: GuiObject,
 		Name: TextLabel,
 		Count: TextLabel,
-		Equip: TextButton,
+		CountPill: GuiObject,
+		Bonus: TextLabel,
+		Equip: any,
 		Outline: UIStroke,
-		Merge: TextButton?,
+		Tick: GuiObject,
+		Merge: any?,
 		Mascot: any,
 	}
 	local tiles: { Tile } = {}
 	local doMerge: (mascot: any) -> ()
+	local FACE_W, FACE_H = CARD_W - 6, CARD_H - 12
 	-- Each mascot's card, then its Shiny card right after it (each shown only once owned)
 	local cards = {}
 	for index, mascot in Config.Mascots do -- every egg's pets (Phase X: one egg per zone), shown once owned
@@ -283,29 +312,73 @@ function MascotController:Start()
 	end
 	for _, card in cards do
 		local mascot = card.Mascot
-		local frame = Instance.new("Frame")
-		frame.Name = mascot.Id
-		frame.BackgroundColor3 = CARD
+		local color = if mascot.Shiny then K.Gold else Mascots.RarityColor(mascot.Rarity)
+		local block = UiKit.Block(grid, {
+			Name = mascot.Id,
+			Size = Vector2.new(CARD_W, CARD_H),
+			Fill = if mascot.Shiny then UiKit.Hex("2E2312") else K.Card,
+			Lip = K.Page,
+			LipPx = 6,
+			Radius = 16,
+			Outline = 3,
+			Ring = color,
+		})
+		local frame = block.Holder
 		frame.LayoutOrder = card.Order
-		frame.Parent = grid
-		corner(frame, 10)
-		local tileOutline = stroke(frame, if mascot.Shiny then GOLD else Mascots.RarityColor(mascot.Rarity), 2, true)
-		local holder = Instance.new("Frame")
-		holder.BackgroundTransparency = 1
-		holder.Position = UDim2.fromOffset(12, 4)
-		holder.Size = UDim2.new(1, -24, 0, 66)
-		holder.Parent = frame
-		local view = MascotView.Viewport(holder, MascotView.Mascot(mascot, 2, false), 0.95)
-		local name = text(frame, "Name", FONT, Color3.new(1, 1, 1), UDim2.fromOffset(4, 70), UDim2.new(1, -8, 0, 18))
-		local count = text(
-			frame,
-			"Count",
-			BODY_FONT,
-			Mascots.RarityColor(mascot.Rarity),
-			UDim2.fromOffset(4, 88),
-			UDim2.new(1, -8, 0, 14)
+		frame.Visible = false
+		local face = block.Face
+		local tileOutline = (face:FindFirstChild("Ring") :: Frame):FindFirstChildOfClass("UIStroke") :: UIStroke
+		local holder = make("Frame", {
+			Name = "Pet",
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(8, 8),
+			Size = UDim2.fromOffset(FACE_W - 16, 84),
+		}, face)
+		MascotView.Viewport(holder, MascotView.Mascot(mascot, 2, false), 0.95)
+		-- Shiny: a gold star (the crown is on the 3D pet) and sparkles over the pet
+		if mascot.Shiny then
+			local star = CrateKit.Icon(face, "Star", 30)
+			star.Position = UDim2.fromOffset(6, 62)
+			star.ZIndex = 5
+			RewardKit.Twinkle(holder, 3, K.Gold)
+		end
+		-- equipped: a lime tick, top-left
+		local tick = UiKit.Icon(face, "Tick", 28)
+		tick.Position = UDim2.fromOffset(6, 6)
+		tick.ZIndex = 5
+		tick.Visible = false
+		-- "x3" pill, top-right
+		local pill = UiKit.Block(face, {
+			Name = "CountPill",
+			Size = Vector2.new(44, 26),
+			Fill = K.Cover,
+			Lip = K.Ink,
+			LipPx = 3,
+			Radius = 13,
+			Outline = 2,
+		})
+		pill.Holder.Position = UDim2.fromOffset(FACE_W - 50, 6)
+		pill.Holder.ZIndex = 5
+		local count = RewardKit.Label(pill.Face, "", UiKit.Num, 15, K.Gold, 1.5, 2, 1, 40, 20)
+		local name =
+			RewardKit.Label(face, string.upper(mascot.Name), UiKit.Head, 17, K.White, 2, 6, 94, FACE_W - 12, 22)
+		name.Name = "Name"
+		local bonus = RewardKit.Label(
+			face,
+			Mascots.BonusText(Mascots.Bonus(mascot)) .. " COINS",
+			UiKit.Num,
+			17,
+			K.Lime,
+			1.5,
+			6,
+			116,
+			FACE_W - 12,
+			20
 		)
-		local equip = button(frame, "Equip", "EQUIP", LIME, UDim2.new(0, 8, 1, -32), UDim2.new(1, -16, 0, 26))
+		bonus.Name = "Bonus"
+		local equip = RewardKit.Button(face, "EQUIP", "Lime", FACE_W - 12, 40, 20)
+		equip.Holder.Name = "Equip"
+		equip.Holder.Position = UDim2.fromOffset(6, FACE_H - 40 - 8)
 		equip.Activated:Connect(function()
 			local mine = owned()[mascot.Id] or 0
 			local inUse = countIn(equipped(), mascot.Id)
@@ -314,22 +387,19 @@ function MascotController:Start()
 				equipRemote:FireServer(mascot.Id, true)
 			elseif inUse > 0 then
 				equipRemote:FireServer(mascot.Id, false)
+			else
+				equip:Shake()
 			end
 		end)
-		-- MERGE: three of a kind -> one Shiny (top of the card, over the mascot)
-		local merge: TextButton? = nil
+		-- MERGE: three of a kind -> one Shiny (gold, over the lower part of the pet)
+		local merge = nil
 		local cost = Mascots.MergeCost(mascot)
 		if cost then
-			local mergeButton = button(
-				frame,
-				"Merge",
-				("MERGE %d"):format(cost),
-				GOLD,
-				UDim2.fromOffset(6, 4),
-				UDim2.new(1, -12, 0, 20)
-			)
-			mergeButton.ZIndex = 3
-			mergeButton.Visible = false
+			local mergeButton = RewardKit.Button(face, ("MERGE %d > SHINY"):format(cost), "Gold", FACE_W - 12, 32, 15)
+			mergeButton.Holder.Name = "Merge"
+			mergeButton.Holder.Position = UDim2.fromOffset(6, 58)
+			mergeButton.Holder.ZIndex = 6
+			mergeButton.Holder.Visible = false
 			mergeButton.Activated:Connect(function()
 				task.spawn(doMerge, mascot)
 			end)
@@ -337,14 +407,40 @@ function MascotController:Start()
 		end
 		table.insert(tiles, {
 			Frame = frame,
-			View = view,
 			Name = name,
 			Count = count,
+			CountPill = pill.Holder,
+			Bonus = bonus,
 			Equip = equip,
 			Outline = tileOutline,
+			Tick = tick,
 			Merge = merge,
 			Mascot = mascot,
 		})
+	end
+
+	-- What locks each slot past the open ones: the rank levels, then rebirths, then (store on) the +2 PET SLOTS pass
+	local function lockTexts(level: number): { string }
+		local list = {}
+		for _, rank in ECONOMY.SlotRanks do
+			if level < rank then
+				table.insert(list, ("LV %d"):format(rank))
+			end
+		end
+		local rebirths = player:GetAttribute("Rebirths") or 0
+		for _, needed in ECONOMY.SlotRebirths do
+			if rebirths < needed then
+				table.insert(list, if needed == 1 then "REBIRTH" else ("%d REBIRTHS"):format(needed))
+			end
+		end
+		if Store.Active() and Store.PetSlots(player) == 0 then
+			for _, pass in Config.Monetization.Passes do
+				for _ = 1, pass.PetSlots or 0 do
+					table.insert(list, "PASS")
+				end
+			end
+		end
+		return list
 	end
 
 	local function refreshSlots()
@@ -355,47 +451,62 @@ function MascotController:Start()
 		end
 		local list = equipped()
 		local slots = player:GetAttribute("MascotSlots") or ECONOMY.StartSlots
-		local level = player:GetAttribute("RankLevel") or 1
-		local lockedShown = false
-		-- The +2 PET SLOTS pass (Config.Monetization) can go past MaxSlots: smaller boxes so they all fit
-		local shown = math.max(ECONOMY.MaxSlots, slots)
-		local boxSize = math.min(66, math.floor((ECONOMY.MaxSlots * 74 - 8 - (shown - 1) * 8) / shown))
+		local locks = lockTexts(player:GetAttribute("RankLevel") or 1)
+		local shown = slots + #locks
+		local rowW = PAGE_W - 6 - SIDE_W - 76
+		local boxSize = math.min(84, math.floor((rowW - (shown - 1) * 10) / shown))
 		for i = 1, shown do
 			local open = i <= slots
-			if not open and lockedShown then
-				break -- show only the next locked slot, so it's clear what unlocks it
-			end
-			local box = Instance.new("TextButton")
-			box.Name = "Slot" .. i
-			box.Text = ""
-			box.AutoButtonColor = false
-			box.LayoutOrder = i
-			box.BackgroundColor3 = SLOT
-			box.Size = UDim2.fromOffset(boxSize, boxSize)
-			box.Parent = slotRow
-			corner(box, 10)
 			local mascot = Mascots.Get(list[i])
-			stroke(box, if mascot then Mascots.RarityColor(mascot.Rarity) else GREY, 2, true)
+			local color = if mascot
+				then (if mascot.Shiny then K.Gold else Mascots.RarityColor(mascot.Rarity))
+				else K.Dash
+			local box = make("TextButton", {
+				Name = "Slot" .. i,
+				Text = "",
+				AutoButtonColor = false,
+				BackgroundTransparency = 1,
+				LayoutOrder = i,
+				Size = UDim2.fromOffset(boxSize, boxSize),
+			}, slotRow) :: TextButton
+			local fill = UiKit.Box(box, "Fill", if open then K.Slot else K.Missing, 16, 3, color)
+			UiKit.Place(fill, 0, 0, boxSize, boxSize, 3)
 			if mascot then
-				MascotView.Viewport(box, MascotView.Mascot(mascot, 2, false), 0.95)
+				MascotView.Viewport(fill, MascotView.Mascot(mascot, 2, false), 0.95)
 				box.Activated:Connect(function()
 					equipRemote:FireServer(mascot.Id, false)
 				end)
 				UiFx.Press(box)
 			elseif open then
-				local plus = text(box, "Empty", FONT, GREY, UDim2.fromScale(0.2, 0.2), UDim2.fromScale(0.6, 0.6))
-				plus.Text = "+"
+				local plus = RewardKit.Label(fill, "+", UiKit.Head, 36, K.Faded, 0, 0, 0, boxSize - 6, boxSize - 6)
+				plus.Name = "Empty"
+				make("UIPadding", { PaddingTop = UDim.new(0, 6) }, plus)
 			else
-				lockedShown = true
-				box.BackgroundTransparency = 0.5
-				local lock =
-					text(box, "Locked", BODY_FONT, GREY, UDim2.fromScale(0.08, 0.2), UDim2.fromScale(0.84, 0.6))
-				lock.Text = "LOCKED\n" .. (Mascots.NextSlotText(level) or "")
+				local size = boxSize - 6
+				HudKit.Image(fill, "Lock", size * 0.42, {
+					AnchorPoint = Vector2.new(0.5, 0),
+					Position = UDim2.new(0.5, 0, 0, size * 0.12),
+					ImageTransparency = 0.2,
+				})
+				local lock = RewardKit.Label(
+					fill,
+					locks[i - slots],
+					UiKit.Head,
+					15,
+					K.LockedText,
+					1.5,
+					3,
+					size * 0.6,
+					size - 6,
+					size * 0.3
+				)
+				lock.Name = "Locked"
 			end
 		end
 	end
 
 	local refreshBadge: () -> () -- below, with the tabs
+	local currentTab = "Pets"
 	local function refresh()
 		local mine = owned()
 		local list = equipped()
@@ -412,45 +523,35 @@ function MascotController:Start()
 				end
 			end
 		end
-		countLabel.Text = ("%s COINS  -  %d / %d SLOTS  -  %d / %d FOUND"):format(
-			Mascots.BonusText(bonus),
-			#list,
-			slots,
-			kinds,
-			kindsTotal
-		)
-		slotsTitle.Text = ("EQUIPPED  %s COINS"):format(Mascots.BonusText(bonus))
+		if currentTab == "Pets" then
+			subLine.Text = ("%d / %d EQUIPPED  ·  %d / %d PETS FOUND"):format(#list, slots, kinds, kindsTotal)
+		end
+		slotsTitle.Text = ("%s COINS"):format(Mascots.BonusText(bonus))
 
 		for _, tile in tiles do
 			local mascot = tile.Mascot
 			local have = mine[mascot.Id] or 0
 			local inUse = countIn(list, mascot.Id)
 			if tile.Merge then
-				tile.Merge.Visible = have >= (Mascots.MergeCost(mascot) or math.huge)
+				tile.Merge.Holder.Visible = have >= (Mascots.MergeCost(mascot) or math.huge)
 			end
 			tile.Frame.Visible = have > 0
 			if have > 0 then
-				tile.Name.Text = string.upper(mascot.Name)
-				tile.Count.Text = ("%s%s"):format(
-					Mascots.BonusText(Mascots.Bonus(mascot)),
-					if have > 1 then ("  x%d"):format(have) else ""
-				)
-				tile.Equip.Visible = true
+				tile.Count.Text = ("x%d"):format(have)
+				tile.CountPill.Visible = have > 1
+				tile.Tick.Visible = inUse > 0
+				local equip = tile.Equip
 				if inUse < have and #list < slots then
-					tile.Equip.Text = "EQUIP"
-					tile.Equip.BackgroundColor3 = LIME
+					equip:SetText("EQUIP")
+					equip:Paint(K.Lime, K.LimeLip, K.White)
 				elseif inUse > 0 then
-					tile.Equip.Text = "UNEQUIP"
-					tile.Equip.BackgroundColor3 = GREY
+					equip:SetText("UNEQUIP")
+					equip:Paint(K.Grey, K.GreyLip, K.White)
 				else
-					tile.Equip.Text = "SLOTS FULL"
-					tile.Equip.BackgroundColor3 = GREY
+					equip:SetText("SLOTS FULL")
+					equip:Paint(K.Grey, K.GreyLip, K.LockedText)
 				end
-				tile.Frame.BackgroundColor3 = if inUse > 0
-					then Color3.fromRGB(40, 60, 40)
-					elseif mascot.Shiny then Color3.fromRGB(60, 45, 20)
-					else CARD
-				tile.Outline.Thickness = if inUse > 0 then 3 else 2
+				tile.Outline.Thickness = if inUse > 0 then 5 else 3
 			end
 		end
 		noPets.Visible = kinds == 0
@@ -460,16 +561,17 @@ function MascotController:Start()
 	end
 
 	-- Which tab is showing; before the pets' zone the PETS tab shows the lock note and the button opens on ITEMS
-	local currentTab = "Pets"
 	local petsLocked: boolean? = nil
-	local testEgg: TextButton? = nil
+	local testEgg: GuiObject? = nil
 	local function showTab(name: string)
 		currentTab = name
 		local pets = name == "Pets"
 		for tabName, tab in tabs do
-			local on = tabName == name
-			tab.BackgroundColor3 = if on then PINK else CARD
-			tab.TextColor3 = if on then INK else Color3.new(1, 1, 1)
+			if tabName == name then
+				tab:Paint(K.Pink, K.PinkLip, K.White)
+			else
+				tab:Paint(K.Chip, K.Ink, K.Muted)
+			end
 		end
 		right.Visible = pets and not petsLocked
 		lockedNote.Visible = pets and petsLocked == true
@@ -477,12 +579,13 @@ function MascotController:Start()
 		if testEgg then
 			testEgg.Visible = pets
 		end
-		title.Text = if pets then "PETS" else "ITEMS"
+		setTitle(if pets then "PETS" else "ITEMS", if pets then K.Pink else K.Cyan)
 		if pets then
+			subLine.Text = if petsLocked then "PETS FOLLOW YOU AND BOOST YOUR COINS" else ""
 			refresh()
 		else
 			local potions = PotionController.Count()
-			countLabel.Text = if potions == 1 then "1 POTION TO DRINK" else ("%d POTIONS TO DRINK"):format(potions)
+			subLine.Text = if potions == 1 then "1 POTION TO DRINK" else ("%d POTIONS TO DRINK"):format(potions)
 		end
 	end
 
@@ -498,10 +601,8 @@ function MascotController:Start()
 		local unlocked, why = eggState()
 		local locked = not unlocked
 		petsButton.Visible = true
-		lockedNote.Text = ("PETS UNLOCK IN %s (%s)\nHATCH THE NEON EGG AT THE EGG STAND"):format(
-			Zones.Name(EGG.Zone or 1):upper(),
-			tostring(why)
-		)
+		lockedHead.Text = ("PETS UNLOCK IN %s"):format(Zones.Name(EGG.Zone or 1):upper())
+		lockedLine.Text = ("%s  ·  THEN HATCH THE NEON EGG AT THE EGG STAND"):format(tostring(why))
 		if locked == petsLocked then
 			return
 		end
@@ -522,10 +623,12 @@ function MascotController:Start()
 		kitToast(upper, nil, nil, if problem then RewardKit.C.Price else RewardKit.C.White, 2)
 	end
 
-	PotionController.BuildItems(itemsPage, showToast)
+	PotionController.BuildItems(itemsPage, showToast, PAGE_W, PAGE_H)
 	for name, tab in tabs do
 		tab.Activated:Connect(function()
-			showTab(name)
+			if currentTab ~= name then
+				showTab(name)
+			end
 		end)
 	end
 
@@ -557,6 +660,21 @@ function MascotController:Start()
 		corner(ring)
 		glowRings[i] = ring
 	end
+	-- UI pass batch 5: the Crate Kit's rays turn behind the pet in its rarity colour (screen hatches and merges;
+	-- the stand hatch has the 3D stand's own light show)
+	local stageRays = make("ImageLabel", {
+		Name = "Rays",
+		BackgroundTransparency = 1,
+		Image = CrateKit.Image("Rays"),
+		ImageTransparency = 0.3,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.45),
+		Size = UDim2.fromScale(0.62, 0.62),
+		ZIndex = 33,
+		Visible = false,
+	}, overlay) :: ImageLabel
+	make("UIAspectRatioConstraint", {}, stageRays)
+	HudKit.Spin(stageRays, 10)
 	local stage = Instance.new("Frame")
 	stage.BackgroundTransparency = 1
 	stage.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -568,66 +686,231 @@ function MascotController:Start()
 	stageAspect.Parent = stage
 	local stageScale = Instance.new("UIScale")
 	stageScale.Parent = stage
-	local revealNew = text(overlay, "New", FONT, LIME, UDim2.fromScale(0.3, 0.13), UDim2.fromScale(0.4, 0.07))
-	local revealName =
-		text(overlay, "Name", FONT, Color3.new(1, 1, 1), UDim2.fromScale(0.25, 0.64), UDim2.fromScale(0.5, 0.08))
-	local revealInfo = text(overlay, "Info", FONT, GOLD, UDim2.fromScale(0.25, 0.72), UDim2.fromScale(0.5, 0.05))
-	-- Polish P2: "1 IN X" odds of this exact pet, under its name
-	local revealOdds = text(
-		overlay,
-		"Odds",
-		FONT,
-		Color3.fromRGB(200, 190, 230),
-		UDim2.fromScale(0.3, 0.71),
-		UDim2.fromScale(0.4, 0.04)
-	)
 	-- A1 (2026-10-28): the rarity slams in big over the pet on the stand hatch ("LEGENDARY!")
 	-- (the overlay starts above the screen's top edge, so 0.11 keeps it clear of the top bar)
 	local revealRarity = text(overlay, "Rarity", FONT, GOLD, UDim2.fromScale(0.2, 0.11), UDim2.fromScale(0.6, 0.1))
 	revealRarity.Visible = false
-	for _, label in { revealNew, revealName, revealInfo, revealOdds, revealRarity } do
-		label.ZIndex = 35
-		local s = label:FindFirstChildOfClass("UIStroke")
-		if s then
-			s.Thickness = if label == revealRarity then 4 else 3
-		end
+	revealRarity.ZIndex = 35
+	local rarityStroke = revealRarity:FindFirstChildOfClass("UIStroke")
+	if rarityStroke then
+		rarityStroke.Thickness = 4
 	end
-	local doneButton = button(overlay, "Done", "CLOSE", GREY, UDim2.new(0.5, -65, 0.79, 0), UDim2.fromOffset(130, 46))
-	doneButton.TextColor3 = Color3.new(1, 1, 1)
-	doneButton.ZIndex = 36
+
+	-- The hatch card (UI pass batch 5): a navy plate ringed in the rarity colour with the rarity chip, the pet's
+	-- name, "+12% COINS" counting up, the odds and a NEW! stamp; OK (and AUTO on the stand) under it. A triple hatch
+	-- puts the other two pets on small cards either side. Design px; it shrinks to fit the screen's bottom part.
+	local front = make("Frame", {
+		Name = "Front",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(0, 60), -- the real screen inside the taller overlay
+		Size = UDim2.new(1, 0, 1, -120),
+		ZIndex = 35,
+	}, overlay) :: Frame
+	local PLATE_W, PLATE_H, SIDE = 520, 150, 150
+	local cardHolder = make("Frame", {
+		Name = "Card",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -16),
+		Size = UDim2.fromOffset(PLATE_W, PLATE_H),
+		Visible = false,
+	}, front) :: Frame
+	local cardFit = make("UIScale", {}, cardHolder) :: UIScale
+	local plateBlock = UiKit.Block(cardHolder, {
+		Name = "Plate",
+		Size = Vector2.new(PLATE_W, PLATE_H),
+		Fill = K.Cover,
+		Lip = K.Ink,
+		LipPx = 6,
+		Radius = 24,
+		Outline = 4,
+		Ring = GOLD,
+	})
+	local plate = plateBlock.Holder
+	local plateFace = plateBlock.Face
+	local plateRing = (plateFace:FindFirstChild("Ring") :: Frame):FindFirstChildOfClass("UIStroke") :: UIStroke
+	-- rarity chip on the plate's top edge
+	local chip = UiKit.Block(cardHolder, {
+		Name = "RarityChip",
+		Size = Vector2.new(190, 40),
+		Fill = GOLD,
+		Lip = K.GoldLip,
+		LipPx = 4,
+		Radius = 20,
+		Outline = 3,
+	})
+	chip.Holder.AnchorPoint = Vector2.new(0.5, 0.5)
+	chip.Holder.Position = UDim2.fromOffset(PLATE_W / 2, 2)
+	chip.Holder.ZIndex = 3
+	local chipText = RewardKit.Label(chip.Face, "", UiKit.Head, 22, K.White, 2.5, 8, 2, 174, 30)
+	make("UIPadding", { PaddingTop = UDim.new(0, 3) }, chipText)
+	local revealName = RewardKit.Label(plateFace, "", UiKit.Head, 40, K.White, 3, 20, 26, PLATE_W - 48, 48)
+	revealName.Name = "Name"
+	local revealInfo = RewardKit.Label(plateFace, "", UiKit.Num, 28, K.Lime, 2.5, 20, 74, PLATE_W - 48, 34)
+	revealInfo.Name = "Info"
+	-- Polish P2: "1 IN X" odds of this exact pet, under its name
+	local revealOdds = RewardKit.Label(plateFace, "", UiKit.Body, 15, K.Label, 0, 20, 110, PLATE_W - 48, 20)
+	revealOdds.Name = "Odds"
+	-- NEW! stamp, tilted on the plate's top-right corner
+	local stamp = UiKit.Block(cardHolder, {
+		Name = "New",
+		Size = Vector2.new(128, 48),
+		Fill = K.Lime,
+		Lip = K.LimeLip,
+		LipPx = 5,
+		Radius = 14,
+		Outline = 3,
+	})
+	stamp.Holder.AnchorPoint = Vector2.new(0.5, 0.5)
+	stamp.Holder.Position = UDim2.fromOffset(PLATE_W - 40, 4)
+	stamp.Holder.ZIndex = 4
+	local revealNew = RewardKit.Label(stamp.Face, "NEW!", UiKit.Head, 26, K.White, 2.5, 6, 2, 116, 36)
+	make("UIPadding", { PaddingTop = UDim.new(0, 3) }, revealNew)
+
+	local doneKit = RewardKit.Button(cardHolder, "OK!", "Lime", 200, 62, 30)
+	local doneButton = doneKit.Holder
+	doneButton.Name = "Done"
 	-- Polish P2: AUTO HATCH (stand hatches only): keeps hatching while you can pay; tap it again, CLOSE or the screen to stop
-	local autoButton = button(overlay, "Auto", "AUTO: OFF", GREY, UDim2.new(0.5, 5, 0.81, 0), UDim2.fromOffset(150, 46))
-	autoButton.TextColor3 = Color3.new(1, 1, 1)
-	autoButton.ZIndex = 36
+	local autoKit = RewardKit.Button(cardHolder, "AUTO: OFF", "Grey", 200, 62, 26)
+	local autoButton = autoKit.Holder
+	autoButton.Name = "Auto"
 	autoButton.Visible = false
-	local skipHint = text(
-		overlay,
-		"SkipHint",
-		FONT,
-		Color3.fromRGB(200, 190, 230),
-		UDim2.fromScale(0.35, 0.86),
-		UDim2.fromScale(0.3, 0.035)
-	)
-	skipHint.Text = "TAP TO SKIP"
-	skipHint.ZIndex = 35
+	-- the buttons live under the card, but AUTO also shows alone during AUTO (the card is hidden then)
+	local buttonRow = make("Frame", {
+		Name = "Buttons",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -16),
+		Size = UDim2.fromOffset(PLATE_W, 70),
+	}, front) :: Frame
+	local rowFit = make("UIScale", {}, buttonRow) :: UIScale
+	doneButton.Parent = buttonRow
+	autoButton.Parent = buttonRow
+	local function placeButtons(withAuto: boolean)
+		doneButton.Position = UDim2.fromOffset(if withAuto then 50 else (PLATE_W - 200) / 2, 0)
+		autoButton.Position = UDim2.fromOffset(if withAuto then 270 else (PLATE_W - 200) / 2, 0)
+	end
+
+	-- Triple hatch: the other two pets on small cards left and right of the plate
+	type Side = { Holder: GuiObject, Ring: UIStroke, Pet: Frame, Name: TextLabel, New: TextLabel }
+	local sides: { Side } = {}
+	for i = 1, 2 do
+		local block = UiKit.Block(cardHolder, {
+			Name = "Extra" .. i,
+			Size = Vector2.new(SIDE, PLATE_H),
+			Fill = K.Card,
+			Lip = K.Page,
+			LipPx = 6,
+			Radius = 20,
+			Outline = 3,
+			Ring = GOLD,
+		})
+		block.Holder.Position = UDim2.fromOffset(if i == 1 then -SIDE - 14 else PLATE_W + 14, 0)
+		block.Holder.Visible = false
+		local pet = make("Frame", {
+			Name = "Pet",
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(10, 8),
+			Size = UDim2.fromOffset(SIDE - 26, 86),
+		}, block.Face) :: Frame
+		local name = RewardKit.Label(block.Face, "", UiKit.Head, 16, K.White, 2, 6, 96, SIDE - 18, 22)
+		local new = RewardKit.Label(block.Face, "NEW!", UiKit.Head, 15, K.Lime, 2, 6, 116, SIDE - 18, 18)
+		sides[i] = {
+			Holder = block.Holder,
+			Ring = (block.Face:FindFirstChild("Ring") :: Frame):FindFirstChildOfClass("UIStroke") :: UIStroke,
+			Pet = pet,
+			Name = name,
+			New = new,
+		}
+	end
+
+	local skipHint = RewardKit.Label(front, "TAP TO SKIP", UiKit.Head, 22, K.White, 2.5, 0, 0, 300, 30)
+	skipHint.Name = "SkipHint"
+	skipHint.AnchorPoint = Vector2.new(0.5, 1)
+	skipHint.Position = UDim2.new(0.5, 0, 1, -28)
+	skipHint.TextTransparency = 0.15
 	skipHint.Visible = false
 
-	-- The name card sits lower on the stand hatch, so the pet above the stand stays clear
+	-- Card and buttons shrink to fit: full width, and at most 40% of the screen's height
+	local function fitCard(wide: number)
+		local area = front.AbsoluteSize
+		if area.X <= 0 then
+			return
+		end
+		local scale = math.max(0.4, math.min(1, (area.X - 24) / wide, area.Y * 0.4 / (PLATE_H + 100)))
+		cardFit.Scale = scale
+		rowFit.Scale = scale
+		cardHolder.Position = UDim2.new(0.5, 0, 1, -16 - 82 * scale)
+	end
+
+	-- Every hatch and merge uses the same card; onStand = AUTO sits next to OK
 	local function cardLayout(onStand: boolean)
-		-- On the stand the rarity title takes the top and NEW PET! sits under it as a tilted stamp
 		revealRarity.Visible = onStand
 		revealRarity.Text = ""
-		revealNew.Visible = true
-		revealNew.Position = if onStand then UDim2.fromScale(0.38, 0.205) else UDim2.fromScale(0.3, 0.13)
-		revealNew.Size = if onStand then UDim2.fromScale(0.24, 0.05) else UDim2.fromScale(0.4, 0.07)
-		revealNew.Rotation = if onStand then -6 else 0
-		revealName.Position = UDim2.fromScale(0.25, if onStand then 0.655 else 0.62)
-		revealOdds.Position = UDim2.fromScale(0.3, if onStand then 0.72 else 0.685)
-		revealInfo.Position = UDim2.fromScale(0.25, if onStand then 0.755 else 0.72)
-		-- On the stand CLOSE and AUTO sit side by side; stays on short screens too
-		doneButton.Position = UDim2.new(0.5, if onStand then -155 else -65, if onStand then 0.81 else 0.79, 0)
+		stageRays.Visible = false
+		cardHolder.Visible = false
+		for _, side in sides do
+			side.Holder.Visible = false
+		end
+		placeButtons(onStand)
 		autoButton.Visible = false
 		skipHint.Visible = false
+	end
+
+	-- Fills and pops the card in. look: Color, Rarity (chip), Name, Stamp ("NEW!" / "SHINY!" / nil), Extras
+	local function popCard(look: { [string]: any })
+		local color = look.Color
+		plateRing.Color = color
+		chip:Paint(color, color:Lerp(K.Ink, 0.35))
+		chipText.Text = look.Rarity
+		revealName.Text = look.Name
+		revealName.TextColor3 = color
+		stamp.Holder.Visible = look.Stamp ~= nil
+		if look.Stamp then
+			revealNew.Text = look.Stamp
+			stamp:Paint(look.StampColor or K.Lime, (look.StampColor or K.Lime):Lerp(K.Ink, 0.3))
+		end
+		local wide = PLATE_W
+		for i, side in sides do
+			local extra = look.Extras and look.Extras[i]
+			local other = extra and Mascots.Get(extra.MascotId)
+			side.Holder.Visible = other ~= nil
+			if other then
+				wide = PLATE_W + 2 * (SIDE + 14)
+				side.Pet:ClearAllChildren()
+				MascotView.Viewport(side.Pet, MascotView.Mascot(other, 2, false), 0.95)
+				side.Ring.Color = Mascots.RarityColor(other.Rarity)
+				side.Name.Text = string.upper(other.Name)
+				side.Name.TextColor3 = Mascots.RarityColor(other.Rarity)
+				side.New.Text = if extra.IsNew then "NEW!" else string.upper(other.Rarity)
+				side.New.TextColor3 = if extra.IsNew then K.Lime else K.Muted
+			end
+		end
+		fitCard(wide)
+		cardHolder.Visible = true
+		-- the plate pops 0.6 -> 1.05 -> 1 (the kit's open pop), the side cards a beat later, the stamp drops on last
+		local scale = UiKit.ScaleOf(plate)
+		scale.Scale = 0.6
+		UiKit.Tween(scale, 0.18, Enum.EasingStyle.Back, { Scale = 1.05 }).Completed:Once(function()
+			UiKit.Tween(scale, 0.08, Enum.EasingStyle.Quad, { Scale = 1 })
+		end)
+		UiFx.Pop(chip.Holder, 0.4, 0.3)
+		local shownSides = {}
+		for _, side in sides do
+			if side.Holder.Visible then
+				table.insert(shownSides, side.Holder)
+			end
+		end
+		RewardKit.Stagger(shownSides, 0.08, 0.15)
+		if look.Stamp then
+			stamp.Holder.Visible = false
+			task.delay(0.25, function()
+				if cardHolder.Visible then
+					stamp.Holder.Visible = true
+					RewardKit.Stamp(stamp.Holder)
+				end
+			end)
+		end
 	end
 
 	-- "1 IN 4", "1 IN 2.5", "1 IN 1.2K" (chance = 0..1 from the server)
@@ -700,25 +983,30 @@ function MascotController:Start()
 	local autoHatch = false
 	local autoNext: () -> ()
 	local function paintAuto()
-		autoButton.Text = if autoHatch then "AUTO: ON" else "AUTO: OFF"
-		autoButton.BackgroundColor3 = if autoHatch then LIME else GREY
-		autoButton.TextColor3 = if autoHatch then INK else Color3.new(1, 1, 1)
+		autoKit:SetText(if autoHatch then "AUTO: ON" else "AUTO: OFF")
+		if autoHatch then
+			autoKit:Paint(K.Lime, K.LimeLip, K.White)
+		else
+			autoKit:Paint(K.Grey, K.GreyLip, K.White)
+		end
 	end
 
 	local cardToken = nil
 	local function showCard(result, mascot)
 		local color = Mascots.RarityColor(mascot.Rarity)
-		revealNew.Text = if result.IsNew then "NEW PET!" else "ANOTHER ONE!"
-		revealNew.TextColor3 = if result.IsNew then LIME else Color3.fromRGB(200, 190, 230)
-		revealName.Text = string.upper(mascot.Name)
-		revealName.TextColor3 = color
-		revealOdds.Text = oddsText(result.Chance)
+		popCard({
+			Color = color,
+			Rarity = string.upper(mascot.Rarity),
+			Name = string.upper(mascot.Name),
+			Stamp = if result.IsNew then "NEW!" else nil,
+			Extras = result.Extras, -- TRIPLE HATCH: the other two pets
+		})
+		local odds = oddsText(result.Chance)
+		revealOdds.Text = if result.Equipped
+			then (if odds ~= "" then odds .. "  ·  EQUIPPED!" else "EQUIPPED!")
+			else odds
 		local function info(bonus: number): string
-			return ("%s  -  %s COINS%s"):format(
-				string.upper(mascot.Rarity),
-				Mascots.BonusText(bonus),
-				if result.Equipped then "  -  EQUIPPED!" else ""
-			)
+			return Mascots.BonusText(bonus) .. " COINS"
 		end
 		-- A1: the COINS bonus counts up from +0%
 		local bonus = Mascots.Bonus(mascot)
@@ -736,28 +1024,23 @@ function MascotController:Start()
 				RunService.RenderStepped:Wait()
 			end
 		end)
-		for _, label in { revealName, revealOdds, revealInfo } do
+		for _, label in { revealName, revealInfo } do
 			UiFx.Pop(label, 1.5, 0.35)
 		end
-		-- The rarity title slams in tilted and straightens; NEW PET! stamps on a beat later
+		-- The rarity title slams in tilted and straightens (the NEW! stamp drops on a beat later)
 		if revealRarity.Visible then
 			revealRarity.Text = string.upper(mascot.Rarity) .. "!"
 			revealRarity.TextColor3 = color
 			revealRarity.Rotation = -10
 			UiFx.Pop(revealRarity, 2.2, 0.35)
 			TweenService:Create(revealRarity, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Rotation = 0 }):Play()
-			revealNew.Visible = false
-			task.delay(0.25, function()
-				if cardToken == token then
-					revealNew.Visible = true
-					UiFx.Pop(revealNew, 1.8, 0.3)
-				end
-			end)
-		else
-			UiFx.Pop(revealNew, 1.5, 0.35)
 		end
 		-- Confetti in the rarity's colours, more the rarer it is
-		UiFx.Confetti(nil, FX.Hatch.Confetti[mascot.Rarity] or 20, { color, color:Lerp(Color3.new(1, 1, 1), 0.5), GOLD })
+		UiFx.Confetti(
+			nil,
+			FX.Hatch.Confetti[mascot.Rarity] or 20,
+			{ color, color:Lerp(Color3.new(1, 1, 1), 0.5), GOLD }
+		)
 		skipHint.Visible = false
 		doneButton.Visible = true
 		UiFx.Pop(doneButton, 0.6, 0.3)
@@ -809,7 +1092,7 @@ function MascotController:Start()
 			end
 		end
 		petsButton.Visible = false
-		panel.Visible = false
+		win:Close()
 		cardLayout(true)
 		overlay.BackgroundTransparency = 1
 		setGlow(GOLD, 0)
@@ -817,10 +1100,6 @@ function MascotController:Start()
 		doneButton.Visible = false
 		autoButton.Visible = autoHatch -- stays up during AUTO so it can be turned off
 		skipHint.Visible = not autoHatch
-		revealNew.Text = ""
-		revealName.Text = ""
-		revealOdds.Text = ""
-		revealInfo.Text = ""
 		clearStage()
 		local context = {
 			Stand = site.Stand,
@@ -863,18 +1142,6 @@ function MascotController:Start()
 			showToast(message)
 		end
 	end
-	local function extrasToast(result)
-		if not result.Extras then
-			return
-		end
-		-- TRIPLE HATCH: the other pets from this hatch
-		local names = {}
-		for _, extra in result.Extras do
-			local other = Mascots.Get(extra.MascotId)
-			table.insert(names, (if other then other.Name:upper() else "?") .. (if extra.IsNew then " (NEW)" else ""))
-		end
-		task.spawn(showToast, "ALSO HATCHED: " .. table.concat(names, ", "))
-	end
 	autoNext = function()
 		local context = sceneContext
 		local site = stands[currentEgg.Id]
@@ -897,7 +1164,6 @@ function MascotController:Start()
 			stopAuto(if ok and result and result.Error then result.Error else "Try again")
 			return
 		end
-		extrasToast(result)
 		local camera = context.Camera
 		finishStand(true)
 		playOnStand(result, mascot, site, camera)
@@ -918,10 +1184,6 @@ function MascotController:Start()
 		overlay.BackgroundTransparency = 0.25
 		overlay.Visible = true
 		doneButton.Visible = false
-		revealNew.Text = ""
-		revealName.Text = ""
-		revealInfo.Text = ""
-		revealOdds.Text = ""
 		setGlow(Mascots.RarityColor("Common"), 0.3)
 		clearStage()
 
@@ -963,32 +1225,11 @@ function MascotController:Start()
 			model:PivotTo(CFrame.Angles(0, math.sin(angle) * 0.6, 0))
 		end)
 
-		revealNew.Text = if result.IsNew then "NEW PET!" else "ANOTHER ONE!"
-		revealNew.TextColor3 = if result.IsNew then LIME else Color3.fromRGB(200, 190, 230)
-		revealName.Text = string.upper(mascot.Name)
-		revealName.TextColor3 = Mascots.RarityColor(mascot.Rarity)
-		revealOdds.Text = oddsText(result.Chance)
-		revealInfo.Text = ("%s  -  %s COINS%s"):format(
-			string.upper(mascot.Rarity),
-			Mascots.BonusText(Mascots.Bonus(mascot)),
-			if result.Equipped then "  -  EQUIPPED!" else ""
-		)
-		for _, label in { revealNew, revealName, revealOdds, revealInfo } do
-			UiFx.Pop(label, 1.5, 0.35)
-		end
-		if rarity >= Mascots.RarityIndex("Epic") then
-			Sfx.Play("RevealBig")
-			UiFx.Confetti(nil, 70)
-		else
-			Sfx.Play("Reveal")
-			if rarity >= Mascots.RarityIndex("Rare") then
-				UiFx.Confetti(nil, 35)
-			end
-		end
-
-		task.wait(0.6)
-		doneButton.Visible = true
-		UiFx.Pop(doneButton, 0.6, 0.3)
+		stageRays.ImageColor3 = Mascots.RarityColor(mascot.Rarity)
+		stageRays.Visible = true
+		UiFx.Pop(stageRays, 0.3, 0.4)
+		Sfx.Play(if rarity >= Mascots.RarityIndex("Epic") then "RevealBig" else "Reveal")
+		showCard(result, mascot)
 	end
 
 	doHatch = function(egg)
@@ -1009,7 +1250,6 @@ function MascotController:Start()
 		hatching = true
 		local ok, result = pcall(hatchRemote.InvokeServer, hatchRemote, egg.Id)
 		if ok and result and result.Ok then
-			extrasToast(result)
 			play(result)
 		else
 			showToast(if ok and result and result.Error then result.Error else "Try again")
@@ -1035,10 +1275,6 @@ function MascotController:Start()
 		overlay.BackgroundTransparency = 0.25
 		overlay.Visible = true
 		doneButton.Visible = false
-		revealNew.Text = ""
-		revealName.Text = ""
-		revealInfo.Text = ""
-		revealOdds.Text = ""
 		clearStage()
 		local trio = Instance.new("Model")
 		local copies = {}
@@ -1079,16 +1315,16 @@ function MascotController:Start()
 			angle += dt * 1.2
 			model:PivotTo(CFrame.Angles(0, math.sin(angle) * 0.6, 0))
 		end)
-		revealNew.Text = "SHINY!"
-		revealNew.TextColor3 = GOLD
-		revealName.Text = string.upper(shiny.Name)
-		revealName.TextColor3 = GOLD
-		revealInfo.Text = ("x%d BONUS  -  %s COINS%s"):format(
+		stageRays.ImageColor3 = GOLD
+		stageRays.Visible = true
+		UiFx.Pop(stageRays, 0.3, 0.4)
+		popCard({ Color = GOLD, Rarity = "SHINY", Name = string.upper(shiny.Name), Stamp = "SHINY!", StampColor = GOLD })
+		revealInfo.Text = ("x%d BONUS  ·  %s COINS"):format(
 			ECONOMY.ShinyMultiplier,
-			Mascots.BonusText(Mascots.Bonus(shiny)),
-			if result.Equipped then "  -  EQUIPPED!" else ""
+			Mascots.BonusText(Mascots.Bonus(shiny))
 		)
-		for _, label in { revealNew, revealName, revealInfo } do
+		revealOdds.Text = if result.Equipped then "EQUIPPED!" else ""
+		for _, label in { revealName, revealInfo } do
 			UiFx.Pop(label, 1.5, 0.35)
 		end
 		Sfx.Play("RevealBig")
@@ -1101,6 +1337,8 @@ function MascotController:Start()
 
 	local function closeOverlay()
 		overlay.Visible = false
+		cardHolder.Visible = false
+		stageRays.Visible = false
 		autoButton.Visible = false
 		skipHint.Visible = false
 		clearStage()
@@ -1131,6 +1369,269 @@ function MascotController:Start()
 			sceneContext.SkipAt = os.clock()
 		end
 	end)
+	-- ===== The fusion window (zone 3's PET FUSION machine; UI pass batch 5) =====
+	-- Pick a pet at the bottom; its copies fill the 3 slots, the arrow points at the Shiny it makes (gold ring, star).
+	-- FUSE runs the merge (the same server merge and animation as the MERGE button); short = NEED 1 MORE.
+	local FW, FH = 640, 450
+	local SLOT_SIZE, SLOT_GAP = 104, 12
+	local fusionGui = make("ScreenGui", {
+		Name = "FusionUI",
+		ResetOnSpawn = false,
+		IgnoreGuiInset = true,
+		DisplayOrder = 12,
+	}, playerGui) :: ScreenGui
+	local fusionWin = RewardKit.Window(fusionGui, FW, FH)
+	local fusionCover, fusionX = RewardKit.Cover(
+		fusionWin.Panel,
+		FW,
+		FH,
+		"PET FUSION",
+		("%d OF THE SAME PET MAKE 1 SHINY: x%d BONUS AND A GOLD CROWN"):format(
+			ECONOMY.ShinyMerge,
+			ECONOMY.ShinyMultiplier
+		),
+		K.Gold
+	)
+	fusionX.Activated:Connect(function()
+		fusionWin:Close()
+	end)
+	local fusionSlots: { { Box: Frame, Ring: UIStroke, Pet: Frame } } = {}
+	for i = 1, ECONOMY.ShinyMerge do
+		local box = UiKit.Box(fusionCover, "Slot" .. i, K.Slot, 18, 3, K.Dash)
+		UiKit.Place(box, 24 + (i - 1) * (SLOT_SIZE + SLOT_GAP), 124, SLOT_SIZE, SLOT_SIZE, 3)
+		local pet = make("Frame", { Name = "Pet", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1) }, box)
+		fusionSlots[i] = { Box = box, Ring = box:FindFirstChildOfClass("UIStroke") :: UIStroke, Pet = pet }
+	end
+	local slotsEnd = 24 + ECONOMY.ShinyMerge * (SLOT_SIZE + SLOT_GAP) - SLOT_GAP
+	local arrow = UiKit.Icon(fusionCover, "ArrowRight", 56)
+	arrow.AnchorPoint = Vector2.new(0.5, 0.5)
+	arrow.Position = UDim2.fromOffset(slotsEnd + 40, 176)
+	-- the Shiny it makes: gold ring, gold star on top for the crown
+	local resultX = slotsEnd + 80
+	local resultBlock = UiKit.Block(fusionCover, {
+		Name = "Result",
+		Size = Vector2.new(FW - 24 - resultX, 150),
+		Fill = UiKit.Hex("2E2312"),
+		Lip = K.Page,
+		LipPx = 6,
+		Radius = 20,
+		Outline = 3,
+		Ring = K.Gold,
+	})
+	resultBlock.Holder.Position = UDim2.fromOffset(resultX, 104)
+	local resultRing = (resultBlock.Face:FindFirstChild("Ring") :: Frame):FindFirstChildOfClass("UIStroke") :: UIStroke
+	local resultPet = make("Frame", {
+		Name = "Pet",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(8, 10),
+		Size = UDim2.new(1, -16, 1, -48),
+	}, resultBlock.Face) :: Frame
+	local crown = CrateKit.Icon(resultBlock.Holder, "Star", 36)
+	crown.AnchorPoint = Vector2.new(0.5, 0.5)
+	crown.Position = UDim2.fromScale(0.5, 0)
+	crown.ZIndex = 6
+	local resultName =
+		RewardKit.Label(resultBlock.Face, "", UiKit.Head, 18, K.Gold, 2, 6, 108, FW - 24 - resultX - 18, 24)
+	local fusionStatus = RewardKit.Label(fusionCover, "", UiKit.Head, 22, K.Price, 2.5, 24, 236, slotsEnd - 24, 30)
+	local pickLabel = RewardKit.Label(fusionCover, "PICK A PET", UiKit.Body, 14, K.Muted, 0, 24, 272, 300, 18)
+	pickLabel.TextXAlignment = Enum.TextXAlignment.Left
+	local picker = make("ScrollingFrame", {
+		Name = "Picker",
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Position = UDim2.fromOffset(24, 292),
+		Size = UDim2.fromOffset(FW - 48, 76),
+		ScrollBarThickness = 4,
+		ScrollBarImageColor3 = K.Gold,
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		CanvasSize = UDim2.new(),
+		ScrollingDirection = Enum.ScrollingDirection.X,
+	}, fusionCover) :: ScrollingFrame
+	make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		Padding = UDim.new(0, 8),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}, picker)
+	make("UIPadding", { PaddingLeft = UDim.new(0, 3), PaddingTop = UDim.new(0, 3) }, picker)
+	local fuse = RewardKit.Button(fusionCover, "FUSE!", "Gold", 300, 60, 30)
+	fuse.Holder.Name = "Fuse"
+	fuse.Holder.Position = UDim2.fromOffset((FW - 300) / 2, FH - 60 - 22)
+
+	local picked: any = nil
+	local stopResultTwinkle: (() -> ())? = nil
+	local stopArrowPulse: (() -> ())? = nil
+	-- Pets you could fuse: every non-Shiny pet you own, most copies first, rarer first on a tie
+	local function fusable(): { any }
+		local mine = owned()
+		local list = {}
+		for _, mascot in Config.Mascots do
+			if (mine[mascot.Id] or 0) > 0 and Mascots.MergeCost(mascot) then
+				table.insert(list, mascot)
+			end
+		end
+		table.sort(list, function(a, b)
+			local ca, cb = mine[a.Id] or 0, mine[b.Id] or 0
+			if ca ~= cb then
+				return ca > cb
+			end
+			return Mascots.RarityIndex(a.Rarity) > Mascots.RarityIndex(b.Rarity)
+		end)
+		return list
+	end
+
+	local refreshFusion: (animate: boolean?) -> ()
+	refreshFusion = function(animate: boolean?)
+		local list = fusable()
+		local mine = owned()
+		local still = false
+		for _, mascot in list do
+			if picked and mascot.Id == picked.Id then
+				still = true
+			end
+		end
+		if not still then
+			picked = list[1]
+		end
+		-- the picker chips
+		for _, child in picker:GetChildren() do
+			if child:IsA("GuiObject") then
+				child:Destroy()
+			end
+		end
+		for order, mascot in list do
+			local on = picked ~= nil and mascot.Id == picked.Id
+			local chipButton = make("TextButton", {
+				Name = mascot.Id,
+				Text = "",
+				AutoButtonColor = false,
+				BackgroundTransparency = 1,
+				LayoutOrder = order,
+				Size = UDim2.fromOffset(68, 68),
+			}, picker) :: TextButton
+			local box = UiKit.Box(
+				chipButton,
+				"Fill",
+				if on then UiKit.Hex("2E2312") else K.Card,
+				14,
+				if on then 4 else 3,
+				if on then K.Gold else Mascots.RarityColor(mascot.Rarity)
+			)
+			UiKit.Place(box, 0, 0, 68, 68, if on then 4 else 3)
+			MascotView.Viewport(box, MascotView.Mascot(mascot, 2, false), 0.9)
+			local count =
+				RewardKit.Label(box, ("x%d"):format(mine[mascot.Id] or 0), UiKit.Num, 15, K.Gold, 1.5, 22, 40, 40, 20)
+			count.TextXAlignment = Enum.TextXAlignment.Right
+			UiFx.Press(chipButton)
+			chipButton.Activated:Connect(function()
+				if not picked or picked.Id ~= mascot.Id then
+					picked = mascot
+					refreshFusion(true)
+				end
+			end)
+		end
+		-- the slots fill with your copies
+		local need = if picked then Mascots.MergeCost(picked) or ECONOMY.ShinyMerge else ECONOMY.ShinyMerge
+		local have = if picked then mine[picked.Id] or 0 else 0
+		for i, slot in fusionSlots do
+			slot.Pet:ClearAllChildren()
+			local filled = picked ~= nil and i <= have
+			slot.Ring.Color = if filled then Mascots.RarityColor(picked.Rarity) else K.Dash
+			if filled then
+				MascotView.Viewport(slot.Pet, MascotView.Mascot(picked, 2, false), 0.9)
+			else
+				local plus =
+					RewardKit.Label(slot.Pet, "+", UiKit.Head, 40, K.Faded, 0, 0, 0, SLOT_SIZE - 6, SLOT_SIZE - 6)
+				make("UIPadding", { PaddingTop = UDim.new(0, 8) }, plus)
+			end
+			if animate and filled then
+				local scale = UiKit.ScaleOf(slot.Pet)
+				scale.Scale = 0.01
+				task.delay(0.05 + (i - 1) * 0.09, function()
+					Sfx.Play("ReelTick", 1 + i * 0.12)
+					UiKit.Tween(scale, 0.2, Enum.EasingStyle.Back, { Scale = 1 })
+				end)
+			end
+		end
+		-- the Shiny it makes
+		resultPet:ClearAllChildren()
+		local ready = picked ~= nil and have >= need
+		if stopResultTwinkle then
+			stopResultTwinkle()
+			stopResultTwinkle = nil
+		end
+		if stopArrowPulse then
+			stopArrowPulse()
+			stopArrowPulse = nil
+		end
+		if picked then
+			local shiny = Mascots.Get(Mascots.ShinyId(picked.Id))
+			local view = MascotView.Viewport(resultPet, MascotView.Mascot(shiny or picked, 2, false), 0.95)
+			view.ImageColor3 = if ready then Color3.new(1, 1, 1) else Color3.fromRGB(70, 70, 95) -- dark until ready
+			resultName.Text = ("SHINY %s"):format(string.upper(picked.Name))
+		else
+			resultName.Text = "SHINY ?"
+		end
+		resultRing.Color = if ready then K.Gold else K.Grey
+		crown.ImageTransparency = if ready then 0 else 0.55
+		arrow.ImageTransparency = if ready then 0 else 0.5
+		if ready then
+			stopResultTwinkle = RewardKit.Twinkle(resultBlock.Holder, 4, K.Gold)
+			stopArrowPulse = RewardKit.Pulse(arrow, 1.15, 0.4)
+		end
+		if not picked then
+			fusionStatus.Text = "NO PETS YET: HATCH AN EGG"
+			fusionStatus.TextColor3 = K.Price
+			fuse:SetText("NEED 3 PETS")
+		elseif ready then
+			fusionStatus.Text = "READY TO FUSE!"
+			fusionStatus.TextColor3 = K.Lime
+			fuse:SetText("FUSE!")
+		else
+			fusionStatus.Text = ("NEED %d MORE"):format(need - have)
+			fusionStatus.TextColor3 = K.Price
+			fuse:SetText(("NEED %d MORE"):format(need - have))
+		end
+		if ready then
+			fuse:Paint(K.Gold, K.GoldLip, K.White)
+		else
+			fuse:Paint(K.Grey, K.GreyLip, K.LockedText)
+		end
+	end
+
+	fuse.Activated:Connect(function()
+		local mascot = picked
+		local need = mascot and Mascots.MergeCost(mascot)
+		if not mascot or not need or (owned()[mascot.Id] or 0) < need then
+			fuse:Shake()
+			return
+		end
+		fusionWin:Close()
+		task.spawn(doMerge, mascot)
+	end)
+	fusionWin.Closed.Event:Connect(function()
+		if stopResultTwinkle then
+			stopResultTwinkle()
+			stopResultTwinkle = nil
+		end
+		if stopArrowPulse then
+			stopArrowPulse()
+			stopArrowPulse = nil
+		end
+	end)
+	player:GetAttributeChangedSignal("Mascots"):Connect(function()
+		if fusionWin:IsOpen() then
+			refreshFusion(false)
+		end
+	end)
+	MascotController.OpenFusion = function()
+		if fusionWin:IsOpen() or overlay.Visible then
+			return
+		end
+		win:Close()
+		refreshFusion(true)
+		fusionWin:Open()
+	end
+
 	-- Polish P4: a pointing hand on EQUIP BEST the first time it would change your pets (Config.EquipBestHint).
 	-- It stays until EQUIP BEST is tapped once; the server remembers that in the save (EquipBestHinted).
 	local HINT = Config.EquipBestHint
@@ -1169,7 +1670,7 @@ function MascotController:Start()
 	end
 	refreshHint()
 	RunService.RenderStepped:Connect(function()
-		local show = hintWanted and gui.Enabled and panel.Visible and right.Visible and bestButton.Visible
+		local show = hintWanted and gui.Enabled and win:IsOpen() and right.Visible and bestButton.Visible
 		hand.Visible = show
 		if show then
 			local pos, size = bestButton.AbsolutePosition, bestButton.AbsoluteSize
@@ -1183,55 +1684,67 @@ function MascotController:Start()
 		bestRemote:FireServer()
 	end)
 
+	-- Pops the cards you can see in one after another (the first dozen)
+	local function staggerCards()
+		local shown = {}
+		for _, tile in tiles do
+			if tile.Frame.Visible then
+				table.insert(shown, tile.Frame)
+			end
+		end
+		table.sort(shown, function(a, b)
+			return a.LayoutOrder < b.LayoutOrder
+		end)
+		while #shown > 12 do
+			table.remove(shown)
+		end
+		RewardKit.Stagger(shown, 0.03, 0.12)
+	end
+	local function openPanel(tab: string)
+		showTab(tab)
+		win:Open()
+		if tab == "Pets" and not petsLocked then
+			staggerCards()
+		end
+	end
 	petsButton.Activated:Connect(function()
-		if panel.Visible then
-			UiFx.Close(panel)
+		if win:IsOpen() then
+			win:Close()
 		else
-			showTab(if petsLocked then "Items" else currentTab)
-			UiFx.Open(panel)
+			openPanel(if petsLocked then "Items" else currentTab)
 		end
 	end)
-	close.Activated:Connect(function()
-		UiFx.Close(panel)
+	closeX.Activated:Connect(function()
+		win:Close()
 	end)
-	-- The zone 3 fusion station opens the panel on the pets (where MERGE is)
+	-- Opens the panel on the pets
 	MascotController.OpenPets = function()
-		showTab(if petsLocked then "Items" else "Pets")
-		UiFx.Open(panel)
+		openPanel(if petsLocked then "Items" else "Pets")
 	end
 
 	-- Studio only: get to the egg's level and its price in coins (the server ignores this in the live game)
 	local testRemote = remotes:FindFirstChild("TestEgg") :: RemoteEvent?
 	if testRemote then
 		local test = button(
-			panel,
+			cover,
 			"TestEgg",
 			"TEST: EGG",
 			Color3.fromRGB(60, 60, 80),
-			UDim2.new(0, 12, 1, -30),
-			UDim2.fromOffset(120, 22)
+			UDim2.new(0, 24, 1, -22),
+			UDim2.fromOffset(120, 20)
 		)
 		test.TextColor3 = Color3.new(1, 1, 1)
-		test.ZIndex = 4
+		test.ZIndex = 6
 		test.Activated:Connect(function()
 			testRemote:FireServer()
 		end)
 		testEgg = test
 	end
 
-	-- Compact layout on short screens (phones held sideways)
-	local function layout()
-		local compact = hud.AbsoluteSize.Y > 0 and hud.AbsoluteSize.Y < Config.Ui.CompactHeight
-		panel.Position = UDim2.fromScale(0.5, if compact then 0.5 else 0.53)
-		panel.Size = if compact then UDim2.fromScale(0.94, 0.94) else UDim2.fromScale(0.88, 0.74)
-	end
-	hud:GetPropertyChangedSignal("AbsoluteSize"):Connect(layout)
-	layout()
-
 	for _, key in { "Mascots", "EquippedMascots", "MascotSlots", "MascotBonus", "Coins", "RankLevel", "ZonesOpen" } do
 		player:GetAttributeChangedSignal(key):Connect(function()
 			refreshButton()
-			if panel.Visible or key ~= "Coins" then
+			if win:IsOpen() or key ~= "Coins" then
 				refresh()
 			else
 				refreshBadge()
@@ -1240,7 +1753,7 @@ function MascotController:Start()
 	end
 	player:GetAttributeChangedSignal("Potions"):Connect(function()
 		refreshBadge()
-		if panel.Visible and currentTab == "Items" then
+		if win:IsOpen() and currentTab == "Items" then
 			showTab("Items")
 		end
 	end)
