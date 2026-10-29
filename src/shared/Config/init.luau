@@ -2841,16 +2841,26 @@ Config.IntroCinematic = {
 Config.JoinIntro = {
 	Enabled = true,
 	SkipAfter = 1,
+	-- Title card before the shots (owner 2026-10-29: the first join was dark while textures and lights loaded; in
+	-- Studio Roblox takes ~8-9 s to build the lighting after joining, live servers are usually faster, and no script
+	-- can tell when it's done). Stays at least MinLoad seconds, until the Back Alley's textures are in and you have
+	-- stood on your lane LightSettle seconds (after the zone look's fade); never longer than LoadLimit. Fades over FadeIn.
+	MinLoad = 5,
+	LoadLimit = 9,
+	LightSettle = 0.6,
+	FadeIn = 0.6,
+	Tips = { -- one at random on the title card
+		"TIP: Only PERFECT throws strike. Let go in the gold!",
+		"TIP: Strikes in a row make a streak, and streaks pay more.",
+		"TIP: Open crates to find stronger balls.",
+		"TIP: Rebirth to open new zones and pets.",
+	},
 	FieldOfView = 70,
-	GlideBack = 0.9, -- seconds for the camera to glide back behind you at the end (or after SKIP)
+	GlideBack = 1.4, -- seconds for the camera to crane back down behind you at the end (or after SKIP)
 	WaitForData = 12, -- seconds to wait for your save to load before giving up on the intro
+	-- Close shots first, the wide one last: Roblox is still building the lighting in the first seconds, and the wide
+	-- shot needs the most light. It ends high over the alley and the camera cranes down behind you.
 	Shots = {
-		{ -- high over the back of the alley, drifting in towards the lanes
-			Time = 2.6,
-			From = { Pos = Vector3.new(0, 34, 238), Look = Vector3.new(0, 2, 112) },
-			To = { Pos = Vector3.new(0, 22, 200), Look = Vector3.new(0, 2, 100) },
-			Text = "STRIKE LEGENDS",
-		},
 		{ -- low run down a lane to the pins
 			Time = 2.4,
 			From = { Pos = Vector3.new(-7, 5, 152), Look = Vector3.new(-7, 2, 78) },
@@ -2864,6 +2874,12 @@ Config.JoinIntro = {
 			Text = "OPEN CRATES. FIND LEGENDS.",
 			Rizzo = "Fresh bowler? Show me a strike!",
 			Deal = true,
+		},
+		{ -- high over the back of the alley, drifting in towards the lanes
+			Time = 2.6,
+			From = { Pos = Vector3.new(0, 34, 238), Look = Vector3.new(0, 2, 112) },
+			To = { Pos = Vector3.new(0, 22, 200), Look = Vector3.new(0, 2, 100) },
+			Text = "BECOME A LEGEND!",
 		},
 	},
 }
