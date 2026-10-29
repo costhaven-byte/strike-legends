@@ -3972,7 +3972,7 @@ Config.Friends = {
 -- StudioPreview: in Studio only, the STORE shows even while Enabled is off and every BUY is free and instant
 -- (nothing real, and Studio tests don't save). It never does anything in the live game.
 Config.Monetization = {
-	Enabled = false,
+	Enabled = true,
 	StudioPreview = true,
 	-- Game passes: bought once, kept forever (owner 2026-10-25: more giving than plain 2x coins).
 	-- Coins / Xp: multiply every throw's coins / XP (they stack with potions: 2X pass + Mega potion = x8).
