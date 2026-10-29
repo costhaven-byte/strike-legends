@@ -120,6 +120,25 @@ AssetSlots.Images = {
 	HudClover = 112463627711081,
 	HudClose = 83174793991131,
 	HudCheck = 105468984575166,
+	-- The owner's LOOKS icons (claude.ai/design 'Strike Legends Store Looks', Looks Icons Sheet, 2026-10-29; files in
+	-- assets/look_icons). Look<Config.Cosmetics Id>; a look without one shows a colour swatch on its store card.
+	LookFireTrail = 99667527769047,
+	LookIceTrail = 71400205635025,
+	LookToxicTrail = 75322072368091,
+	LookGalaxyTrail = 96879499483388,
+	LookVipGold = 107365444718862, -- VipGoldTrail.png
+	LookBoomBanner = 132535889047133,
+	LookEasyBanner = 92798652067744, -- TooEasyBanner.png
+	LookCrushedBanner = 125776190574560,
+	LookLegendBanner = 121592540336011,
+	LookConfettiBlast = 72232310268465,
+	LookFrostBlast = 104283104156008,
+	LookToxicBlast = 75545458260109,
+	LookGalaxyBlast = 102168598343723,
+	LookCandyLane = 87493091852079,
+	LookIceLane = 112971816146344,
+	LookLavaLane = 116429696023059,
+	LookGoldLane = 99913758403619,
 }
 
 -- "rbxassetid://..." for an Images slot

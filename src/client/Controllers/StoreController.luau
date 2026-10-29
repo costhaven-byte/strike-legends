@@ -910,7 +910,9 @@ function StoreController:Start()
 		elseif kind == "Look" then
 			local lookKind = Cosmetics.Kind(item.Kind)
 			labelText, labelColor = if lookKind then lookKind.Label else "LOOK", C.Pink
-			name, iconName, iconSize = item.Name, nil, 54
+			-- the owner's LOOKS icon if it has one (AssetSlots.Images Look<Id>), else a colour swatch
+			local lookIcon = "Look" .. item.Id
+			name, iconName, iconSize = item.Name, if AssetSlots.Images[lookIcon] then lookIcon else nil, 72
 		else
 			labelText, labelColor = if item.Gems then "GEMS" else "BOOST", C.Cyan
 			name, iconName, iconSize = item.Name, ICONS[item.Id], GEM_ICON_SIZE[item.Id] or 54
@@ -935,13 +937,13 @@ function StoreController:Start()
 		chipText.Position = UDim2.fromOffset(0, 1)
 		-- Icon + name (+ the ladder's "x4 > x8")
 		local rowTop = 24
-		if kind == "Look" then
+		if kind == "Look" and not iconName then
 			-- A colour swatch: the look's colours blended (a lane skin's single colour is flat)
 			local swatch = make("Frame", {
 				Name = "Swatch",
 				BackgroundColor3 = C.White,
 				Position = UDim2.fromOffset(2, rowTop + 4),
-				Size = UDim2.fromOffset(iconSize - 4, iconSize - 4),
+				Size = UDim2.fromOffset(54 - 4, 54 - 4),
 				Rotation = 8,
 				ZIndex = 4,
 			}, body)
