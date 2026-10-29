@@ -219,3 +219,50 @@ At the end: one combined 2-minute playtest.
   be a later pass. (5) Rebirth teaser time (150 s) kept. (6) No save changes.
 - Studio: no world edits. Code pushed into Studio's scripts (Config, Rebirth module, EconomySim; unsaved in the place
   until you save; git has it).
+
+## D4 FEVER MODE (commit c37a344, restore tag `restore-batchD4-before`)
+- **What it is:** 5 strikes in a row by hand = FEVER MODE for 15 seconds. During fever:
+  - every throw pays **x3 coins**, on top of everything else;
+  - **throws come faster**: the lane is ready about 1.6 s after you let go, instead of about 2.2 s. The server
+    still checks it, allowing one throw every 1.4 s during fever (2 s otherwise);
+  - the zone music plays **15% faster**.
+- **What you see:** a "FEVER!" banner in the kit look (orange ribbon, flame icon, "x3 COINS · FASTER THROWS"), with a
+  small camera kick and a cheer. A draining orange **FEVER x3** bar sits over the power meter, showing the seconds
+  left; it blinks in the last 3 seconds. A soft orange glow on the screen edges breathes slowly. Soft flame wisps rise
+  off your lane's light strips and trail behind your ball, and other players see them on your lane too. The
+  multiplier card and list show a **FEVER x3** row while it runs. All the numbers are in `Config.Fever`
+  (`Enabled = false` turns it off).
+- **Settings:** EFFECTS off = no edge glow and no flames (the banner and bar stay). OTHER PLAYERS' EFFECTS off = no
+  flames on other people's lanes. SCREEN SHAKE off = no camera kick.
+- **Simulator:** at the simulator's normal skill (15% PERFECT throws), 5 strikes in a row almost never happens:
+  about one fever in 10 hours. Rebirth 1 stays 4:27, zone 3 26:13, zone 4 1h35, so nothing needed tuning down.
+  Better players get more: at 35% PERFECT, about 42 fevers in 10 hours and zone 4 at 57:32 (57:34 without fever).
+  At 50% PERFECT, zone 4 comes at 39 min (45 without fever). The report now prints "fevers per player".
+- **Test (Studio, ~2 min):** press Play, walk onto your lane, open the purple TEST tab and press **FEVER NOW**
+  (under EVENTS). Expected: the FEVER! banner, the orange bar over the power meter counting down from 15, a soft
+  orange glow on the screen edges, flames on your lane strips, slightly faster music. Throw a few times: the lane
+  is ready again noticeably sooner, and the coin pop is about 3x bigger. Tap the coin multiplier badge: a FEVER x3
+  row. After 15 s everything goes back to normal. For the real trigger, get 5 PERFECTs in a row.
+  Silent failures: the bar never appears (it hides when you're off your lane); the glow too bright for you
+  (`Config.Fever.EdgeGlow`, higher = fainter); the music staying fast after fever ends; HOLD! refusing a quick
+  throw during fever (rate limit).
+- **Tested by Claude in Studio (Play, FROM ZERO):** FEVER NOW gave 15 s of fever and FEVER x3 in the multiplier
+  list. 4 throws during fever paid 360 per PERFECT strike (120 before), with the lane ready again 1.55-1.61 s after
+  release. After fever: 2.26 s and no fever pay. Lane flames came and went with fever. The banner fired with its
+  text. Server rules checked: 4 in a row = nothing; 5 = 15 s; a strike 3 s later = +1 s; more strikes stay capped
+  at 15 s. No errors in Output. **NOT seen on screen:** Studio drew no frames for me (0 render frames), so the bar,
+  edge glow, banner animation and the music speed-up didn't run where I could see them. Please look at those.
+- **Choices made for you:**
+  1. Strikes during fever add 1 second each (never above 15). Misses don't end fever early.
+  2. Fever comes back at 10, 15, 20... in a row if the last one ran out.
+  3. **AUTO BOWL can't start fever** (auto throws never touch the streak), and auto throws during fever get
+     neither the x3 nor the speed. Otherwise the pass would be an endless fever.
+  4. The throw that makes 5 in a row isn't paid x3; fever starts when its ball hits.
+  5. The strike slow motion stays during fever, so strikes still feel big.
+  6. Fever's x3 is left out of coins-per-minute and away coins, so a 15 s burst doesn't inflate them.
+  7. The 5-in-a-row trigger (your number) is kept. Most players may rarely see fever, because only PERFECTs strike
+     and the gold shrinks with the streak. If you want it more often, change `Config.Fever.StreakNeeded`. At the
+     simulator's normal skill, 4 in a row = about 5 fevers in 10 hours (zone 4 1h32) and 3 in a row = about 35
+     (zone 4 1h24, still inside your 1h20 limit).
+- **Studio:** no world edits. The code is pushed into Studio's scripts (two new ones, FeverService and
+  FeverController, checked: no duplicates). It is unsaved in the place until you save; git has it.
