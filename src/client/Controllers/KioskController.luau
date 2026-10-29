@@ -19,7 +19,7 @@ local SHOP = Config.CrateShop
 local FONT = "rbxasset://fonts/families/GothamSSm.json"
 local COIN_COLOR = Color3.fromRGB(255, 200, 40)
 local FREE_COLOR = Color3.fromRGB(125, 255, 60)
-local BUTTON_BRIGHT = Color3.fromRGB(150, 255, 90) -- the BUY glow pulses toward this (white would turn yellow in the lobby grading)
+local BUTTON_BRIGHT = Color3.fromRGB(96, 214, 100) -- the BUY cap pulses toward this (batch A2: soft, so the BUY text stays readable)
 local PPS = 50 -- SurfaceGui pixels per stud
 
 local player = Players.LocalPlayer
@@ -549,7 +549,8 @@ function KioskController:Start()
 			d.Button = art
 			d.ButtonScale = art:GetScale()
 			for _, part in partsOf(art) do
-				if part.Material == Enum.Material.Neon then
+				-- the cap was Neon; batch A2 made it plain plastic (Neon washed out the BUY text)
+				if part.Material == Enum.Material.Neon or part.Name:match("^buy_cap") then
 					d.ButtonGlow = part
 					d.ButtonColor = part.Color
 				end
