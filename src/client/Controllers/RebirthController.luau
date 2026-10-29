@@ -333,7 +333,7 @@ function RebirthController:Start()
 		return block.Face
 	end
 
-	-- 1. YOU GO BACK TO: Power Level 1, 0 coins
+	-- 1. YOU GO BACK TO: level 1, Power Level 1, 0 coins (batch D1: levels reset too)
 	local back = section("Back", "YOU GO BACK TO", C.Price, 94, 80)
 	local backRow = make("Frame", {
 		Name = "Row",
@@ -346,13 +346,13 @@ function RebirthController:Start()
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		Padding = UDim.new(0, 10),
 	}, backRow)
-	chip(backRow, "POWER LV 1", C.White, "Bolt", 20, 38).LayoutOrder = 1
-	chip(backRow, "0 COINS", C.White, "Coin", 20, 38).LayoutOrder = 2
+	chip(backRow, "LEVEL 1", C.White, "Xp", 18, 38).LayoutOrder = 1
+	chip(backRow, "POWER LV 1", C.White, "Bolt", 18, 38).LayoutOrder = 2
+	chip(backRow, "0 COINS", C.White, "Coin", 18, 38).LayoutOrder = 3
 
 	-- 2. YOU KEEP: one icon per thing you keep
 	local keep = section("Keep", "YOU KEEP", C.Lime, 184, 92)
 	local KEEPS = {
-		{ "Xp", "LEVEL" },
 		{ "Ball", "BALLS" },
 		{ "Paw", "PETS" },
 		{ "Gem", "GEMS" },

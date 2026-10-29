@@ -36,6 +36,9 @@ local function setLevel(player: Player, level: number)
 	local xp = PlayerDataService.Get(player, "XP") or 0
 	PlayerDataService.Set(player, "XP", math.max(xp, Progression.LevelXP(level)))
 	PlayerDataService.Set(player, "RankLevel", level)
+	-- Jumped-over levels and tiers count as rewarded, like a real player's (BestLevel / BestRank, batch D1)
+	PlayerDataService.Set(player, "BestLevel", math.max(PlayerDataService.Get(player, "BestLevel") or 1, level))
+	PlayerDataService.Set(player, "BestRank", math.max(PlayerDataService.Get(player, "BestRank") or 1, tier))
 	ProgressionService.RefreshRankUpReady(player)
 end
 

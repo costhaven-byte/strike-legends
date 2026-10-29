@@ -434,7 +434,7 @@ local function playThrow(data)
 	local thrower = Players:GetPlayerByUserId(data.UserId)
 	local character = thrower and thrower.Character
 	if character and not isOwn then
-		ThrowPose.Release(character, feel.Level) -- your own swing already started when you let go
+		ThrowPose.Release(character, data.Pose or 1) -- rank-level animation; your own swing already started when you let go
 	end
 	local heldBall = character and character:FindFirstChild("HeldBall", true) :: BasePart?
 	local handOffset = Vector3.zero

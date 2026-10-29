@@ -33,14 +33,14 @@ export type Result = {
 local OVER = THROW.Overcharge
 
 -- A failed overcharge: the ball overcooks and drops into the gutter. No pins, no traits.
-local function wasted(distance: number): Result
+local function wasted(distance: number, speed: number?): Result
 	return {
 		Count = 0,
 		Tier = "Gutter",
 		Pins = {},
 		HitX = LANE.GutterOffset * (if math.random() < 0.5 then -1 else 1),
 		Gutter = true,
-		RollTime = ThrowRules.RollTime(distance, 1),
+		RollTime = ThrowRules.RollTime(distance, 1, speed),
 		CurveFromX = nil,
 		Traits = {},
 		Perfect = false,
@@ -76,6 +76,7 @@ end
 -- ball: the equipped ball row from Config.Balls; distance: studs from the ball start to the head pin
 -- power: the Power Level's Power (Config.Economy.PowerLevels), the most pins a non-PERFECT throw knocks down
 -- forceStrike: a strike that is not a PERFECT (the paid Auto Bowl, Config.Monetization)
+-- speed: the ball speed multiplier from the thrower's rank level (ThrowRules.Style, batch D1)
 function ThrowResolver.Resolve(
 	charge: number,
 	perfect: boolean,
@@ -84,13 +85,14 @@ function ThrowResolver.Resolve(
 	ball,
 	distance: number,
 	power: number,
-	forceStrike: boolean?
+	forceStrike: boolean?,
+	speed: number?
 ): Result
 	-- The gamble: a huge strike or the gutter
 	local blasted = false
 	if overcharged and not (perfect or hooked) then
 		if math.random() >= OVER.SuccessChance then
-			return wasted(distance)
+			return wasted(distance, speed)
 		end
 		blasted = true
 	end
@@ -145,7 +147,7 @@ function ThrowResolver.Resolve(
 		Pins = pickPins(count),
 		HitX = 0,
 		Gutter = false,
-		RollTime = ThrowRules.RollTime(distance, strength),
+		RollTime = ThrowRules.RollTime(distance, strength, speed),
 		CurveFromX = curveFromX,
 		Traits = fired,
 		Perfect = perfect,

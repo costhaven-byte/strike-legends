@@ -11,7 +11,8 @@
 --   ranks    rank levels 1-60 (Config.Economy.Ranks); the rank tier (Config.Ranks, 6 levels each) sets the coin
 --            multiplier; rank trials are assumed passed straight away
 --   zones    open by rebirths (Config.Economy.Zones Rebirths, built zones only; owner 2026-10-27); the player
---            always bowls in the newest zone. A rebirth resets only coins and Power Level
+--            always bowls in the newest zone. A rebirth resets coins, Power Level and rank level + XP (batch D1,
+--            owner 2026-10-29 "full reset"); level rewards still pay once ever
 --   crates   only the crates of open zones (Config.Crates), each gives only its zone's balls (Zones.BallInCrate),
 --            odds moved like Shared.Modules.Balls does, pity, first bought crate 1,000 + Uncommon, gift crate
 --   eggs     only eggs with pets, in open zones; hatch odds like MascotService (only rarities the egg has);
@@ -737,7 +738,8 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 		end
 
 		-- Rebirth (only while the simulator is told to: Sim.Rebirths)
-		-- Owner 2026-10-27: a rebirth resets only coins and Power Level, and opens the zones
+		-- A rebirth resets coins, Power Level and (batch D1, owner 2026-10-29) rank level + XP, and opens the zones.
+		-- Level rewards already paid stay paid (levelPaid), like BestLevel in the game
 		local needRank, needCoins = rebirthNeed()
 		if s.Rank >= needRank and s.Coins >= needCoins then
 			mark("RebirthReady")
@@ -746,6 +748,7 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 				s.RunStart = time
 				mark("Rebirth" .. s.Rebirths)
 				s.Coins, s.Level, s.Streak = 0, 1, 0
+				s.Rank, s.XP = 1, 0
 				local before = s.Zone
 				openZones()
 				if s.Zone ~= before then

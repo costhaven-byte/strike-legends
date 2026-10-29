@@ -2,7 +2,7 @@
 -- on top of the normal idle animation. While you charge, the arm swings back as far as the meter is full;
 -- letting go swings it down and through into a lunge, then relaxes. Numbers for timing live in Config.Throw.
 -- The pose is seen on this screen only; LaneVisuals plays the release on other players' characters too.
--- The ball's level changes the throw: low levels throw stiff, wobbly and flailing (the SCUFFED poses),
+-- The thrower's pose level (from rank level, Config.Throw.RankStyle) changes the throw: low levels throw stiff, wobbly and flailing (the SCUFFED poses),
 -- every level is a bit cleaner, and from Config.Throw.PoseCleanLevel up it is clean and gets bigger each level.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")

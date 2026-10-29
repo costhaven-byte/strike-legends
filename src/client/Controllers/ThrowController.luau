@@ -872,7 +872,7 @@ function ThrowController:Start()
 		sentAt = os.clock()
 		setState("Waiting")
 		-- The arm swings down first; the ball leaves the hand (and the server hears about it) at the bottom
-		ThrowPose.Release(player.Character, ThrowRules.Level(player:GetAttribute("PowerLevel")))
+		ThrowPose.Release(player.Character, ThrowRules.Style(player:GetAttribute("RankLevel")).Pose)
 		-- Only how long you held; the server checks it against its own timing and waits out the down-swing
 		throwRequest:FireServer(holdTime)
 	end
@@ -1063,7 +1063,8 @@ function ThrowController:Start()
 				Sfx.Play("OverchargeWarn")
 			end
 			wasInRed = inRed
-			ThrowPose.Charge(player.Character, charge, ThrowRules.Level(player:GetAttribute("PowerLevel")))
+			-- The throw animation follows your current rank level (batch D1), not Power Level
+			ThrowPose.Charge(player.Character, charge, ThrowRules.Style(player:GetAttribute("RankLevel")).Pose)
 			faceLane(dt)
 		elseif state == "Waiting" then
 			drawReleased(dt)

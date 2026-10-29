@@ -107,14 +107,28 @@ function ThrowRules.Strength(charge: number, perfect: boolean): number
 	return THROW.WeakestThrow + (1 - THROW.WeakestThrow) * charge
 end
 
--- The look-and-hit level (1-12) for a player's Power Level (Config.Throw.Levels), kept on the ladder
+-- The look-and-hit level (1-12) for a player's Power Level (Config.Throw.Levels), kept on the ladder.
+-- Ball size, trail, fire and crash only: the throw animation and ball speed come from rank (ThrowRules.Style).
 function ThrowRules.Level(powerLevel: number?): number
 	return math.clamp(math.floor(tonumber(powerLevel) or 1), 1, #THROW.Levels)
 end
 
--- Seconds from release until the ball reaches the head pin, over `distance` studs
-function ThrowRules.RollTime(distance: number, strength: number): number
-	return distance / (THROW.BallSpeed * (0.55 + 0.45 * strength))
+-- The throw style for a player's CURRENT rank level (Config.Throw.RankStyle, batch D1): { Pose, Speed }.
+-- Pose = the throw animation level (ThrowPose, 1-12), Speed = ball speed multiplier.
+function ThrowRules.Style(rankLevel: number?): { Level: number, Pose: number, Speed: number }
+	local level = math.floor(tonumber(rankLevel) or 1)
+	local style = THROW.RankStyle[1]
+	for _, row in THROW.RankStyle do
+		if level >= row.Level then
+			style = row
+		end
+	end
+	return style
+end
+
+-- Seconds from release until the ball reaches the head pin, over `distance` studs (speed = the rank's Speed)
+function ThrowRules.RollTime(distance: number, strength: number, speed: number?): number
+	return distance / (THROW.BallSpeed * (speed or 1) * (0.55 + 0.45 * strength))
 end
 
 return ThrowRules

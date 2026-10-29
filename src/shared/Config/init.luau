@@ -55,11 +55,30 @@ Config.Throw = {
 	PoseHoldTime = 0.35, -- holds the follow-through pose this long, then relaxes
 	PoseRelaxTime = 0.35,
 	PoseExaggeration = 1.3, -- every bend of the throw animation is this much bigger (1 = the original pose)
-	-- Low Power Levels throw worse: level 1 is stiff, wobbly and flailing, and it gets cleaner every level
-	PoseCleanLevel = 9, -- from this Power Level the throw is fully clean
+	-- Low pose levels throw worse: level 1 is stiff, wobbly and flailing, and it gets cleaner every level. The pose
+	-- level comes from your RANK LEVEL (RankStyle below; batch D1, owner 2026-10-29), not from Power Level.
+	PoseCleanLevel = 9, -- from this pose level the throw is fully clean
 	PoseWobble = 14, -- how far (degrees) a level 1 throw shakes; none at PoseCleanLevel
 	PoseWobbleSpeed = 4, -- how fast the shaking is
 	PoseFlairPerLevel = 0.06, -- each level above PoseCleanLevel swings this much bigger (level 12 = +18%)
+	-- Batch D1 (owner 2026-10-29, Addendum 3 S0): your CURRENT rank level decides the throw animation and how fast the
+	-- ball rolls (a rebirth resets it, on purpose). Each row starts at a rank level: Pose = the throw animation level
+	-- (1 = scuffed .. PoseCleanLevel = clean .. 12 = biggest), Speed = ball speed x (1 = Config BallSpeed, never slower
+	-- than before D1). Small steps every Rookie level (level 2 comes about a minute in), a bigger jump every Pro Tier.
+	RankStyle = {
+		{ Level = 1, Pose = 1, Speed = 1 }, -- Rookie
+		{ Level = 2, Pose = 2, Speed = 1.02 },
+		{ Level = 3, Pose = 3, Speed = 1.04 },
+		{ Level = 4, Pose = 4, Speed = 1.06 },
+		{ Level = 5, Pose = 5, Speed = 1.08 },
+		{ Level = 6, Pose = 6, Speed = 1.1 },
+		{ Level = 7, Pose = 7, Speed = 1.15 }, -- Amateur
+		{ Level = 10, Pose = 8, Speed = 1.18 },
+		{ Level = 13, Pose = 9, Speed = 1.22 }, -- Regular: fully clean
+		{ Level = 19, Pose = 10, Speed = 1.26 }, -- tier 4
+		{ Level = 31, Pose = 11, Speed = 1.31 }, -- tier 6
+		{ Level = 43, Pose = 12, Speed = 1.36 }, -- tier 8 and up: the biggest pro throw
+	},
 	MeterStyle = "Side", -- "Side" = half circle standing up right of your bowler; "Arc" = lying flat
 	HandBlendDistance = 10, -- the rolling ball drops from the hand onto the lane over this many studs
 	ForgivenessScale = 6, -- a ball's Forgiveness 0.05 = gold zone 30% wider
@@ -178,7 +197,9 @@ Config.StartingData = {
 	Gems = 0,
 	XP = 0,
 	Rank = 1, -- index into Config.Ranks (1 = Rookie); raised by passing Rank Trials
-	RankLevel = 1, -- highest rank level (1-60) whose level-up reward was given
+	RankLevel = 1, -- current rank level (1-60); a rebirth puts it back to 1 (batch D1)
+	BestLevel = 1, -- highest rank level ever reached: level-up gems, free crates and level rewards pay only above it (v32)
+	BestRank = 1, -- highest rank tier ever passed: a tier won before comes back without a trial and without gems (v32)
 	BestStreak = 0,
 	EquippedBall = "Rookie",
 	OwnedBalls = { Rookie = true }, -- set of ball Ids
@@ -245,7 +266,7 @@ Config.StartingData = {
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 31, -- v31 AutoDelete (batch C3 X'd pets on the egg odds boards; starts empty, nothing to upgrade or delete). v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 32, -- v32 BestLevel + BestRank (batch D1 rebirth resets levels; old saves start at their RankLevel / Rank). v31 AutoDelete (batch C3 X'd pets on the egg odds boards; starts empty, nothing to upgrade or delete). v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -4833,7 +4854,9 @@ Config.Economy.Ranks = {
 Config.Economy.Rebirth = {
 	Enabled = true, -- the owner flips this (switched ON by the owner 2026-10-26)
 	-- Owner 2026-10-27: zones open by rebirths (Config.Economy.Zones Rebirths), so the first rebirth happens in zone 1.
-	-- A rebirth resets only coins and Power Level (level, rank and throw style stay).
+	-- A rebirth resets coins, Power Level AND rank level, XP and rank tier (owner 2026-10-29, batch D1 "full reset";
+	-- was coins + Power Level only). Levels come back faster each rebirth (XpBonus, zone XP pay). Level-up and rank-up
+	-- rewards pay once ever (BestLevel / BestRank); ranks won before need no second trial.
 	-- Economy pass R2 (2026-10-27, tools/EconomySim): prices below hit the timeline (Config.Economy.Timeline).
 	Level = 4, -- the first rebirth needs this rank level...
 	RankStep = 2, -- ...and this many more levels for each one after
@@ -4928,7 +4951,7 @@ Config.Profile = {
 		{ Key = "Pets", Name = "PETS FOUND", Icon = "Paw", Format = "Number" },
 		{ Key = "Rebirths", Name = "REBIRTHS", Icon = "Rebirth", Format = "Number" },
 		{ Key = "BossWins", Name = "TITAN WINS", Icon = "Bolt", Format = "Number" },
-		{ Key = "Level", Name = "LEVEL", Icon = "Xp", Format = "Number" },
+		{ Key = "Level", Name = "BEST LEVEL", Icon = "Xp", Format = "Number" }, -- best ever (rebirths reset levels)
 		{ Key = "Zones", Name = "ZONES OPEN", Icon = "Portal", Format = "Number" },
 		{ Key = "PlayTime", Name = "TIME PLAYED", Icon = "GiftDaily", Format = "Time" },
 	},

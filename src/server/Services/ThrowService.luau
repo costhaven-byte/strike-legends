@@ -121,6 +121,8 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 	local ball = BallService.GetEquipped(player)
 	local powerLevel = ThrowRules.Level(PlayerDataService.Get(player, "PowerLevel"))
 	local level = PowerLevels.Get(powerLevel)
+	-- The throw animation and ball speed follow the CURRENT rank level (batch D1; a rebirth resets it)
+	local style = ThrowRules.Style(PlayerDataService.Get(player, "RankLevel"))
 	local modifier = Modifiers.Current()
 	-- The gold sits where the lane says and shrinks with the streak (the client draws it the same way)
 	local goldCenter = lane:GetAttribute("GoldCenter")
@@ -144,7 +146,8 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 	local forward = lane.BallStart.CFrame.LookVector
 	local distance = (lane.PinSpot.Position - lane.BallStart.Position):Dot(forward)
 	local autoStrike = auto and Store.Owns(player, "AutoBowl")
-	local result = ThrowResolver.Resolve(charge, perfect, hooked, overcharged, ball, distance, level.Power, autoStrike)
+	local result =
+		ThrowResolver.Resolve(charge, perfect, hooked, overcharged, ball, distance, level.Power, autoStrike, style.Speed)
 	local isStrike = result.Tier == "Strike" or result.Tier == "PerfectStrike"
 	-- An overcooked throw always ends the streak: Streak Saver never covers the greedy red
 	local saverCooldown = if result.Overcharge == "Wasted" then 0 else Balls.TraitValue(ball, "StreakSaver")
@@ -214,6 +217,7 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 		UserId = player.UserId,
 		BallId = ball.Id,
 		PowerLevel = powerLevel, -- how the ball looks, sounds and hits (Config.Throw.Levels)
+		Pose = style.Pose, -- the thrower's throw animation level (rank level, Config.Throw.RankStyle)
 		Charge = charge,
 		Power = result.Strength, -- how hard it was thrown (above 1 for a PERFECT)
 		Perfect = result.Perfect,

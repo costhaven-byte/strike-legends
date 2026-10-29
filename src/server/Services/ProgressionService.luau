@@ -2,6 +2,8 @@
 -- each player's level and rank above their head.
 -- Rank (the tier) is saved on its own. Levels inside a tier come from XP; enough XP for the next tier only unlocks
 -- its Rank Trial (TrialService). Tiers without a trial in Config.Trials are given straight away.
+-- A rebirth resets level, XP and tier (batch D1, ResetForRebirth). Rewards pay once ever: level-up gems, free crates
+-- and level rewards only above BestLevel, rank gems only above BestRank, and a tier won before comes back without a trial.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -116,7 +118,8 @@ end
 
 -- Gives every rank level the player's XP has reached (inside their tier) and its reward:
 -- LevelGems for a level inside a tier (a tier's first level gets the tier's Gems in PromoteRank instead),
--- and a free crate every FreeCrateEvery levels (nil = none).
+-- and a free crate every FreeCrateEvery levels (nil = none). Rewards only for levels above BestLevel (once ever);
+-- a level reached again after a rebirth still gets its popup.
 local function refreshLevel(player: Player)
 	local done = PlayerDataService.Get(player, "RankLevel") or 1
 	local level =
@@ -124,13 +127,18 @@ local function refreshLevel(player: Player)
 	if level <= done or not PlayerDataService.Set(player, "RankLevel", level) then
 		return
 	end
+	local best = PlayerDataService.Get(player, "BestLevel") or 1
+	if level > best then
+		PlayerDataService.Set(player, "BestLevel", level)
+	end
 	local gems, crates, inTier = 0, 0, false
 	for reached = done + 1, level do
+		local first = reached > best
 		if (reached - 1) % LEVELS.LevelsPerTier ~= 0 then
 			inTier = true
-			gems += if Config.Gems.Enabled then LEVELS.LevelGems else 0
+			gems += if Config.Gems.Enabled and first then LEVELS.LevelGems else 0
 		end
-		if LEVELS.FreeCrateEvery and reached % LEVELS.FreeCrateEvery == 0 then
+		if first and LEVELS.FreeCrateEvery and reached % LEVELS.FreeCrateEvery == 0 then
 			crates += 1
 		end
 		Analytics.Event(player, "LevelUp", reached)
@@ -148,14 +156,15 @@ local function refreshLevel(player: Player)
 	for _ = 1, crates do
 		BallService.GiveFreeCrate(player)
 	end
-	for reached = done + 1, level do
+	for reached = math.max(done, best) + 1, level do
 		for _, callback in levelCallbacks do
 			task.spawn(callback, player, reached)
 		end
 	end
 end
 
--- Runs callback(player, level) once for every new rank level a player reaches (level rewards: MilestoneService)
+-- Runs callback(player, level) once ever for every rank level a player reaches (level rewards: MilestoneService);
+-- levels reached again after a rebirth don't run it
 function ProgressionService.OnLevel(callback: (Player, number) -> ())
 	table.insert(levelCallbacks, callback)
 end
@@ -167,7 +176,11 @@ function ProgressionService.PromoteRank(player: Player)
 		return
 	end
 	local rank = Progression.GetRank(index)
-	local gems = if Config.Gems.Enabled then rank.Gems else 0
+	local first = index > (PlayerDataService.Get(player, "BestRank") or 1)
+	if first then
+		PlayerDataService.Set(player, "BestRank", index)
+	end
+	local gems = if Config.Gems.Enabled and first then rank.Gems else 0
 	if gems > 0 then
 		PlayerDataService.Add(player, "Gems", gems)
 		Analytics.Currency(player, "Gems", gems, "Gameplay", "RankUp")
@@ -191,11 +204,22 @@ end
 function ProgressionService.RefreshRankUpReady(player: Player)
 	local ready = ProgressionService.IsRankUpReady(player)
 	local nextRank = ProgressionService.GetNextRank(player)
-	if ready and nextRank and not Config.Trials.Ranks[nextRank.Name] then
+	local best = PlayerDataService.Get(player, "BestRank") or 1
+	local wonBefore = ProgressionService.GetCurrentRankIndex(player) < best -- the next tier was won before a rebirth
+	if ready and nextRank and (wonBefore or not Config.Trials.Ranks[nextRank.Name]) then
 		ProgressionService.PromoteRank(player)
 		return
 	end
 	player:SetAttribute("RankUpReady", ready)
+end
+
+-- Rebirth (batch D1 "full reset"): back to rank level 1, 0 XP and the first tier. BestLevel / BestRank stay.
+function ProgressionService.ResetForRebirth(player: Player)
+	PlayerDataService.Set(player, "XP", 0)
+	PlayerDataService.Set(player, "RankLevel", 1)
+	PlayerDataService.Set(player, "Rank", 1)
+	updateBadge(player)
+	ProgressionService.RefreshRankUpReady(player)
 end
 
 function ProgressionService.AddXP(player: Player, amount: number)

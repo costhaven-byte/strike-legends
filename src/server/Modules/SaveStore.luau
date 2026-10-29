@@ -140,6 +140,8 @@ local function migrate(saved: any): { [string]: any }
 		-- v30 added PetSlotsKept (see below) and EggPrompted (first egg popup): EggPrompted starts at 0, and players
 		-- who already hatched an egg never see the popup anyway
 		-- v31 added AutoDelete (batch C3 X'd pets on the egg odds boards): it starts empty, nothing to upgrade or delete
+		-- v32 added BestLevel and BestRank (batch D1: rebirths reset levels): they start at the save's level and tier,
+		-- see below, so levels and ranks already rewarded never pay twice
 		if version < 22 then
 			-- v22: the COIN BOOST became a doubling ladder (x2, x4, x8, x16). An old adding boost (coins x (1 +
 			-- RobuxBoost)) becomes the highest step it already reached or passed, so nobody loses what they paid for.
@@ -190,6 +192,9 @@ local function migrate(saved: any): { [string]: any }
 	-- Rebirths done always keep their zones open (also when a later update moves a zone's rebirth count)
 	data.ZonesOpen = math.max(math.floor(tonumber(data.ZonesOpen) or 1), Zones.ForRebirths(tonumber(data.Rebirths) or 0))
 	data.Rank = math.clamp(math.floor(tonumber(data.Rank) or 1), 1, #Config.Ranks)
+	-- Best-ever level and tier are never below the current ones (v32; also covers any later save)
+	data.BestLevel = math.max(math.floor(tonumber(data.BestLevel) or 1), math.floor(tonumber(data.RankLevel) or 1))
+	data.BestRank = math.clamp(math.max(math.floor(tonumber(data.BestRank) or 1), data.Rank), 1, #Config.Ranks)
 	-- Money comes back through Currency, so a future number format can read old plain-number saves here
 	for _, key in Config.Numbers.Currencies do
 		data[key] = Currency.Decode(data[key])

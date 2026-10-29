@@ -63,7 +63,7 @@ function AchievementService.Stats(player: Player): { [string]: number }
 		Pets = count(PlayerDataService.Get(player, "Mascots"), true),
 		Rebirths = num(player, "Rebirths"),
 		BossWins = num(player, "BossWins"),
-		Level = num(player, "RankLevel"),
+		Level = num(player, "BestLevel"), -- best ever: rebirths reset the level (batch D1)
 		Zones = num(player, "ZonesOpen"),
 		PlayTime = num(player, "PlayTime"),
 	}
