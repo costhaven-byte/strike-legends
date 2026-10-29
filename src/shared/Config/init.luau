@@ -251,7 +251,7 @@ Config.Data = {
 -- 2. A big "BUY" callout points at the Power Level button the moment Level 2 is affordable.
 -- 3. The first crate bought with coins (FirstCrateGoal) costs FirstCratePrice, so it's affordable inside the first
 --    minute, and gives exactly a FirstBoughtRarity ball. Only that one purchase; crate odds and prices stay the same otherwise.
--- 4. After GiftAfterThrows throws (about 4 minutes): a free gift crate, opened right there (GiftRarity nil = normal odds),
+-- 4. After GiftAfterThrows throws (about 1 minute): a free gift crate, opened right there (GiftRarity nil = normal odds),
 --    with an EQUIP button.
 -- 5. LegendsAfterThrows throws later: the camera swings to a locked ball in the lobby showcase (the chase).
 -- The "next goal" bar on the HUD always shows the closest goal (next Power Level, the gift, the next free crate,
@@ -259,7 +259,7 @@ Config.Data = {
 -- a beam leads to its kiosk station).
 Config.Onboarding = {
 	Enabled = true,
-	GiftAfterThrows = 65, -- about 4:00 (measured ~3.6 seconds a throw with buying and crates), after the first bought crate
+	GiftAfterThrows = 20, -- about 1:00-1:15, after the first bought crate (owner 2026-10-29, final changes batch B2: was 65, about 4:00)
 	GiftCrateId = "Basic", -- the gift opens as this crate
 	GiftRarity = nil, -- nil = the gift crate rolls normal odds (owner 2026-10-21: only the first crate is guaranteed)
 	FirstCrateGoal = "Basic", -- this crate is a "next goal" until the first crate bought with coins (CratesBought)
@@ -267,6 +267,12 @@ Config.Onboarding = {
 	FirstBoughtRarity = "Uncommon", -- the first crate a player buys with coins always gives this rarity
 	LegendsAfterThrows = 3, -- throws after the gift: the camera shows a locked showcase ball, then the daily unlocks
 	LegendsPanTime = 3.5, -- seconds the camera looks at the locked ball
+	-- Rebirth teaser (batch B2): once a session, this many seconds after joining, a player who has never rebirthed
+	-- (and is past the steps above) sees "REBIRTH = NEW ZONE + PETS!" with what it still needs, and a TAP arrow
+	-- under the REBIRTH button for RebirthTeaserArrow seconds. Skipped when the rebirth is already ready (that has
+	-- its own REBIRTH IS READY! popup). nil = off.
+	RebirthTeaserAt = 150,
+	RebirthTeaserArrow = 8,
 	-- Studio testing: every play test starts as a brand new player and nothing is saved (your real save is untouched).
 	-- Never affects the live game. Set to false to test with your saved progress.
 	StudioNewPlayer = false,
@@ -710,6 +716,16 @@ Config.FreeCrates = {
 -- The "almost there" bar above the throw meter: always shows the nearest reward.
 Config.AlmostThere = {
 	PulseAt = 0.8, -- the bar pulses once you are this far (80%) toward the reward
+}
+
+-- "YOU CAN NOW AFFORD X" (final changes item 8, batch B2): a note fades in at the top centre and fades out when your
+-- coins first reach something: a crate or egg of a zone you have open, the next Power Level, the next rebirth.
+-- One note per thing a session; what you could already afford when you joined gets none. Skipped where a bigger
+-- moment already says it (the first crate's 93% OFF, BUY LV 2, the first REBIRTH IS READY!). AffordController.
+Config.AffordNote = {
+	Enabled = true,
+	Seconds = 2.6, -- how long a note stays (plus 0.35 s fading in and 0.6 s fading out)
+	Gap = 3, -- seconds between two notes (more wait in a queue)
 }
 
 -- Lane modifiers: every Interval seconds the server picks a new one for the whole alley.

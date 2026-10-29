@@ -622,6 +622,48 @@ function EventController:Start()
 		end
 	end)
 
+	-- Rebirth teaser (batch B2, Config.Onboarding.RebirthTeaserAt): once a session, a player who has never rebirthed
+	-- learns what it gives and what it still needs; RebirthController shows its TAP arrow while RebirthTeaser is on
+	local teaserAt = Config.Onboarding.RebirthTeaserAt
+	if teaserAt and Config.Economy.Rebirth.Enabled then
+		task.spawn(function()
+			local due = os.clock() + teaserAt
+			while true do
+				task.wait(1)
+				if (player:GetAttribute("Rebirths") or 0) > 0 then
+					return
+				end
+				if os.clock() >= due and (player:GetAttribute("Onboarding") or 3) >= 3 then
+					local needLevel, cost = Rebirth.Level(0), Rebirth.Cost(0)
+					local level = player:GetAttribute("RankLevel") or 1
+					local coins = player:GetAttribute("Coins") or 0
+					local hasLevel, hasCoins = level >= needLevel, Currency.CanAfford(coins, cost)
+					if hasLevel and hasCoins then
+						return -- ready: REBIRTH IS READY! says it
+					end
+					local needs = if not hasLevel and not hasCoins
+						then ("LEVEL %d + %s COINS"):format(needLevel, short(cost))
+						elseif not hasLevel then ("REACH LEVEL %d"):format(needLevel)
+						else ("%s MORE COINS"):format(short(cost - coins))
+					local zone = Zones.Name(Rebirth.OpensZone(0) or 2):upper()
+					showPopup(
+						"REBIRTH = NEW ZONE + PETS!",
+						REBIRTH_COLOR,
+						("%s TO OPEN %s  ·  REBIRTH BUTTON AT THE TOP"):format(needs, zone),
+						true,
+						nil,
+						"Hud:Rebirth"
+					)
+					Sfx.Play("StreakUp", 1, 0.8)
+					player:SetAttribute("RebirthTeaser", true)
+					task.wait(Config.Onboarding.RebirthTeaserArrow or 8)
+					player:SetAttribute("RebirthTeaser", nil)
+					return
+				end
+			end
+		end)
+	end
+
 	-- Walked into a new zone for the first time: a welcome popup
 	local visitedShown = player:GetAttribute("ZoneVisited") or 1
 	player:GetAttributeChangedSignal("ZoneVisited"):Connect(function()

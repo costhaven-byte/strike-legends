@@ -286,7 +286,7 @@ function RebirthController:Start()
 	tapArrow.BackgroundTransparency = 1
 	tapArrow.AnchorPoint = Vector2.new(0.5, 0)
 	tapArrow.Position = UDim2.new(0.5, 0, 1, 18)
-	tapArrow.Size = UDim2.fromOffset(90, 44)
+	tapArrow.Size = UDim2.fromOffset(140, 46) -- wide enough for "NEW ZONE!" (rebirth teaser)
 	tapArrow.FontFace = UiKit.Head
 	tapArrow.TextScaled = true
 	tapArrow.TextColor3 = C.Lime
@@ -414,7 +414,10 @@ function RebirthController:Start()
 		openButton.Visible = done > 0 or (player:GetAttribute("Onboarding") or 0) >= 3
 		local ready = REBIRTH.Enabled and hasLevel and hasCoins
 		setLook(if ready then "Ready" else "Normal")
-		tapArrow.Visible = ready and done == 0 and not win:IsOpen()
+		-- also while the rebirth teaser points here (EventController, batch B2)
+		local teaser = player:GetAttribute("RebirthTeaser") == true and done == 0
+		tapArrow.Visible = (ready or teaser) and done == 0 and not win:IsOpen()
+		tapArrow.Text = if ready then "▲\nTAP!" else "▲\nNEW ZONE!"
 
 		-- The window
 		titleFront.Text = if done > 0 then ("REBIRTH %d"):format(done + 1) else "REBIRTH"
@@ -518,7 +521,7 @@ function RebirthController:Start()
 		end
 	end)
 
-	for _, key in { "RankLevel", "Coins", "Rebirths", "Onboarding" } do
+	for _, key in { "RankLevel", "Coins", "Rebirths", "Onboarding", "RebirthTeaser" } do
 		player:GetAttributeChangedSignal(key):Connect(refresh)
 	end
 	refresh()
