@@ -3,6 +3,7 @@
 -- Everything hangs off an invisible upright "rig" that follows the ball without spinning,
 -- so rings and badges stay steady while the ball rolls.
 -- SETTINGS: EFFECTS off hides every ball's effects (the ball itself stays); switching it back on brings them back.
+-- OTHER PLAYERS' EFFECTS off hides them on balls made with options.Others = true (another player's ball).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -529,7 +530,7 @@ function BallFx.Attach(
 	ballId: string?,
 	mode: Mode,
 	forward: Vector3?,
-	options: { Level: number?, TrailColors: { Color3 }?, TrailStyle: string?, TrailTier: number? }?
+	options: { Level: number?, TrailColors: { Color3 }?, TrailStyle: string?, TrailTier: number?, Others: boolean? }?
 )
 	local info = Balls.Get(ballId) or Config.Balls[1]
 	local look = lookFor(info)
@@ -561,6 +562,7 @@ function BallFx.Attach(
 		TrailBright = {},
 		MotionSpeed = 1, -- slow-motion can lower this so the trail's motion slows with the ball
 		Enabled = true,
+		Others = options ~= nil and options.Others == true, -- another player's ball
 	}
 
 	if isLane then
@@ -692,7 +694,7 @@ function BallFx.Attach(
 
 	function handle.SetEnabled(_, enabled: boolean)
 		handle.Enabled = enabled
-		local shown = enabled and Settings.Get("Vfx")
+		local shown = enabled and Settings.Get("Vfx") and (not handle.Others or Settings.Get("OthersVfx"))
 		rig.Parent = if shown then ball.Parent else nil
 		for _, emitter in handle.Emitters do
 			emitter.Enabled = shown
@@ -713,12 +715,14 @@ function BallFx.Attach(
 	return handle
 end
 
--- SETTINGS: EFFECTS switched: hide or bring back every ball's effects
-Settings.Changed("Vfx", function()
+-- SETTINGS: EFFECTS or OTHER PLAYERS' EFFECTS switched: hide or bring back the balls' effects
+local function refreshAll()
 	for handle in active do
 		handle:SetEnabled(handle.Enabled)
 	end
-end)
+end
+Settings.Changed("Vfx", refreshAll)
+Settings.Changed("OthersVfx", refreshAll)
 
 -- One loop turns every ring, spins the disks, bobs the badges and keeps held effects on their ball
 RunService.RenderStepped:Connect(function(dt)

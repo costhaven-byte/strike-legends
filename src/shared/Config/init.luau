@@ -4749,6 +4749,8 @@ Config.Economy.Sim = {
 --   Vfx    ball trails/sparkles/rings, sparks, confetti, fireworks, shockwave rings, lane run lights
 --          (numbers, popups and the hatch/crate screens stay)
 --   Shake  camera shake and the camera punch on hits
+--   OthersVfx  other players' ball effects + their throw effects (sparks, confetti, trait effects, cosmetic blasts;
+--          less lag in full servers; the balls, pins, numbers and sounds stay)
 Config.Settings = {
 	Enabled = true,
 	Options = {
@@ -4756,6 +4758,7 @@ Config.Settings = {
 		{ Key = "Music", Name = "MUSIC", Info = "Zone music and background sounds", Kind = "Slider", Default = 0.7 },
 		{ Key = "Vfx", Name = "EFFECTS", Info = "Ball trails, sparks, confetti and fireworks" },
 		{ Key = "Shake", Name = "SCREEN SHAKE", Info = "The camera shaking on big hits" },
+		{ Key = "OthersVfx", Name = "OTHER PLAYERS' EFFECTS", Info = "Turn off for less lag in full servers" },
 	},
 	SliderStep = 0.05, -- sliders move in 5% steps
 }

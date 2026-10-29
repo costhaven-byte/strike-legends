@@ -27,6 +27,7 @@ local BallFx = require(Modules.BallFx)
 local TraitFx = require(Modules.TraitFx)
 local ThrowFx = require(Modules.ThrowFx)
 local ThrowPose = require(Modules.ThrowPose)
+local Settings = require(Modules.Settings)
 
 local LANE = Config.Lane
 local CAMERA = Config.Camera
@@ -172,14 +173,30 @@ local function throwFeel(data, ballInfo)
 	}
 end
 
+-- SETTINGS: OTHER PLAYERS' EFFECTS off = another bowler's throw shows no ball effects, sparks, rings, confetti,
+-- fireworks, run lights, trait effects or cosmetic blasts/banners (the ball, pins, numbers and sounds stay)
+local function hidden(isOwn: boolean): boolean
+	return not isOwn and not Settings.Get("OthersVfx")
+end
+local function burst(isOwn: boolean, ...)
+	if not hidden(isOwn) then
+		ThrowFx.Burst(...)
+	end
+end
+local function shockwave(isOwn: boolean, ...)
+	if not hidden(isOwn) then
+		ThrowFx.Shockwave(...)
+	end
+end
+
 -- Everything that happens the moment the ball reaches the pins
 -- A cosmetic pin blast (Config.Cosmetics PinFx): a burst and a ring per colour, on top of the normal crash
-local function pinBlast(item, crashPoint: Vector3, ringPoint: Vector3, strength: number)
+local function pinBlast(item, crashPoint: Vector3, ringPoint: Vector3, strength: number, isOwn: boolean)
 	local size = Config.Cosmetics.BlastSize * strength
 	for index, color in item.Colors do
 		task.delay((index - 1) * 0.05, function()
-			ThrowFx.Burst(crashPoint + Vector3.new(0, index * 0.5, 0), color, 30 * size, 40 * size * PIN_SCALE, 1.1)
-			ThrowFx.Shockwave(ringPoint + Vector3.new(0, 0.15 * index, 0), color, (9 + 4 * index) * size * PIN_SCALE, 0.4)
+			burst(isOwn, crashPoint + Vector3.new(0, index * 0.5, 0), color, 30 * size, 40 * size * PIN_SCALE, 1.1)
+			shockwave(isOwn, ringPoint + Vector3.new(0, 0.15 * index, 0), color, (9 + 4 * index) * size * PIN_SCALE, 0.4)
 		end)
 	end
 end
@@ -275,15 +292,15 @@ local function onImpact(data, rack, feel, isOwn: boolean, setTimeScale: (number)
 		(if isStrike then 0.95 else 1.1) * (1.08 - feel.Level * 0.025),
 		math.clamp(0.5 + count * 0.07, 0.5, 1.3) * math.min(crash, 1.6)
 	)
-	ThrowFx.Shockwave(headPin + forward * 2 + Vector3.new(0, 0.1, 0), ringColor, (6 + 5 * crash) * PIN_SCALE)
-	ThrowFx.Burst(crashPoint, ringColor, 25 + 20 * crash, 35 * crash * PIN_SCALE, 0.9 * math.sqrt(crash))
+	shockwave(isOwn, headPin + forward * 2 + Vector3.new(0, 0.1, 0), ringColor, (6 + 5 * crash) * PIN_SCALE)
+	burst(isOwn, crashPoint, ringColor, 25 + 20 * crash, 35 * crash * PIN_SCALE, 0.9 * math.sqrt(crash))
 	local mega = feel.Level >= THROW.MegaCrashFromLevel
 	if mega then
 		-- The strongest balls: a second, bigger shockwave, a white burst and a deep extra boom
 		task.delay(0.07, function()
-			ThrowFx.Shockwave(headPin + forward * 2 + Vector3.new(0, 0.2, 0), WHITE, (10 + 7 * crash) * PIN_SCALE, 0.45)
+			shockwave(isOwn, headPin + forward * 2 + Vector3.new(0, 0.2, 0), WHITE, (10 + 7 * crash) * PIN_SCALE, 0.45)
 		end)
-		ThrowFx.Burst(crashPoint + Vector3.new(0, 2, 0), WHITE, 15 * crash, 50 * crash * PIN_SCALE, 1.6)
+		burst(isOwn, crashPoint + Vector3.new(0, 2, 0), WHITE, 15 * crash, 50 * crash * PIN_SCALE, 1.6)
 		Sfx.PlayAt("StrikeCrash", lane.PinSpot, 0.55, 1.2)
 	end
 	local overcharged = data.Overcharge == "Blast"
@@ -291,28 +308,28 @@ local function onImpact(data, rack, feel, isOwn: boolean, setTimeScale: (number)
 		-- The gamble paid off: an extra red blast wave and a deep boom on top of the strike
 		Sfx.PlayAt("OverchargeBlast", lane.PinSpot, 1, 1.2)
 		task.delay(0.05, function()
-			ThrowFx.Shockwave(headPin + forward * 2 + Vector3.new(0, 0.3, 0), RED, (14 + 8 * crash) * PIN_SCALE, 0.5)
+			shockwave(isOwn, headPin + forward * 2 + Vector3.new(0, 0.3, 0), RED, (14 + 8 * crash) * PIN_SCALE, 0.5)
 		end)
-		ThrowFx.Burst(crashPoint + Vector3.new(0, 1.5, 0), RED, 40 * crash, 60 * crash * PIN_SCALE, 1.8)
+		burst(isOwn, crashPoint + Vector3.new(0, 1.5, 0), RED, 40 * crash, 60 * crash * PIN_SCALE, 1.8)
 	end
-	if isStrike then
+	if isStrike and not hidden(isOwn) then
 		LaneFx.Confetti(lane, JUICE.ConfettiAmount)
 	end
-	if isPerfect then
+	if isPerfect and not hidden(isOwn) then
 		LaneFx.Fireworks(lane, JUICE.PerfectFireworks)
 	end
 	-- The thrower's looks (Config.Cosmetics): a pin blast on every hit, a banner over the pins on a strike
 	local thrower = Players:GetPlayerByUserId(data.UserId)
 	local blast = thrower and Cosmetics.Worn(thrower, "PinFx")
 	if blast then
-		pinBlast(blast, crashPoint, headPin + forward * 2, if isStrike then 1.4 else 0.8)
+		pinBlast(blast, crashPoint, headPin + forward * 2, if isStrike then 1.4 else 0.8, isOwn)
 	end
 	local banner = thrower and Cosmetics.Worn(thrower, "Banner")
-	if banner and isStrike then
+	if banner and isStrike and not hidden(isOwn) then
 		strikeBanner(lane, banner, headPin)
 	end
 	local golden = data.Golden
-	if golden and golden.Hit then
+	if golden and golden.Hit and not hidden(isOwn) then
 		local pin = rack.Pins[golden.Pin]
 		LaneFx.GoldenBurst(lane, if pin and pin.PrimaryPart then pin.PrimaryPart.Position else crashPoint)
 		if isOwn then
@@ -358,7 +375,9 @@ end
 local function playTraits(data, position: Vector3, isOwn: boolean)
 	local lane: Model = data.Lane
 	for _, traitId in data.Traits or {} do
-		if traitId == "Blast" then
+		if hidden(isOwn) then
+			break
+		elseif traitId == "Blast" then
 			TraitFx.Blast(lane, position, isOwn)
 		elseif traitId == "Heavy" then
 			TraitFx.Heavy(lane, position, isOwn)
@@ -436,19 +455,25 @@ local function playThrow(data)
 		TrailColors = look and look.Colors,
 		TrailStyle = look and look.Style,
 		TrailTier = look and look.Tier,
+		Others = not isOwn,
 	})
-	local lights = LaneFx.FollowLights(lane, if look then look.Colors[#look.Colors] else ballInfo.Trail)
+	local lights = if hidden(isOwn)
+		then { Update = function() end, Destroy = function() end }
+		else LaneFx.FollowLights(lane, if look then look.Colors[#look.Colors] else ballInfo.Trail)
 	BallFx.Dim(ball)
 	local fired = data.Traits or {}
-	local curveTrail = if table.find(fired, "Curve") then TraitFx.CurveTrail(lane, headDistance) else nil
-	local gemTrail = if table.find(fired, "GemHunter") then TraitFx.GemTrail(lane) else nil
+	local curveTrail = if table.find(fired, "Curve") and not hidden(isOwn)
+		then TraitFx.CurveTrail(lane, headDistance)
+		else nil
+	local gemTrail = if table.find(fired, "GemHunter") and not hidden(isOwn) then TraitFx.GemTrail(lane) else nil
 	-- Stronger balls sound heavier (deeper)
 	local heavy = 1.1 - feel.Level * LEVEL_FX.LevelSoundDrop
 	local rollSound =
 		Sfx.PlayAt("Roll", ball, (0.9 + feel.Strength * 0.2) * heavy, 0.8 + feel.Level * LEVEL_FX.LevelSoundLoud)
 	-- The release: a burst in the level's colour from the hand (and a ring from ReleaseRingFromLevel)
 	local levelColor = if feel.Level >= THROW.RainbowFromLevel then PINK else ballInfo.Trail or ballInfo.Color
-	ThrowFx.Burst(
+	burst(
+		isOwn,
 		ball.Position,
 		levelColor,
 		LEVEL_FX.ReleaseBurst * feel.Level,
@@ -456,7 +481,7 @@ local function playThrow(data)
 		0.4 + ball.Size.X * 0.15
 	)
 	if feel.Level >= LEVEL_FX.ReleaseRingFromLevel then
-		ThrowFx.Shockwave(ballStart.Position + Vector3.new(0, 0.1, 0), levelColor, (3 + feel.Level) * PIN_SCALE, 0.35)
+		shockwave(isOwn, ballStart.Position + Vector3.new(0, 0.1, 0), levelColor, (3 + feel.Level) * PIN_SCALE, 0.35)
 	end
 	if isOwn then
 		Sfx.Play("Throw", (1 + (feel.Strength - 1) * 0.3) * heavy)
@@ -482,7 +507,7 @@ local function playThrow(data)
 		local body = pin.PrimaryPart :: BasePart
 		local spot = body.Position + Vector3.new(0, 1, 0)
 		ThrowFx.PinHitSound(body, flew, timeScale < 1)
-		ThrowFx.Burst(spot, feel.Color, 10 + 6 * flew, 22 * flew * PIN_SCALE, 0.5 * feel.Crash, timeScale)
+		burst(isOwn, spot, feel.Color, 10 + 6 * flew, 22 * flew * PIN_SCALE, 0.5 * feel.Crash, timeScale)
 		if isOwn then
 			if coinsEach > 0 then
 				local size = THROW.NumberPopSize * feel.PopScale * (0.9 + math.min(flew, 2) * 0.1)
