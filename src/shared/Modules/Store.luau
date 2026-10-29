@@ -123,7 +123,7 @@ function Store.XpBoostMultiplier(player: Player): number
 	return Store.LadderMult("Xp", Store.LadderLevel(player, "Xp"))
 end
 
--- Luck from owned passes (LUCKY x1.5, SUPER LUCKY x2, both x3)
+-- Luck from owned passes (LUCKY x2, SUPER LUCKY x4, both x8)
 function Store.Luck(player: Player): number
 	return product(player, "Luck")
 end

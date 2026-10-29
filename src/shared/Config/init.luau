@@ -3982,7 +3982,7 @@ Config.Monetization = {
 	Passes = {
 		{
 			Id = "DoubleCoins", -- Id kept from 12a
-			PassId = 0,
+			PassId = 2058239949,
 			Robux = 399,
 			Name = "2X COINS + 2X XP",
 			Text = "Every throw pays double coins AND double XP. Stacks with potions.",
@@ -3991,7 +3991,7 @@ Config.Monetization = {
 		},
 		{
 			Id = "VIP",
-			PassId = 0,
+			PassId = 2061664560,
 			Robux = 799,
 			Name = "VIP",
 			Text = "+25% coins and XP, 25 free gems every day, a gold ball trail and a [VIP] chat tag.",
@@ -4002,30 +4002,30 @@ Config.Monetization = {
 		},
 		{
 			Id = "AutoBowl",
-			PassId = 0,
+			PassId = 2058863916,
 			Robux = 499,
 			Name = "AUTO BOWL",
 			Text = "An AUTO button: the game bowls for you and every throw is a STRIKE. No PERFECT x2, no streak.",
 		},
 		{
 			Id = "Lucky",
-			PassId = 0,
+			PassId = 2061610571,
 			Robux = 199,
 			Name = "LUCKY",
-			Text = "x1.5 luck: Rare and better balls and pets come more often.",
-			Luck = 1.5,
-		},
-		{
-			Id = "SuperLucky",
-			PassId = 0,
-			Robux = 399,
-			Name = "SUPER LUCKY",
-			Text = "x2 luck. Stacks with LUCKY for x3.",
+			Text = "x2 luck: Rare and better balls and pets come more often.",
 			Luck = 2,
 		},
 		{
+			Id = "SuperLucky",
+			PassId = 2060945099,
+			Robux = 399,
+			Name = "SUPER LUCKY",
+			Text = "x4 luck. Stacks with LUCKY for x8.",
+			Luck = 4,
+		},
+		{
 			Id = "TripleHatch",
-			PassId = 0,
+			PassId = 2062270254,
 			Robux = 399,
 			Name = "TRIPLE HATCH",
 			Text = "Open 3 eggs or crates at once (when you can pay for 3).",
@@ -4033,7 +4033,7 @@ Config.Monetization = {
 		},
 		{
 			Id = "PetSlots",
-			PassId = 0,
+			PassId = 2057495968,
 			Robux = 399,
 			Name = "+2 PET SLOTS",
 			Text = "Two more pets follow you.",
@@ -4046,7 +4046,7 @@ Config.Monetization = {
 	Products = {
 		{
 			Id = "StarterPack",
-			ProductId = 0,
+			ProductId = 3723601057,
 			Robux = 199,
 			Name = "STARTER PACK",
 			Text = "Dumpster Diamond (Rare ball), 30 min of 2X COINS and 100 gems. Once only.",
@@ -4060,28 +4060,28 @@ Config.Monetization = {
 		-- at level 4 just stays MAXED at x4). Bought in order, up to the last step (then MAXED). Ladder = "Coins"
 		-- or "Xp", Step = 1-3: the player's saved CoinBoostLevel / XpBoostLevel becomes Step, worth Mult forever
 		-- (the step's own Mult, not added up). The store only offers each ladder's next step.
-		{ Id = "CoinLadder1", ProductId = 0, Robux = 10, Ladder = "Coins", Step = 1, Mult = 2 },
-		{ Id = "CoinLadder2", ProductId = 0, Robux = 20, Ladder = "Coins", Step = 2, Mult = 3 },
-		{ Id = "CoinLadder3", ProductId = 0, Robux = 50, Ladder = "Coins", Step = 3, Mult = 4 },
-		{ Id = "XpLadder1", ProductId = 0, Robux = 15, Ladder = "Xp", Step = 1, Mult = 2 },
-		{ Id = "XpLadder2", ProductId = 0, Robux = 30, Ladder = "Xp", Step = 2, Mult = 3 },
-		{ Id = "XpLadder3", ProductId = 0, Robux = 75, Ladder = "Xp", Step = 3, Mult = 4 },
+		{ Id = "CoinLadder1", ProductId = 3723601233, Robux = 10, Ladder = "Coins", Step = 1, Mult = 2 },
+		{ Id = "CoinLadder2", ProductId = 3723601347, Robux = 20, Ladder = "Coins", Step = 2, Mult = 3 },
+		{ Id = "CoinLadder3", ProductId = 3723601535, Robux = 50, Ladder = "Coins", Step = 3, Mult = 4 },
+		{ Id = "XpLadder1", ProductId = 3723601619, Robux = 15, Ladder = "Xp", Step = 1, Mult = 2 },
+		{ Id = "XpLadder2", ProductId = 3723601701, Robux = 30, Ladder = "Xp", Step = 2, Mult = 3 },
+		{ Id = "XpLadder3", ProductId = 3723601776, Robux = 75, Ladder = "Xp", Step = 3, Mult = 4 },
 		{
 			Id = "CoinBoost", -- Id kept from 12a (the timed boost)
-			ProductId = 0,
+			ProductId = 3723601922,
 			Robux = 49,
 			Name = "2X COINS - 15 MIN",
 			Text = "Double coins for 15 minutes of play.",
 			Boost = { Potion = "CoinSmall", Minutes = 15 },
 		},
-		{ Id = "GemsSmall", ProductId = 0, Robux = 99, Name = "60 GEMS", Text = "A handful of gems.", Gems = 60 },
-		{ Id = "GemsMedium", ProductId = 0, Robux = 399, Name = "300 GEMS", Text = "A bag of gems.", Gems = 300 },
-		{ Id = "GemsLarge", ProductId = 0, Robux = 1599, Name = "1,500 GEMS", Text = "A chest of gems.", Gems = 1500 },
+		{ Id = "GemsSmall", ProductId = 3723602054, Robux = 99, Name = "60 GEMS", Text = "A handful of gems.", Gems = 60 },
+		{ Id = "GemsMedium", ProductId = 3723602173, Robux = 399, Name = "300 GEMS", Text = "A bag of gems.", Gems = 300 },
+		{ Id = "GemsLarge", ProductId = 3723602254, Robux = 1599, Name = "1,500 GEMS", Text = "A chest of gems.", Gems = 1500 },
 		-- Robux looks (step 12b): Cosmetic = the Config.Cosmetics item it unlocks (bought once; looks only)
-		{ Id = "LookGalaxyTrail", ProductId = 0, Robux = 149, Name = "GALAXY TRAIL", Cosmetic = "GalaxyTrail" },
-		{ Id = "LookLegendBanner", ProductId = 0, Robux = 149, Name = "LEGEND BANNER", Cosmetic = "LegendBanner" },
-		{ Id = "LookGalaxyBlast", ProductId = 0, Robux = 149, Name = "GALAXY BLAST", Cosmetic = "GalaxyBlast" },
-		{ Id = "LookGoldLane", ProductId = 0, Robux = 149, Name = "GOLD LANE", Cosmetic = "GoldLane" },
+		{ Id = "LookGalaxyTrail", ProductId = 3723602449, Robux = 149, Name = "GALAXY TRAIL", Cosmetic = "GalaxyTrail" },
+		{ Id = "LookLegendBanner", ProductId = 3723602590, Robux = 149, Name = "LEGEND BANNER", Cosmetic = "LegendBanner" },
+		{ Id = "LookGalaxyBlast", ProductId = 3723602682, Robux = 149, Name = "GALAXY BLAST", Cosmetic = "GalaxyBlast" },
+		{ Id = "LookGoldLane", ProductId = 3723602758, Robux = 149, Name = "GOLD LANE", Cosmetic = "GoldLane" },
 	},
 	-- Luck (LUCKY passes): every rarity from LuckFrom up gets its chance multiplied by the player's luck, then all
 	-- chances are scaled back to 100% (so commons drop a little). Pity and exact guarantees don't change.
