@@ -77,6 +77,8 @@ local POPUPS = {
 }
 
 local ThrowController = {}
+-- True while something holds the screen (the join intro): presses don't start a throw
+ThrowController.Blocked = false
 
 local state = "Hidden" -- Hidden, Ready, Charging, Waiting
 local charge = 0
@@ -876,7 +878,7 @@ function ThrowController:Start()
 	end
 
 	local function press(input: InputObject)
-		if held or popupOpen(gui) then
+		if held or popupOpen(gui) or ThrowController.Blocked then
 			return
 		end
 		held = input

@@ -2833,6 +2833,41 @@ Config.IntroCinematic = {
 	},
 }
 
+-- Join intro (batch B, 2026-10-29): a short fly-over of the Back Alley for brand new players only (first join,
+-- before the first throw), in the live game too. Covers asset loading and shows what the game is in 7 seconds.
+-- SKIP shows after SkipAfter seconds. Shots work like Config.IntroCinematic's (camera From -> To, a caption, an
+-- optional Rizzo line, Deal = his first crate deal sign). Then the camera glides back behind your character.
+-- Studio: TEST panel > NEXT PLAY TEST STARTS FROM ZERO shows it (a saved player never sees it).
+Config.JoinIntro = {
+	Enabled = true,
+	SkipAfter = 1,
+	FieldOfView = 70,
+	GlideBack = 0.9, -- seconds for the camera to glide back behind you at the end (or after SKIP)
+	WaitForData = 12, -- seconds to wait for your save to load before giving up on the intro
+	Shots = {
+		{ -- high over the back of the alley, drifting in towards the lanes
+			Time = 2.6,
+			From = { Pos = Vector3.new(0, 34, 238), Look = Vector3.new(0, 2, 112) },
+			To = { Pos = Vector3.new(0, 22, 200), Look = Vector3.new(0, 2, 100) },
+			Text = "STRIKE LEGENDS",
+		},
+		{ -- low run down a lane to the pins
+			Time = 2.4,
+			From = { Pos = Vector3.new(-7, 5, 152), Look = Vector3.new(-7, 2, 78) },
+			To = { Pos = Vector3.new(-7, 3.2, 104), Look = Vector3.new(-7, 1.6, 78) },
+			Text = "STRIKES = COINS",
+		},
+		{ -- Rizzo waves from his cart with the first crate deal
+			Time = 2.4,
+			From = { Pos = Vector3.new(10, 6.5, 156), Look = Vector3.new(14, 6.5, 175) },
+			To = { Pos = Vector3.new(13, 7, 162), Look = Vector3.new(14, 7, 172) },
+			Text = "OPEN CRATES. FIND LEGENDS.",
+			Rizzo = "Fresh bowler? Show me a strike!",
+			Deal = true,
+		},
+	},
+}
+
 -- The crate shop kiosk in the lobby (Workspace.Hub.CrateShop, built in Studio). Crate looks live in
 -- ReplicatedStorage.CrateModels, one model per crate Id.
 -- Weekly featured ball (Addendum 2 step 11b): each week (Monday 00:00 UTC) every zone features one of its crate balls

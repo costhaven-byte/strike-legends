@@ -266,8 +266,9 @@ function RizzoController:Start()
 		waveStart = os.clock()
 	end
 
-	-- Studio only: the Day 1 video intro (IntroCinematicController) makes him talk, wave and show the deal sign
-	if RunService:IsStudio() then
+	-- The Day 1 video intro (IntroCinematicController, Studio only) and the new player's join intro
+	-- (JoinIntroController, live game) make him talk, wave and show the deal sign
+	do
 		local firstPrice = Balls.CratePrice(crate, 0)
 		RizzoController.Cinematic = {
 			Say = say,
