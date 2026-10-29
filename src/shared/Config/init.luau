@@ -231,7 +231,7 @@ Config.StartingData = {
 	LifetimeCoins = 0, -- coins earned ever, from anything (never goes down: spending and rebirths don't touch it)
 	BossWins = 0, -- Pin Titan fights won (with enough hits to get a reward)
 	AchievementTiers = {}, -- achievement tiers claimed, by Config.Profile.Achievements Id: { Throws = 2 }
-	Settings = "", -- SETTINGS window switches turned off, "Music=0;Vfx=0" (Config.Settings; v27). Missing = on
+	Settings = "", -- SETTINGS window choices that differ from the start, "Vfx=0;Music=0.45" (Config.Settings; v27)
 }
 
 -- Saving (DataStore)
@@ -4743,8 +4743,9 @@ Config.Economy.Sim = {
 -- cosmetic); the big tiers (12 gems) need 10+ hours each. Gem packs: 60 gems = 99 Robux, so this never undercuts them.
 -- SETTINGS window (owner 2026-10-29): a grey SETTINGS button under GIFTS (top-right; in the MORE menu on phones)
 -- opens switches the player can turn on or off. Saved per player (save field Settings, v27). Everything starts on.
+-- Kind = "Slider": a 0-100% slider instead of a switch, starting at Default (owner 2026-10-29: music a bit quieter).
 --   Sfx    every sound effect (SoundService SoundGroup "EffectsVolume")
---   Music  zone music + ambience loops (SoundGroup "MusicVolume")
+--   Music  zone music + ambience loops volume (SoundGroup "MusicVolume")
 --   Vfx    ball trails/sparkles/rings, sparks, confetti, fireworks, shockwave rings, lane run lights
 --          (numbers, popups and the hatch/crate screens stay)
 --   Shake  camera shake and the camera punch on hits
@@ -4752,10 +4753,11 @@ Config.Settings = {
 	Enabled = true,
 	Options = {
 		{ Key = "Sfx", Name = "SOUND EFFECTS", Info = "Strikes, pins, buttons and every other sound" },
-		{ Key = "Music", Name = "MUSIC", Info = "Zone music and background sounds" },
+		{ Key = "Music", Name = "MUSIC", Info = "Zone music and background sounds", Kind = "Slider", Default = 0.7 },
 		{ Key = "Vfx", Name = "EFFECTS", Info = "Ball trails, sparks, confetti and fireworks" },
 		{ Key = "Shake", Name = "SCREEN SHAKE", Info = "The camera shaking on big hits" },
 	},
+	SliderStep = 0.05, -- sliders move in 5% steps
 }
 
 Config.Profile = {

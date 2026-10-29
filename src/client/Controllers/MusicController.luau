@@ -1,7 +1,7 @@
 -- Background music and zone ambience (Shared.AssetSlots.Music). Every 0.5 s it checks where your
 -- character stands (the Config.Zones.Gated areas = zones 2-4, anywhere else = zone 1, the Pin Titan
 -- fight = Boss) and cross-fades the music and the ambience loop to that place's tracks.
--- Both play through the "MusicVolume" SoundGroup, which the SETTINGS switch MUSIC mutes.
+-- Both play through the "MusicVolume" SoundGroup, which the SETTINGS slider MUSIC sets.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
@@ -24,10 +24,10 @@ folder.Parent = SoundService
 
 local group = Instance.new("SoundGroup")
 group.Name = "MusicVolume"
-group.Volume = if Settings.Get("Music") then 1 else 0
+group.Volume = Settings.Value("Music") -- the MUSIC slider, 0..1
 group.Parent = SoundService
-Settings.Changed("Music", function(on)
-	group.Volume = if on then 1 else 0
+Settings.Changed("Music", function(value)
+	group.Volume = value
 end)
 
 local function inArea(area, position: Vector3): boolean

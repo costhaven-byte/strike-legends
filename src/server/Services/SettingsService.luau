@@ -1,6 +1,7 @@
--- SETTINGS window switches (Config.Settings): the client asks to turn one on or off (remote SetSetting, rate
--- limited); the server keeps them in the save (field Settings, v27) as the switches that are OFF, "Music=0;Vfx=0",
--- and the player's Settings attribute shows the same text. A missing key = on, so new switches start on.
+-- SETTINGS window choices (Config.Settings): the client asks to change one (remote SetSetting, rate limited): a switch
+-- with true/false, a slider (Kind = "Slider") with 0..1. The server keeps them in the save (field Settings, v27) as only
+-- what differs from the start, "Vfx=0;Music=0.45", and the player's Settings attribute shows the same text.
+-- A missing key = the start (switches on, sliders at Default), so new options need nothing in old saves.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -12,34 +13,48 @@ local SETTINGS = Config.Settings
 
 local SettingsService = {}
 
-local function known(key: any): boolean
+local function optionFor(key: any)
 	for _, option in SETTINGS.Options do
 		if option.Key == key then
-			return true
+			return option
 		end
 	end
-	return false
+	return nil
 end
 
-local function onSet(player: Player, key: any, on: any)
-	if type(key) ~= "string" or type(on) ~= "boolean" or not known(key) then
+local function snap(value: number): number
+	local step = SETTINGS.SliderStep
+	return math.clamp(math.floor(value / step + 0.5) * step, 0, 1)
+end
+
+local function onSet(player: Player, key: any, value: any)
+	local option = optionFor(key)
+	if not option then
+		return
+	end
+	local slider = option.Kind == "Slider"
+	if slider and (type(value) ~= "number" or value ~= value) then
+		return
+	elseif not slider and type(value) ~= "boolean" then
 		return
 	end
 	if not RateLimit.Allow(player, "SetSetting") or not PlayerDataService.IsLoaded(player) then
 		return
 	end
-	local off = {}
+	local values = {}
 	local saved = PlayerDataService.Get(player, "Settings")
-	for name in tostring(saved or ""):gmatch("([^;=]+)=0") do
-		if known(name) then
-			off[name] = true
+	for name, text in tostring(saved or ""):gmatch("([^;=]+)=([%d%.]+)") do
+		if optionFor(name) and tonumber(text) then
+			values[name] = tonumber(text)
 		end
 	end
-	off[key] = not on or nil
+	values[key] = if slider then snap(value) elseif value then 1 else 0
 	local parts = {}
-	for _, option in SETTINGS.Options do -- Config order, so the text is the same for the same switches
-		if off[option.Key] then
-			table.insert(parts, option.Key .. "=0")
+	for _, row in SETTINGS.Options do -- Config order, so the text is the same for the same choices
+		local start = if row.Kind == "Slider" then row.Default else 1
+		local now = values[row.Key]
+		if now and math.abs(now - start) > 1e-3 then
+			table.insert(parts, ("%s=%s"):format(row.Key, if row.Kind == "Slider" then ("%.2f"):format(now) else "0"))
 		end
 	end
 	PlayerDataService.Set(player, "Settings", table.concat(parts, ";"))
