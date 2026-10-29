@@ -130,3 +130,39 @@ At the end: one combined 2-minute playtest.
   (5) The Pin Titan boss's damage bonus stays on Power Level (it's hitting power, not the throw animation).
   (6) The rebirth level needs (level 4, +2 per rebirth) are unchanged; D3 retunes them.
 - Studio: no world edits. Code pushed into Studio's scripts (unsaved in the place until you save; git has it).
+
+## D2 Power Levels: much cheaper + the game shows what they pay (commit 83b8d53, restore tag `restore-batchD2-before`)
+- Power Level prices cut a lot, so they are the cheap, frequent step between rebirths (a rebirth puts you back to
+  Power Level 1). Their coin multiplier (x1.25 ... x12) is unchanged. Old -> new price:
+  LV2 400 -> 100 | LV3 3,000 -> 500 | LV4 27K -> 2K | LV5 840K -> 7.5K | LV6 4.2M -> 30K | LV7 100M -> 150K |
+  LV8 1.5B -> 1M | LV9 8.2B -> 10M | LV10 41B -> 200M | LV11 210B -> 8B | LV12 1.2T -> 250B.
+- The game now says what a Power Level pays: a small gold pill under the POWER LV button "x1.5 > x2 COINS"
+  (at MAX: "x12 COINS", white ring); the POWER LEVEL 5! moment has a green line "COINS x2 > x2.5"; the
+  "YOU CAN NOW AFFORD" note says "POWER LV 5 = x2.5 COINS". (There is no separate Power Level shop; the button is it.)
+- Economy sim (now / before): each rebirth run now gets a new Power Level every ~20 s to 3 min at its start, before
+  it was 1-2 per run. First run: LV2 0:03, LV3 0:06, LV4 0:37, LV5 1:09, LV6 3:16 (before: LV4 at 3:12, then nothing).
+  Zone 2 run: LV6 0:46, LV7 3:36. Zone 3 runs: LV8-LV10 between 0:06 and 3:10. Zone 4: LV11 ~9 min into the first
+  zone 4 run, LV12 ~85 min into the next (long goals on purpose). Because levels are cheaper, coins come faster:
+  zone 2 at 9:40 (was 11:37), zone 3 at 29:43 (was 48:04), zone 4 at 1h09m (was 2h41m). D3 (next) retunes rebirths
+  to its targets (4 min / 25 min / 1.5 h); zone 4 is now a bit EARLY vs 1.5 h, so D3 will slow the later rebirths.
+- Rewards that use "a share of your next Power Level's price" checked: daily rewards and playtime gifts stay sensible
+  (they also pay minutes of your own income, which now sets most of them; e.g. zone 2 day 1 = 2.5M, zone 3 day 1 =
+  90M); not changed. Level 7 / level 9 rewards would have dropped ~10x, so their shares went 0.1 / 0.15 -> 0.3 / 0.5
+  (minimum 50K / 150K unchanged). Pin Titan boss rewards: about the same as before (not changed).
+- Test (Studio, TEST panel FROM ZERO, ~2 min): look at the POWER LV button: a gold pill under it says
+  "x1 > x1.25 COINS". Throw once or twice -> BUY POWER LV 2! callout -> buy: the POWER LEVEL 2! moment shows
+  "COINS x1 > x1.25" in green, the pill now says "x1.25 > x1.5 COINS". Keep throwing: LV 3 and LV 4 come within about a
+  minute; a note "YOU CAN NOW AFFORD POWER LV 4 = x2 COINS" shows. Then COINS x10 a few times and keep buying to
+  LV 12: the button turns gold MAX POWER! and the pill says "x12 COINS".
+  Silent failures: the pill hiding behind DAILY or cut off on a phone (it should sit on the button's bottom edge);
+  the BUY POWER LV 2! callout not appearing at 100 coins; the afford notes coming too often for your taste
+  (one per Power Level; say so and I'll turn the Power Level ones off).
+- Tested by Claude in Studio: pill text at every level 1-12 and at MAX ("x12 COINS", white ring), pill 98x18 px
+  between the button and DAILY, buying works (multiplier list shows PowerLevel=1.25 ... 12), level-up and afford
+  texts built for every level, daily/playtime coin amounts at 5 progress points. No errors in Output. NOT seen on
+  screen: Studio wasn't drawing frames, so the level-up moment, the BUY LV 2 callout and the afford note were not
+  watched live (the join intro also waits on frames). Please look at those in your test.
+- Choices made for you: (1) multiplier values kept; only prices moved. (2) Levels 11-12 stay expensive so zone 4
+  still has Power Level goals. (3) Arrow written as ">" ("x1.5 > x2"), like "MERGE 3 > SHINY", since the game fonts
+  may not have an arrow sign. (4) Level 7/9 reward shares raised (above). (5) Daily/playtime shares unchanged.
+- Studio: no world edits. Code pushed into Studio's scripts (unsaved in the place until you save; git has it).
