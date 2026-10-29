@@ -1,9 +1,10 @@
 -- Mascot eggs, hatching and equipping (Addendum 2 Phase 3 step 8). The server rolls every hatch.
 -- Saved: Mascots ({ Id = count }, Shiny versions as "Pinny_Shiny"), EquippedMascots ({ Id, ... } one per slot), EggsHatched,
--- FreeEggs ({ Alley = 1 }: free hatches from playtime gifts, used before coins).
+-- FreeEggs ({ Alley = 1 }: free hatches from playtime gifts, used before coins), AutoDelete ({ Pinny = true }: pets X'd
+-- on the egg odds boards, not kept when hatched; batch C3, Config.AutoDelete).
 -- Published to everyone as Player attributes (each client draws every player's mascots from them):
 --   Mascots "Pinny=2,Gus=1", EquippedMascots "Pinny,Gus", MascotSlots, MascotBonus (0.04 = +4% coins),
---   FreeEgg_<egg Id> (free hatches waiting).
+--   FreeEgg_<egg Id> (free hatches waiting), AutoDelete "Pinny,Gus" (X'd pets).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -72,8 +73,40 @@ local function getFreeEggs(player: Player): { [string]: number }
 	return if type(value) == "table" then value else {}
 end
 
+local function getAutoDelete(player: Player): { [string]: boolean }
+	local value = PlayerDataService.Get(player, "AutoDelete")
+	return if type(value) == "table" then value else {}
+end
+
+-- Batch C3: can this pet be X'd on an egg board? Egg pets only (not Shinies), never rarer than Config.AutoDelete.MaxRarity
+local function deletable(mascot): boolean
+	return mascot ~= nil
+		and not mascot.Shiny
+		and Mascots.GetEgg(mascot.Egg) ~= nil
+		and Mascots.RarityIndex(mascot.Rarity) <= Mascots.RarityIndex(Config.AutoDelete.MaxRarity)
+end
+
+-- Is this hatched pet auto-deleted? X'd, still allowed, and (KeepFirst) the player already owns it or its Shiny
+local function autoDeletes(player: Player, mascot): boolean
+	local rules = Config.AutoDelete
+	if not rules.Enabled or not getAutoDelete(player)[mascot.Id] or not deletable(mascot) then
+		return false
+	end
+	if rules.KeepFirst then
+		local owned = getOwned(player)
+		return (owned[mascot.Id] or 0) > 0 or (owned[Mascots.ShinyId(mascot.Id)] or 0) > 0
+	end
+	return true
+end
+
 local function publish(player: Player)
 	repairEquipped(player)
+	local marked = {}
+	for id in getAutoDelete(player) do
+		table.insert(marked, id)
+	end
+	table.sort(marked)
+	player:SetAttribute("AutoDelete", table.concat(marked, ","))
 	local free = getFreeEggs(player)
 	for _, egg in Config.Economy.Eggs do
 		player:SetAttribute("FreeEgg_" .. egg.Id, free[egg.Id] or 0)
@@ -225,11 +258,22 @@ local function hatch(player: Player, eggId: any)
 		end
 		table.insert(extras, other)
 	end
-	local isNew, autoEquipped = addMascot(player, mascot)
+	-- Batch C3: X'd pets are not kept (still shown on the card with an AUTO-DELETED stamp, still eggs hatched)
+	local deleted = autoDeletes(player, mascot)
+	local isNew, autoEquipped = false, false
+	if not deleted then
+		isNew, autoEquipped = addMascot(player, mascot)
+	end
 	local extraResults = {}
+	local deletedCount = if deleted then 1 else 0
 	for _, other in extras do
-		local otherNew = addMascot(player, other)
-		table.insert(extraResults, { MascotId = other.Id, IsNew = otherNew })
+		if autoDeletes(player, other) then
+			deletedCount += 1
+			table.insert(extraResults, { MascotId = other.Id, IsNew = false, Deleted = true })
+		else
+			local otherNew = addMascot(player, other)
+			table.insert(extraResults, { MascotId = other.Id, IsNew = otherNew })
+		end
 	end
 
 	-- A Legendary or Mythic pet: the crate pull banner for everyone in the server (Config.PullBanner), after the reveal
@@ -253,12 +297,13 @@ local function hatch(player: Player, eggId: any)
 	Analytics.Step(player, "Hatched Mascot")
 	SessionLog.Moment(
 		player,
-		("Egg hatched%s: %s -> %s (%s, %s)"):format(
+		("Egg hatched%s: %s -> %s (%s, %s)%s"):format(
 			if free then " (free)" else "",
 			egg.Id,
 			mascot.Id,
 			mascot.Rarity,
-			if isNew then "new" else "duplicate"
+			if deleted then "auto-deleted" elseif isNew then "new" else "duplicate",
+			if deletedCount > 0 then (", %d auto-deleted"):format(deletedCount) else ""
 		)
 	)
 	return {
@@ -266,6 +311,7 @@ local function hatch(player: Player, eggId: any)
 		MascotId = mascot.Id,
 		IsNew = isNew,
 		Equipped = autoEquipped,
+		Deleted = if deleted then true else nil,
 		Chance = chance(egg.Id, mascot, luck),
 		Extras = if #extraResults > 0 then extraResults else nil,
 	}
@@ -447,6 +493,26 @@ local function onMerge(player: Player, mascotId: any)
 	return { Ok = true, MascotId = shinyId, Equipped = swapped }
 end
 
+-- Batch C3: X a pet out on an egg odds board (on = true) or take the X off (on = false). One list across all eggs.
+local function onAutoDelete(player: Player, mascotId: any, on: any)
+	if not Config.AutoDelete.Enabled or type(on) ~= "boolean" then
+		return
+	end
+	if not PlayerDataService.IsLoaded(player) or not RateLimit.Allow(player, "AutoDelete") then
+		return
+	end
+	local mascot = Mascots.Get(mascotId)
+	if not mascot or (on and not deletable(mascot)) then
+		return
+	end
+	local list = PlayerDataService.Get(player, "AutoDelete")
+	if type(list) ~= "table" then
+		return
+	end
+	list[mascot.Id] = if on then true else nil
+	publish(player)
+end
+
 local function onEquipBest(player: Player)
 	if not PlayerDataService.IsLoaded(player) or not RateLimit.Allow(player, "EquipMascot") then
 		return
@@ -491,6 +557,11 @@ function MascotService:Start()
 	mergeRemote.Name = "MergeMascot"
 	mergeRemote.OnServerInvoke = onMerge
 	mergeRemote.Parent = remotes
+
+	local autoDeleteRemote = Instance.new("RemoteEvent")
+	autoDeleteRemote.Name = "SetAutoDelete"
+	autoDeleteRemote.OnServerEvent:Connect(onAutoDelete)
+	autoDeleteRemote.Parent = remotes
 
 	local bestRemote = Instance.new("RemoteEvent")
 	bestRemote.Name = "EquipBestMascots"

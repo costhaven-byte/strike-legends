@@ -239,12 +239,13 @@ Config.StartingData = {
 	PlaytimeGot = "", -- gifts claimed that day, by number: "1,2,4"
 	EggPrompted = 0, -- 1 = the BUY YOUR FIRST PET EGG! popup was shown (Config.EggPrompt; v30)
 	PetSlotsKept = 0, -- pet slots an old save had under the old rules (rank levels 15/30 + 1 rebirth); never fewer (v30)
+	AutoDelete = {}, -- pets X'd on the egg odds boards: { Pinny = true }; hatched ones are not kept (Config.AutoDelete; v31)
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 30, -- v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 31, -- v31 AutoDelete (batch C3 X'd pets on the egg odds boards; starts empty, nothing to upgrade or delete). v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -328,6 +329,7 @@ Config.RateLimits = {
 	OfferAsk = 3,
 	ClaimAchievement = 0.4, -- Profile panel CLAIM (Polish P5)
 	SetSetting = 0.15, -- SETTINGS window switch
+	AutoDelete = 0.15, -- tapping a pet on an egg odds board to X it out / back in (batch C3)
 }
 
 -- Gems on/off switch. Addendum 1 keeps gems (earned only, a gem sink comes later); set Enabled = false to hide them.
@@ -3262,6 +3264,18 @@ Config.EggOdds = {
 	PerRow = 6, -- bubbles per row (more pets wrap onto a second row)
 	PetFill = 0.85, -- how much of its bubble the pet fills
 	Spin = 30, -- degrees per second the pets turn in their bubbles (0 = still)
+}
+
+-- Batch C3 (final changes 11b): tap a pet on an egg's odds board to X it out; X'd pets you hatch are auto-deleted
+-- (not kept; the hatch card still shows them with an AUTO-DELETED stamp and they count as eggs hatched). Tap again
+-- to undo. One list per player across all eggs, saved (AutoDelete), the server owns it (MascotService).
+Config.AutoDelete = {
+	Enabled = true, -- false = no X on the boards and nothing is auto-deleted (saved X's are kept for later)
+	MaxRarity = "Legendary", -- the rarest pet that can be X'd; rarer ones (Mythic) can never be auto-deleted
+	KeepFirst = true, -- true = a pet you own none of (nor its Shiny) is always kept, even when X'd
+	XColor = Color3.fromRGB(255, 45, 74), -- the big X over an X'd pet's bubble
+	Hint = "TAP A PET TO AUTO-DELETE IT", -- the line under the bubbles
+	TooRare = "%s PETS CAN'T BE AUTO-DELETED", -- toast when a pet rarer than MaxRarity is tapped (%s = rarity)
 }
 
 -- Polish P4: big floating signs over every station so you always know where to go, even from far away or on a phone

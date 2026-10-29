@@ -151,6 +151,7 @@ function MascotController:Start()
 	local equipRemote = remotes:WaitForChild("EquipMascot") :: RemoteEvent
 	local bestRemote = remotes:WaitForChild("EquipBestMascots") :: RemoteEvent
 	local mergeRemote = remotes:WaitForChild("MergeMascot") :: RemoteFunction
+	local autoDeleteRemote = remotes:WaitForChild("SetAutoDelete") :: RemoteEvent
 	local playerGui = player:WaitForChild("PlayerGui")
 	local ballsUI = playerGui:WaitForChild("BallsUI") :: ScreenGui
 
@@ -739,6 +740,7 @@ function MascotController:Start()
 	stamp.Holder.ZIndex = 4
 	local revealNew = RewardKit.Label(stamp.Face, "NEW!", UiKit.Head, 26, K.White, 2.5, 6, 2, 116, 36)
 	make("UIPadding", { PaddingTop = UDim.new(0, 3) }, revealNew)
+	HudKit.Fit(revealNew, 26) -- batch C3: "AUTO-DELETED" shrinks to fit the stamp
 
 	local doneKit = RewardKit.Button(cardHolder, "OK!", "Lime", 200, 62, 30)
 	local doneButton = doneKit.Holder
@@ -788,6 +790,7 @@ function MascotController:Start()
 		}, block.Face) :: Frame
 		local name = RewardKit.Label(block.Face, "", UiKit.Head, 16, K.White, 2, 6, 96, SIDE - 18, 22)
 		local new = RewardKit.Label(block.Face, "NEW!", UiKit.Head, 15, K.Lime, 2, 6, 116, SIDE - 18, 18)
+		HudKit.Fit(new, 15)
 		sides[i] = {
 			Holder = block.Holder,
 			Ring = (block.Face:FindFirstChild("Ring") :: Frame):FindFirstChildOfClass("UIStroke") :: UIStroke,
@@ -855,8 +858,11 @@ function MascotController:Start()
 				side.Ring.Color = Mascots.RarityColor(other.Rarity)
 				side.Name.Text = string.upper(other.Name)
 				side.Name.TextColor3 = Mascots.RarityColor(other.Rarity)
-				side.New.Text = if extra.IsNew then "NEW!" else string.upper(other.Rarity)
-				side.New.TextColor3 = if extra.IsNew then K.Lime else K.Muted
+				side.New.Text = if extra.Deleted
+					then "AUTO-DELETED"
+					elseif extra.IsNew then "NEW!"
+					else string.upper(other.Rarity)
+				side.New.TextColor3 = if extra.Deleted then CrateKit.C.Red elseif extra.IsNew then K.Lime else K.Muted
 			end
 		end
 		fitCard(wide)
@@ -971,13 +977,14 @@ function MascotController:Start()
 			Color = color,
 			Rarity = string.upper(mascot.Rarity),
 			Name = string.upper(mascot.Name),
-			Stamp = if result.IsNew then "NEW!" else nil,
+			-- batch C3: a pet X'd on the egg board is not kept, and the card says so
+			Stamp = if result.Deleted then "AUTO-DELETED" elseif result.IsNew then "NEW!" else nil,
+			StampColor = if result.Deleted then CrateKit.C.Red else nil,
 			Extras = result.Extras, -- TRIPLE HATCH: the other two pets
 		})
 		local odds = oddsText(result.Chance)
-		revealOdds.Text = if result.Equipped
-			then (if odds ~= "" then odds .. "  ·  EQUIPPED!" else "EQUIPPED!")
-			else odds
+		local note = if result.Deleted then "NOT KEPT" elseif result.Equipped then "EQUIPPED!" else nil
+		revealOdds.Text = if note then (if odds ~= "" then odds .. "  ·  " .. note else note) else odds
 		local function info(bonus: number): string
 			return Mascots.BonusText(bonus) .. " COINS"
 		end
@@ -1826,10 +1833,14 @@ function MascotController:Start()
 		local rows = math.ceil(#pets / ODDS_FX.PerRow)
 		local cardW, cardH = ODDS_FX.CardSize, ODDS_FX.CardSize * 1.3
 		local boardW = perRow * cardW + (perRow - 1) * ODDS_FX.Gap
-		local boardH = rows * cardH + (rows - 1) * ODDS_FX.Gap + 0.8 -- + the LUCKY line on top
+		-- batch C3: tap a pet to X it out (Config.AutoDelete); a hint line goes under the bubbles
+		local AUTO_DELETE = Config.AutoDelete
+		local hintH = if AUTO_DELETE.Enabled then 0.5 else 0
+		local boardH = rows * cardH + (rows - 1) * ODDS_FX.Gap + 0.8 + hintH -- + the LUCKY line on top
 		oddsBoard.Size = UDim2.fromScale(boardW, boardH) -- scale = studs, so it is the same size on every screen
 		oddsBoard.StudsOffset = Vector3.new(0, ODDS_FX.Height + boardH / 2, 0) -- bottom edge at Height
 		oddsBoard.LightInfluence = 0
+		oddsBoard.Active = true -- the pet bubbles take taps (batch C3)
 
 		oddsBoard.Enabled = false
 		-- Final changes 11a: pinned to the stand from PlayerGui. Pet viewports on a billboard parented in the Workspace
@@ -1860,6 +1871,8 @@ function MascotController:Start()
 		end)
 		local percents: { [any]: TextLabel } = {}
 		local spinners: { Model } = {}
+		local crosses: { [string]: TextLabel } = {}
+		local markedForDelete: { [string]: boolean } = {}
 		for index, mascot in pets do
 			local column = (index - 1) % ODDS_FX.PerRow
 			local line = (index - 1) // ODDS_FX.PerRow
@@ -1910,6 +1923,66 @@ function MascotController:Start()
 				fadeWith(percentStroke, "Transparency")
 			end
 			percents[mascot] = percent
+
+			-- batch C3: a big red X over the bubble while this pet is X'd; tapping the bubble toggles it
+			if AUTO_DELETE.Enabled then
+				local cross = text(card, "AutoDeleteX", FONT, AUTO_DELETE.XColor, UDim2.new(), UDim2.fromScale(1, 1))
+				cross.Text = "X"
+				cross.ZIndex = 5
+				cross.Visible = false
+				local crossStroke = cross:FindFirstChildOfClass("UIStroke")
+				if crossStroke then
+					crossStroke.Thickness = 3
+					fadeWith(crossStroke, "Transparency")
+				end
+				fadeWith(cross, "TextTransparency")
+				crosses[mascot.Id] = cross
+				local tap = Instance.new("TextButton")
+				tap.Name = "Tap"
+				tap.BackgroundTransparency = 1
+				tap.Text = ""
+				tap.Size = UDim2.fromScale(1, 1)
+				tap.ZIndex = 6
+				tap.Parent = card
+				tap.Activated:Connect(function()
+					if Mascots.RarityIndex(mascot.Rarity) > Mascots.RarityIndex(AUTO_DELETE.MaxRarity) then
+						showToast(AUTO_DELETE.TooRare:format(string.upper(mascot.Rarity)))
+						return
+					end
+					local on = not markedForDelete[mascot.Id]
+					markedForDelete[mascot.Id] = if on then true else nil
+					cross.Visible = on -- straight away; the server's AutoDelete attribute confirms it
+					Sfx.Play("Click")
+					autoDeleteRemote:FireServer(mascot.Id, on)
+				end)
+			end
+		end
+		if AUTO_DELETE.Enabled then
+			local hint = text(
+				oddsBoard,
+				"AutoDeleteHint",
+				FONT,
+				Color3.new(1, 1, 1),
+				UDim2.fromScale(0, 1 - hintH / boardH),
+				UDim2.fromScale(1, hintH / boardH)
+			)
+			hint.Text = AUTO_DELETE.Hint
+			fadeWith(hint, "TextTransparency")
+			local hintStroke = hint:FindFirstChildOfClass("UIStroke")
+			if hintStroke then
+				fadeWith(hintStroke, "Transparency")
+			end
+			local function refreshCrosses()
+				markedForDelete = {}
+				for id in string.gmatch(player:GetAttribute("AutoDelete") or "", "[^,]+") do
+					markedForDelete[id] = true
+				end
+				for id, cross in crosses do
+					cross.Visible = markedForDelete[id] == true
+				end
+			end
+			player:GetAttributeChangedSignal("AutoDelete"):Connect(refreshCrosses)
+			refreshCrosses()
 		end
 
 		-- "40%", "2.5%", "0.25%", "0.01%": always short enough for a bubble
