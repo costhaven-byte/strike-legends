@@ -4,7 +4,9 @@
 --   The fight: health bar, team meter, phase name and timer at the top, balls flying from each spot to the Titan,
 --   damage numbers, plates breaking, the GIANT BALL call, then the results screen.
 -- The throw itself is the normal one (ThrowController treats your arena spot like a lane).
--- PLACEHOLDER looks: Claude's own design until the owner's boss UI exists.
+-- Looks: UI pass batch 6 (2026-10-29), Claude's design in the owner's kits (UI Kit, Crate Kit, HUD Kit): the lobby
+-- pill with the BOARD NOW! state, the fight plate (chunky health bar, 6 armour pips that break, timer chip), the
+-- DODGE! / CORE OPEN! slams, the TITAN DOWN! / THE TITAN WON results window and the boss toasts.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -15,12 +17,18 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local Currency = require(Shared.Modules.Currency)
+local Mascots = require(Shared.Modules.Mascots)
 local Zones = require(Shared.Modules.Zones)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local BallView = require(Modules.BallView)
+local CrateKit = require(Modules.CrateKit)
 local HudKit = require(Modules.HudKit)
+local MascotView = require(Modules.MascotView)
+local MomentKit = require(Modules.MomentKit)
+local RewardKit = require(Modules.RewardKit)
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
+local UiKit = require(Modules.UiKit)
 local CrateController = require(script.Parent.CrateController)
 
 local BOSS = Config.Boss
@@ -38,7 +46,7 @@ local PHASE_NAMES = {
 }
 local PHASE_CALLS = { -- the big text when a phase starts
 	Intro = { "PIN TITAN!", "DODGE THE RED - STRIKES BREAK ITS ARMOR", C.Red },
-	Core = { "CORE EXPOSED!", "PERFECTS DO BIG DAMAGE", C.Gold },
+	Core = { "CORE OPEN!", "HIT IT! PERFECTS DO BIG DAMAGE", C.Gold },
 	Finale = { "FINALE!", "FILL THE TEAM METER", C.Cyan },
 	Giant = { "GIANT BALLS!", "THROW YOURS TO FINISH IT", C.Pink },
 	Defeated = { "PIN TITAN DEFEATED!", "", C.Lime },
@@ -75,24 +83,89 @@ local function new(className: string, props: { [string]: any }, parent: Instance
 	return object
 end
 
-local function bar(parent: Instance, name: string, color: Color3, height: number): (Frame, Frame, TextLabel)
-	local back = new("Frame", {
-		Name = name,
-		Size = UDim2.new(1, 0, 0, height),
-		BackgroundColor3 = C.Panel,
-		BackgroundTransparency = 0.15,
-	}, parent)
-	HudKit.Corner(back, height / 2)
-	HudKit.Outline(back, C.Ink, 3)
-	local fill = new("Frame", {
-		Name = "Fill",
-		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = color,
-	}, back)
-	HudKit.Corner(fill, height / 2)
-	local label = HudKit.Text(back, "", HudKit.Num, height - 6, C.White, 2)
-	return back, fill, label
+local K = UiKit.C
+
+-- The next event's opening time on the EverySeconds clock (BossService nextSlot: the same on every server)
+local function nextSlot(): number
+	local every = BOSS.EverySeconds
+	return math.ceil((Workspace:GetServerTimeNow() + 1) / every) * every
 end
+
+-- A chunky kit bar: dark slot with an ink outline, a coloured fill with its own darker lip and a shine strip, a
+-- light "drain" ghost that catches up a moment after a hit, and the number in the middle. set(k) moves it (0..1).
+local function kitBar(
+	parent: Instance,
+	name: string,
+	color: Color3,
+	lip: Color3,
+	w: number,
+	h: number
+): (GuiObject, (number) -> (), TextLabel)
+	local slot = UiKit.Block(parent, {
+		Name = name,
+		Size = Vector2.new(w, h),
+		Fill = K.Slot,
+		Lip = K.Ink,
+		LipPx = 0,
+		Radius = math.floor(h / 2.6),
+		Outline = 3,
+	})
+	local inner = new("Frame", {
+		Name = "Inner",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(3, 3),
+		Size = UDim2.new(1, -6, 1, -6),
+		ClipsDescendants = true,
+	}, slot.Face)
+	UiKit.Corner(inner, math.floor(h / 2.6) - 5)
+	local ghost = new("Frame", {
+		Name = "Ghost",
+		BackgroundColor3 = Color3.fromRGB(255, 236, 214),
+		Size = UDim2.fromScale(1, 1),
+	}, inner)
+	UiKit.Corner(ghost, math.floor(h / 2.6) - 5)
+	local fill = new("Frame", { Name = "Fill", BackgroundColor3 = lip, Size = UDim2.fromScale(1, 1) }, inner)
+	UiKit.Corner(fill, math.floor(h / 2.6) - 5)
+	local top = new("Frame", {
+		Name = "Top",
+		BackgroundColor3 = color,
+		Size = UDim2.new(1, 0, 1, -math.max(4, math.floor(h * 0.18))),
+	}, fill)
+	UiKit.Corner(top, math.floor(h / 2.6) - 5)
+	new("Frame", {
+		Name = "Shine",
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundTransparency = 0.7,
+		Position = UDim2.fromOffset(8, 4),
+		Size = UDim2.new(1, -16, 0, math.max(3, math.floor(h * 0.16))),
+	}, top)
+	local label = UiKit.Text(slot.Face, "", UiKit.Num, h - 12, C.White, 2.5)
+	label.ZIndex = 3
+	local shown = 1
+	local token = 0
+	local function set(k: number)
+		k = math.clamp(k, 0, 1)
+		if math.abs(k - shown) < 1e-4 then
+			return
+		end
+		fill.Visible = k > 0
+		fill.Size = UDim2.fromScale(math.max(k, 0.001), 1)
+		if k > shown then
+			ghost.Size = fill.Size -- filling up: no ghost
+		else
+			token += 1
+			local mine = token
+			task.delay(0.3, function()
+				if token == mine then
+					UiKit.Tween(ghost, 0.35, Enum.EasingStyle.Quad, { Size = UDim2.fromScale(k, 1) })
+				end
+			end)
+		end
+		shown = k
+	end
+	return slot.Holder, set, label
+end
+
 
 function BossController:Start()
 	if not BOSS.Enabled then
@@ -111,91 +184,323 @@ function BossController:Start()
 	}, player:WaitForChild("PlayerGui"))
 	local screenScale = new("UIScale", {}, gui)
 
-	-- ===== Lobby: the pill on screen =====
+	-- ===== Lobby: the kit pill under the level bar (Titan pin on a disc; gold BOARD NOW! while boarding) =====
+	local PILL_W, PILL_H = 480, 56
 	local pill = new("Frame", {
 		Name = "LobbyPill",
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 20), -- just under the level bar, above the "+XP" line
-		Size = UDim2.fromOffset(440, 40),
-		BackgroundColor3 = C.Panel,
-		BackgroundTransparency = 0.1,
+		Size = UDim2.fromOffset(PILL_W, PILL_H),
+		BackgroundTransparency = 1,
 		Visible = false,
 	}, gui)
-	HudKit.Corner(pill, 20)
-	local pillStroke = HudKit.Outline(pill, C.Pink, 3)
-	local pillText = HudKit.Text(pill, "", HudKit.Head, 22, C.White, 2)
-	HudKit.Fit(pillText, 22)
-	new("UIPadding", { PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14) }, pill)
+	local pillBlock = UiKit.Block(pill, {
+		Name = "Pill",
+		Size = UDim2.fromScale(1, 1),
+		Fill = K.Cover,
+		Lip = K.Ink,
+		LipPx = 5,
+		Radius = 28,
+		Outline = 3,
+		Ring = C.Pink,
+	})
+	local pillRing = (pillBlock.Face:FindFirstChild("Ring") :: Frame):FindFirstChildOfClass("UIStroke") :: UIStroke
+	local pillDisc = UiKit.Block(pill, {
+		Name = "Disc",
+		Size = Vector2.new(66, 66),
+		Fill = K.Cover,
+		Lip = K.Ink,
+		LipPx = 4,
+		Radius = 33,
+		Outline = 3,
+		Ring = C.Pink,
+	})
+	pillDisc.Holder.Position = UDim2.fromOffset(-20, -5)
+	local discRing = (pillDisc.Face:FindFirstChild("Ring") :: Frame):FindFirstChildOfClass("UIStroke") :: UIStroke
+	HudKit.Image(pillDisc.Face, "Pin", 40, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5) })
+	local pillText = UiKit.Text(pillBlock.Face, "", UiKit.Head, 24, C.White, 2.5)
+	pillText.Position = UDim2.fromOffset(52, 3)
+	pillText.Size = UDim2.new(1, -64, 1, 0)
+	RewardKit.Fit(pillText, 24, PILL_W - 80, PILL_H - 14)
+	local pillMode = ""
+	local stopPillPulse: (() -> ())? = nil
+	-- mode: "Wait", "Siren", "Board", "OnBoard", "Busy"
+	local function paintPill(mode: string, flashOn: boolean)
+		local face, lip, ring = K.Cover, K.Ink, C.Pink
+		if mode == "Siren" then
+			face, lip, ring = if flashOn then C.Red else K.Cover, if flashOn then C.RedLip else K.Ink, C.Red
+		elseif mode == "Board" then
+			face, lip, ring = C.Gold, C.GoldLip, C.White
+		elseif mode == "OnBoard" then
+			face, lip, ring = C.Lime, C.LimeLip, C.White
+		elseif mode == "Busy" then
+			ring = C.Grey
+		end
+		pillBlock:Paint(face, lip)
+		pillRing.Color = ring
+		discRing.Color = if mode == "Busy" then C.Grey elseif mode == "Wait" then C.Pink else ring
+		if mode ~= pillMode then
+			pillMode = mode
+			if stopPillPulse then
+				stopPillPulse()
+				stopPillPulse = nil
+			end
+			if mode == "Board" then
+				stopPillPulse = RewardKit.Pulse(pill, 1.06, 0.45)
+			end
+		end
+	end
 
-	-- ===== The fight HUD at the top =====
+	-- ===== The fight plate at the top (takes the level bar's place) =====
+	local TOP_W, PLATE_H = 560, 134
+	local FACE_W = TOP_W - 8 -- inside the 4 px outline
 	local top = new("Frame", {
 		Name = "FightHud",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, -42), -- where the level bar is (hidden during the fight)
-		Size = UDim2.fromOffset(480, 120), -- narrow enough to stay clear of the power arc on the right
+		Position = UDim2.new(0.5, 0, 0, -40), -- where the level bar is (hidden during the fight)
+		Size = UDim2.fromOffset(TOP_W, PLATE_H + 44),
 		BackgroundTransparency = 1,
 		Visible = false,
 	}, gui)
-	local titleRow = new("Frame", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1 }, top)
-	local titleLabel = HudKit.Text(titleRow, "PIN TITAN", HudKit.Head, 26, C.White, 2.5)
-	titleLabel.Size = UDim2.fromScale(0.5, 1)
+	local plate = UiKit.Block(top, {
+		Name = "Plate",
+		Size = Vector2.new(TOP_W, PLATE_H),
+		Fill = K.Cover,
+		Lip = K.Ink,
+		LipPx = 6,
+		Radius = 22,
+		Outline = 4,
+		Ring = C.Red,
+	})
+	local plateFace = plate.Face
+	local titleBox = new("Frame", {
+		Name = "TitleBox",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(18, 6),
+		Size = UDim2.fromOffset(210, 42),
+	}, plateFace)
+	local titleLabel = CrateKit.Title(titleBox, "PIN TITAN", 34, C.White, 3, 3)
 	titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-	local phaseLabel = HudKit.Text(titleRow, "", HudKit.Head, 22, C.Gold, 2)
-	phaseLabel.AnchorPoint = Vector2.new(0.5, 0)
-	phaseLabel.Position = UDim2.fromScale(0.5, 0)
-	phaseLabel.Size = UDim2.fromScale(0.5, 1)
-	local timerLabel = HudKit.Text(titleRow, "", HudKit.Num, 26, C.White, 2.5)
-	timerLabel.AnchorPoint = Vector2.new(1, 0)
-	timerLabel.Position = UDim2.fromScale(1, 0)
-	timerLabel.Size = UDim2.fromScale(0.25, 1)
-	timerLabel.TextXAlignment = Enum.TextXAlignment.Right
-	local healthBack, healthFill, healthText = bar(top, "Health", C.Red, 28)
-	healthBack.Position = UDim2.fromOffset(0, 34)
-	local meterBack, meterFill, meterText = bar(top, "Meter", C.Cyan, 20)
-	meterBack.Position = UDim2.fromOffset(0, 68)
-	local damageLabel = HudKit.Text(top, "", HudKit.Body, 15, C.White, 1.5)
-	damageLabel.Position = UDim2.fromOffset(0, 94)
-	damageLabel.Size = UDim2.new(1, 0, 0, 20)
+	local phaseChip = UiKit.Block(plateFace, {
+		Name = "Phase",
+		Size = Vector2.new(190, 36),
+		Fill = K.Chip,
+		Lip = K.Ink,
+		LipPx = 4,
+		Radius = 18,
+		Outline = 3,
+	})
+	phaseChip.Holder.Position = UDim2.fromOffset(226, 9)
+	local phaseLabel = UiKit.Text(phaseChip.Face, "", UiKit.Head, 19, C.Gold, 2)
+	phaseLabel.Position = UDim2.fromOffset(6, 2)
+	phaseLabel.Size = UDim2.new(1, -12, 1, 0)
+	RewardKit.Fit(phaseLabel, 19, 170, 28)
+	local timerChip = UiKit.Block(plateFace, {
+		Name = "Timer",
+		Size = Vector2.new(112, 42),
+		Fill = K.Card,
+		Lip = K.Ink,
+		LipPx = 4,
+		Radius = 14,
+		Outline = 3,
+	})
+	timerChip.Holder.Position = UDim2.fromOffset(FACE_W - 112 - 10, 6)
+	local timerLabel = UiKit.Text(timerChip.Face, "", UiKit.Num, 28, C.White, 2.5)
+	local stopTimerPulse: (() -> ())? = nil
+	local healthHolder, setHealth, healthText = kitBar(plateFace, "Health", C.Red, C.RedLip, FACE_W - 24, 42)
+	healthHolder.Position = UDim2.fromOffset(12, 54)
+	-- 6 armour pips: steel shields that pop and go dark as plates break
+	local pips = {}
+	local pipRow = new("Frame", {
+		Name = "Pips",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(14, 95),
+		Size = UDim2.fromOffset(BOSS.Plates * 38, 24),
+	}, plateFace)
+	new("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		Padding = UDim.new(0, 6),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}, pipRow)
+	for i = 1, BOSS.Plates do
+		local pip = UiKit.Block(pipRow, {
+			Name = "Pip" .. i,
+			Size = Vector2.new(32, 22),
+			Fill = Color3.fromRGB(170, 178, 205),
+			Lip = Color3.fromRGB(94, 100, 136),
+			LipPx = 4,
+			Radius = 7,
+			Outline = 2,
+		})
+		pip.Holder.LayoutOrder = i
+		local rivet = new("Frame", {
+			Name = "Rivet",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromOffset(6, 6),
+			BackgroundColor3 = Color3.fromRGB(235, 240, 255),
+		}, pip.Face)
+		UiKit.Corner(rivet, 3)
+		local crack = new("Frame", {
+			Name = "Crack",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromOffset(26, 3),
+			Rotation = -35,
+			BackgroundColor3 = C.Red,
+			Visible = false,
+		}, pip.Face)
+		table.insert(pips, { Block = pip, Rivet = rivet, Crack = crack, Broken = false })
+	end
+	local function setPips(left: number)
+		for i, pip in pips do
+			local broken = i > left
+			if broken ~= pip.Broken then
+				pip.Broken = broken
+				if broken then
+					pip.Block:Paint(K.Slot, K.Ink)
+					pip.Rivet.Visible = false
+					pip.Crack.Visible = true
+					local scale = UiKit.ScaleOf(pip.Block.Holder)
+					scale.Scale = 1.6
+					UiKit.Tween(scale, 0.25, Enum.EasingStyle.Back, { Scale = 1 })
+				else
+					pip.Block:Paint(Color3.fromRGB(170, 178, 205), Color3.fromRGB(94, 100, 136))
+					pip.Rivet.Visible = true
+					pip.Crack.Visible = false
+				end
+			end
+		end
+	end
+	local damageLabel = UiKit.Text(plateFace, "", UiKit.Head, 17, C.White, 2)
+	damageLabel.TextXAlignment = Enum.TextXAlignment.Right
+	damageLabel.Position = UDim2.fromOffset(BOSS.Plates * 38 + 20, 95)
+	damageLabel.Size = UDim2.fromOffset(FACE_W - BOSS.Plates * 38 - 34, 24)
+	RewardKit.Fit(damageLabel, 17, FACE_W - BOSS.Plates * 38 - 40, 24)
+	-- Team meter (finale): its own cyan bar hanging under the plate
+	local meterBack, setMeter, meterText = kitBar(top, "Meter", C.Cyan, C.CyanLip, 420, 36)
+	meterBack.Position = UDim2.fromOffset((TOP_W - 420) / 2, PLATE_H + 4)
 
-	-- The big text in the middle (phase calls, GIANT BALL READY)
-	local call = new("Frame", {
-		Name = "Call",
+	-- The big calls (phase starts, OUCH, ON BOARD) are the kit slam banner; DODGE! is a quick red slam. Both live on
+	-- their own layer (BossUI has a phone UIScale; the kit pieces fit the screen themselves).
+	local moments = MomentKit.Layer("BossMoments", 8)
+	local banner = MomentKit.Banner(moments, 0.36)
+	local toast = RewardKit.Toast(gui)
+	local PAINT_BY_COLOR = { -- by colour hex
+		[C.Red:ToHex()] = "Red",
+		[C.Gold:ToHex()] = "Gold",
+		[C.Lime:ToHex()] = "Lime",
+		[C.Cyan:ToHex()] = "Cyan",
+		[C.Pink:ToHex()] = "Pink",
+	}
+	local function showCall(big: string, small: string, color: Color3, seconds: number?)
+		if big == "" then
+			toast(small, nil, nil, color, seconds)
+			return
+		end
+		banner(big, PAINT_BY_COLOR[color:ToHex()] or "Grey", if small ~= "" then small else nil, nil, seconds or 2.4)
+	end
+
+	local dodge = new("Frame", {
+		Name = "Dodge",
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.32),
-		Size = UDim2.fromOffset(800, 110),
+		Position = UDim2.fromScale(0.5, 0.3), -- under the fight plate
+		Size = UDim2.fromOffset(340, 96),
 		BackgroundTransparency = 1,
 		Visible = false,
-	}, gui)
-	local callBig = HudKit.Text(call, "", HudKit.Head, 64, C.Red, 4)
-	callBig.Size = UDim2.new(1, 0, 0, 72)
-	local callSmall = HudKit.Text(call, "", HudKit.Head, 26, C.White, 2.5)
-	callSmall.Position = UDim2.fromOffset(0, 74)
-	callSmall.Size = UDim2.new(1, 0, 0, 32)
-	local callToken = 0
-	local function showCall(big: string, small: string, color: Color3, seconds: number?)
-		callToken += 1
-		local token = callToken
-		callBig.Text, callSmall.Text, callBig.TextColor3 = big, small, color
-		call.Visible = true
-		UiFx.Pop(call, 1.4, 0.3)
-		task.delay(seconds or 2.4, function()
-			if callToken == token then
-				call.Visible = false
+	}, moments)
+	local dodgeFit = new("UIScale", {}, dodge)
+	local dodgePop = new("Frame", { Name = "Pop", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1) }, dodge)
+	local dodgeBlock = UiKit.Block(dodgePop, {
+		Name = "Ribbon",
+		Size = UDim2.fromScale(1, 1),
+		Fill = C.Red,
+		Lip = C.RedLip,
+		LipPx = 8,
+		Radius = 26,
+		Outline = 5,
+	})
+	local dodgeTitle = CrateKit.Title(dodgeBlock.Face, "DODGE!", 64, C.White, 4, 5)
+	new("UIPadding", { PaddingTop = UDim.new(0, 8) }, dodgeTitle)
+	local dodgeToken = 0
+	local function slamDodge(seconds: number)
+		dodgeToken += 1
+		local mine = dodgeToken
+		local area = moments.AbsoluteSize
+		dodgeFit.Scale = if area.X > 0 then math.max(0.45, math.min(1, area.X / 1920 * 1.25, area.Y / 1080 * 1.25)) else 1
+		dodge.Visible = true
+		local scale = UiKit.ScaleOf(dodgePop)
+		scale.Scale = 2.2
+		dodgePop.Rotation = -8
+		UiKit.Tween(scale, 0.22, Enum.EasingStyle.Back, { Scale = 1 })
+		UiKit.Tween(dodgePop, 0.22, Enum.EasingStyle.Back, { Rotation = 0 })
+		Sfx.Play("OverchargeWarn", 1.1, 0.7)
+		-- a little shake while it's up
+		task.spawn(function()
+			local began = os.clock()
+			while dodgeToken == mine and os.clock() - began < seconds do
+				dodgePop.Position = UDim2.fromOffset(math.random(-4, 4), math.random(-3, 3))
+				task.wait(0.04)
+			end
+			dodgePop.Position = UDim2.new()
+			if dodgeToken == mine then
+				UiKit.Tween(scale, 0.15, Enum.EasingStyle.Back, { Scale = 0 }, Enum.EasingDirection.In).Completed:Wait()
+				if dodgeToken == mine then
+					dodge.Visible = false
+				end
 			end
 		end)
+	end
+	-- Am I standing where this attack lands?
+	local function myRoot(): BasePart?
+		return player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	end
+	local function flat(v: Vector3): Vector3
+		return Vector3.new(v.X, 0, v.Z)
+	end
+	local function inDanger(data): boolean
+		local root = myRoot()
+		if not root or not player:GetAttribute("BossFighting") then
+			return false
+		end
+		local at = flat(root.Position)
+		if data.Kind == "Pins" then
+			for _, spot in data.Spots do
+				if (at - flat(spot)).Magnitude <= data.Radius + 6 then
+					return true
+				end
+			end
+		elseif data.Kind == "Roll" then
+			local a, b = flat(data.From), flat(data.To)
+			local ab = b - a
+			local t = if ab.Magnitude > 0 then math.clamp((at - a):Dot(ab) / ab:Dot(ab), 0, 1) else 0
+			return (at - (a + ab * t)).Magnitude <= data.Width / 2 + 6
+		end
+		return false
 	end
 
 	local giantBanner = new("Frame", {
 		Name = "Giant",
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 1, -150), -- just above the hint line, under the power arc
-		Size = UDim2.fromOffset(460, 46),
-		BackgroundColor3 = C.Pink,
+		Size = UDim2.fromOffset(500, 62),
+		BackgroundTransparency = 1,
 		Visible = false,
 	}, gui)
-	HudKit.Corner(giantBanner, 23)
-	HudKit.Outline(giantBanner, C.Ink, 3)
-	HudKit.Text(giantBanner, "GIANT BALL READY! HOLD + LET GO!", HudKit.Head, 24, C.White, 2.5)
+	local giantBlock = UiKit.Block(giantBanner, {
+		Name = "Ribbon",
+		Size = UDim2.fromScale(1, 1),
+		Fill = C.Pink,
+		Lip = C.PinkLip,
+		LipPx = 6,
+		Radius = 24,
+		Outline = 4,
+	})
+	local giantText = UiKit.Text(giantBlock.Face, "GIANT BALL READY! HOLD + LET GO!", UiKit.Head, 26, C.White, 3)
+	giantText.Position = UDim2.fromOffset(12, 3)
+	giantText.Size = UDim2.new(1, -24, 1, 0)
+	RewardKit.Fit(giantText, 26, 470, 46)
+	local stopGiantPulse: (() -> ())? = nil
 
 	-- Black fade for the helicopter flights
 	local fade = new("Frame", {
@@ -661,57 +966,122 @@ function BossController:Start()
 		end)
 	end
 
-	-- ===== Results =====
-	local results = new("Frame", {
-		Name = "Results",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(560, 470),
-		BackgroundColor3 = C.Panel,
-		Visible = false,
-		ZIndex = 20,
-	}, gui)
-	HudKit.Corner(results, 22)
-	HudKit.Outline(results, C.Pink, 4)
-	local resultsTitle = HudKit.Text(results, "PIN TITAN DEFEATED!", HudKit.Head, 38, C.Lime, 3)
-	resultsTitle.Size = UDim2.new(1, 0, 0, 56)
-	resultsTitle.ZIndex = 21
-	local list = new("ScrollingFrame", {
-		Position = UDim2.fromOffset(24, 60),
-		Size = UDim2.new(1, -48, 0, 200),
-		BackgroundColor3 = C.Card,
-		BorderSizePixel = 0,
-		ScrollBarThickness = 6,
-		AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		CanvasSize = UDim2.new(),
-		ZIndex = 21,
-	}, results)
-	HudKit.Corner(list, 12)
-	new("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }, list)
-	new("UIPadding", {
-		PaddingTop = UDim.new(0, 6),
-		PaddingLeft = UDim.new(0, 10),
-		PaddingRight = UDim.new(0, 10),
-	}, list)
-	local mineBox = new("Frame", {
-		Position = UDim2.fromOffset(24, 270),
-		Size = UDim2.new(1, -48, 0, 130),
+	-- ===== Results: kit window, TITAN DOWN! / THE TITAN WON =====
+	local resultsGui = new("ScreenGui", {
+		Name = "BossResultsUI",
+		ResetOnSpawn = false,
+		DisplayOrder = 9,
+		IgnoreGuiInset = true,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	}, player:WaitForChild("PlayerGui"))
+	local RW, RH = 620, 610
+	local win = RewardKit.Window(resultsGui, RW, RH)
+	local cover, closeX = RewardKit.Cover(win.Panel, RW, RH, "TITAN DOWN!", "THE PIN TITAN IS RUBBLE!", C.Lime)
+	local coverTitle = (cover:FindFirstChild("TitleBox") :: Frame):FindFirstChild("Front", true) :: TextLabel
+	local coverSub = cover:FindFirstChild("Sub") :: TextLabel
+	-- Hero row: the coins on rays + the amount, tier chip and your rank
+	local hero = new("Frame", {
+		Name = "Hero",
 		BackgroundTransparency = 1,
-		ZIndex = 21,
-	}, results)
-	local mineText = HudKit.Text(mineBox, "", HudKit.Head, 22, C.White, 2)
-	mineText.RichText = true
-	mineText.TextWrapped = true
-	mineText.TextYAlignment = Enum.TextYAlignment.Top
-	mineText.ZIndex = 22
-	local close = HudKit.Block(results, { Name = "Close", Button = true, Paint = "Lime", Radius = 14, Lip = 5 })
-	close.Holder.AnchorPoint = Vector2.new(0.5, 1)
-	close.Holder.Position = UDim2.new(0.5, 0, 1, -16)
-	close.Holder.Size = UDim2.fromOffset(200, 50)
-	close.Holder.ZIndex = 21
-	HudKit.Press(close, false, close.Holder :: any)
-	local closeText = HudKit.Text(close.Face, "AWESOME!", HudKit.Head, 26, C.White, 2.5)
-	closeText.ZIndex = 25
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromOffset(140, 168),
+		Size = UDim2.fromOffset(140, 140),
+	}, cover)
+	local heroRays = RewardKit.Rays(hero, C.Gold, 250, 10)
+	local heroIcon = RewardKit.Icon(hero, "Coins", nil, 120)
+	local coinsLabel = RewardKit.Label(cover, "", UiKit.Head, 56, C.Gold, 4, 240, 102, 356, 66)
+	coinsLabel.TextXAlignment = Enum.TextXAlignment.Left
+	local function chip(parent: Instance, w: number, h: number, size: number)
+		local block = UiKit.Block(parent, {
+			Name = "Chip",
+			Size = Vector2.new(w, h),
+			Fill = K.Chip,
+			Lip = K.Ink,
+			LipPx = 4,
+			Radius = math.floor(h / 2),
+			Outline = 3,
+		})
+		local label = UiKit.Text(block.Face, "", UiKit.Head, size, C.White, 2)
+		label.Position = UDim2.fromOffset(8, 2)
+		label.Size = UDim2.new(1, -16, 1, 0)
+		RewardKit.Fit(label, size, w - 22, h - 10)
+		return block, label
+	end
+	local tierChip, tierText = chip(cover, 150, 42, 22)
+	tierChip.Holder.Position = UDim2.fromOffset(240, 176)
+	local rankChip, rankText = chip(cover, 206, 42, 20)
+	rankChip.Holder.Position = UDim2.fromOffset(398, 176)
+	-- Extras: crate, potions, NO HITS, TOP DAMAGE as small chips in a row
+	local extras = new("Frame", {
+		Name = "Extras",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(24, 248),
+		Size = UDim2.fromOffset(RW - 48, 50),
+	}, cover)
+	new("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		Padding = UDim.new(0, 8),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}, extras)
+	local extrasScale = new("UIScale", {}, extras)
+	local extrasWidth = 0
+	local function extra(text: string, color: Color3, kind: string?, value: any?)
+		local w = math.clamp(CrateKit.TextWidth(text, UiKit.Head, 18) + (if kind then 72 else 36), 120, RW - 48)
+		local block, label = chip(extras, w, 46, 18)
+		block.Holder.LayoutOrder = #extras:GetChildren()
+		-- too many chips for one row: the whole row shrinks to fit
+		extrasWidth += w + (if extrasWidth > 0 then 8 else 0)
+		extrasScale.Scale = math.min(1, (RW - 48) / extrasWidth)
+		label.Text = text
+		label.TextColor3 = color
+		if kind then
+			label.Position = UDim2.fromOffset(46, 2)
+			label.Size = UDim2.new(1, -54, 1, 0)
+			RewardKit.Icon(block.Face, kind, value, 36, UDim2.fromOffset(24, 19))
+		end
+	end
+	-- The drop line: a strip with the pet chance, the pet you got, or the next try after a loss
+	local dropStrip = UiKit.Block(cover, {
+		Name = "Drop",
+		Size = Vector2.new(RW - 48, 52),
+		Fill = K.Card,
+		Lip = K.Ink,
+		LipPx = 4,
+		Radius = 18,
+		Outline = 3,
+	})
+	dropStrip.Holder.Position = UDim2.fromOffset(24, 306)
+	local dropSlot = new("Frame", {
+		Name = "Pet",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(6, -12),
+		Size = UDim2.fromOffset(62, 62),
+		ZIndex = 4,
+	}, dropStrip.Face)
+	local dropText = UiKit.Text(dropStrip.Face, "", UiKit.Head, 20, K.Label, 2)
+	RewardKit.Fit(dropText, 20, RW - 160, 40)
+	-- Damage board: the top 5 (you take row 5 when you are further down)
+	local board = UiKit.Block(cover, {
+		Name = "Board",
+		Size = Vector2.new(RW - 48, 162),
+		Fill = K.Page,
+		Lip = K.Ink,
+		LipPx = 0,
+		Radius = 16,
+		Outline = 3,
+	})
+	board.Holder.Position = UDim2.fromOffset(24, 368)
+	local boardList = new("Frame", {
+		Name = "List",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(8, 6),
+		Size = UDim2.new(1, -16, 1, -12),
+	}, board.Face)
+	new("UIListLayout", { Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder }, boardList)
+	local MEDALS = { C.Gold, Color3.fromRGB(210, 225, 245), Color3.fromRGB(230, 150, 90) }
+	local ok = RewardKit.Button(cover, "AWESOME!", "Lime", 240, 62, 30)
+	ok.Holder.Position = UDim2.fromOffset((RW - 240) / 2, RH - 62 - 16)
 
 	local TIER_COLORS = {
 		BRONZE = Color3.fromRGB(230, 150, 90),
@@ -720,110 +1090,237 @@ function BossController:Start()
 		TITAN = C.Pink,
 	}
 	local pendingCrate = nil
+	local stopTwinkle: (() -> ())? = nil
+	local resultsToken = 0
 	local function closeResults()
-		if not results.Visible then
-			return
+		win:Close()
+	end
+	ok.Activated:Connect(closeResults)
+	closeX.Activated:Connect(closeResults)
+	win.Closed.Event:Connect(function()
+		resultsToken += 1
+		if stopTwinkle then
+			stopTwinkle()
+			stopTwinkle = nil
 		end
-		UiFx.Close(results)
 		local crate = pendingCrate
 		pendingCrate = nil
 		if crate and CrateController.PlayOpening then
 			task.delay(0.3, CrateController.PlayOpening, crate[1], crate[2])
 		end
+	end)
+
+	local function boardRow(row, order: number)
+		local isMe = row.UserId == player.UserId
+		local line = new("Frame", {
+			Name = "Row",
+			Size = UDim2.new(1, 0, 0, 28),
+			BackgroundColor3 = K.Card,
+			BackgroundTransparency = if isMe then 0 else 1,
+			LayoutOrder = order,
+		}, boardList)
+		UiKit.Corner(line, 10)
+		if isMe then
+			UiKit.Outline(line, C.Gold, 2)
+		end
+		local disc = new("Frame", {
+			Name = "Rank",
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 4, 0.5, 0),
+			Size = UDim2.fromOffset(24, 24),
+			BackgroundColor3 = MEDALS[row.Rank] or K.Chip,
+		}, line)
+		UiKit.Corner(disc, 12)
+		UiKit.Outline(disc, K.Ink, 2)
+		UiKit.Text(disc, tostring(row.Rank), UiKit.Num, 15, C.White, 1.5)
+		local name = UiKit.Text(line, row.Name, UiKit.Head, 18, if isMe then C.Gold else C.White, 1.5)
+		name.Position = UDim2.fromOffset(36, 2)
+		name.Size = UDim2.new(0.5, -36, 1, 0)
+		name.TextXAlignment = Enum.TextXAlignment.Left
+		name.TextTruncate = Enum.TextTruncate.AtEnd
+		local tier = UiKit.Text(line, row.Tier or "-", UiKit.Head, 17, TIER_COLORS[row.Tier] or C.Grey, 1.5)
+		tier.Position = UDim2.new(0.5, 0, 0, 2)
+		tier.Size = UDim2.fromScale(0.22, 1)
+		local damage = UiKit.Text(line, Currency.Format(row.Damage), UiKit.Num, 18, C.White, 1.5)
+		damage.AnchorPoint = Vector2.new(1, 0)
+		damage.Position = UDim2.new(1, -8, 0, 0)
+		damage.Size = UDim2.fromScale(0.28, 1)
+		damage.TextXAlignment = Enum.TextXAlignment.Right
 	end
-	(close.Holder :: TextButton).Activated:Connect(closeResults)
+
+	-- "TITAN JR. PET: 10% CHANCE, 25% FOR #1" from Config.Boss.Drop
+	local function dropChanceText(): string
+		local drop = BOSS.Drop
+		if not drop then
+			return ""
+		end
+		local name = drop.Id
+		if drop.Kind == "Pet" then
+			local mascot = Mascots.Get(drop.Id)
+			name = (if mascot then mascot.Name else drop.Id) .. " PET"
+		elseif drop.Kind == "Ball" then
+			local ball = Balls.Get(drop.Id)
+			name = if ball then ball.Name else drop.Id
+		end
+		local line = ("%s: %d%% CHANCE"):format(name:upper(), math.round(drop.Chance * 100))
+		if drop.TopChance then
+			line ..= (", %d%% FOR #1"):format(math.round(drop.TopChance * 100))
+		end
+		return line
+	end
 
 	local function showResults(data)
-		for _, child in list:GetChildren() do
-			if child:IsA("Frame") then
+		resultsToken += 1
+		local token = resultsToken
+		local lost = data.Won == false
+		local rewarded = data.Tier ~= nil
+		coverTitle.Text = if lost then "THE TITAN WON" else "TITAN DOWN!"
+		coverTitle.TextColor3 = if lost then C.Red else C.Lime
+		coverSub.Text = if lost then "OUT OF TIME! IT GOT AWAY..." else "THE PIN TITAN IS RUBBLE!"
+		-- hero: coins count up
+		heroRays.ImageColor3 = if lost then C.Grey else C.Gold
+		heroRays.Visible = rewarded
+		RewardKit.Fill(heroIcon, "Coins", nil)
+		local coins = data.Coins or 0
+		if rewarded then
+			coinsLabel.TextColor3 = C.Gold
+			coinsLabel.Text = "+0 COINS"
+			local counter = Instance.new("NumberValue")
+			counter.Changed:Connect(function(v)
+				if token == resultsToken then
+					coinsLabel.Text = "+" .. Currency.Format(v) .. " COINS"
+				end
+			end)
+			task.delay(0.35, function()
+				UiKit.Tween(counter, 0.9, Enum.EasingStyle.Quad, { Value = coins }).Completed:Wait()
+				counter:Destroy()
+				if token == resultsToken then
+					coinsLabel.Text = "+" .. Currency.Format(coins) .. " COINS"
+				end
+			end)
+		else
+			coinsLabel.Text = "NO REWARD"
+			coinsLabel.TextColor3 = C.Grey
+		end
+		tierChip.Holder.Visible = rewarded
+		tierText.Text = (data.Tier or "") .. " TIER"
+		tierText.TextColor3 = TIER_COLORS[data.Tier] or C.White
+		rankText.Text = ("YOU: #%d · %d HITS"):format(data.Rank or 0, data.Hits or 0)
+		rankChip.Holder.Position = UDim2.fromOffset(if rewarded then 398 else 240, 176)
+		-- extras
+		for _, child in extras:GetChildren() do
+			if child:IsA("GuiObject") then
 				child:Destroy()
 			end
 		end
-		for _, row in data.Rows or {} do
-			local line = new("Frame", {
-				Size = UDim2.new(1, 0, 0, 28),
-				BackgroundTransparency = 1,
-				LayoutOrder = row.Rank,
-				ZIndex = 22,
-			}, list)
-			local isMe = row.UserId == player.UserId
-			local name = HudKit.Text(
-				line,
-				("%d. %s"):format(row.Rank, row.Name),
-				HudKit.Body,
-				18,
-				if isMe then C.Gold else C.White,
-				1.5
-			)
-			name.Size = UDim2.fromScale(0.5, 1)
-			name.TextXAlignment = Enum.TextXAlignment.Left
-			name.ZIndex = 23
-			local tier = HudKit.Text(line, row.Tier or "-", HudKit.Head, 18, TIER_COLORS[row.Tier] or C.Grey, 1.5)
-			tier.Position = UDim2.fromScale(0.5, 0)
-			tier.Size = UDim2.fromScale(0.22, 1)
-			tier.ZIndex = 23
-			local damage = HudKit.Text(line, Currency.Format(row.Damage), HudKit.Num, 18, C.White, 1.5)
-			damage.AnchorPoint = Vector2.new(1, 0)
-			damage.Position = UDim2.fromScale(1, 0)
-			damage.Size = UDim2.fromScale(0.28, 1)
-			damage.TextXAlignment = Enum.TextXAlignment.Right
-			damage.ZIndex = 23
-		end
-		local lines = {}
-		if data.Won == false then
-			table.insert(lines, '<font color="#FF2D4A">OUT OF TIME! SMALL REWARD ONLY</font>')
-		end
-		if data.Tier then
-			local color = (TIER_COLORS[data.Tier] or C.White):ToHex()
-			table.insert(lines, ('YOUR TIER: <font color="#%s">%s</font>  (#%d)'):format(color, data.Tier, data.Rank))
-			table.insert(lines, ('<font color="#FFC93A">+%s COINS</font>'):format(Currency.Format(data.Coins or 0)))
-			table.insert(
-				lines,
-				if (data.HitsTaken or 0) == 0
-					then '<font color="#7DFF3C">NO HITS TAKEN!</font>'
-					else ("HITS TAKEN: %d"):format(data.HitsTaken)
-			)
-			if data.TopBonus and data.TopBonus > 0 then
-				table.insert(lines, "TOP DAMAGE BONUS INCLUDED!")
-			end
+		extrasWidth = 0
+		extrasScale.Scale = 1
+		pendingCrate = nil
+		if rewarded then
 			local crate = Balls.GetCrate(data.CrateId)
 			if crate then
-				table.insert(lines, "+ " .. crate.Name:upper())
+				extra("+ " .. crate.Name:upper(), C.White, "Crate", crate.Id)
 				pendingCrate = if data.Crate then { crate, data.Crate } else nil
 			end
 			for _, potion in data.Potions or {} do
-				local row = nil
-				for _, item in Config.Potions.List do
-					if item.Id == potion.Id then
-						row = item
-					end
-				end
-				table.insert(lines, ("+ %d %s"):format(potion.Count, (row and row.Name or potion.Id):upper()))
+				local row = RewardKit.PotionById(potion.Id)
+				extra(
+					("+%d %s"):format(potion.Count, (if row then row.Name else potion.Id):upper()),
+					C.White,
+					"Potion",
+					potion.Id
+				)
 			end
-			if data.Drop then
-				table.insert(lines, ('<font color="#FF4FB0">BOSS DROP: %s!</font>'):format(data.Drop.Name:upper()))
+			if data.TopBonus and data.TopBonus > 0 then
+				extra("TOP DAMAGE BONUS!", C.Gold)
+			end
+			if (data.HitsTaken or 0) == 0 then
+				extra("NO HITS TAKEN!", C.Lime)
+			else
+				extra(("GOT HIT %d TIMES"):format(data.HitsTaken), K.Label)
 			end
 		else
-			table.insert(lines, "LAND A HIT TO EARN REWARDS NEXT TIME!")
+			extra("LAND A HIT TO EARN REWARDS NEXT TIME!", K.Label)
 		end
-		mineText.Text = table.concat(lines, "\n")
-		local lost = data.Won == false
-		resultsTitle.Text = if lost then "THE TITAN GOT AWAY!" else "PIN TITAN DEFEATED!"
-		resultsTitle.TextColor3 = if lost then C.Red else C.Lime
-		closeText.Text = if lost then "OK" else "AWESOME!"
-		UiFx.Open(results)
+		-- drop strip
+		dropSlot:ClearAllChildren()
+		dropText.Position = UDim2.fromOffset(16, 3)
+		dropText.Size = UDim2.new(1, -32, 1, -4)
+		dropText.TextColor3 = K.Label
+		if lost then
+			dropText.TextColor3 = C.Gold
+			task.spawn(function()
+				local at = nextSlot()
+				while token == resultsToken do
+					dropText.Text = "NEXT TRY IN " .. clock(at - Workspace:GetServerTimeNow())
+					task.wait(0.5)
+				end
+			end)
+		elseif data.Drop then
+			dropText.Position = UDim2.fromOffset(76, 3)
+			dropText.Size = UDim2.new(1, -92, 1, -4)
+			dropText.Text = ("BOSS DROP: YOU GOT %s!"):format(data.Drop.Name:upper())
+			dropText.TextColor3 = C.Pink
+			local mascot = data.Drop.Kind == "Pet" and Mascots.Get(data.Drop.Id)
+			local ball = data.Drop.Kind == "Ball" and Balls.Get(data.Drop.Id)
+			if mascot then
+				local view = MascotView.Viewport(dropSlot, MascotView.Mascot(mascot, 2, false), 0.95)
+				view.ZIndex = 5
+			elseif ball then
+				local view = BallView.New(ball, { Spin = true })
+				view.Size = UDim2.fromScale(1, 1)
+				view.ZIndex = 5
+				view.Parent = dropSlot
+			else
+				RewardKit.Icon(dropSlot, "Crate", data.Drop.Id, 56)
+			end
+			task.delay(0.7, RewardKit.Stamp, dropStrip.Holder)
+		else
+			dropText.Text = dropChanceText()
+		end
+		-- board
+		for _, child in boardList:GetChildren() do
+			if child:IsA("GuiObject") then
+				child:Destroy()
+			end
+		end
+		local rows = data.Rows or {}
+		for i = 1, math.min(5, #rows) do
+			local row = rows[i]
+			if i == 5 and (data.Rank or 0) > 5 and rows[data.Rank] then
+				row = rows[data.Rank]
+			end
+			boardRow(row, i)
+		end
+		ok:SetText(if lost then "OK" else "AWESOME!")
+		ok:Paint(if lost then C.Grey else C.Lime, if lost then C.GreyLip else C.LimeLip)
+		win:Open()
+		RewardKit.Stagger(
+			{ hero, coinsLabel, tierChip.Holder, rankChip.Holder, dropStrip.Holder, board.Holder },
+			0.06,
+			0.15
+		)
+		if stopTwinkle then
+			stopTwinkle()
+			stopTwinkle = nil
+		end
 		if lost then
 			Sfx.Play("StreakLost", 0.7)
 		else
-			UiFx.Confetti(nil, 40)
+			stopTwinkle = RewardKit.Twinkle(hero, 5, C.Gold)
+			CrateKit.Confetti(cover, 0, -60, 40, 300, 0.7)
 			Sfx.Play("RevealBig")
 		end
 		if data.Drop then
-			task.delay(0.6, function()
+			task.delay(0.9, function()
 				showCall("BOSS DROP!", data.Drop.Name:upper(), C.Pink, 2.5)
 			end)
 		end
-		task.delay(BOSS.ResultsSeconds - 1, closeResults)
+		task.delay(BOSS.ResultsSeconds - 1, function()
+			if token == resultsToken then
+				closeResults()
+			end
+		end)
 	end
 
 	eventRemote.OnClientEvent:Connect(function(kind: string, data)
@@ -832,6 +1329,9 @@ function BossController:Start()
 		elseif kind == "Return" then
 			closeResults()
 			flight("FLYING BACK...", data.Seconds)
+			task.delay(data.Seconds + 1.5, function()
+				toast("NEXT BOSS FLIGHT IN " .. clock(nextSlot() - Workspace:GetServerTimeNow()), nil, nil, C.Gold, 3.5)
+			end)
 		elseif kind == "Throw" then
 			fly(data)
 		elseif kind == "Hit" then
@@ -841,6 +1341,9 @@ function BossController:Start()
 		elseif kind == "Results" then
 			showResults(data)
 		elseif kind == "Attack" then
+			if inDanger(data) then
+				slamDodge(math.clamp((data.ImpactAt or data.StartsAt or 0) - Workspace:GetServerTimeNow(), 0.6, 1.2))
+			end
 			if data.Kind == "Pins" then
 				pinAttack(data)
 			elseif data.Kind == "Roll" then
@@ -879,6 +1382,7 @@ function BossController:Start()
 
 	-- ===== Every frame-ish: lobby countdown, siren, HUD numbers =====
 	local lastSiren = 0
+	local lastToastMode = "Wait"
 	local warnedAt = nil -- the FightEndsAt the 30-seconds-left call was shown for
 	local function inLobby(): boolean
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -894,21 +1398,20 @@ function BossController:Start()
 		local fighting = player:GetAttribute("BossFighting") == true
 		local boarded = player:GetAttribute("BossBoarded") == true
 
-		-- What the lobby says
-		local text, color = "", C.White
-		local siren = false
+		-- What the lobby says (sign over the helipad + the pill)
+		local text, color, mode = "", C.White, "Wait"
 		if eventState == "Boarding" then
 			if boarded then
-				text, color = "ON BOARD! TAKEOFF IN " .. clock(boardingEnds - now), C.Lime
+				text, color, mode = "ON BOARD! TAKEOFF IN " .. clock(boardingEnds - now), C.Lime, "OnBoard"
 			else
-				text, color = "HELICOPTER BOARDING! " .. clock(boardingEnds - now), C.Gold
+				text, color, mode = "BOARD NOW! HELIPAD " .. clock(boardingEnds - now), C.Gold, "Board"
 			end
 		elseif eventState == "Fight" or eventState == "Results" then
-			text, color = "PIN TITAN FIGHT IN PROGRESS", C.Grey
+			text, color, mode = "PIN TITAN FIGHT IN PROGRESS", C.Grey, "Busy"
 		else
 			local left = opensAt - now
 			if left <= BOSS.SirenSeconds then
-				text, color, siren = "BOSS INCOMING! BOARDING IN " .. clock(left), C.Red, true
+				text, color, mode = "BOSS INCOMING! BOARDING IN " .. clock(left), C.Red, "Siren"
 			else
 				text, color = "PIN TITAN IN " .. clock(left), C.White
 			end
@@ -920,26 +1423,31 @@ function BossController:Start()
 		if prompt then
 			prompt.Enabled = unlocked and eventState == "Boarding" and not boarded and not fighting
 		end
-		local showPill = unlocked and not fighting and inLobby()
+		local here = inLobby()
+		local showPill = unlocked and not fighting and here
 		pill.Visible = showPill
 		if showPill then
 			pillText.Text = text
-			pillText.TextColor3 = color
-			pillStroke.Color = if siren then C.Red elseif eventState == "Boarding" then C.Gold else C.Pink
-			if siren then
-				-- flashing pill + siren every 2 seconds
-				pill.BackgroundColor3 = if math.floor(now * 2) % 2 == 0 then C.RedLip else C.Panel
-				if os.clock() - lastSiren >= 2 then
-					lastSiren = os.clock()
-					Sfx.Play("BossSiren")
-					UiFx.Flash(C.Red, 0.15, 0.5)
-				end
-			else
-				pill.BackgroundColor3 = C.Panel
+			pillText.TextColor3 = if mode == "Busy" then C.Grey else C.White
+			paintPill(mode, math.floor(now * 2) % 2 == 0)
+			if mode == "Siren" and os.clock() - lastSiren >= 2 then
+				-- siren every 2 seconds while the pill flashes
+				lastSiren = os.clock()
+				Sfx.Play("BossSiren")
+				UiFx.Flash(C.Red, 0.15, 0.5)
 			end
 		end
+		-- Boss toasts for players with the zone who are somewhere else: siren, then boarding
+		if unlocked and not fighting and not here and mode ~= lastToastMode then
+			if mode == "Siren" then
+				toast("NEXT BOSS FLIGHT IN " .. clock(opensAt - now) .. "! GO TO THE SKYLINE HELIPAD", nil, nil, C.Red, 4)
+			elseif mode == "Board" then
+				toast("FLY TO THE BOSS! THE HELICOPTER IS BOARDING NOW", nil, nil, C.Gold, 4)
+			end
+		end
+		lastToastMode = mode
 
-		-- The fight HUD (it takes the level bar's place at the top; the bar comes back after the fight)
+		-- The fight plate (it takes the level bar's place at the top; the bar comes back after the fight)
 		top.Visible = fighting
 		local hud = player.PlayerGui:FindFirstChild("HUD")
 		local rankBar = hud and hud:FindFirstChild("RankBar") :: GuiObject?
@@ -950,11 +1458,12 @@ function BossController:Start()
 			local phase = state:GetAttribute("Phase") or "Intro"
 			local hp = state:GetAttribute("Health") or 0
 			local maxHp = math.max(1, state:GetAttribute("MaxHealth") or 1)
-			healthFill.Size = UDim2.fromScale(math.clamp(hp / maxHp, 0, 1), 1)
-			healthFill.Visible = hp > 0
+			setHealth(hp / maxHp)
 			healthText.Text = Currency.Format(hp) .. " / " .. Currency.Format(maxHp)
-			local plates = state:GetAttribute("Plates") or 0
-			phaseLabel.Text = if phase == "Armor" then ("ARMOR: %d PLATES"):format(plates) else PHASE_NAMES[phase] or ""
+			local plates = if phase == "Intro" then BOSS.Plates else state:GetAttribute("Plates") or 0
+			setPips(plates)
+			phaseLabel.Text = if phase == "Armor" then ("ARMOR: %d LEFT"):format(plates) else PHASE_NAMES[phase] or ""
+			phaseLabel.TextColor3 = if phase == "Core" then C.Gold elseif phase == "Giant" then C.Pink else C.Gold
 			-- 30 seconds left before the Titan escapes
 			local fightEnds = state:GetAttribute("FightEndsAt")
 			if
@@ -972,7 +1481,7 @@ function BossController:Start()
 			if showMeter then
 				local goal = math.max(1, state:GetAttribute("MeterGoal") or 1)
 				local fill = state:GetAttribute("Meter") or 0
-				meterFill.Size = UDim2.fromScale(math.clamp(fill / goal, 0, 1), 1)
+				setMeter(fill / goal)
 				meterText.Text = if fill >= goal
 					then "TEAM METER FULL!"
 					else ("TEAM METER %d%%"):format(fill / goal * 100)
@@ -980,18 +1489,33 @@ function BossController:Start()
 			local endsAt = if phase == "Giant"
 				then state:GetAttribute("GiantEndsAt")
 				else state:GetAttribute("FightEndsAt")
-			timerLabel.Text = if endsAt and phase ~= "Defeated" then clock(endsAt - now) else ""
-			timerLabel.TextColor3 = if endsAt and endsAt - now <= 20 then C.Red else C.White
+			timerLabel.Text = if endsAt and phase ~= "Defeated" then clock(endsAt - now) else "--"
+			local urgent = endsAt ~= nil and phase ~= "Defeated" and endsAt - now <= 20
+			timerLabel.TextColor3 = if urgent then C.Red else C.White
+			if urgent and not stopTimerPulse then
+				stopTimerPulse = RewardKit.Pulse(timerChip.Holder, 1.12, 0.25)
+			elseif not urgent and stopTimerPulse then
+				stopTimerPulse()
+				stopTimerPulse = nil
+			end
 			local streak = player:GetAttribute("BossStreak") or 0
 			local dazed = now < (player:GetAttribute("BossDazedUntil") or 0)
-			damageLabel.Text = ("YOUR DAMAGE %s%s"):format(
+			damageLabel.Text = ("YOU: %s%s"):format(
 				Currency.Format(player:GetAttribute("BossDamage") or 0),
-				if dazed then "   DAZED!" elseif streak >= 2 then ("   PERFECT x%d"):format(streak) else ""
+				if dazed then "  ·  DAZED!" elseif streak >= 2 then ("  ·  PERFECT x%d"):format(streak) else ""
 			)
-			damageLabel.TextColor3 = if dazed then C.Red else C.White
-			damageLabel.Position = UDim2.fromOffset(0, if showMeter then 94 else 66)
+			damageLabel.TextColor3 = if dazed then C.Red elseif streak >= 2 then C.Gold else C.White
 		end
-		giantBanner.Visible = fighting and player:GetAttribute("BossGiant") == true
+		local giant = fighting and player:GetAttribute("BossGiant") == true
+		if giant ~= giantBanner.Visible then
+			giantBanner.Visible = giant
+			if giant then
+				stopGiantPulse = RewardKit.Pulse(giantBanner, 1.07, 0.35)
+			elseif stopGiantPulse then
+				stopGiantPulse()
+				stopGiantPulse = nil
+			end
+		end
 		task.wait(0.1)
 	end
 end

@@ -877,7 +877,7 @@ local function payRewards(won: boolean)
 	local mines = {}
 	for rank, entry in list do
 		local player, f = entry.Player, entry.F
-		local mine = { Rank = rank, Damage = f.Damage, Coins = 0, HitsTaken = f.HitsTaken }
+		local mine = { Rank = rank, Damage = f.Damage, Hits = f.Hits, Coins = 0, HitsTaken = f.HitsTaken }
 		if f.Hits >= BOSS.MinHits and PlayerDataService.IsLoaded(player) then
 			local share = f.Damage / fair
 			local tier = BOSS.Tiers[1]

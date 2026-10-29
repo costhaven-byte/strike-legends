@@ -30,6 +30,11 @@ local Zones = require(Shared.Modules.Zones)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules:WaitForChild("Sfx"))
 local HudKit = require(Modules:WaitForChild("HudKit"))
+local BallView = require(Modules:WaitForChild("BallView"))
+local CrateKit = require(Modules:WaitForChild("CrateKit"))
+local RewardKit = require(Modules:WaitForChild("RewardKit"))
+local UiKit = require(Modules:WaitForChild("UiKit"))
+local Balls = require(Shared.Modules.Balls)
 
 local player = Players.LocalPlayer
 
@@ -1786,114 +1791,198 @@ function StoreController:Start()
 	popupNoBody.Activated:Connect(closePopup)
 	popupCloseBody.Activated:Connect(closePopup)
 
-	-- ===== Offer popup (hard stop / rare pull) =====
+	-- ===== Offer popups (hard stop / rare pull): kit windows, UI pass batch 6 =====
+	-- Never pushy: no timers, NO THANKS is as big as the buy button, the X and the backdrop close it too.
+	-- STUCK AT THE WALL? = the next coin boost step (or the 2X pass) at a locked zone; NICE PULL! = a trail for the
+	-- ball you just pulled (buying a look wears it, so the button says WEAR IT).
+	local RC = RewardKit.C
 	local offerOpen = false
 	local offerData = nil
-	local offerPopup, offerGroup, offerContent = panelShell(overlay, "OfferPopup", 24, 4, C.Gold, 3, 6)
-	offerPopup.AnchorPoint = Vector2.new(0.5, 0.5)
-	offerPopup.Position = UDim2.fromScale(0.5, 0.5)
-	offerPopup.Size = UDim2.fromOffset(380, 236)
-	innerRing(offerGroup, C.Ink, 2, 7, 24, 20)
-	local offerBody =
-		make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 6 }, offerContent)
-	pad(offerBody, 8, 10, 10, 10)
-	local offerTitle = label(offerBody, "", HEAD, 26, C.Gold, 7)
-	offerTitle.TextXAlignment = Enum.TextXAlignment.Left
-	offerTitle.TextTruncate = Enum.TextTruncate.AtEnd
-	offerTitle.Position = UDim2.fromOffset(4, 5)
-	offerTitle.Size = UDim2.new(1, -50, 0, 38)
-	local offerCloseHolder, offerCloseFace, offerCloseBody = chunky(offerBody, {
-		Name = "Close",
-		Size = UDim2.fromOffset(44, 44),
-		Radius = 12,
-		Color = C.Grey,
-		Lip = C.GreyLip,
-		LipHeight = 3,
-		Drop = 3,
-		Outline = 3,
-		Highlight = 0,
-		HighlightAlpha = 0,
-	})
-	offerCloseHolder.AnchorPoint = Vector2.new(1, 0)
-	offerCloseHolder.Position = UDim2.new(1, 4, 0, -2)
-	local offerX = label(offerCloseFace, "X", HEAD, 22, C.White, 5)
-	offerX.Position = UDim2.fromOffset(0, 2)
-	-- The picture tile (a pass/boost icon, or a look's colour swatch) and the line next to it
-	local offerTile = make("Frame", {
-		BackgroundColor3 = C.Card,
-		Position = UDim2.fromOffset(0, 50),
-		Size = UDim2.fromOffset(100, 100),
-	}, offerBody)
-	corner(offerTile, 16)
-	innerRing(offerTile, C.Ink, 2.5, 0, 16, 5)
-	local offerIcon = image(offerTile, "XpStar", 72, {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		ZIndex = 6,
-	})
-	local offerSwatch = make("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(72, 72),
-		ZIndex = 6,
-		Visible = false,
-	}, offerTile)
-	corner(offerSwatch, 14)
-	stroke(offerSwatch, C.Ink, 3)
-	local offerGradient = make("UIGradient", { Rotation = 45 }, offerSwatch)
-	local offerText = label(offerBody, "", BOLD, 15, C.White)
-	offerText.TextWrapped = true
-	offerText.TextXAlignment = Enum.TextXAlignment.Left
-	offerText.TextYAlignment = Enum.TextYAlignment.Center
-	offerText.Position = UDim2.fromOffset(112, 50)
-	offerText.Size = UDim2.new(1, -112, 0, 100)
-	local offerBuyHolder, offerBuyFace, offerBuyBody = chunky(offerBody, {
-		Name = "Buy",
-		Size = UDim2.new(0.5, -5, 0, 48),
-		Radius = 14,
-		Color = C.Lime,
-		Down = C.LimeDown,
-		Lip = C.LimeLip,
-		LipHeight = 4,
-		Drop = 4,
-		Outline = 3,
-		Highlight = 3,
-		HighlightAlpha = 0.55,
-	})
-	offerBuyHolder.AnchorPoint = Vector2.new(0, 1)
-	offerBuyHolder.Position = UDim2.new(0, 0, 1, -4)
-	local offerPriceRow, offerAmount = priceContent(offerBuyFace, 22, 24, 6, 4)
-	local offerPriceIcon = offerPriceRow:FindFirstChildOfClass("ImageLabel")
-	local offerNoHolder, offerNoFace, offerNoBody = chunky(offerBody, {
-		Name = "NoThanks",
-		Size = UDim2.new(0.5, -5, 0, 48),
-		Radius = 14,
-		Color = C.Grey,
-		Lip = C.GreyLip,
-		LipHeight = 4,
-		Drop = 4,
-		Outline = 3,
-		Highlight = 3,
-		HighlightAlpha = 0.25,
-	})
-	offerNoHolder.AnchorPoint = Vector2.new(1, 1)
-	offerNoHolder.Position = UDim2.new(1, 0, 1, -4)
-	local offerNoText = label(offerNoFace, "NO THANKS", HEAD, 19, C.White, 5)
-	offerNoText.Position = UDim2.fromOffset(0, 1)
-	offerNoText.Size = UDim2.new(1, 0, 1, -4)
+	local offerGui = make("ScreenGui", {
+		Name = "OfferUI",
+		ResetOnSpawn = false,
+		IgnoreGuiInset = true,
+		DisplayOrder = 30,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	}, playerGui)
 
+	-- A lime price button: words, then the gem/Robux icon and the amount; set(iconName, amount)
+	local function priceButton(parent: Instance, words: string, w: number, h: number)
+		local button = RewardKit.Button(parent, words, "Lime", w, h, 26)
+		button.Label.LayoutOrder = 1
+		button.Icon.LayoutOrder = 2
+		button.Icon.Visible = true
+		button.Icon.Size = UDim2.fromOffset(30, 30)
+		local amount = UiKit.Text(button.Row, "", UiKit.Num, 28, RC.White, 3)
+		amount.Name = "Amount"
+		amount.LayoutOrder = 3
+		amount.AutomaticSize = Enum.AutomaticSize.X
+		amount.Size = UDim2.fromScale(0, 1)
+		local function set(iconName: string, text: string)
+			button.Icon.Image = AssetSlots.Image(iconName)
+			amount.Text = text
+		end
+		return button, set
+	end
+	local function noThanks(parent: Instance, w: number, h: number)
+		return RewardKit.Button(parent, "NO THANKS", "Grey", w, h, 24)
+	end
+
+	-- STUCK AT THE WALL?
+	local WW, WH = 460, 330
+	local wallWin = RewardKit.Window(offerGui, WW, WH)
+	local wallCover, wallX = RewardKit.Cover(wallWin.Panel, WW, WH, "STUCK AT THE WALL?", "", RC.Gold)
+	local wallSub = wallCover:FindFirstChild("Sub") :: TextLabel
+	-- the long title shrinks to stay clear of the X
+	RewardKit.Fit((wallCover:FindFirstChild("TitleBox") :: Frame):FindFirstChild("Front", true) :: TextLabel, 44, WW - 140, 54)
+	local wallCard = UiKit.Block(wallCover, {
+		Name = "Card",
+		Size = Vector2.new(WW - 48, 128),
+		Fill = RC.Card,
+		Lip = RC.Page,
+		LipPx = 6,
+		Radius = 18,
+		Outline = 3,
+	})
+	wallCard.Holder.Position = UDim2.fromOffset(24, 100)
+	local wallTile = UiKit.Block(wallCard.Face, {
+		Name = "Tile",
+		Size = Vector2.new(100, 100),
+		Fill = RC.Slot,
+		Lip = RC.Ink,
+		LipPx = 0,
+		Radius = 16,
+		Outline = 3,
+		Ring = RC.Gold,
+	})
+	wallTile.Holder.Position = UDim2.fromOffset(8, 8)
+	wallTile.Face.ClipsDescendants = true
+	RewardKit.Rays(wallTile.Face, RC.Gold, 170, 12)
+	local wallIcon = make("ImageLabel", {
+		Name = "Icon",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(74, 74),
+		ScaleType = Enum.ScaleType.Fit,
+		ZIndex = 4,
+	}, wallTile.Face)
+	local wallName = RewardKit.Label(wallCard.Face, "", UiKit.Head, 28, RC.Gold, 3, 122, 12, WW - 48 - 140, 40)
+	wallName.TextXAlignment = Enum.TextXAlignment.Left
+	local wallLine = RewardKit.Label(wallCard.Face, "", UiKit.Body, 16, RC.Label, 0, 124, 54, WW - 48 - 144, 52)
+	wallLine.TextWrapped = true
+	wallLine.TextXAlignment = Enum.TextXAlignment.Left
+	wallLine.TextYAlignment = Enum.TextYAlignment.Top
+	local BW = (WW - 48 - 14) / 2
+	local wallBuy, setWallPrice = priceButton(wallCover, "", BW, 64)
+	wallBuy.Holder.Position = UDim2.fromOffset(24, WH - 64 - 22)
+	local wallNo = noThanks(wallCover, BW, 64)
+	wallNo.Holder.Position = UDim2.fromOffset(24 + BW + 14, WH - 64 - 22)
+
+	-- NICE PULL!
+	local PW, PH = 480, 350
+	local pullWin = RewardKit.Window(offerGui, PW, PH)
+	local pullCover, pullX = RewardKit.Cover(pullWin.Panel, PW, PH, "NICE PULL!", "", RC.Pink)
+	local pullSub = pullCover:FindFirstChild("Sub") :: TextLabel
+	local pullSlot = UiKit.Block(pullCover, {
+		Name = "Slot",
+		Size = Vector2.new(150, 150),
+		Fill = RC.Slot,
+		Lip = RC.Ink,
+		LipPx = 6,
+		Radius = 20,
+		Outline = 3,
+		Ring = RC.Pink,
+	})
+	pullSlot.Holder.Position = UDim2.fromOffset(24, 100)
+	pullSlot.Face.ClipsDescendants = true
+	local pullSlotRing = (pullSlot.Face:FindFirstChild("Ring") :: Frame):FindFirstChildOfClass("UIStroke") :: UIStroke
+	local pullRays = RewardKit.Rays(pullSlot.Face, RC.Pink, 240, 10)
+	local pullBall = make("Frame", {
+		Name = "Ball",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(118, 118),
+		ZIndex = 4,
+	}, pullSlot.Face)
+	local RX = 24 + 150 + 18
+	local RWIDTH = PW - RX - 24
+	local pullAsk = RewardKit.Label(pullCover, "Give it a", UiKit.Body, 17, RC.Label, 0, RX, 100, RWIDTH, 24)
+	pullAsk.TextXAlignment = Enum.TextXAlignment.Left
+	local pullName = RewardKit.Label(pullCover, "", UiKit.Head, 32, RC.Pink, 3, RX, 122, RWIDTH, 44)
+	pullName.TextXAlignment = Enum.TextXAlignment.Left
+	-- Trail preview strip: the look's colours streaking out behind a little ball, sliding along
+	local strip = UiKit.Block(pullCover, {
+		Name = "Strip",
+		Size = Vector2.new(RWIDTH, 50),
+		Fill = RC.Slot,
+		Lip = RC.Ink,
+		LipPx = 0,
+		Radius = 25,
+		Outline = 3,
+	})
+	strip.Holder.Position = UDim2.fromOffset(RX, 172)
+	strip.Face.ClipsDescendants = true
+	local streak = make("Frame", {
+		Name = "Streak",
+		BackgroundColor3 = RC.White,
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 8, 0.5, 0),
+		Size = UDim2.new(1, -46, 0, 22),
+		ZIndex = 3,
+	}, strip.Face)
+	UiKit.Corner(streak, 11)
+	local streakColors = make("UIGradient", {
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.35, 0.45),
+			NumberSequenceKeypoint.new(1, 0),
+		}),
+	}, streak)
+	local stripBall = make("Frame", {
+		Name = "Ball",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -6, 0.5, 0),
+		Size = UDim2.fromOffset(38, 38),
+		ZIndex = 5,
+	}, strip.Face)
+	local pullNote = RewardKit.Label(pullCover, "Looks only. Everyone sees it.", UiKit.Body, 14, RC.Muted, 0, RX, 228, RWIDTH, 20)
+	pullNote.TextXAlignment = Enum.TextXAlignment.Left
+	local PBW = (PW - 48 - 14) / 2
+	local pullBuy, setPullPrice = priceButton(pullCover, "WEAR IT", PBW, 64)
+	pullBuy.Holder.Position = UDim2.fromOffset(24, PH - 64 - 22)
+	local pullNo = noThanks(pullCover, PBW, 64)
+	pullNo.Holder.Position = UDim2.fromOffset(24 + PBW + 14, PH - 64 - 22)
+
+	local stopFx: { () -> () } = {}
+	local function stopEffects()
+		for _, stop in stopFx do
+			stop()
+		end
+		table.clear(stopFx)
+	end
 	local function closeOffer()
 		if not offerOpen then
 			return
 		end
 		offerOpen = false
 		offerData = nil
-		hideBackdrop()
-		closePanel(offerPopup, offerGroup, function()
-			return not offerOpen
+		stopEffects()
+		wallWin:Close()
+		pullWin:Close()
+	end
+	for _, win in { wallWin, pullWin } do
+		win.Closed.Event:Connect(function()
+			if offerOpen then -- backdrop tap or B closed it
+				offerOpen = false
+				offerData = nil
+				stopEffects()
+			end
 		end)
 	end
-	offerBuyBody.Activated:Connect(function()
+	local function buyOffer()
 		local data = offerData
 		if not data then
 			return
@@ -1911,53 +2000,92 @@ function StoreController:Start()
 				buyRemote:FireServer(Cosmetics.Product(item).Id)
 			end
 		else
-			buyRemote:FireServer(data.Id) -- the XP BOOST step or the 2X pass
+			buyRemote:FireServer(data.Id) -- the coin boost step or the 2X pass
 		end
 		closeOffer()
-	end)
-	offerNoBody.Activated:Connect(closeOffer)
-	offerCloseBody.Activated:Connect(closeOffer)
+	end
+	wallBuy.Activated:Connect(buyOffer)
+	pullBuy.Activated:Connect(buyOffer)
+	for _, button in { wallNo, pullNo, wallX, pullX } :: { any } do
+		button.Activated:Connect(closeOffer)
+	end
 
-	-- Fills the popup for one offer; false when there's nothing to show (bought meanwhile, unknown id)
+	-- Fills the right popup for one offer; false when there's nothing to show (bought meanwhile, unknown id)
+	local fillWin = nil
 	local function fillOffer(data): boolean
-		local robux, gems
 		if data.Kind == "Look" then
 			local item = Cosmetics.Get(data.Id)
 			if not item or Cosmetics.Owns(player, item.Id) then
 				return false
 			end
 			local product = Cosmetics.Product(item)
-			gems = item.Gems
-			robux = product and product.Robux
-			offerSwatch.Visible = true
-			offerIcon.Visible = false
-			offerGradient.Color = Cosmetics.Sequence(item)
-		else
-			local pass = Store.Pass(data.Id)
-			local product = Store.Product(data.Id)
-			if pass and Store.Owns(player, pass.Id) then
+			if not item.Gems and not (product and product.Robux) then
 				return false
 			end
-			if product and product.Ladder and Store.NextStep(player, product.Ladder) ~= product then
-				return false
+			local ball = Balls.Get(data.BallId)
+			local rarity = ball and UiKit.Rarity[ball.Rarity]
+			local tint = if rarity then rarity[1] else RC.Pink
+			pullSub.Text = if ball then ("%s JOINED YOUR BAG!"):format(ball.Name:upper()) else "A NEW BALL!"
+			pullSlotRing.Color = tint
+			pullRays.ImageColor3 = tint
+			if ball then
+				BallView.Put(pullBall, ball, { Spin = true })
+				BallView.Put(stripBall, ball, { Spin = true })
 			end
-			robux = (pass and pass.Robux) or (product and product.Robux)
-			offerSwatch.Visible = false
-			offerIcon.Visible = true
-			offerIcon.Image = AssetSlots.Image(if pass then (ICONS[pass.Id] or "Pass2x") else "XpStar")
+			pullName.Text = item.Name:upper() .. "?"
+			streakColors.Color = Cosmetics.Sequence(item)
+			setPullPrice(
+				if item.Gems then "Gem" else "Robux",
+				if item.Gems then tostring(item.Gems) else formatRobux((product :: any).Robux)
+			)
+			fillWin = pullWin
+			return true
 		end
-		if not robux and not gems then
+		local pass = Store.Pass(data.Id)
+		local product = Store.Product(data.Id)
+		if pass and Store.Owns(player, pass.Id) then
 			return false
 		end
-		local color = if data.Kind == "Look" then C.Pink else C.Gold
-		offerTitle.Text = tostring(data.Title or "")
-		offerTitle.TextColor3 = color
-		offerText.Text = tostring(data.Text or "")
-		if offerPriceIcon then
-			offerPriceIcon.Image = AssetSlots.Image(if gems then "Gem" else "Robux")
+		if product and product.Ladder and Store.NextStep(player, product.Ladder) ~= product then
+			return false
 		end
-		offerAmount.Text = if gems then tostring(gems) else formatRobux(robux)
+		local robux = (pass and pass.Robux) or (product and product.Robux)
+		if not robux then
+			return false
+		end
+		wallSub.Text = if data.ZoneName
+			then ("%s OPENS AFTER %s"):format(data.ZoneName, data.Need or "")
+			else tostring(data.Title or "")
+		wallIcon.Image = AssetSlots.Image(if pass then (ICONS[pass.Id] or "Pass2x") else "BoostCoin")
+		wallName.Text = data.OfferName or (if pass then pass.Name:upper() else "COIN BOOST")
+		wallLine.Text = if pass then "Gets you there twice as fast. Forever." else "Gets you there faster. Forever."
+		setWallPrice("Robux", formatRobux(robux))
+		fillWin = wallWin
 		return true
+	end
+	local function openOffer()
+		local win = fillWin
+		if not win then
+			return
+		end
+		win:Open()
+		if win == pullWin then
+			-- the streak slides and sparkles while the popup is up
+			local running = true
+			table.insert(stopFx, function()
+				running = false
+			end)
+			task.spawn(function()
+				local t = 0
+				while running do
+					t += task.wait()
+					streakColors.Offset = Vector2.new(math.sin(t * 3) * 0.06, 0)
+				end
+			end)
+			table.insert(stopFx, RewardKit.Twinkle(strip.Holder, 4, RC.White))
+			CrateKit.Confetti(pullCover, 0, -40, 16, 180, 0.6)
+		end
+		RewardKit.Stagger({ wallCard.Holder, pullSlot.Holder, strip.Holder }, 0.06, 0.15)
 	end
 
 	-- Tapping the dark backdrop or gamepad B closes whatever is open
@@ -2046,8 +2174,7 @@ function StoreController:Start()
 		end
 		offerData = data
 		offerOpen = true
-		showBackdrop()
-		openPanel(offerPopup, offerGroup)
+		openOffer()
 		Sfx.Play("Reveal", 0.9)
 	end)
 

@@ -317,10 +317,12 @@ local function onHardStop(player: Player, zone: any)
 	-- Zones open by rebirths (owner 2026-10-27) and rebirths cost coins, so the offer is a coin boost
 	local step = Store.NextStep(player, "Coins")
 	local pass = Store.Pass("DoubleCoins")
-	local id, what
+	local id, what, offerName
 	if step then
-		id, what = step.Id, "COIN BOOST " .. Store.MultText(step.Mult) .. " gets you there faster, forever."
+		offerName = "COIN BOOST " .. Store.MultText(step.Mult)
+		id, what = step.Id, offerName .. " gets you there faster, forever."
 	elseif pass and not Store.Owns(player, pass.Id) then
+		offerName = pass.Name:upper()
 		id, what = pass.Id, pass.Name .. " gets you there twice as fast, forever."
 	else
 		return -- nothing left to offer here
@@ -332,6 +334,11 @@ local function onHardStop(player: Player, zone: any)
 		Id = id,
 		Title = ("ZONE %d IS LOCKED"):format(zone),
 		Text = ("%s opens after %s. %s"):format(Zones.Name(zone):upper(), Zones.NeedText(zone), what),
+		-- the popup's own pieces (UI pass batch 6)
+		Zone = zone,
+		ZoneName = Zones.Name(zone):upper(),
+		Need = Zones.NeedText(zone),
+		OfferName = offerName,
 	})
 end
 
