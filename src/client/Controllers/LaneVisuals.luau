@@ -270,7 +270,7 @@ local function onImpact(data, rack, feel, isOwn: boolean, setTimeScale: (number)
 
 	-- Everyone nearby hears and sees the crash; strikes get the big one
 	Sfx.PlayAt(
-		if isStrike then "StrikeCrash" else "PinHit",
+		if isStrike then "StrikeCrash" elseif count >= 5 then "SpareCrash" else "PinHit",
 		lane.PinSpot,
 		(if isStrike then 0.95 else 1.1) * (1.08 - feel.Level * 0.025),
 		math.clamp(0.5 + count * 0.07, 0.5, 1.3) * math.min(crash, 1.6)
@@ -507,7 +507,8 @@ local function playThrow(data)
 	local function impact()
 		hit = true
 		if data.Gutter then
-			return -- an overcooked ball rolls past the pins in the gutter: no crash
+			Sfx.PlayAt("Gutter", lane.PinSpot) -- an overcooked ball rolls past the pins in the gutter: no crash
+			return
 		end
 		onImpact(data, rack, feel, isOwn, setTimeScale)
 		if isOwn and coins > 0 then

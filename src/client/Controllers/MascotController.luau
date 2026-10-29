@@ -384,6 +384,7 @@ function MascotController:Start()
 			local inUse = countIn(equipped(), mascot.Id)
 			local slots = player:GetAttribute("MascotSlots") or ECONOMY.StartSlots
 			if inUse < mine and #equipped() < slots then
+				Sfx.Play("PetEquip")
 				equipRemote:FireServer(mascot.Id, true)
 			elseif inUse > 0 then
 				equipRemote:FireServer(mascot.Id, false)
@@ -1294,6 +1295,7 @@ function MascotController:Start()
 		local view = MascotView.Viewport(stage, trio, 0.85)
 		view.ZIndex = 34
 		UiFx.Pop(stage, 0.4, 0.35)
+		Sfx.Play("PetMerge")
 		local started = os.clock()
 		local beat = 0
 		while os.clock() - started < FX.MergeTime do
@@ -1681,6 +1683,7 @@ function MascotController:Start()
 
 	bestButton.Activated:Connect(function()
 		hintWanted = false -- the server saves it; hide the hand right away
+		Sfx.Play("PetEquip")
 		bestRemote:FireServer()
 	end)
 

@@ -558,8 +558,8 @@ Config.Traits = {
 		NoGemsShort = "COINS +%s%%",
 		NoGemsPopup = "+%s COINS", -- %s = coins paid
 		Color = Color3.fromHex("19E3C0"), -- gem
-		Sound = "Coin",
-		Pitch = 1.6,
+		Sound = "Gem",
+		Pitch = 1,
 	},
 	{
 		Id = "Heavy", -- Value: how much wider the gold zone on the charge bar gets (0.5 = 50% wider). Every strike hits HEAVY.

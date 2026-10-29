@@ -1598,7 +1598,7 @@ function CrateController:Start()
 				if not landed then
 					landed = true
 					kick, shake = 1, 1
-					Sfx.Play("PinHit", 0.7, 1.2)
+					Sfx.Play("CrateLand")
 					UiFx.Pop(introGlow, 1.6, 0.3)
 				end
 				-- Hops: each one higher, a quarter turn each, a little wiggle in the air
@@ -1650,7 +1650,7 @@ function CrateController:Start()
 					if not blasted then
 						blasted = true
 						kick, shake = 1.6, 1.4
-						Sfx.Play("StrikeCrash", 1.35, 0.8)
+						Sfx.Play("CrateOpen")
 						Sfx.Play("Firework", 1.1, 0.7)
 						UiFx.Flash(color, 0.5, 0.3)
 						UiFx.Confetti(opening, INTRO.Confetti, { color, white, color:Lerp(white, 0.5) })

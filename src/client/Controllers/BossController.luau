@@ -212,11 +212,12 @@ function BossController:Start()
 	local function flight(text: string, seconds: number)
 		fade.Visible = true
 		fadeText.Text = text
-		Sfx.Play("Helicopter")
+		local rotor = Sfx.Play("Helicopter")
 		local half = TweenInfo.new(seconds * 0.45)
 		TweenService:Create(fade, half, { BackgroundTransparency = 0 }):Play()
 		TweenService:Create(fadeText, half, { TextTransparency = 0 }):Play()
 		task.delay(seconds + 0.4, function()
+			Sfx.FadeOut(rotor, 0.8)
 			local out = TweenInfo.new(0.6)
 			TweenService:Create(fade, out, { BackgroundTransparency = 1 }):Play()
 			TweenService:Create(fadeText, out, { TextTransparency = 1 }):Play()

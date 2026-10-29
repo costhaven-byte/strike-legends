@@ -101,6 +101,8 @@ local function buildCounter(pill: Frame, key: string)
 	HudKit.Place(pill, key)
 end
 
+local startedAt = os.clock()
+
 local function bindStat(pill: Frame, key: string)
 	local label = pill:WaitForChild("Amount") :: TextLabel
 	local scale = pill:WaitForChild("UIScale") :: UIScale
@@ -116,6 +118,10 @@ local function bindStat(pill: Frame, key: string)
 		local target = player:GetAttribute(key) or 0
 		if target > shown.Value then
 			bump(scale)
+			-- Gems get their own chime (not while the save is loading in)
+			if key == "Gems" and os.clock() - startedAt > 5 then
+				Sfx.Play("Gem")
+			end
 		end
 		TweenService:Create(shown, TweenInfo.new(COUNT_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			Value = target,

@@ -201,7 +201,7 @@ function TeleportController:Start()
 		root.AssemblyLinearVelocity = Vector3.zero
 		win:Close()
 		UiFx.Flash((ZONE_PAINT[zone] or FALLBACK_PAINT)[1], 0.6, 0.4)
-		Sfx.Play("Reveal", 1)
+		Sfx.Play("Teleport")
 	end
 
 	local cards = {}

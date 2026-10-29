@@ -473,7 +473,7 @@ function SpinController:Start()
 		end
 		local slice = SPIN.Slices[result.Slice]
 		turnTo(result.Slice)
-		Sfx.Play("Reveal")
+		Sfx.Play("SpinWin")
 		blink(result.Slice)
 		spinning = false
 		refresh()

@@ -1,4 +1,4 @@
--- Plays the sound effects listed in Config.Sounds (Shared.AssetSlots).
+-- Plays the sound effects listed in Config.Sounds (Shared.AssetSlots). Music + ambience: MusicController.
 -- Play = a flat sound for this player only. PlayAt = a sound coming from a spot in the world.
 local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -35,6 +35,7 @@ local function getTemplate(name: string): Sound?
 	sound.Name = name
 	sound.SoundId = "rbxassetid://" .. id
 	sound.Volume = info.Volume or 0.5
+	sound.Looped = info.Loop == true -- a looped sound plays until it is faded out or its parent goes
 	sound:SetAttribute("Pitch", if standIn then info.StandInPitch or 1 else 1)
 	sound.Parent = folder
 	templates[name] = sound
