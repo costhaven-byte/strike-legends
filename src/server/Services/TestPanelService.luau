@@ -16,6 +16,7 @@ local StudioTestMode = require(script.Parent.Parent.Modules.StudioTestMode)
 local BallService = require(script.Parent.BallService)
 local BossService = require(script.Parent.BossService)
 local FeverService = require(script.Parent.FeverService)
+local LaneEventService = require(script.Parent.LaneEventService)
 local MascotService = require(script.Parent.MascotService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local PotionService = require(script.Parent.PotionService)
@@ -142,6 +143,16 @@ local ACTIONS: { [string]: (Player) -> any } = {
 		end
 		FeverService.Begin(player, 0)
 		return reply(true, "FEVER MODE for " .. Config.Fever.Seconds .. " s: throw now")
+	end,
+	-- Lane events (Config.LaneEvents, batch D5) on your lane now
+	GoldenRack = function(player)
+		return reply(LaneEventService.Force(player, "GoldenRack"))
+	end,
+	Split = function(player)
+		return reply(LaneEventService.Force(player, "Split"))
+	end,
+	GemPin = function(player)
+		return reply(LaneEventService.Force(player, "GemPin"))
 	end,
 }
 

@@ -399,6 +399,47 @@ Config.Fever = {
 	BallFlameRate = 30, -- flame wisps per second behind the ball
 }
 
+-- LANE EVENTS (final changes batch D5; LaneEventService, looks in PinRack + EventController): about every Interval
+-- seconds of bowling by hand, your lane's next rack is a short event (one throw), picked by Weight:
+--   GoldenRack = every pin is gold; a strike on it pays x StrikeMultiplier coins
+--   Split      = only pins 7 and 10 stand (the 7-10 split); both down = StrikeValues x what a PERFECT strike pays
+--                you right now, plus Gems[zone] gems. A PERFECT always clears it; other throws have a small chance.
+--                The split throw never breaks or adds to your strike streak.
+--   GemPin     = one pin (from Pins) is a gem pin; knock it down for Gems[zone] gems
+-- No events during the first minutes (Config.Onboarding, the bowling clock starts when it ends), FEVER MODE, a rank
+-- trial, the boss fight or while AUTO BOWL is on; a waiting event comes on the first rack after. Auto throws never
+-- move the clock or win an event. Studio: TEST panel GOLDEN RACK / 7-10 SPLIT / GEM PIN.
+Config.LaneEvents = {
+	Enabled = true,
+	Interval = 120, -- seconds of bowling between events...
+	Jitter = 20, -- ...give or take this many
+	MaxGap = 10, -- a pause longer than this between two throws only counts this many seconds (idle time doesn't count)
+	Weights = { GoldenRack = 40, Split = 30, GemPin = 30 },
+	GoldenRack = {
+		StrikeMultiplier = 5, -- replaces FEVER's x3 if both are on (never x15)
+		PinLight = 0.9, -- each gold pin's glow (the single Golden Pin uses 3): soft, ten of them
+		PinSparkles = 3, -- sparkles per second per pin
+	},
+	Split = {
+		Pins = { 7, 10 }, -- the back corners
+		StrikeValues = 12, -- the prize = this many PERFECT strikes' coins (with every multiplier you have now)
+		Gems = { 2, 3, 3, 4 }, -- by zone
+		BothChance = 0.12, -- a throw that isn't a PERFECT knocks both down this often...
+		OneChance = 0.5, -- ...and one of them this often (else neither)
+	},
+	GemPin = {
+		Pins = { 2, 3, 4, 6, 7, 8, 9, 10 }, -- never the head pin or the middle pin (those fall on every throw)
+		Gems = { 3, 4, 4, 5 }, -- by zone
+	},
+	Looks = {
+		GoldenRack = { Name = "GOLDEN RACK", Sub = "STRIKE IT FOR x%d COINS", Paint = "Gold", Icon = "GoldenPin" },
+		Split = { Name = "7-10 SPLIT", Sub = "KNOCK DOWN BOTH FOR A BIG PRIZE", Paint = "Pink", Icon = "Hud:Pin" },
+		GemPin = { Name = "GEM PIN", Sub = "HIT THE GEM PIN FOR +%d GEMS", Paint = "Cyan", Icon = "Gem" },
+	},
+	GemColor = Color3.fromRGB(70, 230, 255),
+	GemLight = 1.2,
+}
+
 -- Pro Tiers. Each tier holds 6 of the 60 rank levels (Config.Economy.Ranks: levels 1-6 Rookie, 7-12 Amateur ...
 -- 55-60 Hall of Famer). Levels inside a tier come straight from XP; a tier's first level needs its Rank Trial
 -- (see Config.Trials) once the XP is there. Coin multiplier is permanent; gems are a one-time tier reward.
@@ -4379,6 +4420,7 @@ Config.Analytics = {
 		"PolishLevel", -- value = new Polish level; labels = ball
 		"PotionUsed", -- value = minutes left on that potion after drinking; labels = potion
 		"Fever", -- FEVER MODE started (Config.Fever, batch D4); value = streak that started it
+		"LaneEvent", -- a lane event was thrown at (Config.LaneEvents, batch D5); value = 1 won / 0 missed; labels = event
 		"PlaytimeClaimed", -- value = the gift's minute mark; labels = Potion/Egg/Crate, item
 		"SpinWheel", -- value = the slice number; labels = Potion/Egg/Crate/Ball/Pet, item
 		"Rebirth", -- later (Milestone 17)

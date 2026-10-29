@@ -59,9 +59,13 @@ local function refreshRack(lane: Model)
 	local modifier = Modifiers.Current()
 	local scale = modifier and modifier.PinScale or 1
 	local golden = lane:GetAttribute("GoldenPin") or 0
-	if rack.Scale ~= scale or rack.Golden ~= golden then
+	local event = lane:GetAttribute("LaneEvent") or ""
+	local eventPin = lane:GetAttribute("LaneEventPin") or 0
+	if rack.Scale ~= scale or rack.Golden ~= golden or rack.Event ~= event or rack.EventPin ~= eventPin then
 		rack.Scale = scale
 		rack.Golden = golden
+		rack.Event = event
+		rack.EventPin = eventPin
 		rack:Reset()
 	end
 end
@@ -706,6 +710,8 @@ local function playThrow(data)
 		local modifier = Modifiers.Current()
 		rack.Scale = modifier and modifier.PinScale or 1
 		rack.Golden = lane:GetAttribute("GoldenPin") or 0
+		rack.Event = lane:GetAttribute("LaneEvent") or ""
+		rack.EventPin = lane:GetAttribute("LaneEventPin") or 0
 		rack:Reset()
 	end)
 end
@@ -803,6 +809,10 @@ function LaneVisuals:Start()
 	-- Golden Pins and the lane modifier change the standing rack
 	for lane in racks do
 		lane:GetAttributeChangedSignal("GoldenPin"):Connect(function()
+			refreshRack(lane)
+		end)
+		-- Lane events (Config.LaneEvents): the server sets LaneEventPin before LaneEvent
+		lane:GetAttributeChangedSignal("LaneEvent"):Connect(function()
 			refreshRack(lane)
 		end)
 		refreshRack(lane)

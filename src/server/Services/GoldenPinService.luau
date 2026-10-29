@@ -18,7 +18,8 @@ local GoldenPinService = {}
 function GoldenPinService.Roll(lane: Model)
 	local ownerId = lane:GetAttribute("OwnerId")
 	local owner = ownerId and Players:GetPlayerByUserId(ownerId)
-	if not owner then
+	-- No Golden Pin on a lane event rack (Config.LaneEvents)
+	if not owner or (lane:GetAttribute("LaneEvent") or "") ~= "" then
 		lane:SetAttribute("GoldenPin", 0)
 		lane:SetAttribute("GoldenLucky", false)
 		return

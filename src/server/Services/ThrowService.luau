@@ -8,6 +8,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
+local Currency = require(Shared.Modules.Currency)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modifiers = require(Shared.Modules.Modifiers)
 local Store = require(Shared.Modules.Store)
@@ -19,6 +20,7 @@ local BallService = require(script.Parent.BallService)
 local BossService = require(script.Parent.BossService)
 local FeverService = require(script.Parent.FeverService)
 local GoldenPinService = require(script.Parent.GoldenPinService)
+local LaneEventService = require(script.Parent.LaneEventService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
 local MilestoneService = require(script.Parent.MilestoneService)
 local MultiplierService = require(script.Parent.MultiplierService)
@@ -34,6 +36,7 @@ local StoreService = require(script.Parent.StoreService)
 
 local FEVER = Config.Fever
 local GOLDEN = Config.GoldenPin
+local EVENTS = Config.LaneEvents
 local THROW = Config.Throw
 
 -- A sliding gold zone counts as hit if the release was in it at any moment this many seconds back
@@ -123,6 +126,12 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 		return
 	end
 
+	-- LANE EVENTS (Config.LaneEvents): the event on this rack, used up by this throw (auto throws never win one)
+	local event, eventPin = LaneEventService.Take(lane, player, auto)
+	if auto then
+		event = nil
+	end
+
 	local ball = BallService.GetEquipped(player)
 	local powerLevel = ThrowRules.Level(PlayerDataService.Get(player, "PowerLevel"))
 	local level = PowerLevels.Get(powerLevel)
@@ -153,11 +162,23 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 	local autoStrike = auto and Store.Owns(player, "AutoBowl")
 	local result =
 		ThrowResolver.Resolve(charge, perfect, hooked, overcharged, ball, distance, level.Power, autoStrike, style.Speed)
+	-- 7-10 SPLIT: only pins 7 and 10 stand. A PERFECT clears both, other throws have a small chance.
+	local split = event == "Split"
+	if split then
+		result.Pins = LaneEventService.SplitPins(result.Perfect or autoStrike, result.Gutter)
+		result.Count = #result.Pins
+		if result.Count == #EVENTS.Split.Pins then
+			result.Tier = if result.Perfect then "PerfectStrike" else "Strike"
+		elseif not result.Gutter then
+			result.Tier = "Weak"
+		end
+	end
 	local isStrike = result.Tier == "Strike" or result.Tier == "PerfectStrike"
 	-- An overcooked throw always ends the streak: Streak Saver never covers the greedy red
 	local saverCooldown = if result.Overcharge == "Wasted" then 0 else Balls.TraitValue(ball, "StreakSaver")
 	local streak, saved = shownStreak, false
-	if not auto then
+	-- (the split throw never breaks or adds to the streak)
+	if not auto and not split then
 		streak, saved = ProgressionService.NextStreak(player, isStrike, saverCooldown)
 	end
 	local goldenPin = GoldenPinService.Get(lane)
@@ -168,13 +189,35 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 		multipliers.Overcharge = THROW.Overcharge.CoinMultiplier
 	end
 	multipliers.Fever = if fever then FEVER.CoinMultiplier else 1
+	-- GOLDEN RACK: a strike pays x StrikeMultiplier (it replaces fever's x3, never stacks with it)
+	local eventWon = false
+	if event == "GoldenRack" and isStrike then
+		eventWon = true
+		multipliers.Fever = 1
+		multipliers.LaneEvent = EVENTS.GoldenRack.StrikeMultiplier
+	end
+	local xpMultipliers = getXpMultipliers(player, streak, zone)
 	local reward = RewardResolver.Calculate(
 		result.Count,
 		result.Tier,
 		multipliers,
-		getXpMultipliers(player, streak, zone),
+		xpMultipliers,
 		Balls.TraitValue(ball, "GemHunter")
 	)
+	local eventGems = 0
+	if split and isStrike then
+		-- Both down: StrikeValues x what a PERFECT strike pays this player right now, plus gems
+		eventWon = true
+		local perfectPay = RewardResolver.Calculate(Config.Lane.PinCount, "PerfectStrike", multipliers, xpMultipliers)
+		reward.Coins = Currency.Round(Currency.Scale(perfectPay.Coins, EVENTS.Split.StrikeValues))
+		eventGems = LaneEventService.Gems(EVENTS.Split.Gems, zone)
+	elseif event == "GemPin" and table.find(result.Pins, eventPin) then
+		eventWon = true
+		eventGems = LaneEventService.Gems(EVENTS.GemPin.Gems, zone)
+	end
+	if not Config.Gems.Enabled then
+		eventGems = 0
+	end
 
 	-- Surprise bonuses: Golden Pin gems and free crate, and the Bonus Gems lane modifier
 	local golden = { Pin = goldenPin, Hit = goldenHit, Gems = 0, Crate = false }
@@ -194,7 +237,7 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 	then
 		modifierGems = modifier.StrikeGemAmount or 1
 	end
-	reward.Gems += golden.Gems + modifierGems
+	reward.Gems += golden.Gems + modifierGems + eventGems
 
 	local trialAttempt = TrialService.GetAttemptId(player)
 
@@ -243,6 +286,8 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 		ModifierGems = modifierGems,
 		Overcharge = result.Overcharge,
 		Fever = fever, -- thrown during FEVER MODE: the ball burns (LaneVisuals)
+		-- the lane event this throw was at (EventController shows the result)
+		LaneEvent = if event then { Id = event, Pin = eventPin, Won = eventWon, Gems = eventGems } else nil,
 	})
 
 	SessionLog.Throw(player, powerLevel, result.Perfect, assisted)
@@ -259,7 +304,7 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 				PlayerDataService.Add(player, "Gems", reward.Gems)
 			end
 			ProgressionService.ShowStreak(player, streak)
-			if isStrike and not auto then
+			if isStrike and not auto and not split then
 				FeverService.OnStrike(player, streak)
 			end
 			ProgressionService.AddXP(player, reward.XP)
@@ -276,10 +321,14 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 				TrialService.OnThrow(player, trialAttempt, result.Tier, saved)
 				StoreService.OnThrow(player, isStrike)
 			end
-			MilestoneService.OnThrow(player, LaneUtil.ZoneOf(lane), isStrike and not auto, saved)
+			MilestoneService.OnThrow(player, LaneUtil.ZoneOf(lane), isStrike and not auto and not split, saved)
 			BallService.AddCrateThrow(player)
 			if goldenHit then
 				SessionLog.Moment(player, "Golden Pin hit")
+			end
+			if event then
+				SessionLog.Moment(player, "Lane event " .. event .. (if eventWon then " won" else " missed"))
+				Analytics.Event(player, "LaneEvent", if eventWon then 1 else 0, { event })
 			end
 			if golden.Crate then
 				BallService.GiveFreeCrate(player)
@@ -302,8 +351,11 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 		end
 		setStatus(lane, if result.Count == 1 then "1 PIN" else TIER_TEXT[result.Tier]:format(result.Count))
 	end)
-	-- Roll the next rack's Golden Pin as the pins reset
-	task.delay(result.RollTime + resetDelay, GoldenPinService.Roll, lane)
+	-- The next rack as the pins reset: maybe a lane event, else maybe a Golden Pin
+	task.delay(result.RollTime + resetDelay, function()
+		LaneEventService.OnReset(lane, player)
+		GoldenPinService.Roll(lane)
+	end)
 end
 
 local function onThrowRequest(player: Player, clientHold: any)

@@ -1,6 +1,7 @@
 -- The surprise layer on screen: the lane modifier banner and timer, the "next goal" bar (with the new-player
 -- guide: REBIRTH to open the next zone, then a gold beam to its door until you walk in, owner 2026-10-27),
--- and the big popups for Golden Pins, "LUCKY!", bonus gems, level-ups, free crates and arriving in a zone.
+-- and the big popups for Golden Pins, "LUCKY!", bonus gems, level-ups, free crates and arriving in a zone, and the
+-- lane events (Config.LaneEvents: slam banner when one lands on your lane, the result after you throw at it).
 -- The UI itself (StarterGui.EventUI) is built in Studio; this script fills it in and animates it.
 -- Everything shown comes from attributes and throw results the server sends.
 local Players = game:GetService("Players")
@@ -31,6 +32,11 @@ local POWER_COLOR = Color3.fromRGB(255, 43, 214)
 local REBIRTH_COLOR = Color3.fromRGB(125, 255, 60) -- the REBIRTH button's lime
 
 local short = Currency.Format -- Config.Numbers
+
+-- A lane event's text colour (Config.LaneEvents.Looks Paint names the HUD Kit colour)
+local function eventColor(paint: string): Color3
+	return K[paint] or K.Gold
+end
 
 -- Lane modifier pill look per modifier (owner's HUD Kit): icon and colour
 local MODIFIER_LOOKS = {
@@ -730,6 +736,30 @@ function EventController:Start()
 		watchLane(lane)
 	end
 
+	-- Lane events on your lane: the kit's slam banner in the event's colour, what to do on the chip
+	local EVENTS = Config.LaneEvents
+	local function eventSub(id: string, lane: Model): string
+		local look = EVENTS.Looks[id]
+		if id == "GoldenRack" then
+			return look.Sub:format(EVENTS.GoldenRack.StrikeMultiplier)
+		elseif id == "GemPin" then
+			local gems = EVENTS.GemPin.Gems
+			return look.Sub:format(gems[math.clamp(LaneUtil.ZoneOf(lane), 1, #gems)])
+		end
+		return look.Sub
+	end
+	for _, lane in LaneUtil.GetLanes() do
+		lane:GetAttributeChangedSignal("LaneEvent"):Connect(function()
+			local id = lane:GetAttribute("LaneEvent") or ""
+			local look = EVENTS.Looks[id]
+			if not look or lane:GetAttribute("OwnerId") ~= player.UserId then
+				return
+			end
+			kitBanner(look.Name, look.Paint, eventSub(id, lane), look.Icon, 3)
+			Sfx.Play("StreakUp", 0.9, 1.3)
+		end)
+	end
+
 	-- Your own throw: Golden Pin jackpot and bonus gems
 	ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ThrowResult").OnClientEvent:Connect(function(data)
 		if data.UserId ~= player.UserId then
@@ -748,6 +778,28 @@ function EventController:Start()
 				showPopup("GOLDEN PIN!", GOLD, table.concat(extras, "  ·  "), true, nil, "GoldenPin")
 				Sfx.Play("PerfectSting", 1.1)
 				Sfx.Play("Cheer", 1.2)
+			end
+			local event = data.LaneEvent
+			local look = event and EVENTS.Looks[event.Id]
+			if look then
+				local color = eventColor(look.Paint)
+				if event.Won then
+					local extras = {}
+					if event.Id == "GoldenRack" then
+						table.insert(extras, ("x%d COINS"):format(EVENTS.GoldenRack.StrikeMultiplier))
+					elseif event.Id == "Split" then
+						table.insert(extras, "+" .. short(data.Reward.Coins) .. " COINS")
+					end
+					if (event.Gems or 0) > 0 then
+						table.insert(extras, ("+%d GEMS"):format(event.Gems))
+					end
+					local title = if event.Id == "Split" then "SPLIT CLEARED!" else look.Name .. "!"
+					showPopup(title, color, table.concat(extras, "  ·  "), true, nil, look.Icon)
+					Sfx.Play("PerfectSting", 1.1)
+					Sfx.Play("Cheer", 1.2)
+				else
+					showPopup(look.Name .. " MISSED", color, "ANOTHER ONE COMES SOON", false, nil, look.Icon)
+				end
 			end
 			if (data.ModifierGems or 0) > 0 then
 				local gems = data.ModifierGems

@@ -1,5 +1,6 @@
 -- Builds a rack of 10 pins, knocks them flying and resets them. Used by the client for throw visuals.
--- Lane surprises change the rack too: a Golden Pin, bigger pins (Giant Pins) and sliding pins (Moving Pins).
+-- Lane surprises change the rack too: a Golden Pin, bigger pins (Giant Pins) and sliding pins (Moving Pins), and
+-- lane events (Config.LaneEvents): every pin gold (GoldenRack), only pins 7 and 10 (Split) or one gem pin (GemPin).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(script.Parent.Parent.Config)
@@ -252,6 +253,8 @@ function PinRack.new(headPinCFrame: CFrame, parent: Instance)
 	self.Scale = 1 -- pin size (Giant Pins)
 	self.Offset = 0 -- studs the rack has slid sideways (Moving Pins)
 	self.Golden = 0 -- which pin is golden (0 = none)
+	self.Event = "" -- the lane event on this rack ("" = none)
+	self.EventPin = 0 -- the GemPin event's pin
 	self.TimeScale = 1 -- below 1 during strike slow motion
 	-- Which zone the lane is in (its Workspace lane folder), for that zone's pin set
 	for _, folder in Config.Zones.LaneFolders do
@@ -264,9 +267,10 @@ function PinRack.new(headPinCFrame: CFrame, parent: Instance)
 	return self
 end
 
--- Golden Pin look: shiny gold, glowing and sparkling
-local function makeGolden(pin: Model)
+-- Golden Pin look: shiny gold, glowing and sparkling. soft = one of a GOLDEN RACK's ten (dimmer, fewer sparkles)
+local function makeGolden(pin: Model, soft: boolean?)
 	local gold = Config.GoldenPin.Color
+	local rack = Config.LaneEvents.GoldenRack
 	-- Simple part pins only; the designed golden pin already has its own colours
 	local neck = pin:FindFirstChild("Neck") :: BasePart?
 	if neck then
@@ -280,8 +284,8 @@ local function makeGolden(pin: Model)
 	local body = pin.PrimaryPart :: BasePart
 	local light = Instance.new("PointLight")
 	light.Color = gold
-	light.Range = 10
-	light.Brightness = 3
+	light.Range = if soft then 6 else 10
+	light.Brightness = if soft then rack.PinLight else 3
 	light.Parent = body
 	local sparkles = Instance.new("ParticleEmitter")
 	sparkles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
@@ -291,8 +295,54 @@ local function makeGolden(pin: Model)
 	sparkles.Lifetime = NumberRange.new(0.6, 1.1)
 	sparkles.Speed = NumberRange.new(1, 2.5)
 	sparkles.SpreadAngle = Vector2.new(180, 180)
-	sparkles.Rate = 14
+	sparkles.Rate = if soft then rack.PinSparkles else 14
 	sparkles.Parent = body
+end
+
+-- GEM PIN look: the pin turns crystal cyan, glows and sparkles, with a gem spinning over its head
+local function makeGem(pin: Model)
+	local events = Config.LaneEvents
+	local color = events.GemColor
+	local body = pin.PrimaryPart :: BasePart
+	for _, part in pin:GetDescendants() do
+		if part:IsA("BasePart") and part.Name ~= "FloorGlow" then
+			-- the body is cyan crystal, every other piece (head, rings) a paler glowing cyan
+			part.Color = if part == body then color else color:Lerp(Color3.new(1, 1, 1), 0.4)
+			part.Material = if part == body then Enum.Material.Glass else Enum.Material.Neon
+			if part:IsA("MeshPart") then
+				part.TextureID = ""
+			end
+			local look = part:FindFirstChildOfClass("SurfaceAppearance")
+			if look then
+				look:Destroy()
+			end
+		end
+	end
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Range = 9
+	light.Brightness = events.GemLight
+	light.Parent = body
+	local sparkles = Instance.new("ParticleEmitter")
+	sparkles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	sparkles.Color = ColorSequence.new(color, Color3.new(1, 1, 1))
+	sparkles.LightEmission = 1
+	sparkles.Size = NumberSequence.new(0.4, 0)
+	sparkles.Lifetime = NumberRange.new(0.6, 1.1)
+	sparkles.Speed = NumberRange.new(1, 2.5)
+	sparkles.SpreadAngle = Vector2.new(180, 180)
+	sparkles.Rate = 12
+	sparkles.Parent = body
+	-- The gem: a small neon diamond floating over the pin (welded, so it flies with it)
+	local box, size = pin:GetBoundingBox()
+	local gem = Instance.new("Part")
+	gem.Name = "Gem"
+	gem.Size = Vector3.one * LANE.PinWidth * 0.55
+	gem.Color = color
+	gem.Material = Enum.Material.Neon
+	gem.CFrame = CFrame.new(body.Position.X, box.Position.Y + size.Y / 2 + gem.Size.Y, body.Position.Z)
+		* CFrame.Angles(math.rad(45), 0, math.rad(45))
+	attach(body, gem)
 end
 
 -- Where pin `index` stands, including the Moving Pins slide
@@ -322,14 +372,22 @@ function PinRack:Reset()
 	self.Folder:ClearAllChildren()
 	table.clear(self.Pins)
 
+	local allGold = self.Event == "GoldenRack"
+	local only = if self.Event == "Split" then Config.LaneEvents.Split.Pins else nil
 	for index in PinRack.Offsets() do
-		local golden = index == self.Golden
+		if only and not table.find(only, index) then
+			continue -- the 7-10 split: only the back corners stand
+		end
+		local golden = index == self.Golden or allGold
+		local gem = self.Event == "GemPin" and index == self.EventPin
 		local pin = buildMeshPin(self:SpotFor(index), self.Scale, golden, self.Zone)
 		if not pin then
 			pin = buildPin(self:SpotFor(index), self.Scale)
 		end
 		if golden then
-			makeGolden(pin)
+			makeGolden(pin, allGold)
+		elseif gem then
+			makeGem(pin)
 		end
 		pin.Name = "Pin" .. index
 		pin.PrimaryPart.Anchored = true

@@ -50,6 +50,9 @@ local SECTIONS = {
 		Buttons = {
 			{ Text = "BOSS NOW", Action = "Boss" },
 			{ Text = "FEVER NOW", Action = "Fever" },
+			{ Text = "GOLDEN RACK", Action = "GoldenRack" },
+			{ Text = "7-10 SPLIT", Action = "Split" },
+			{ Text = "GEM PIN", Action = "GemPin" },
 		},
 	},
 }
