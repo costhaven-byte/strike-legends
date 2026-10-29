@@ -1,7 +1,9 @@
 -- TELEPORT button (owner 2026-10-25): jump straight to any zone you have unlocked. Kept apart from the other HUD
 -- buttons (owner: don't put them all next to each other): top-right corner, right under the GIFTS button (owner
 -- 2026-10-25), on computers and phones. It shows once zone 2 is
--- open (or after a rebirth). Tapping it opens a card per built zone: GO, or the level that opens it.
+-- open (or after a rebirth). Tapping it opens a card per built zone: GO, or the rebirths that open it.
+-- UI pass batch 4 (2026-10-29): the window is in the owner's kit look (RewardKit window + cover): a 2 x 2 grid of zone
+-- cards, each with a little picture in its zone's two colours, the zone's coin pay, and GO / YOU ARE HERE / locked.
 -- Arrival spots: Back Alley = behind your own Back Alley lane; zones 2-4 = their Config.Zones.Gated Arrival (the same
 -- spots as the "TAKE ME THERE" button). The server still keeps players out of zones they haven't unlocked (LaneService).
 local Players = game:GetService("Players")
@@ -9,62 +11,34 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Currency = require(Shared.Modules.Currency)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Zones = require(Shared.Modules.Zones)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules:WaitForChild("Sfx"))
 local UiFx = require(Modules:WaitForChild("UiFx"))
 local HudKit = require(Modules:WaitForChild("HudKit"))
+local UiKit = require(Modules:WaitForChild("UiKit"))
+local RewardKit = require(Modules:WaitForChild("RewardKit"))
 
 local player = Players.LocalPlayer
 
-local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
-local BODY_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
-local INK = Color3.fromHex("06060F")
-local CARD = Color3.fromRGB(30, 20, 60)
-local PANEL = Color3.fromRGB(18, 12, 38)
-local CYAN = Color3.fromRGB(60, 220, 255)
-local LIME = Color3.fromRGB(125, 255, 60)
-local GREY = Color3.fromRGB(120, 110, 150)
-local SOFT = Color3.fromRGB(200, 190, 230)
+local C = UiKit.C
+local make = UiKit.Make
 local COOLDOWN = 2 -- seconds between teleports
+local HERE_RANGE = 140 -- studs: the zone of the nearest lane this close counts as "you are here"
 
--- Each zone's colour on its card (zones 2-4 use their lock wall colour)
-local ZONE_COLORS = { [1] = Color3.fromRGB(60, 200, 255) }
-for _, gate in Config.Zones.Gated do
-	ZONE_COLORS[gate.Zone] = gate.WallColor
-end
+-- Each zone's two colours (ASSET_PROMPTS 7D): alley grey + pink, neon pink + cyan, main street red + royal blue,
+-- skyline navy + gold. The first colour rings the card, both paint its picture.
+local ZONE_PAINT = {
+	[1] = { Color3.fromHex("8C93AE"), Color3.fromHex("FF4FB0") },
+	[2] = { Color3.fromHex("FF4FB0"), Color3.fromHex("2BE4FF") },
+	[3] = { Color3.fromHex("FF3B3B"), Color3.fromHex("2F5BFF") },
+	[4] = { Color3.fromHex("FFC93A"), Color3.fromHex("1A2260") },
+}
+local FALLBACK_PAINT = { C.Cyan, C.Pink }
 
 local TeleportController = {}
-
-local function corner(parent: Instance, radius: number?)
-	local c = Instance.new("UICorner")
-	c.CornerRadius = if radius then UDim.new(0, radius) else UDim.new(1, 0)
-	c.Parent = parent
-end
-
-local function stroke(parent: Instance, color: Color3, thickness: number, border: boolean?): UIStroke
-	local s = Instance.new("UIStroke")
-	s.Color = color
-	s.Thickness = thickness
-	s.ApplyStrokeMode = if border then Enum.ApplyStrokeMode.Border else Enum.ApplyStrokeMode.Contextual
-	s.Parent = parent
-	return s
-end
-
-local function text(parent: Instance, name: string, font: Font, color: Color3, position: UDim2, size: UDim2): TextLabel
-	local label = Instance.new("TextLabel")
-	label.Name = name
-	label.BackgroundTransparency = 1
-	label.FontFace = font
-	label.TextScaled = true
-	label.TextColor3 = color
-	label.Position = position
-	label.Size = size
-	label.Parent = parent
-	stroke(label, INK, 1.5)
-	return label
-end
 
 -- Where a zone's teleport lands, facing the pins
 local function arrival(zone: number): CFrame?
@@ -87,6 +61,76 @@ local function arrival(zone: number): CFrame?
 		end
 	end
 	return nil
+end
+
+-- The zone you're standing in: the zone of the nearest lane (nil in the lobby, far from every lane)
+local function hereZone(): number?
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not root then
+		return nil
+	end
+	local best, bestDistance = nil, HERE_RANGE
+	for _, lane in LaneUtil.GetLanes() do
+		local start = lane:FindFirstChild("BallStart") :: BasePart?
+		if start then
+			local distance = (start.Position - root.Position).Magnitude
+			if distance < bestDistance then
+				best, bestDistance = LaneUtil.ZoneOf(lane), distance
+			end
+		end
+	end
+	return best
+end
+
+-- The little zone picture: the zone's two colours corner to corner, a lane running up the middle, a pin at its end
+local function picture(parent: Instance, zone: number, paint: { Color3 }): Frame
+	local tile = make("Frame", {
+		Name = "Picture",
+		BackgroundColor3 = C.White,
+		BorderSizePixel = 0,
+		Position = UDim2.fromOffset(10, 10),
+		Size = UDim2.fromOffset(112, 124),
+	}, parent) :: Frame
+	UiKit.Corner(tile, 12)
+	UiKit.Outline(tile, C.Ink, 3)
+	make("UIGradient", {
+		Color = ColorSequence.new(paint[1], paint[2]),
+		Rotation = 55,
+	}, tile)
+	-- the lane: a dark strip with a lighter centre line, narrowing toward the pin
+	local lane = make("Frame", {
+		Name = "Lane",
+		BackgroundColor3 = C.Ink,
+		BackgroundTransparency = 0.45,
+		BorderSizePixel = 0,
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.fromScale(0.5, 1),
+		Size = UDim2.new(0, 46, 1, -14),
+	}, tile)
+	make("UIGradient", {
+		Transparency = NumberSequence.new(0.6, 0),
+		Rotation = 90,
+	}, lane)
+	make("Frame", {
+		Name = "Line",
+		BackgroundColor3 = C.White,
+		BackgroundTransparency = 0.55,
+		BorderSizePixel = 0,
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.fromScale(0.5, 1),
+		Size = UDim2.new(0, 4, 0.7, 0),
+	}, lane)
+	HudKit.Image(tile, "Pin", 58, {
+		Name = "Pin",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 0, 42),
+		ZIndex = 3,
+	})
+	local tag = RewardKit.Label(tile, ("ZONE %d"):format(zone), UiKit.Head, 18, C.White, 2.5, 4, 92, 104, 26)
+	tag.ZIndex = 4
+	make("UIPadding", { PaddingTop = UDim.new(0, 2) }, tag)
+	return tile
 end
 
 function TeleportController:Start()
@@ -115,53 +159,22 @@ function TeleportController:Start()
 	teleportKit:SetCaption("TELEPORT", nil, nil, 9)
 	HudKit.Spin(teleportKit.Slot, 4)
 
-	-- ===== The window: one card per built zone =====
-	local built = Config.Zones.BuiltZones
-	local panel = Instance.new("Frame")
-	panel.Name = "Panel"
-	panel.AnchorPoint = Vector2.new(0.5, 0.5)
-	panel.Position = UDim2.fromScale(0.5, 0.53)
-	panel.Size = UDim2.fromOffset(32 + built * 148, 270)
-	panel.BackgroundColor3 = PANEL
-	panel.BackgroundTransparency = 0.05
-	panel.Visible = false
-	panel.Active = true
-	panel.Parent = gui
-	corner(panel, 18)
-	stroke(panel, CYAN, 4, true)
-
-	local title = text(panel, "Title", FONT, Color3.new(1, 1, 1), UDim2.new(0, 20, 0, 12), UDim2.new(1, -80, 0, 38))
-	title.Text = "TELEPORT"
-	title.TextXAlignment = Enum.TextXAlignment.Left
-	local close = Instance.new("TextButton")
-	close.Name = "Close"
-	close.Text = "X"
-	close.FontFace = FONT
-	close.TextScaled = true
-	close.TextColor3 = Color3.new(1, 1, 1)
-	close.BackgroundColor3 = Color3.fromRGB(255, 70, 90)
-	close.AutoButtonColor = false
-	close.Position = UDim2.new(1, -54, 0, 12)
-	close.Size = UDim2.fromOffset(42, 42)
-	close.Parent = panel
-	corner(close, 10)
-	stroke(close, INK, 2, true)
-	UiFx.Press(close)
-
-	local list = Instance.new("Frame")
-	list.Name = "Zones"
-	list.BackgroundTransparency = 1
-	list.Position = UDim2.new(0, 16, 0, 64)
-	list.Size = UDim2.new(1, -32, 1, -80)
-	list.Parent = panel
-	local layout = Instance.new("UIListLayout")
-	layout.FillDirection = Enum.FillDirection.Horizontal
-	layout.Padding = UDim.new(0, 8)
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Parent = list
+	-- ===== The window: a 2 x 2 grid of zone cards =====
+	local W, H = 640, 460
+	local CARD_W, CARD_H, GAP = 290, 162, 12
+	local windowGui = make("ScreenGui", {
+		Name = "TeleportWindowUI",
+		ResetOnSpawn = false,
+		IgnoreGuiInset = true,
+		DisplayOrder = 12,
+	}, playerGui) :: ScreenGui
+	local win = RewardKit.Window(windowGui, W, H)
+	local cover, closeX = RewardKit.Cover(win.Panel, W, H, "TELEPORT", "JUMP TO ANY ZONE YOU HAVE OPENED", C.Cyan)
+	closeX.Activated:Connect(function()
+		win:Close()
+	end)
 
 	local lastTeleport = 0
-	local cards = {}
 	local function teleport(zone: number)
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -186,78 +199,148 @@ function TeleportController:Start()
 		end
 		character:PivotTo(spot)
 		root.AssemblyLinearVelocity = Vector3.zero
-		UiFx.Close(panel)
-		UiFx.Flash(ZONE_COLORS[zone] or CYAN, 0.6, 0.4)
+		win:Close()
+		UiFx.Flash((ZONE_PAINT[zone] or FALLBACK_PAINT)[1], 0.6, 0.4)
 		Sfx.Play("Reveal", 1)
 	end
 
+	local cards = {}
+	local built = math.min(Config.Zones.BuiltZones, 4) -- launch = zones 1-4: the grid holds four
 	for zone = 1, built do
-		local color = ZONE_COLORS[zone] or CYAN
-		local card = Instance.new("Frame")
-		card.Name = "Zone" .. zone
-		card.LayoutOrder = zone
-		card.BackgroundColor3 = CARD
-		card.Size = UDim2.new(1 / built, -8 * (built - 1) / built, 1, 0)
-		card.Parent = list
-		corner(card, 12)
-		local cardStroke = stroke(card, color, 3, true)
-		local strip = Instance.new("Frame")
-		strip.Name = "Strip"
-		strip.BackgroundColor3 = color
-		strip.BorderSizePixel = 0
-		strip.Size = UDim2.new(1, 0, 0, 10)
-		strip.Parent = card
-		corner(strip, 12)
-		local number = text(card, "Number", FONT, color, UDim2.new(0, 8, 0, 18), UDim2.new(1, -16, 0, 26))
-		number.Text = ("ZONE %d"):format(zone)
-		local name = text(card, "ZoneName", FONT, Color3.new(1, 1, 1), UDim2.new(0, 8, 0, 48), UDim2.new(1, -16, 0, 44))
-		name.Text = Zones.Name(zone):upper()
-		local need = text(card, "Need", BODY_FONT, SOFT, UDim2.new(0, 8, 0, 98), UDim2.new(1, -16, 0, 16))
-		local go = Instance.new("TextButton")
-		go.Name = "Go"
-		go.FontFace = FONT
-		go.TextScaled = true
-		go.TextColor3 = INK
-		go.AutoButtonColor = false
-		go.AnchorPoint = Vector2.new(0.5, 1)
-		go.Position = UDim2.new(0.5, 0, 1, -10)
-		go.Size = UDim2.new(1, -20, 0, 44)
-		go.Parent = card
-		corner(go, 10)
-		stroke(go, INK, 2, true)
-		local pad = Instance.new("UIPadding")
-		pad.PaddingTop = UDim.new(0, 6)
-		pad.PaddingBottom = UDim.new(0, 6)
-		pad.Parent = go
-		UiFx.Press(go)
+		local paint = ZONE_PAINT[zone] or FALLBACK_PAINT
+		local col, row = (zone - 1) % 2, (zone - 1) // 2
+		local block = UiKit.Block(cover, {
+			Name = "Zone" .. zone,
+			Size = Vector2.new(CARD_W, CARD_H),
+			Fill = C.Card,
+			Lip = C.Page,
+			LipPx = 6,
+			Radius = 18,
+			Outline = 3,
+			Ring = paint[1],
+		})
+		block.Holder.Position = UDim2.fromOffset(24 + col * (CARD_W + GAP), 98 + row * (CARD_H + GAP))
+		local face = block.Face
+		local ring = face:FindFirstChild("Ring") :: Frame
+		local ringStroke = ring:FindFirstChildOfClass("UIStroke") :: UIStroke
+		local tile = picture(face, zone, paint)
+
+		-- Locked: the picture goes dark under a lock
+		local shade = make("Frame", {
+			Name = "Shade",
+			BackgroundColor3 = C.Ink,
+			BackgroundTransparency = 0.35,
+			BorderSizePixel = 0,
+			Size = UDim2.fromScale(1, 1),
+			ZIndex = 5,
+			Visible = false,
+		}, tile)
+		UiKit.Corner(shade, 12)
+		HudKit.Image(shade, "Lock", 54, {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.42),
+			ZIndex = 6,
+		})
+
+		local name = RewardKit.Label(face, Zones.Name(zone):upper(), UiKit.Head, 24, C.White, 2.5, 132, 10, 146, 54)
+		name.TextWrapped = true
+		name.TextXAlignment = Enum.TextXAlignment.Left
+		RewardKit.Fit(name, 24, 140, 54)
+
+		-- Coin pay chip: "x4 COINS" with a coin
+		local chip = UiKit.Block(face, {
+			Name = "Pay",
+			Size = Vector2.new(146, 34),
+			Fill = C.Cover,
+			Lip = C.Ink,
+			LipPx = 4,
+			Radius = 17,
+			Outline = 2,
+		})
+		chip.Holder.Position = UDim2.fromOffset(132, 64)
+		HudKit.Image(chip.Face, "Coin", 22, {
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 8, 0.5, 0),
+		})
+		local pay = RewardKit.Label(
+			chip.Face,
+			("%s COINS"):format(Currency.FormatMultiplier(Zones.CoinPay(zone))),
+			UiKit.Head,
+			18,
+			C.Gold,
+			2,
+			34,
+			2,
+			106,
+			26
+		)
+		pay.TextXAlignment = Enum.TextXAlignment.Left
+
+		local go = RewardKit.Button(face, "GO", "Lime", 146, 46, 26)
+		go.Holder.Position = UDim2.fromOffset(132, 102)
 		go.Activated:Connect(function()
-			teleport(zone)
+			local card = cards[zone]
+			if card.State == "Open" then
+				teleport(zone)
+			elseif card.State == "Locked" then
+				go:Shake()
+			end
 		end)
-		cards[zone] = { Go = go, Need = need, Stroke = cardStroke, Color = color }
+		cards[zone] = {
+			Go = go,
+			Shade = shade,
+			Pin = tile:FindFirstChild("Pin") :: ImageLabel,
+			Ring = ringStroke,
+			Paint = paint,
+			Name = name,
+			State = "",
+		}
 	end
 
 	local function refresh()
 		local zonesOpen = player:GetAttribute("ZonesOpen") or 1
 		openButton.Visible = zonesOpen >= 2
+		local here = hereZone()
 		for zone, card in cards do
 			local open = Zones.Unlocked(zonesOpen, zone)
-			card.Go.Text = if open then "GO" else "LOCKED"
-			card.Go.BackgroundColor3 = if open then LIME else GREY
-			card.Need.Text = if zone == 1 then "YOUR LANE" else Zones.NeedText(zone)
-			card.Stroke.Color = if open then card.Color else GREY
+			local state = if not open then "Locked" elseif zone == here then "Here" else "Open"
+			card.State = state
+			card.Shade.Visible = not open
+			card.Pin.Visible = open -- the lock takes its place
+			card.Ring.Color = if open then card.Paint[1] else C.Grey
+			card.Name.TextColor3 = if open then C.White else C.LockedText
+			local go = card.Go
+			go:SetIcon(nil)
+			if state == "Open" then
+				go:Paint(C.Lime, C.LimeLip, C.White)
+				go:SetText("GO!")
+			elseif state == "Here" then
+				go:Paint(C.Chip, C.Ink, C.Cyan)
+				go:SetText("YOU ARE HERE")
+			else
+				go:Paint(C.Grey, C.GreyLip, C.LockedText)
+				go:SetText(Zones.NeedText(zone))
+			end
+			go:SetPressable(state ~= "Here")
 		end
 	end
 
-	openButton.Activated:Connect(function()
-		if panel.Visible then
-			UiFx.Close(panel)
-		else
-			refresh()
-			UiFx.Open(panel)
+	local function open()
+		refresh()
+		win:Open()
+		local holders = {}
+		for zone = 1, built do
+			table.insert(holders, cover:FindFirstChild("Zone" .. zone) :: GuiObject)
 		end
-	end)
-	close.Activated:Connect(function()
-		UiFx.Close(panel)
+		RewardKit.Stagger(holders, 0.05, 0.1)
+	end
+
+	openButton.Activated:Connect(function()
+		if win:IsOpen() then
+			win:Close()
+		else
+			open()
+		end
 	end)
 	for _, key in { "ZonesOpen", "Rebirths" } do
 		player:GetAttributeChangedSignal(key):Connect(refresh)

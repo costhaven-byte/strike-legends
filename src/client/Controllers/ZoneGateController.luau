@@ -447,7 +447,8 @@ function ZoneGateController:Start()
 
 	local function refresh()
 		refreshWalls()
-		if showing then
+		-- a REBIRTH! moment on screen goes first (RebirthController); this follows when it closes
+		if showing or player:GetAttribute("RebirthParty") then
 			return
 		end
 		local zonesOpen = player:GetAttribute("ZonesOpen")
@@ -460,6 +461,7 @@ function ZoneGateController:Start()
 		end
 	end
 	player:GetAttributeChangedSignal("ZonesOpen"):Connect(refresh)
+	player:GetAttributeChangedSignal("RebirthParty"):Connect(refresh)
 	refresh()
 end
 

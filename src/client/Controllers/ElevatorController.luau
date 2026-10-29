@@ -13,6 +13,7 @@ local Config = require(Shared.Config)
 local Zones = require(Shared.Modules.Zones)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules:WaitForChild("Sfx"))
+local CrateKit = require(Modules:WaitForChild("CrateKit"))
 
 local player = Players.LocalPlayer
 
@@ -236,28 +237,44 @@ function ElevatorController:Start()
 	shade.BackgroundColor3 = SIGN
 	shade.BackgroundTransparency = 1
 	shade.Parent = gui
-	local rideText = Instance.new("TextLabel")
-	rideText.BackgroundTransparency = 1
-	rideText.FontFace = FONT
-	rideText.TextScaled = true
-	rideText.TextColor3 = GOLD
+	-- UI pass batch 4 (2026-10-29): the ride words in the owner's kit look (Luckiest Guy gold with the ink drop) and
+	-- a bouncing arrow above them that points the way the car goes
+	local words = Instance.new("Frame")
+	words.Name = "Ride"
+	words.BackgroundTransparency = 1
+	words.AnchorPoint = Vector2.new(0.5, 0.5)
+	words.Position = UDim2.fromScale(0.5, 0.52)
+	words.Size = UDim2.fromOffset(700, 110)
+	words.Parent = shade
+	local wordsScale = Instance.new("UIScale")
+	wordsScale.Parent = words
+	local rideText = CrateKit.Title(words, "", 84, GOLD, 5, 7)
+	local arrow = CrateKit.Title(words, "▲", 64, GOLD, 4, 5)
+	local arrowBox = arrow.Parent :: Frame
+	arrowBox.Name = "Arrow"
+	arrowBox.AnchorPoint = Vector2.new(0.5, 1)
+	arrowBox.Size = UDim2.fromOffset(80, 70)
 	rideText.TextTransparency = 1
-	rideText.AnchorPoint = Vector2.new(0.5, 0.5)
-	rideText.Position = UDim2.fromScale(0.5, 0.5)
-	rideText.Size = UDim2.fromScale(0.6, 0.09)
-	rideText.Parent = shade
-	local textStroke = Instance.new("UIStroke")
-	textStroke.Color = INK
-	textStroke.Thickness = 3
-	textStroke.Transparency = 1
-	textStroke.Parent = rideText
+	arrow.TextTransparency = 1
+	local ARROW_UP, ARROW_DOWN = UDim2.new(0.5, 0, 0, -6), UDim2.new(0.5, 0, 0, 10)
+	arrowBox.Position = ARROW_DOWN
+	local arrowBob = TweenService:Create(
+		arrowBox,
+		TweenInfo.new(0.32, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		{ Position = ARROW_UP }
+	)
 
 	local function fade(dark: boolean, time: number)
 		local info = TweenInfo.new(time, Enum.EasingStyle.Quad)
 		local t = if dark then 0 else 1
 		TweenService:Create(shade, info, { BackgroundTransparency = t }):Play()
 		TweenService:Create(rideText, info, { TextTransparency = t }):Play()
-		TweenService:Create(textStroke, info, { Transparency = t }):Play()
+		TweenService:Create(arrow, info, { TextTransparency = t }):Play()
+		if dark then
+			local fit = math.clamp((gui.AbsoluteSize.X - 24) / 760, 0.4, 1) -- phones held sideways
+			wordsScale.Scale = fit * 0.6
+			TweenService:Create(wordsScale, TweenInfo.new(0.3, Enum.EasingStyle.Back), { Scale = fit }):Play()
+		end
 	end
 
 	remote.OnClientEvent:Connect(function(fromId: string, toId: string)
@@ -268,6 +285,17 @@ function ElevatorController:Start()
 		moveDoors(from, true)
 		Sfx.Play("ElevatorDing", 1)
 		rideText.Text = from.Info.RideText
+		-- the arrow points up on the way up, down on the way down, and bobs that way
+		local down = from.Info.Arrow == "▼"
+		arrow.Text = if down then "▼" else "▲"
+		arrowBox.Position = if down then ARROW_UP else ARROW_DOWN
+		arrowBob:Cancel()
+		arrowBob = TweenService:Create(
+			arrowBox,
+			TweenInfo.new(0.32, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+			{ Position = if down then ARROW_DOWN else ARROW_UP }
+		)
+		arrowBob:Play()
 		gui.Enabled = true
 		fade(true, 0.35)
 		task.wait(ELEVATORS.RideSeconds)
@@ -276,6 +304,7 @@ function ElevatorController:Start()
 		fade(false, 0.4)
 		Sfx.Play("ElevatorDing", 1.2)
 		task.wait(0.45)
+		arrowBob:Cancel()
 		gui.Enabled = false
 		task.wait(1.2)
 		moveDoors(to, false)

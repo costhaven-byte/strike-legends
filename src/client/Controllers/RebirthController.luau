@@ -2,6 +2,9 @@
 -- top of the screen. Owner 2026-10-27: rebirths open the zones, so it shows from zone 1 once the first 3 minutes are
 -- done (Onboarding 3). Tapping it opens the rebirth window: what you go back to, what you keep, the boost you get
 -- forever (and the zone it opens) and what the next rebirth needs. REBIRTH needs a second tap to confirm.
+-- UI pass batch 4 (2026-10-29): the window is in the owner's kit look (RewardKit window + cover, three blocks, lip
+-- buttons) and a done rebirth gets a full-screen "REBIRTH!" moment. While it shows, the local attribute
+-- RebirthParty holds back the ZONE UNLOCKED window (ZoneGateController), which follows when you tap CONTINUE.
 -- Built in code (not in Studio), so it lives in git. The server decides everything (RebirthService).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,52 +17,219 @@ local Rebirth = require(Shared.Modules.Rebirth)
 local Zones = require(Shared.Modules.Zones)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules:WaitForChild("Sfx"))
-local UiFx = require(Modules:WaitForChild("UiFx"))
 local HudKit = require(Modules:WaitForChild("HudKit"))
+local UiKit = require(Modules:WaitForChild("UiKit"))
+local CrateKit = require(Modules:WaitForChild("CrateKit"))
+local RewardKit = require(Modules:WaitForChild("RewardKit"))
+local MomentKit = require(Modules:WaitForChild("MomentKit"))
 
 local player = Players.LocalPlayer
 
 local REBIRTH = Config.Economy.Rebirth
-local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
-local BODY_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
-local INK = Color3.fromHex("06060F")
-local PANEL = Color3.fromRGB(18, 12, 38)
-local GOLD = Color3.fromRGB(255, 200, 40)
-local LIME = Color3.fromRGB(125, 255, 60)
-local RED = Color3.fromRGB(255, 90, 90)
-local GREY = Color3.fromRGB(120, 110, 150)
-local SOFT = Color3.fromRGB(200, 190, 230)
+local C = UiKit.C
+local make = UiKit.Make
+local tween = UiKit.Tween
 local CONFIRM_SECONDS = 3
 
 local RebirthController = {}
 
-local function corner(parent: Instance, radius: number?)
-	local c = Instance.new("UICorner")
-	c.CornerRadius = if radius then UDim.new(0, radius) else UDim.new(1, 0)
-	c.Parent = parent
+local function hex(color: Color3): string
+	return "#" .. color:ToHex()
 end
 
-local function stroke(parent: Instance, color: Color3, thickness: number, border: boolean?): UIStroke
-	local s = Instance.new("UIStroke")
-	s.Color = color
-	s.Thickness = thickness
-	s.ApplyStrokeMode = if border then Enum.ApplyStrokeMode.Border else Enum.ApplyStrokeMode.Contextual
-	s.Parent = parent
-	return s
+-- A navy pill with an icon and a word, sized to its words (rows in the window, chips on the REBIRTH! screen)
+local function chip(parent: Instance, text: string, color: Color3, icon: string?, size: number, h: number): Frame
+	local width = CrateKit.TextWidth(text, UiKit.Head, size) + (if icon then h + 26 else 36)
+	local block = UiKit.Block(parent, {
+		Name = "Chip",
+		Size = Vector2.new(width, h),
+		Fill = C.Cover,
+		Lip = C.Ink,
+		LipPx = 4,
+		Radius = h / 2,
+		Outline = 3,
+	})
+	local x = 18
+	if icon then
+		HudKit.Image(block.Face, icon, h - 18, {
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 12, 0.5, -1),
+		})
+		x = h
+	end
+	local label = UiKit.Text(block.Face, text, UiKit.Head, size, color, 2.5)
+	label.Position = UDim2.fromOffset(x, 2)
+	label.Size = UDim2.new(1, -x - 14, 1, -2)
+	return block.Holder :: Frame
 end
 
-local function text(parent: Instance, name: string, font: Font, color: Color3, position: UDim2, size: UDim2): TextLabel
-	local label = Instance.new("TextLabel")
-	label.Name = name
-	label.BackgroundTransparency = 1
-	label.FontFace = font
-	label.TextScaled = true
-	label.TextColor3 = color
-	label.Position = position
-	label.Size = size
-	label.Parent = parent
-	stroke(label, INK, 1.5)
-	return label
+-- ===== REBIRTH! moment: full screen, the rebirth arrows on rays, what you got, confetti and CONTINUE =====
+-- show(rebirthsDone, zoneOpened?)
+local function celebration(): (number, number?) -> ()
+	local gui = MomentKit.Layer("RebirthPartyUI", 50)
+	local screen = make("Frame", {
+		Name = "Screen",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1, 1),
+		Visible = false,
+		Active = true,
+	}, gui) :: Frame
+	local shade = make("TextButton", {
+		Name = "Backdrop",
+		Text = "",
+		AutoButtonColor = false,
+		BackgroundColor3 = C.Ink,
+		BackgroundTransparency = 0.12,
+		BorderSizePixel = 0,
+		Size = UDim2.fromScale(1, 1),
+	}, screen)
+	local flash = make("Frame", {
+		Name = "Flash",
+		BackgroundColor3 = C.Lime,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Size = UDim2.fromScale(1, 1),
+		ZIndex = 20,
+	}, screen)
+	local W, H = 900, 720
+	local stage = make("Frame", {
+		Name = "Stage",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(W, H),
+		ZIndex = 2,
+	}, screen)
+	local fit = make("UIScale", {}, stage)
+	local function refit()
+		local area = gui.AbsoluteSize
+		if area.X > 0 then
+			fit.Scale = math.max(0.3, math.min(1, (area.X - 24) / W, (area.Y - 16) / H))
+		end
+	end
+	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(refit)
+	local pop = make("Frame", { Name = "Pop", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1) }, stage)
+	local popScale = UiKit.ScaleOf(pop)
+
+	local titleBox = make("Frame", {
+		Name = "TitleBox",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(0, 10),
+		Size = UDim2.fromOffset(W, 110),
+		ZIndex = 5,
+	}, pop)
+	CrateKit.Title(titleBox, "REBIRTH!", 110, C.Lime, 5, 8)
+	local iconSpot = make("Frame", {
+		Name = "IconSpot",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromOffset(W / 2, 290),
+		Size = UDim2.fromOffset(240, 240),
+		ZIndex = 3,
+	}, pop)
+	local rays = RewardKit.Rays(iconSpot, C.Lime, 760, 9)
+	rays.ZIndex = 1
+	local arrows = HudKit.Image(iconSpot, "Rebirth", 240, { ZIndex = 4 })
+	local nameBox = make("Frame", {
+		Name = "NameBox",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(0, 432),
+		Size = UDim2.fromOffset(W, 84),
+		ZIndex = 5,
+	}, pop)
+	local count = CrateKit.Title(nameBox, "", 70, C.White, 4.5, 7)
+	local chips = make("Frame", {
+		Name = "Chips",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(0, 528),
+		Size = UDim2.fromOffset(W, 56),
+		ZIndex = 5,
+	}, pop)
+	make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Padding = UDim.new(0, 14),
+	}, chips)
+	local continue = RewardKit.Button(pop, "CONTINUE", "Lime", 300, 72, 36)
+	continue.Holder.Position = UDim2.fromOffset((W - 300) / 2, 616)
+
+	local stopTwinkle: (() -> ())? = nil
+	local stopSpin: (() -> ())? = nil
+	local canClose = false
+	local function close()
+		if not screen.Visible or not canClose then
+			return
+		end
+		canClose = false
+		for _, stop in { stopTwinkle, stopSpin } do
+			if stop then
+				stop()
+			end
+		end
+		stopTwinkle, stopSpin = nil, nil
+		tween(shade, 0.2, Enum.EasingStyle.Linear, { BackgroundTransparency = 1 })
+		tween(popScale, 0.22, Enum.EasingStyle.Back, { Scale = 0 }, Enum.EasingDirection.In).Completed:Wait()
+		screen.Visible = false
+		player:SetAttribute("RebirthParty", nil) -- the ZONE UNLOCKED window may show now
+	end
+	continue.Activated:Connect(close)
+	UiKit.CloseKeys(screen, close)
+
+	return function(done: number, zone: number?)
+		player:SetAttribute("RebirthParty", true)
+		refit()
+		count.Text = ("REBIRTH %d"):format(done)
+		for _, child in chips:GetChildren() do
+			if child:IsA("GuiObject") then
+				child:Destroy()
+			end
+		end
+		local coins = Currency.FormatMultiplier(Rebirth.CoinMultiplier(done))
+		chip(chips, coins .. " COINS", C.Gold, "Coin", 28, 56).LayoutOrder = 1
+		local xp = Currency.FormatMultiplier(Rebirth.XpMultiplier(done))
+		chip(chips, xp .. " XP", C.Cyan, "Xp", 28, 56).LayoutOrder = 2
+		if zone then
+			chip(chips, Zones.Name(zone):upper() .. " OPEN!", C.Pink, "Portal", 28, 56).LayoutOrder = 3
+		end
+
+		screen.Visible = true
+		shade.BackgroundTransparency = 1
+		tween(shade, 0.25, Enum.EasingStyle.Linear, { BackgroundTransparency = 0.12 })
+		flash.BackgroundTransparency = 0.2
+		tween(flash, 0.7, Enum.EasingStyle.Quad, { BackgroundTransparency = 1 })
+		popScale.Scale = 0.6
+		tween(popScale, 0.3, Enum.EasingStyle.Back, { Scale = 1 })
+		RewardKit.Stamp(titleBox)
+		-- the arrows spin in fast, then keep turning slowly
+		local arrowScale = UiKit.ScaleOf(arrows)
+		arrowScale.Scale = 0.01
+		arrows.Rotation = -360
+		task.delay(0.2, function()
+			tween(arrows, 0.6, Enum.EasingStyle.Quint, { Rotation = 0 })
+			tween(arrowScale, 0.35, Enum.EasingStyle.Back, { Scale = 1.15 }).Completed:Wait()
+			tween(arrowScale, 0.12, Enum.EasingStyle.Quad, { Scale = 1 })
+			task.wait(0.3)
+			if screen.Visible and not stopSpin then
+				stopSpin = HudKit.Spin(arrows, 6)
+			end
+		end)
+		RewardKit.Stagger({ nameBox, chips, continue.Holder }, 0.12, 0.45)
+		if stopTwinkle then
+			stopTwinkle()
+		end
+		stopTwinkle = RewardKit.Twinkle(iconSpot, 8, C.Lime)
+		CrateKit.Confetti(pop, 0, -120, 50, 480, 1)
+		task.delay(0.5, function()
+			CrateKit.Confetti(pop, -300, -60, 24, 260, 0.9)
+			CrateKit.Confetti(pop, 300, -60, 24, 260, 0.9)
+		end)
+		Sfx.Play("RankUp", 1)
+		canClose = false
+		task.delay(0.8, function()
+			canClose = true
+		end)
+	end
 end
 
 function RebirthController:Start()
@@ -117,14 +287,14 @@ function RebirthController:Start()
 	tapArrow.AnchorPoint = Vector2.new(0.5, 0)
 	tapArrow.Position = UDim2.new(0.5, 0, 1, 18)
 	tapArrow.Size = UDim2.fromOffset(90, 44)
-	tapArrow.FontFace = FONT
+	tapArrow.FontFace = UiKit.Head
 	tapArrow.TextScaled = true
-	tapArrow.TextColor3 = LIME
+	tapArrow.TextColor3 = C.Lime
 	tapArrow.Text = "▲\nTAP!"
 	tapArrow.ZIndex = 20
 	tapArrow.Visible = false
 	tapArrow.Parent = openButton
-	stroke(tapArrow, INK, 2.5)
+	UiKit.Outline(tapArrow, C.Ink, 2.5)
 	TweenService:Create(
 		tapArrow,
 		TweenInfo.new(0.45, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
@@ -132,75 +302,103 @@ function RebirthController:Start()
 	):Play()
 
 	-- ===== The window =====
-	local panel = Instance.new("Frame")
-	panel.Name = "Panel"
-	panel.AnchorPoint = Vector2.new(0.5, 0.5)
-	panel.Position = UDim2.fromScale(0.5, 0.53)
-	panel.Size = UDim2.fromOffset(460, 330)
-	panel.BackgroundColor3 = PANEL
-	panel.BackgroundTransparency = 0.05
-	panel.Visible = false
-	panel.Active = true -- taps on the panel don't fall through to the throw meter
-	panel.Parent = gui
-	corner(panel, 18)
-	stroke(panel, GOLD, 4, true)
-	local sizeLimit = Instance.new("UISizeConstraint")
-	sizeLimit.MaxSize = Vector2.new(460, 330)
-	sizeLimit.Parent = panel
+	local W, H = 560, 516
+	local IN_W = W - 48
+	local windowGui = make("ScreenGui", {
+		Name = "RebirthWindowUI",
+		ResetOnSpawn = false,
+		IgnoreGuiInset = true,
+		DisplayOrder = 12,
+	}, playerGui) :: ScreenGui
+	local win = RewardKit.Window(windowGui, W, H)
+	local cover, closeX = RewardKit.Cover(win.Panel, W, H, "REBIRTH", "START AGAIN, STRONGER FOREVER", C.Lime)
+	local titleFront = (cover:FindFirstChild("TitleBox") :: Frame):FindFirstChild("Front", true) :: TextLabel
 
-	local title = text(panel, "Title", FONT, GOLD, UDim2.new(0, 20, 0, 12), UDim2.new(1, -80, 0, 38))
-	title.TextXAlignment = Enum.TextXAlignment.Left
-	local close = Instance.new("TextButton")
-	close.Name = "Close"
-	close.Text = "X"
-	close.FontFace = FONT
-	close.TextScaled = true
-	close.TextColor3 = Color3.new(1, 1, 1)
-	close.BackgroundColor3 = Color3.fromRGB(255, 70, 90)
-	close.AutoButtonColor = false
-	close.Position = UDim2.new(1, -54, 0, 12)
-	close.Size = UDim2.fromOffset(42, 42)
-	close.Parent = panel
-	corner(close, 10)
-	stroke(close, INK, 2, true)
-	UiFx.Press(close)
-
-	-- Four rows: heading on the left, what it means on the right
-	local rows = {}
-	for i, heading in { "BACK TO", "YOU KEEP", "FOREVER", "NEEDS" } do
-		local y = 62 + (i - 1) * 42
-		local head = text(panel, "Head" .. i, FONT, SOFT, UDim2.new(0, 20, 0, y), UDim2.new(0, 110, 0, 22))
-		head.Text = heading
+	-- A block: a card with a coloured heading in its top-left corner
+	local function section(name: string, heading: string, color: Color3, y: number, h: number, ring: Color3?): Frame
+		local block = UiKit.Block(cover, {
+			Name = name,
+			Size = Vector2.new(IN_W, h),
+			Fill = C.Card,
+			Lip = C.Page,
+			LipPx = 5,
+			Radius = 16,
+			Outline = 3,
+			Ring = ring,
+		})
+		block.Holder.Position = UDim2.fromOffset(24, y)
+		local head = RewardKit.Label(block.Face, heading, UiKit.Head, 18, color, 2, 16, 8, IN_W - 32, 22)
+		head.Name = "Heading"
 		head.TextXAlignment = Enum.TextXAlignment.Left
-		local body =
-			text(panel, "Body" .. i, BODY_FONT, Color3.new(1, 1, 1), UDim2.new(0, 136, 0, y), UDim2.new(1, -156, 0, 22))
-		body.TextXAlignment = Enum.TextXAlignment.Left
-		body.RichText = true
-		rows[i] = body
+		return block.Face
 	end
-	rows[1].Text = "POWER LEVEL 1 AND 0 COINS"
-	rows[2].Text = "LEVEL, BALLS, PETS, GEMS, POTIONS AND ZONES"
 
-	local go = Instance.new("TextButton")
-	go.Name = "Go"
-	go.FontFace = FONT
-	go.TextScaled = true
-	go.TextColor3 = INK
-	go.AutoButtonColor = false
-	go.AnchorPoint = Vector2.new(0.5, 1)
-	go.Position = UDim2.new(0.5, 0, 1, -18)
-	go.Size = UDim2.new(0.62, 0, 0, 56)
-	go.Parent = panel
-	corner(go, 12)
-	stroke(go, INK, 2, true)
-	local goPad = Instance.new("UIPadding")
-	goPad.PaddingTop = UDim.new(0, 8)
-	goPad.PaddingBottom = UDim.new(0, 8)
-	goPad.Parent = go
-	UiFx.Press(go)
+	-- 1. YOU GO BACK TO: Power Level 1, 0 coins
+	local back = section("Back", "YOU GO BACK TO", C.Price, 94, 80)
+	local backRow = make("Frame", {
+		Name = "Row",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(14, 32),
+		Size = UDim2.new(1, -28, 0, 38),
+	}, back)
+	make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Padding = UDim.new(0, 10),
+	}, backRow)
+	chip(backRow, "POWER LV 1", C.White, "Bolt", 20, 38).LayoutOrder = 1
+	chip(backRow, "0 COINS", C.White, "Coin", 20, 38).LayoutOrder = 2
 
+	-- 2. YOU KEEP: one icon per thing you keep
+	local keep = section("Keep", "YOU KEEP", C.Lime, 184, 92)
+	local KEEPS = {
+		{ "Xp", "LEVEL" },
+		{ "Ball", "BALLS" },
+		{ "Paw", "PETS" },
+		{ "Gem", "GEMS" },
+		{ "PotionCoin", "POTIONS" },
+		{ "Portal", "ZONES" },
+	}
+	local cellW = (IN_W - 28) / #KEEPS
+	for i, item in KEEPS do
+		local cell = make("Frame", {
+			Name = item[2],
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(14 + (i - 1) * cellW, 30),
+			Size = UDim2.fromOffset(cellW, 56),
+		}, keep)
+		HudKit.Image(cell, item[1], 34, {
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.fromScale(0.5, 0),
+		})
+		RewardKit.Label(cell, item[2], UiKit.Head, 14, C.White, 2, 0, 36, cellW, 18)
+	end
+
+	-- 3. YOU GET FOREVER: the new coin boost big, the XP boost, the zone it opens
+	local forever = section("Forever", "YOU GET FOREVER", C.Gold, 286, 112, C.Gold)
+	local coinsBig = RewardKit.Label(forever, "", UiKit.Head, 46, C.Gold, 3.5, 16, 30, 240, 52)
+	coinsBig.TextXAlignment = Enum.TextXAlignment.Left
+	make("UIPadding", { PaddingTop = UDim.new(0, 5) }, coinsBig)
+	local coinsWas = RewardKit.Label(forever, "", UiKit.Body, 13, C.Muted, 0, 18, 82, 240, 18)
+	coinsWas.TextXAlignment = Enum.TextXAlignment.Left
+	local xpBig = RewardKit.Label(forever, "", UiKit.Head, 32, C.Cyan, 3, 262, 34, 232, 38)
+	xpBig.TextXAlignment = Enum.TextXAlignment.Left
+	local opens = RewardKit.Label(forever, "", UiKit.Head, 20, C.Pink, 2.5, 262, 74, 232, 26)
+	opens.TextXAlignment = Enum.TextXAlignment.Left
+
+	-- What the next rebirth needs (green = you have it, red = not yet)
+	local needs = RewardKit.Label(cover, "", UiKit.Head, 22, C.White, 2.5, 24, 408, IN_W, 28)
+	needs.RichText = true
+
+	local go = RewardKit.Button(cover, "REBIRTH!", "Gold", 300, 66, 32)
+	go.Holder.Position = UDim2.fromOffset(24, H - 66 - 24)
+	local notYet = RewardKit.Button(cover, "NOT YET", "Grey", IN_W - 300 - 12, 66, 28)
+	notYet.Holder.Position = UDim2.fromOffset(24 + 300 + 12, H - 66 - 24)
+
+	local party = celebration()
 	local confirmUntil = 0
 	local busy = false
+	local stopConfirmPulse: (() -> ())? = nil
 
 	local function state()
 		local done = player:GetAttribute("Rebirths") or 0
@@ -211,88 +409,111 @@ function RebirthController:Start()
 		return done, needLevel, cost, hasLevel, hasCoins
 	end
 
-	local function hex(color: Color3): string
-		return "#" .. color:ToHex()
-	end
-
 	local function refresh()
 		local done, needLevel, cost, hasLevel, hasCoins = state()
 		openButton.Visible = done > 0 or (player:GetAttribute("Onboarding") or 0) >= 3
 		local ready = REBIRTH.Enabled and hasLevel and hasCoins
 		setLook(if ready then "Ready" else "Normal")
-		tapArrow.Visible = ready and done == 0 and not panel.Visible
+		tapArrow.Visible = ready and done == 0 and not win:IsOpen()
 
 		-- The window
-		title.Text = if done > 0 then ("REBIRTH %d"):format(done + 1) else "REBIRTH"
-		local opens = Rebirth.OpensZone(done)
-		rows[3].Text = (if opens then ("OPENS %s!  "):format(Zones.Name(opens):upper()) else "")
-			.. ("COINS %s  ->  %s,  XP %s  ->  %s"):format(
-			Currency.FormatMultiplier(Rebirth.CoinMultiplier(done)),
-			Currency.FormatMultiplier(Rebirth.CoinMultiplier(done + 1)),
-			Currency.FormatMultiplier(Rebirth.XpMultiplier(done)),
-			Currency.FormatMultiplier(Rebirth.XpMultiplier(done + 1))
-		)
-		rows[4].Text = ('<font color="%s">LEVEL %d</font>  +  <font color="%s">%s COINS</font>'):format(
-			hex(if hasLevel then LIME else RED),
+		titleFront.Text = if done > 0 then ("REBIRTH %d"):format(done + 1) else "REBIRTH"
+		coinsBig.Text = ("%s COINS"):format(Currency.FormatMultiplier(Rebirth.CoinMultiplier(done + 1)))
+		coinsWas.Text = ("NOW %s"):format(Currency.FormatMultiplier(Rebirth.CoinMultiplier(done)))
+		xpBig.Text = ("%s XP"):format(Currency.FormatMultiplier(Rebirth.XpMultiplier(done + 1)))
+		local zone = Rebirth.OpensZone(done)
+		opens.Text = if zone then ("OPENS %s!"):format(Zones.Name(zone):upper()) else ""
+		needs.Text = ('NEEDS  <font color="%s">LV %d</font>  ·  <font color="%s">%s COINS</font>'):format(
+			hex(if hasLevel then C.Lime else C.Red),
 			needLevel,
-			hex(if hasCoins then LIME else RED),
+			hex(if hasCoins then C.Lime else C.Red),
 			Currency.Format(cost)
 		)
+
+		local confirming = ready and os.clock() < confirmUntil
 		if not REBIRTH.Enabled then
-			go.Text = "COMING SOON"
+			go:SetText("COMING SOON")
 		elseif not hasLevel then
-			go.Text = ("REACH LEVEL %d"):format(needLevel)
+			go:SetText(("REACH LV %d"):format(needLevel))
 		elseif not hasCoins then
-			go.Text = ("NEED %s COINS"):format(Currency.Format(cost))
-		elseif os.clock() < confirmUntil then
-			go.Text = "TAP AGAIN TO REBIRTH"
+			go:SetText(("NEED %s"):format(Currency.Format(cost)))
+		elseif confirming then
+			go:SetText("TAP AGAIN TO REBIRTH")
 		else
-			go.Text = "REBIRTH!"
+			go:SetText("REBIRTH!")
 		end
-		go.BackgroundColor3 = if ready then GOLD else GREY
+		if confirming then
+			go:Paint(C.Pink, C.PinkLip, C.White)
+		elseif ready then
+			go:Paint(C.Gold, C.GoldLip, C.White)
+		else
+			go:Paint(C.Grey, C.GreyLip, C.LockedText)
+		end
+		if not confirming and stopConfirmPulse then
+			stopConfirmPulse()
+			stopConfirmPulse = nil
+		end
 	end
 
 	local function setOpen(open: boolean)
 		if open then
 			confirmUntil = 0
 			refresh()
-			UiFx.Open(panel)
+			win:Open()
+			RewardKit.Stagger({
+				cover:FindFirstChild("Back") :: GuiObject,
+				cover:FindFirstChild("Keep") :: GuiObject,
+				cover:FindFirstChild("Forever") :: GuiObject,
+			}, 0.07, 0.1)
 		else
-			UiFx.Close(panel)
+			win:Close()
 		end
-		task.delay(0.4, refresh) -- after the close animation
+		task.delay(0.4, refresh) -- after the open / close animation
 	end
+	win.Closed.Event:Connect(function()
+		task.delay(0.4, refresh)
+	end)
 
 	openButton.Activated:Connect(function()
-		setOpen(not panel.Visible)
+		setOpen(not win:IsOpen())
 	end)
-	close.Activated:Connect(function()
+	closeX.Activated:Connect(function()
+		setOpen(false)
+	end)
+	notYet.Activated:Connect(function()
 		setOpen(false)
 	end)
 	go.Activated:Connect(function()
-		local _, _, _, hasLevel, hasCoins = state()
+		local done, _, _, hasLevel, hasCoins = state()
 		if busy or not (REBIRTH.Enabled and hasLevel and hasCoins) then
+			go:Shake()
 			return
 		end
 		-- A rebirth can't be undone: the first tap asks, the second (within a few seconds) does it
 		if os.clock() >= confirmUntil then
 			confirmUntil = os.clock() + CONFIRM_SECONDS
 			refresh()
-			UiFx.Pop(go, 1.1, 0.25)
+			if stopConfirmPulse then
+				stopConfirmPulse()
+			end
+			stopConfirmPulse = RewardKit.Pulse(go.Holder, 1.06, 0.3)
 			task.delay(CONFIRM_SECONDS, refresh)
 			return
 		end
 		busy = true
+		local zone = Rebirth.OpensZone(done)
+		-- set before asking: the new ZonesOpen can arrive before the answer, and ZONE UNLOCKED must wait its turn
+		player:SetAttribute("RebirthParty", true)
 		local ok, result = pcall(remote.InvokeServer, remote)
 		busy = false
 		confirmUntil = 0
 		if ok and result and result.Ok then
 			setOpen(false)
-			UiFx.Flash(GOLD, 0.7, 0.6)
-			UiFx.Confetti(nil, 60, { GOLD, Color3.new(1, 1, 1), LIME })
-			Sfx.Play("RankUp", 1)
+			task.delay(0.25, party, done + 1, zone)
 		else
-			go.Text = if ok and result and result.Error then result.Error:upper() else "TRY AGAIN"
+			player:SetAttribute("RebirthParty", nil)
+			go:SetText(if ok and result and result.Error then result.Error:upper() else "TRY AGAIN")
+			go:Shake()
 			task.delay(2, refresh)
 		end
 	end)
