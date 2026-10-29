@@ -101,7 +101,8 @@ local function welcome(player: Player)
 	local rate = tonumber(PlayerDataService.Get(player, "AwayRate")) or 0
 	PlayerDataService.Set(player, "LastOnline", os.time())
 	local test = AWAY.StudioTest
-	if test and RunService:IsStudio() then
+	-- (not in a TEST panel FROM ZERO test: a new player has never been away)
+	if test and RunService:IsStudio() and player:GetAttribute("StudioStart") ~= "Zero" then
 		last = os.time() - test.Hours * 3600
 		rate = math.max(rate, test.Rate)
 	end

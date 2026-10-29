@@ -56,6 +56,7 @@ local phase = "None" -- None, Intro, Armor, Core, Finale, Giant, Defeated
 local health, maxHealth, meter, meterGoal = 0, 0, 0, 0
 local giantsInFlight = 0
 local firstSlot = true
+local openNow = false -- Studio TEST panel: open the next event now
 
 local function now(): number
 	return Workspace:GetServerTimeNow()
@@ -631,6 +632,15 @@ function BossService.Throw(player: Player, charge: number)
 	end)
 end
 
+-- Studio only (TEST panel BOSS NOW): the waiting event opens for boarding right away
+function BossService.TestOpenNow(): boolean
+	if not RunService:IsStudio() or not BOSS.Enabled or state:GetAttribute("State") ~= "Waiting" then
+		return false
+	end
+	openNow = true
+	return true
+end
+
 function BossService.InFight(player: Player): boolean
 	return fighters[player] ~= nil
 end
@@ -1082,7 +1092,16 @@ local function eventLoop()
 		state:SetAttribute("State", "Waiting")
 		state:SetAttribute("OpensAt", opensAt)
 		state:SetAttribute("BoardingEndsAt", opensAt + BOSS.BoardingSeconds)
-		waitUntil(opensAt)
+		while now() < opensAt and not openNow do
+			task.wait(math.min(1, math.max(0.05, opensAt - now())))
+		end
+		if openNow then
+			-- Studio TEST panel BOSS NOW: boarding opens right away
+			openNow = false
+			opensAt = now()
+			state:SetAttribute("OpensAt", opensAt)
+			state:SetAttribute("BoardingEndsAt", opensAt + BOSS.BoardingSeconds)
+		end
 
 		table.clear(boarders)
 		state:SetAttribute("State", "Boarding")

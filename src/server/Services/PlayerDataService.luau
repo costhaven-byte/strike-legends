@@ -11,6 +11,7 @@ local Config = require(Shared.Config)
 local Progression = require(Shared.Modules.Progression)
 local Currency = require(Shared.Modules.Currency)
 local SaveStore = require(script.Parent.Parent.Modules.SaveStore)
+local StudioTestMode = require(script.Parent.Parent.Modules.StudioTestMode)
 
 local PlayerDataService = {}
 
@@ -74,8 +75,12 @@ local function onPlayerAdded(player: Player)
 		return
 	end
 
-	-- Studio test mode (Config.Onboarding.StudioNewPlayer): a brand new player every time, nothing saved
-	local noSave = RunService:IsStudio() and Config.Onboarding.StudioNewPlayer == true
+	-- Studio test mode (Config.Onboarding.StudioNewPlayer): a brand new player every time, nothing saved.
+	-- The TEST panel's START FROM ZERO / MY SAVE choice (StudioTestMode) wins over the Config switch.
+	local studioMode = if RunService:IsStudio() then StudioTestMode.Get(player.UserId) else nil
+	local noSave = RunService:IsStudio()
+		and (studioMode == "Zero" or (studioMode == nil and Config.Onboarding.StudioNewPlayer == true))
+	player:SetAttribute("StudioStart", if RunService:IsStudio() then (if noSave then "Zero" else "Mine") else nil)
 	local data = if noSave then SaveStore.DefaultData() else SaveStore.Load(player.UserId)
 	if noSave then
 		warn(
