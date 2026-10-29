@@ -9,9 +9,17 @@ local FORMULA = Config.Economy.Formula
 
 local Rebirth = {}
 
--- Rank level the next rebirth needs (rebirths = rebirths done so far)
+-- Rank level the next rebirth needs (rebirths = rebirths done so far): its own level from the Levels list, then
+-- RankStep more for each one after it (no list: Level + RankStep each)
 function Rebirth.Level(rebirths: number): number
-	return REBIRTH.Level + REBIRTH.RankStep * rebirths
+	local levels = REBIRTH.Levels
+	if not levels or #levels == 0 then
+		return REBIRTH.Level + REBIRTH.RankStep * rebirths
+	end
+	if rebirths < #levels then
+		return levels[rebirths + 1]
+	end
+	return levels[#levels] + REBIRTH.RankStep * (rebirths + 1 - #levels)
 end
 
 -- The zone the next rebirth opens, or nil when it opens none (rebirths = rebirths done so far)

@@ -233,6 +233,13 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 
 	-- Each goal is timed per run ("Zone4", "Zone4@R1"...) and once over the whole session, rebirths and all
 	-- ("EverZone4" = total play time until the first time it happened)
+	-- Every purchase and rebirth, for EconomySim.Gaps (only when P.Log is a table)
+	local function logBuy(text: string)
+		if P.Log then
+			table.insert(P.Log, { Time = time, Run = s.Rebirths, Text = text, Coins = s.Coins, Rank = s.Rank })
+		end
+	end
+
 	local function mark(goal: string)
 		local key = if s.Rebirths > 0 then goal .. "@R" .. s.Rebirths else goal
 		if not reached[key] then
@@ -474,7 +481,12 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 			then E.Rebirth.FirstCost * E.Rebirth.CostGrowth ^ s.Rebirths
 			elseif s.Rebirths < #costs then costs[s.Rebirths + 1]
 			else costs[#costs] * E.Rebirth.CostGrowth ^ (s.Rebirths + 1 - #costs)
-		return E.Rebirth.Level + E.Rebirth.RankStep * s.Rebirths, needCoins
+		local levels = E.Rebirth.Levels
+		local needRank = if not levels or #levels == 0
+			then E.Rebirth.Level + E.Rebirth.RankStep * s.Rebirths
+			elseif s.Rebirths < #levels then levels[s.Rebirths + 1]
+			else levels[#levels] + E.Rebirth.RankStep * (s.Rebirths + 1 - #levels)
+		return needRank, needCoins
 	end
 	-- Saving up for a rebirth that opens a zone: the goal bar makes it THE goal once it's half way (EventController)
 	local function savingForRebirth(): boolean
@@ -495,6 +507,7 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 			s.Coins -= E.PowerLevels[s.Level + 1].Price
 			s.Level += 1
 			mark("Level" .. s.Level)
+			logBuy("Power Level " .. s.Level)
 		end
 		local budget = if s.Level < #E.PowerLevels then nextLevelPrice() * S.SpendShare else math.huge
 		if savingForRebirth() then
@@ -521,6 +534,7 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 				s.Coins -= egg.Price
 				s.EggCount[egg.Id] = (s.EggCount[egg.Id] or 0) + 1
 				hatch(egg.Id)
+				logBuy("egg " .. egg.Id)
 			end
 		end
 		for i = #P.Crates, 1, -1 do
@@ -547,6 +561,7 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 				s.CrateCount[crate.Id] = (s.CrateCount[crate.Id] or 0) + 1
 				openCrate(crate.Id, if first then config.Onboarding.FirstBoughtRarity else nil)
 				mark("FirstCrateOpened")
+				logBuy("crate " .. crate.Id)
 			end
 		end
 	end
@@ -747,6 +762,7 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 				s.Rebirths += 1
 				s.RunStart = time
 				mark("Rebirth" .. s.Rebirths)
+				logBuy("REBIRTH " .. s.Rebirths)
 				s.Coins, s.Level, s.Streak = 0, 1, 0
 				s.Rank, s.XP = 1, 0
 				local before = s.Zone
@@ -1019,8 +1035,10 @@ function EconomySim.Sheet(config: any?): string
 	local function add(text: string)
 		table.insert(lines, text)
 	end
+	-- total play time to the first time (rebirths reset Power Levels, so a run-0-only time says "never" past it)
 	local function at(goal: string): number?
-		return results[goal] and results[goal].Median
+		local row = results["Ever" .. goal] or results[goal]
+		return row and row.Median
 	end
 	add(
 		("ECONOMY SHEET - 1 throw every %gs, PERFECT on %d%% of throws, median of %d pretend players"):format(
@@ -1060,6 +1078,52 @@ function EconomySim.Sheet(config: any?): string
 	end
 	add("Zones open: " .. table.concat(zones, ", "))
 	add("First rebirth ready: " .. clock(at("RebirthReady")))
+	local report = table.concat(lines, "\n")
+	print(report)
+	return report
+end
+
+-- The gaps between purchases (Power Levels, eggs, crates) in each rebirth run of one pretend player (batch D3:
+-- "the middle must never feel slow"). Paste in Studio's command bar (edit mode):
+--   require(game.ServerStorage.Tools.EconomySim).Gaps()
+function EconomySim.Gaps(config: any?, seed: number?): string
+	config = config or loadConfig()
+	local P = prepare(config)
+	P.Log = {}
+	EconomySim.RunOne(config, seed or 1, P)
+	local lines = { "GAPS BETWEEN PURCHASES (one pretend player; a run ends at its rebirth)" }
+	local runs = {}
+	for _, entry in P.Log do
+		local run = if entry.Text:sub(1, 7) == "REBIRTH" then entry.Run - 1 else entry.Run
+		runs[run] = runs[run] or {}
+		table.insert(runs[run], entry)
+	end
+	for run = 0, #runs do
+		local list = runs[run]
+		if list then
+			local start = if run == 0 then 0 else runs[run - 1][#runs[run - 1]].Time
+			local last, longest, longestAt, buys = start, 0, "", 0
+			for _, entry in list do
+				if entry.Time - last > longest then
+					longest, longestAt = entry.Time - last, entry.Text
+				end
+				last = entry.Time
+				if entry.Text:sub(1, 7) ~= "REBIRTH" then
+					buys += 1
+				end
+			end
+			table.insert(
+				lines,
+				("  run %d: %s long, %d buys, longest wait %s (before %s)"):format(
+					run,
+					clock(last - start),
+					buys,
+					clock(longest),
+					longestAt
+				)
+			)
+		end
+	end
 	local report = table.concat(lines, "\n")
 	print(report)
 	return report

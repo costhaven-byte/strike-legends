@@ -4689,8 +4689,8 @@ Config.Economy.Zones = {
 -- Batch D2 (owner 2026-10-29, final changes "Power Levels"): prices cut a lot so they are the cheap, frequent step
 -- between rebirths (a rebirth puts you back to Power Level 1). Values (the coin multiplier) unchanged. Sim (10 runs):
 -- every run now gets a new Power Level every ~20 s to 3 min at its start (run 0: LV2 0:03, LV3 0:06, LV4 0:49, LV5
--- 1:09, LV6 3:37; zone 2 run: LV6 0:46, LV7 3:36; zone 3 run: LV9 0:16-3:10, LV10 2:10), was 1-2 a run. Levels 11
--- and 12 stay long goals in zone 4 (LV11 ~9 min into the first zone 4 run, LV12 ~85 min into the next).
+-- 1:09, LV6 3:37; zone 2 run: LV6 0:46, LV7 3:36; zone 3 run: LV9 0:16-3:10, LV10 2:10), was 1-2 a run. Level 12
+-- stays a long goal in zone 4. Batch D3: level 11 8B -> 1B, the late goal of the run before zone 4 opens.
 -- The game shows each level's coin payoff ("x1.5 > x2 COINS": PowerLevels.PayoffText).
 Config.Economy.PowerLevels = {
 	{ Level = 1, Price = 0, Power = 6, Value = 1.0 },
@@ -4703,7 +4703,7 @@ Config.Economy.PowerLevels = {
 	{ Level = 8, Price = 1000000, Power = 350, Value = 5 }, -- was 1.5B
 	{ Level = 9, Price = 10000000, Power = 700, Value = 6 }, -- was 8.2B
 	{ Level = 10, Price = 200000000, Power = 1400, Value = 8 }, -- was 41B
-	{ Level = 11, Price = 8000000000, Power = 2800, Value = 10 }, -- was 210B
+	{ Level = 11, Price = 1000000000, Power = 2800, Value = 10 }, -- was 210B; D3: 8B -> 1B (the last buy of a zone 3 run)
 	{ Level = 12, Price = 250000000000, Power = 5000, Value = 12 }, -- was 1.2T
 }
 
@@ -4721,8 +4721,10 @@ Config.Economy.Crates = {
 	{ Id = "Gold", Price = 3000000 }, -- E3b: 65M -> 3M (at 65M it came after the zone 3 crates, about 2 hours in)
 	-- Phase X: zone 3 and 4 crates. Odds come from Config.CrateTiers. E3b: League 25M -> 8M, Champion 1B -> 40M so
 	-- both come while you play zone 3 (were after zone 4 opened); zone 4 crate prices kept.
-	{ Id = "League", Price = 8000000 },
-	{ Id = "Champion", Price = 40000000 },
+	-- D3 (2026-10-29): League 8M -> 30M, Champion 40M -> 250M so they last through both zone 3 runs (at the old
+	-- prices zone 3's shop was bought out early and the run before zone 4 had ~20 minutes with nothing to buy)
+	{ Id = "League", Price = 30000000 },
+	{ Id = "Champion", Price = 250000000 },
 	{ Id = "SkyBronze", Price = 5000000000 },
 	{ Id = "SkySilver", Price = 50000000000 },
 	{ Id = "SkyGold", Price = 500000000000 },
@@ -4810,7 +4812,7 @@ end
 Config.Economy.Eggs = {
 	{ Id = "Alley", Price = 50000, Zone = 2, BonusScale = 0.1 }, -- owner 2026-10-21: pets open with Neon Lanes; 3,700 -> 50K (owner 2026-10-22)
 	{ Id = "Neon", Price = 420000, Zone = 2, BonusScale = 0.2 },
-	{ Id = "Arcade", Price = 6300000, Zone = 3, BonusScale = 0.4 }, -- Main Street Egg (Phase X). E3b: price kept (first one about 1 hour in)
+	{ Id = "Arcade", Price = 20000000, Zone = 3, BonusScale = 0.4 }, -- Main Street Egg (Phase X). D3: 6.3M -> 20M (first one ~3 min into zone 3)
 	{ Id = "Skyline", Price = 1500000000, Zone = 4, BonusScale = 0.7 }, -- Skyline Egg (Phase X). E3b: price kept (about 3 hours of play)
 	{ Id = "Volcano", Price = 35000000000, Zone = 5, BonusScale = 1 },
 }
@@ -4864,9 +4866,16 @@ Config.Economy.Rebirth = {
 	-- was coins + Power Level only). Levels come back faster each rebirth (XpBonus, zone XP pay). Level-up and rank-up
 	-- rewards pay once ever (BestLevel / BestRank); ranks won before need no second trial.
 	-- Economy pass R2 (2026-10-27, tools/EconomySim): prices below hit the timeline (Config.Economy.Timeline).
-	Level = 4, -- the first rebirth needs this rank level...
-	RankStep = 2, -- ...and this many more levels for each one after
-	Costs = { 50000, 700000, 9000000, 150000000, 4000000000 }, -- coins for rebirths 1, 2, 3... (R2 sim: 1st at 12 min, zone 3 at 42 min, zone 4 at 2h20m)
+	-- Batch D3 economy pass (owner 2026-10-29: rebirth 1 at about 4 min, zone 3 at about 25 min, zone 4 at about 1.5 h).
+	-- Each rebirth needs its own rank level (Levels) and coins (Costs). The level comes near the end of each run and
+	-- the coins a minute or two after it, so the run is spent buying Power Levels, crates and eggs, not saving.
+	-- Sim (40 players): rebirth 1 4:27, 2 ~12 min, zone 3 26:14, rebirth 4 ~49 min, zone 4 1h31m; longest wait between
+	-- two buys (median) 2:09 / 1:15 / 3:33 / 3:27 / 10:09 in runs 0-4 (was 5:00 / 1:39 / 5:03 / 1:39 / 25:15).
+	-- Was: Level 4 + RankStep 2 each, Costs 50K / 700K / 9M / 150M / 4B (zone 2 9:40, zone 3 29:43, zone 4 1h09m).
+	Levels = { 3, 8, 13, 21, 24 }, -- rank level for rebirths 1, 2, 3... (D3)...
+	Level = 3, -- (used only when Levels is empty: the first rebirth's level...)
+	RankStep = 2, -- ...and after the Levels list, this many more levels for each rebirth
+	Costs = { 15000, 500000, 4000000, 200000000, 1500000000 }, -- coins for rebirths 1, 2, 3... (D3)
 	CostGrowth = 3, -- ...and each one after the list costs the last one times this
 	FirstCost = 50000, -- (old single-price rule, kept for anything reading it; Rebirth.Cost uses Costs)
 	DiscountLevels = 5, -- NOT BUILT (old plan, nothing reads it): after a rebirth, Power Levels up to this one...
@@ -4879,12 +4888,14 @@ Config.Economy.Timeline = {
 	{ Goal = "Level2", Text = "Buy Power Level 2", From = 0.3, To = 1 }, -- Addendum 2: about 6 throws
 	{ Goal = "FirstCrateOpened", Text = "Open first crate (1,000 sale)", From = 0.5, To = 1.5 }, -- E2: was "afford" at 15K
 	{ Goal = "Rank3", Text = "Reach rank 3", From = 4, To = 5 },
-	{ Goal = "FirstEgg", Text = "Afford first pet egg", From = 11, To = 18, Ever = true }, -- pets open with zone 2 (1 rebirth)
+	{ Goal = "FirstEgg", Text = "Afford first pet egg", From = 5, To = 9, Ever = true }, -- pets open with zone 2 (1 rebirth)
 	-- Owner 2026-10-27: zones open by rebirths (zone 2 = 1, zone 3 = 3, zone 4 = 5); Ever = total play time
-	{ Goal = "RebirthReady", Text = "First rebirth available", From = 10, To = 15, Rebirth = true }, -- skipped while rebirth is off
-	{ Goal = "Zone2", Text = "Unlock Zone 2 (1 rebirth)", From = 10, To = 16, Ever = true },
-	{ Goal = "Zone3", Text = "Unlock Zone 3 (3 rebirths)", From = 40, To = 60, Ever = true },
-	{ Goal = "Zone4", Text = "Unlock Zone 4 (5 rebirths)", From = 120, To = 180, Ever = true },
+	-- Batch D3 (owner 2026-10-29): rebirth 1 about 4 min, zone 3 about 25 min, zone 4 about 1.5 h (aimed a little
+	-- slower: fever and lane events, D4/D5, will add coins the simulator doesn't count)
+	{ Goal = "RebirthReady", Text = "First rebirth available", From = 4, To = 5.5, Rebirth = true }, -- skipped while rebirth is off
+	{ Goal = "Zone2", Text = "Unlock Zone 2 (1 rebirth)", From = 4, To = 5.5, Ever = true },
+	{ Goal = "Zone3", Text = "Unlock Zone 3 (3 rebirths)", From = 24, To = 30, Ever = true },
+	{ Goal = "Zone4", Text = "Unlock Zone 4 (5 rebirths)", From = 85, To = 100, Ever = true },
 }
 
 -- The pretend player the simulator plays as (MASTER_PLAN.md Milestone 10 step 4)
