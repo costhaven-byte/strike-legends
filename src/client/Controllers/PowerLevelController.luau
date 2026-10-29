@@ -1,6 +1,8 @@
 -- The Power Level button on the left of the screen (owner's HUD Kit, 2026-10-26): your level and the next price,
 -- with a bar that fills up as coins come in; it turns lime and glows "BUY!" once you can afford it, gold at MAX. Buying plays a power-up moment;
 -- the bigger ball shows in your hand right away and on the lane from the very next throw.
+-- Batch D2: a small pill under the button says what the next level pays ("x1.5 > x2 COINS"; at MAX "x12 COINS"),
+-- and the power-up moment says it too.
 -- Built in code (not in Studio), so it lives in git. Prices: Config.Economy.PowerLevels.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -21,6 +23,7 @@ local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
 local INK = Color3.fromHex("06060F")
 local GOLD = Color3.fromRGB(255, 200, 40)
 local CYAN = Color3.fromRGB(70, 230, 255)
+local LIME = Color3.fromRGB(125, 255, 60)
 
 local PowerLevelController = {}
 
@@ -50,15 +53,27 @@ local function celebrate(level: number)
 	sub:FindFirstChildOfClass("UIStroke").Thickness = 2
 	local new = PowerLevels.NewText(level)
 	sub.Text = if new ~= "" then new .. " - THROW TO SEE IT!" else "THROW TO SEE IT!"
+	-- the coin payoff: "COINS x1.5 > x2"
+	local pay = sub:Clone()
+	pay.Position = UDim2.new(0.5, 0, 0.38, 64)
+	pay.Size = UDim2.new(0.35, 0, 0, 24)
+	pay.TextColor3 = LIME
+	local was = PowerLevels.Get(level - 1).Value
+	pay.Text = ("COINS %s > %s"):format(
+		Currency.FormatMultiplier(was),
+		Currency.FormatMultiplier(PowerLevels.Get(level).Value)
+	)
 	banner.Parent = layer
 	sub.Parent = layer
+	pay.Parent = layer
 	UiFx.Pop(banner, 1.8, 0.45)
 	UiFx.Pop(sub, 0.4, 0.45)
+	UiFx.Pop(pay, 0.6, 0.45)
 	UiFx.Flash(GOLD, 0.45, 0.4)
 	UiFx.Confetti(nil, 50)
 	Sfx.Play("PowerUp")
 	task.delay(1.8, function()
-		for _, object in { banner, sub } do
+		for _, object in { banner, sub, pay } do
 			TweenService:Create(object, TweenInfo.new(0.3), { TextTransparency = 1 }):Play()
 			TweenService:Create(object:FindFirstChildOfClass("UIStroke") :: UIStroke, TweenInfo.new(0.3), {
 				Transparency = 1,
@@ -158,6 +173,25 @@ function PowerLevelController:Start()
 	maxText.Name = "Max"
 	maxText.TextXAlignment = Enum.TextXAlignment.Left
 
+	-- The coin payoff pill, sitting on the bottom edge of the button ("x1.5 > x2 COINS")
+	local payPill = Instance.new("Frame")
+	payPill.Name = "Payoff"
+	payPill.AnchorPoint = Vector2.new(0.5, 0.5)
+	payPill.AutomaticSize = Enum.AutomaticSize.X
+	payPill.BackgroundColor3 = K.Ink
+	payPill.ZIndex = 8
+	payPill.Parent = button
+	HudKit.Corner(payPill, 9)
+	local payRing = HudKit.Outline(payPill, K.Gold, 1.5)
+	local payPad = Instance.new("UIPadding")
+	payPad.PaddingLeft = UDim.new(0, 7)
+	payPad.PaddingRight = UDim.new(0, 7)
+	payPad.Parent = payPill
+	local payText = HudKit.Text(payPill, "", HudKit.Num, 12, K.Gold, 0)
+	payText.AutomaticSize = Enum.AutomaticSize.X
+	payText.Size = UDim2.fromScale(0, 1)
+	payText.ZIndex = 9
+
 	local mode = ""
 	local phone = false
 	local function arrange()
@@ -195,6 +229,11 @@ function PowerLevelController:Start()
 			maxText.Position = UDim2.fromOffset(left, if p then 3 else 4)
 			HudKit.Fit(maxText, if p then 15 else 22)
 		end
+		-- pill: computer 18 px tall (DAILY is 16 px under the button), phone 14 px
+		payPill.Size = UDim2.fromOffset(0, if p then 14 else 18)
+		payPill.Position = UDim2.new(0.5, 0, 1, if p then -3 else -4)
+		payText.TextSize = if p then 10 else 12
+		payRing.Color = if mode == "Max" then K.White else K.Gold
 		title.Visible = mode ~= "Max"
 		track.Visible = mode == "Saving"
 		buyRow.Visible = mode == "Buy"
@@ -250,6 +289,7 @@ function PowerLevelController:Start()
 		local level = math.clamp(player:GetAttribute("PowerLevel") or 1, 1, PowerLevels.Max)
 		local nextRow = PowerLevels.Next(level)
 		title.Text = ("POWER LV %d"):format(level)
+		payText.Text = PowerLevels.PayoffText(level)
 		if not nextRow then
 			setMode("Max")
 			return

@@ -1,6 +1,7 @@
 -- Looks up Power Levels (Config.Economy.PowerLevels: price, Power, Value) for the server and the client.
 -- How each level looks and sounds is in Config.Throw.Levels.
 local Config = require(script.Parent.Parent.Config)
+local Currency = require(script.Parent.Currency)
 
 local LEVELS = Config.Economy.PowerLevels
 
@@ -31,6 +32,17 @@ function PowerLevels.DailyCoins(reward, level: number?): number
 		end
 	end
 	return coins
+end
+
+-- The coin payoff of buying the next level after `level` ("x1.5 > x2 COINS"; batch D2). At the top: "x12 COINS".
+-- Value is the coin multiplier MultiplierService pays with.
+function PowerLevels.PayoffText(level: number?): string
+	local now = PowerLevels.Get(level)
+	local nextRow = PowerLevels.Next(now.Level)
+	if not nextRow then
+		return Currency.FormatMultiplier(now.Value) .. " COINS"
+	end
+	return ("%s > %s COINS"):format(Currency.FormatMultiplier(now.Value), Currency.FormatMultiplier(nextRow.Value))
 end
 
 -- What the shop says the level adds ("SPARKS", "ON FIRE"...)

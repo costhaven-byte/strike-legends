@@ -71,7 +71,8 @@ local function things(): { { [string]: any } }
 	if nextLevel then
 		table.insert(list, {
 			Key = "Power" .. nextLevel.Level,
-			Name = ("POWER LV %d"):format(nextLevel.Level),
+			-- with its coin payoff (batch D2): "POWER LV 5 = x2.5 COINS"
+			Name = ("POWER LV %d = %s COINS"):format(nextLevel.Level, Currency.FormatMultiplier(nextLevel.Value)),
 			Price = nextLevel.Price,
 			Icon = "Bolt",
 			Color = K.Pink,

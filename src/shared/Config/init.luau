@@ -4113,8 +4113,8 @@ Config.Cosmetics = {
 Config.Milestones = {
 	Enabled = true,
 	LevelRewards = {
-		{ Level = 7, Coins = 50000, LevelShare = 0.1, Crate = "Bronze" },
-		{ Level = 9, Coins = 150000, LevelShare = 0.15, Potions = { { Id = "CoinSmall", Count = 2 } } },
+		{ Level = 7, Coins = 50000, LevelShare = 0.3, Crate = "Bronze" }, -- D2: shares were 0.1 / 0.15 (Power Levels got ~10x cheaper)
+		{ Level = 9, Coins = 150000, LevelShare = 0.5, Potions = { { Id = "CoinSmall", Count = 2 } } },
 	},
 	Challenges = {
 		{
@@ -4686,19 +4686,25 @@ Config.Economy.Zones = {
 -- zone opens (levels 5 and 7), because a new zone pays far more per throw.
 -- 2026-10-18: every simulator price and pin value went x10 so they are in real game coins (the live game pays
 -- Config.Rewards.BaseCoinsPerPin = 10 per pin in zone 1). Levels 2 and 3 cheaper for Addendum 2's first 3 minutes.
+-- Batch D2 (owner 2026-10-29, final changes "Power Levels"): prices cut a lot so they are the cheap, frequent step
+-- between rebirths (a rebirth puts you back to Power Level 1). Values (the coin multiplier) unchanged. Sim (10 runs):
+-- every run now gets a new Power Level every ~20 s to 3 min at its start (run 0: LV2 0:03, LV3 0:06, LV4 0:49, LV5
+-- 1:09, LV6 3:37; zone 2 run: LV6 0:46, LV7 3:36; zone 3 run: LV9 0:16-3:10, LV10 2:10), was 1-2 a run. Levels 11
+-- and 12 stay long goals in zone 4 (LV11 ~9 min into the first zone 4 run, LV12 ~85 min into the next).
+-- The game shows each level's coin payoff ("x1.5 > x2 COINS": PowerLevels.PayoffText).
 Config.Economy.PowerLevels = {
 	{ Level = 1, Price = 0, Power = 6, Value = 1.0 },
-	{ Level = 2, Price = 400, Power = 10, Value = 1.25 },
-	{ Level = 3, Price = 3000, Power = 16, Value = 1.5 },
-	{ Level = 4, Price = 27000, Power = 30, Value = 2 },
-	{ Level = 5, Price = 840000, Power = 50, Value = 2.5 },
-	{ Level = 6, Price = 4200000, Power = 100, Value = 3 },
-	{ Level = 7, Price = 100000000, Power = 180, Value = 4 },
-	{ Level = 8, Price = 1500000000, Power = 350, Value = 5 },
-	{ Level = 9, Price = 8200000000, Power = 700, Value = 6 },
-	{ Level = 10, Price = 41000000000, Power = 1400, Value = 8 },
-	{ Level = 11, Price = 210000000000, Power = 2800, Value = 10 },
-	{ Level = 12, Price = 1200000000000, Power = 5000, Value = 12 },
+	{ Level = 2, Price = 100, Power = 10, Value = 1.25 }, -- D2: was 400
+	{ Level = 3, Price = 500, Power = 16, Value = 1.5 }, -- was 3,000
+	{ Level = 4, Price = 2000, Power = 30, Value = 2 }, -- was 27,000
+	{ Level = 5, Price = 7500, Power = 50, Value = 2.5 }, -- was 840,000
+	{ Level = 6, Price = 30000, Power = 100, Value = 3 }, -- was 4.2M
+	{ Level = 7, Price = 150000, Power = 180, Value = 4 }, -- was 100M
+	{ Level = 8, Price = 1000000, Power = 350, Value = 5 }, -- was 1.5B
+	{ Level = 9, Price = 10000000, Power = 700, Value = 6 }, -- was 8.2B
+	{ Level = 10, Price = 200000000, Power = 1400, Value = 8 }, -- was 41B
+	{ Level = 11, Price = 8000000000, Power = 2800, Value = 10 }, -- was 210B
+	{ Level = 12, Price = 250000000000, Power = 5000, Value = 12 }, -- was 1.2T
 }
 
 -- Crate tiers (Addendum 1). Crates drop only the balls in Config.Balls: roll a rarity with these odds, then every
