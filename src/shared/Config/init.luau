@@ -3720,7 +3720,7 @@ Config.Brightness = {
 		{ Brightness = 1.1, Color = Color3.fromRGB(255, 236, 214) }, -- Back Alley (darkest)
 		{ Brightness = 0.7, Color = Color3.fromRGB(236, 230, 255) }, -- Neon Lanes
 		{ Brightness = 0.6, Color = Color3.fromRGB(255, 240, 220) }, -- Main Street (already warm and lit)
-		{ Brightness = 0.8, Color = Color3.fromRGB(240, 232, 255) }, -- Skyline Lanes
+		{ Brightness = 0.65, Color = Color3.fromRGB(240, 232, 255) }, -- Skyline Lanes (batch A3 2026-10-29, was 0.8)
 	},
 	PlayerFill = { Brightness = 0.8, Range = 12, Color = Color3.fromRGB(255, 244, 230) },
 }
@@ -4316,7 +4316,7 @@ Config.Zones = {
 				-- 2026-10-25 owner: "too bright" (was Ambient 100,90,135 / Outdoor 115,105,155 / Exposure 0.35 / Bloom 0.25)
 				Ambient = Color3.fromRGB(62, 56, 88),
 				OutdoorAmbient = Color3.fromRGB(72, 66, 102),
-				Exposure = -0.05,
+				Exposure = -0.15, -- batch A3 2026-10-29: floor + lanes still too bright (was -0.05)
 				Saturation = 0.22, -- brightness pass 2026-10-28 (was 0.12)
 				Contrast = 0.1,
 				Tint = Color3.fromRGB(236, 228, 255),
