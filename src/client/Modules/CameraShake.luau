@@ -2,6 +2,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Settings = require(script.Parent:WaitForChild("Settings"))
 
 local CameraShake = {}
 
@@ -9,6 +10,9 @@ local strength = 0
 local clock = 0
 
 function CameraShake.Add(amount: number)
+	if not Settings.Get("Shake") then -- SETTINGS: SCREEN SHAKE off
+		return
+	end
 	strength = math.min(strength + amount, 1.5)
 end
 

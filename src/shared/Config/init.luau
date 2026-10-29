@@ -231,12 +231,13 @@ Config.StartingData = {
 	LifetimeCoins = 0, -- coins earned ever, from anything (never goes down: spending and rebirths don't touch it)
 	BossWins = 0, -- Pin Titan fights won (with enough hits to get a reward)
 	AchievementTiers = {}, -- achievement tiers claimed, by Config.Profile.Achievements Id: { Throws = 2 }
+	Settings = "", -- SETTINGS window switches turned off, "Music=0;Vfx=0" (Config.Settings; v27). Missing = on
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 26, -- v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 27, -- v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -313,6 +314,7 @@ Config.RateLimits = {
 	EquipCosmetic = 0.2,
 	OfferAsk = 3,
 	ClaimAchievement = 0.4, -- Profile panel CLAIM (Polish P5)
+	SetSetting = 0.15, -- SETTINGS window switch
 }
 
 -- Gems on/off switch. Addendum 1 keeps gems (earned only, a gem sink comes later); set Enabled = false to hide them.
@@ -445,7 +447,7 @@ Config.Ui = {
 		Computer = false,
 		IdleSeconds = 4,
 		Time = 0.25,
-		Keys = { "Boosts", "Income", "Gems", "Balls", "Pets", "Store", "Daily", "Profile", "Gifts", "Teleport", "Rebirth", "Potions", "More", "PowerMax" },
+		Keys = { "Boosts", "Income", "Gems", "Balls", "Pets", "Store", "Daily", "Profile", "Gifts", "Settings", "Teleport", "Rebirth", "Potions", "More", "PowerMax" },
 	},
 	-- Phone MORE menu (owner 2026-10-28: the phone HUD was still too busy). On phones (short screens) the buttons in
 	-- Keys leave the HUD and fold into one MORE button in the top-right corner; tapping it slides them out in a column
@@ -457,7 +459,7 @@ Config.Ui = {
 	MultiplierBadge = false,
 	PhoneMenu = {
 		Enabled = true,
-		Keys = { "Daily", "Gifts", "Teleport", "Profile" },
+		Keys = { "Daily", "Gifts", "Teleport", "Profile", "Settings" },
 		Aside = { "Modifier", "Goal" },
 		Gap = 52, -- px between buttons in the open column
 		HideZeroStreak = true,
@@ -4739,6 +4741,23 @@ Config.Economy.Sim = {
 -- (~118 to level 60) + rank tier gems (345) + VIP 25/day; sinks: cosmetics 40/120/300, Polish 4-40 per level.
 -- A player's first hour reaches about 8-10 tier-1 rows and a few tier-2 rows = about 20-25 gems (half a 40-gem
 -- cosmetic); the big tiers (12 gems) need 10+ hours each. Gem packs: 60 gems = 99 Robux, so this never undercuts them.
+-- SETTINGS window (owner 2026-10-29): a grey SETTINGS button under GIFTS (top-right; in the MORE menu on phones)
+-- opens switches the player can turn on or off. Saved per player (save field Settings, v27). Everything starts on.
+--   Sfx    every sound effect (SoundService SoundGroup "EffectsVolume")
+--   Music  zone music + ambience loops (SoundGroup "MusicVolume")
+--   Vfx    ball trails/sparkles/rings, sparks, confetti, fireworks, shockwave rings, lane run lights
+--          (numbers, popups and the hatch/crate screens stay)
+--   Shake  camera shake and the camera punch on hits
+Config.Settings = {
+	Enabled = true,
+	Options = {
+		{ Key = "Sfx", Name = "SOUND EFFECTS", Info = "Strikes, pins, buttons and every other sound" },
+		{ Key = "Music", Name = "MUSIC", Info = "Zone music and background sounds" },
+		{ Key = "Vfx", Name = "EFFECTS", Info = "Ball trails, sparks, confetti and fireworks" },
+		{ Key = "Shake", Name = "SCREEN SHAKE", Info = "The camera shaking on big hits" },
+	},
+}
+
 Config.Profile = {
 	Enabled = true,
 	-- The STATS page, in order. Format: "Number" (1,234 / 12.5K), "Time" (seconds -> 3h 20m)

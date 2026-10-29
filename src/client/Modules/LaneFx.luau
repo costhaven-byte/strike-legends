@@ -1,11 +1,13 @@
 -- 3D effects in the alley: lights that run along the lane with the ball, confetti, fireworks,
 -- sparks on impact and "+coins" numbers popping out of the pins. Everything cleans itself up.
+-- SETTINGS: EFFECTS off = no run lights, sparks, confetti or firework bursts (their sounds and the numbers stay).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Sfx = require(script.Parent.Sfx)
+local Settings = require(script.Parent.Settings)
 
 local SQUARE = "rbxasset://textures/particles/SquareParticle.png"
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
@@ -42,6 +44,9 @@ end
 
 -- Two glowing runners on the lane's side strips that keep pace with the ball
 function LaneFx.FollowLights(lane: Model, color: Color3)
+	if not Settings.Get("Vfx") then
+		return { Update = function() end, Destroy = function() end }
+	end
 	local runners = {}
 	for _, strip in lane:GetChildren() do
 		if strip.Name == "CapStrip" and strip:IsA("BasePart") then
@@ -86,6 +91,9 @@ end
 
 -- Bright sparks bursting out where the ball hits
 function LaneFx.Sparks(position: Vector3, amount: number)
+	if not Settings.Get("Vfx") then
+		return
+	end
 	local part = anchor(position + Vector3.new(0, 1, 0), 2)
 	local emitter = Instance.new("ParticleEmitter")
 	emitter.Texture = SPARKLE
@@ -103,6 +111,9 @@ end
 
 -- Paper confetti shooting up over the pins
 function LaneFx.Confetti(lane: Model, amount: number)
+	if not Settings.Get("Vfx") then
+		return
+	end
 	local part = anchor(abovePins(lane, 1), 4)
 	for _, color in NEON_COLORS do
 		local emitter = Instance.new("ParticleEmitter")
@@ -130,6 +141,10 @@ function LaneFx.Fireworks(lane: Model, bursts: number)
 			local offset = Vector3.new((math.random() - 0.5) * 8, math.random() * 3, (math.random() - 0.5) * 6)
 			local part = anchor(abovePins(lane, 9) + offset, 2.5)
 			local color = NEON_COLORS[math.random(#NEON_COLORS)]
+			if not Settings.Get("Vfx") then
+				Sfx.PlayAt("Firework", part, 0.9 + math.random() * 0.3)
+				return
+			end
 
 			local emitter = Instance.new("ParticleEmitter")
 			emitter.Texture = SPARKLE
@@ -284,6 +299,11 @@ function LaneFx.GoldenBurst(lane: Model, position: Vector3)
 	local gold = Config.GoldenPin.Color
 	LaneFx.Trait({ Fx = "Ring", FxSize = 34, Color = gold, Sound = "RevealBig", Pitch = 1 }, position)
 	local part = anchor(position + Vector3.new(0, 1.5, 0), 3)
+	if not Settings.Get("Vfx") then
+		Sfx.PlayAt("Firework", part, 0.8)
+		LaneFx.Fireworks(lane, 4)
+		return
+	end
 	local emitter = Instance.new("ParticleEmitter")
 	emitter.Texture = SPARKLE
 	emitter.Color = ColorSequence.new(gold, Color3.new(1, 1, 1))

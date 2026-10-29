@@ -2,12 +2,14 @@
 -- model pieces, halos, floor rings, the floating trait badge and the glow light.
 -- Everything hangs off an invisible upright "rig" that follows the ball without spinning,
 -- so rings and badges stay steady while the ball rolls.
+-- SETTINGS: EFFECTS off hides every ball's effects (the ball itself stays); switching it back on brings them back.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
+local Settings = require(script.Parent:WaitForChild("Settings"))
 
 local VFX = Config.BallVfx
 local IMAGES = VFX.Images
@@ -690,9 +692,10 @@ function BallFx.Attach(
 
 	function handle.SetEnabled(_, enabled: boolean)
 		handle.Enabled = enabled
-		rig.Parent = if enabled then ball.Parent else nil
+		local shown = enabled and Settings.Get("Vfx")
+		rig.Parent = if shown then ball.Parent else nil
 		for _, emitter in handle.Emitters do
-			emitter.Enabled = enabled
+			emitter.Enabled = shown
 		end
 	end
 
@@ -704,11 +707,18 @@ function BallFx.Attach(
 	for _, ring in handle.Rings do
 		placeRing(ring, 0)
 	end
-	rig.Parent = ball.Parent
 	ball.Destroying:Connect(handle.Destroy)
 	active[handle] = true
+	handle:SetEnabled(true)
 	return handle
 end
+
+-- SETTINGS: EFFECTS switched: hide or bring back every ball's effects
+Settings.Changed("Vfx", function()
+	for handle in active do
+		handle:SetEnabled(handle.Enabled)
+	end
+end)
 
 -- One loop turns every ring, spins the disks, bobs the badges and keeps held effects on their ball
 RunService.RenderStepped:Connect(function(dt)
@@ -716,7 +726,7 @@ RunService.RenderStepped:Connect(function(dt)
 	local camera = workspace.CurrentCamera
 	local cameraPosition = camera and camera.CFrame.Position or Vector3.zero
 	for handle in active do
-		if not handle.Enabled then
+		if not handle.Enabled or not handle.Rig.Parent then -- off, or hidden by SETTINGS: EFFECTS
 			continue
 		end
 		local rig = handle.Rig

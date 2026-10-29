@@ -1,17 +1,27 @@
 -- Plays the sound effects listed in Config.Sounds (Shared.AssetSlots). Music + ambience: MusicController.
 -- Play = a flat sound for this player only. PlayAt = a sound coming from a spot in the world.
+-- Every effect plays through the "EffectsVolume" SoundGroup, which the SETTINGS switch SOUND EFFECTS mutes.
 local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Settings = require(script.Parent:WaitForChild("Settings"))
 
 local Sfx = {}
 
 local folder = Instance.new("Folder")
 folder.Name = "Sfx"
 folder.Parent = SoundService
+
+local group = Instance.new("SoundGroup")
+group.Name = "EffectsVolume"
+group.Volume = if Settings.Get("Sfx") then 1 else 0
+group.Parent = SoundService
+Settings.Changed("Sfx", function(on)
+	group.Volume = if on then 1 else 0
+end)
 
 local templates: { [string]: Sound } = {}
 
@@ -36,6 +46,7 @@ local function getTemplate(name: string): Sound?
 	sound.SoundId = "rbxassetid://" .. id
 	sound.Volume = info.Volume or 0.5
 	sound.Looped = info.Loop == true -- a looped sound plays until it is faded out or its parent goes
+	sound.SoundGroup = group -- copies keep it
 	sound:SetAttribute("Pitch", if standIn then info.StandInPitch or 1 else 1)
 	sound.Parent = folder
 	templates[name] = sound

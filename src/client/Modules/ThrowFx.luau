@@ -1,5 +1,6 @@
 -- The Throw Lab's "juice" for the alley: spark bursts, shockwave rings, number and payout pops, pin hit sounds,
 -- and the camera punch, shake and slow-motion tint on your own throws. Numbers live in Config.Throw.
+-- SETTINGS: EFFECTS off = no spark bursts or shockwave rings; SCREEN SHAKE off = no camera punch or shake.
 local Debris = game:GetService("Debris")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,6 +11,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 local Sfx = require(script.Parent.Sfx)
 local SlUi = require(script.Parent.SlUi)
 local UiFx = require(script.Parent.UiFx)
+local Settings = require(script.Parent.Settings)
 
 local THROW = Config.Throw
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
@@ -37,6 +39,9 @@ end
 
 -- A one-shot burst of glowing sparks. timeScale slows it down during slow motion.
 function ThrowFx.Burst(position: Vector3, color: Color3, count: number, speed: number, size: number, timeScale: number?)
+	if not Settings.Get("Vfx") then
+		return
+	end
 	local p = holder(position, 3)
 	local e = Instance.new("ParticleEmitter")
 	e.Texture = SPARKLE
@@ -55,6 +60,9 @@ end
 
 -- A flat glowing ring that rushes outward along the floor
 function ThrowFx.Shockwave(position: Vector3, color: Color3, radius: number, time: number?)
+	if not Settings.Get("Vfx") then
+		return
+	end
 	local ring = Instance.new("Part")
 	ring.Shape = Enum.PartType.Cylinder
 	ring.Anchored = true
@@ -391,11 +399,14 @@ tint.Name = "ThrowSlowMo"
 tint.Parent = Lighting
 
 function ThrowFx.Punch(amount: number)
+	if not Settings.Get("Shake") then
+		return
+	end
 	punch = math.max(punch, amount)
 end
 
 function ThrowFx.Shake(strength: number, time: number)
-	if strength <= 0 or time <= 0 then
+	if strength <= 0 or time <= 0 or not Settings.Get("Shake") then
 		return
 	end
 	if strength >= shakeStrength * (shakeLeft / math.max(shakeTotal, 0.001)) then

@@ -1,6 +1,7 @@
 -- Background music and zone ambience (Shared.AssetSlots.Music). Every 0.5 s it checks where your
 -- character stands (the Config.Zones.Gated areas = zones 2-4, anywhere else = zone 1, the Pin Titan
 -- fight = Boss) and cross-fades the music and the ambience loop to that place's tracks.
+-- Both play through the "MusicVolume" SoundGroup, which the SETTINGS switch MUSIC mutes.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
@@ -10,6 +11,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local AssetSlots = require(Shared.AssetSlots)
+local Settings = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("Settings"))
 
 local MUSIC = AssetSlots.Music
 local player = Players.LocalPlayer
@@ -19,6 +21,14 @@ local MusicController = {}
 local folder = Instance.new("Folder")
 folder.Name = "Music"
 folder.Parent = SoundService
+
+local group = Instance.new("SoundGroup")
+group.Name = "MusicVolume"
+group.Volume = if Settings.Get("Music") then 1 else 0
+group.Parent = SoundService
+Settings.Changed("Music", function(on)
+	group.Volume = if on then 1 else 0
+end)
 
 local function inArea(area, position: Vector3): boolean
 	local offset = position - area.Center
@@ -67,6 +77,7 @@ local function layer(name: string, volume: number)
 			sound.SoundId = "rbxassetid://" .. id
 			sound.Looped = true
 			sound.Volume = 0
+			sound.SoundGroup = group
 			sound.Parent = folder
 			sound:Play()
 			TweenService:Create(sound, info, { Volume = volume }):Play()

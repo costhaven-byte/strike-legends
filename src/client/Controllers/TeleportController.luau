@@ -145,7 +145,7 @@ function TeleportController:Start()
 	gui.Parent = playerGui
 
 	-- ===== The button =====
-	-- Cyan portal under GIFTS in the top-right corner (owner's HUD Kit); the portal turns slowly all the time
+	-- Cyan portal in the left column under DAILY + PROFILE (owner 2026-10-29; was under GIFTS); the portal turns slowly
 	local teleportKit = HudKit.Square(gui, {
 		Name = "TeleportButton",
 		Paint = "Cyan",

@@ -78,7 +78,7 @@ local SCREENS = {
 }
 -- Key -> { Pc = { x, y, w, h, edgeX, edgeY }, Phone = { ... } }. edgeX: "L" left, "R" right, "C" centre;
 -- edgeY: "T" top, "B" bottom, "M" = the right-hand column (streak, lane event, goal): at its design spot on a
--- 1080-tall screen, moved up as much as a shorter screen needs, but never above MinTop (under TELEPORT).
+-- 1080-tall screen, moved up as much as a shorter screen needs, but never above MinTop (under SETTINGS).
 -- w/h nil = the piece sizes itself.
 HudKit.Layout = {
 	Boosts = { Pc = { 32, 72, nil, nil, "L", "T" }, Phone = { 12, 42, nil, nil, "L", "T" } },
@@ -104,8 +104,10 @@ HudKit.Layout = {
 	Rebirth = { Pc = { 1290, 12, 56, 56, "C", "T" }, Phone = { 592, 2, 44, 46, "C", "T" } },
 	AfterThrow = { Pc = { 660, 140, 600, 30, "C", "T" }, Phone = { 272, 84, 300, 18, "C", "T" } },
 	Gifts = { Pc = { 1832, 72, 56, 56, "R", "T" }, Phone = { 788, 40, 44, 46, "R", "T" } },
-	Teleport = { Pc = { 1832, 146, 56, 56, "R", "T" }, Phone = { 788, 94, 44, 46, "R", "T" } },
-	-- MORE (phones only, Config.Ui.PhoneMenu): DAILY, GIFTS, TELEPORT and PROFILE fold into it; they open in a column under it
+	-- SETTINGS (grey, owner 2026-10-29) under GIFTS; TELEPORT moved to the left column under DAILY + PROFILE
+	Settings = { Pc = { 1832, 146, 56, 56, "R", "T" }, Phone = { 788, 94, 44, 46, "R", "T" } },
+	Teleport = { Pc = { 32, 516, 56, 56, "L", "T" }, Phone = { 788, 94, 44, 46, "R", "T" } },
+	-- MORE (phones only, Config.Ui.PhoneMenu): DAILY, GIFTS, TELEPORT, PROFILE and SETTINGS fold into it; they open in a column under it
 	More = { Pc = { 1832, 72, 56, 56, "R", "T" }, Phone = { 788, 40, 44, 46, "R", "T" } },
 	-- Rank Trial (not in the kit): right of the multiplier badge on computers, under the goal bar on phones
 	Trial = { Pc = { 380, 136, 300, 38, "L", "T" }, Phone = { 640, 224, 140, 40, "R", "T" } },
@@ -113,7 +115,7 @@ HudKit.Layout = {
 	Streak = { Pc = { 1768, 400, 120, 120, "R", "M" }, Phone = { 640, 94, 140, 46, "R", "T" } },
 	Modifier = { Pc = { 1658, 538, 230, 42, "R", "M" }, Phone = { 656, 148, 176, 30, "R", "T" } },
 	Goal = { Pc = { 1640, 594, 248, 54, "R", "M" }, Phone = { 662, 184, 170, 36, "R", "T" } },
-	MinTop = 218, -- (computer) the right-hand column never goes above this
+	MinTop = 218, -- (computer) the right-hand column never goes above this (under SETTINGS)
 	Potions = { Pc = { 32, 996, nil, 52, "L", "B" }, Phone = { 500, 340, nil, 38, "C", "B" } },
 	Hold = { Pc = { 880, 984, 160, 50, "C", "B" }, Phone = { 356, 332, 132, 46, "C", "B" } },
 }
