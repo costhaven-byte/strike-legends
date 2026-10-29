@@ -1,6 +1,6 @@
--- Join intro (batch B, Config.JoinIntro): brand new players only (first join, before their first throw) see a short
--- fly-over of the Back Alley with big captions and Rizzo's wave. It starts on the loading screen (Modules/LoadingScreen) that
--- covers the first seconds while Roblox loads textures and builds up the lighting, then fades into the shots. A SKIP button
+-- Join intro (batch B, Config.JoinIntro): every join starts on the loading screen (Modules/LoadingScreen) that covers
+-- the first seconds while Roblox loads textures and builds up the lighting. Brand new players (first join, before their
+-- first throw) then see a short fly-over of the Back Alley with big captions and Rizzo's wave. A SKIP button
 -- shows after a second. Every other screen and Roblox's own menus hide while it plays and throws can't start; at the
 -- end (or on SKIP) the camera glides back behind your character and everything comes back.
 local ContentProvider = game:GetService("ContentProvider")
@@ -32,11 +32,10 @@ local function ease(t: number): number
 	return t * t * (3 - 2 * t) -- smoothstep: soft start and stop
 end
 
--- Is this a brand new player who hasn't thrown yet? Waits for the save to load (the server mirrors it to attributes)
-local function isNewPlayer(): boolean
-	local waited = 0
-	while player:GetAttribute("Onboarding") == nil and waited < INTRO.WaitForData do
-		waited += task.wait(0.1)
+-- Is this a brand new player who hasn't thrown yet? nil until the save has loaded (the server mirrors it to attributes)
+local function isNewPlayer(): boolean?
+	if player:GetAttribute("Onboarding") == nil then
+		return nil
 	end
 	return player:GetAttribute("Onboarding") == 0 and (player:GetAttribute("OnboardThrows") or 0) == 0
 end
@@ -130,9 +129,17 @@ local function play()
 	pcall(StarterGui.SetCoreGuiEnabled, StarterGui, Enum.CoreGuiType.All, false)
 
 	local oldFov = camera.FieldOfView
-	LaneVisuals.CameraHeld = true
-	camera.CameraType = Enum.CameraType.Scriptable
-	camera.FieldOfView = INTRO.FieldOfView
+	-- New players: the camera goes to the first shot behind the loading screen as soon as the save says so
+	local isNew: boolean? = nil
+	local function takeCamera()
+		LaneVisuals.CameraHeld = true
+		camera.CameraType = Enum.CameraType.Scriptable
+		camera.FieldOfView = INTRO.FieldOfView
+		local first = INTRO.Shots[1]
+		if first then
+			camera.CFrame = CFrame.lookAt(first.From.Pos, first.From.Look)
+		end
+	end
 
 	local skipped = false
 	local started = os.clock()
@@ -151,10 +158,10 @@ local function play()
 		end
 	end
 
-	-- Loading screen while the game loads (owner's design, Modules/LoadingScreen). It stays at least MinLoad seconds
+	-- Loading screen on every join (owner's design, Modules/LoadingScreen). It stays at least MinLoad seconds
 	-- (Roblox builds the lighting up over the first seconds after joining and no script can tell when it's done),
-	-- until the Back Alley's textures are in and you stand on your lane with the zone's lighting faded in, but never
-	-- longer than LoadLimit. The camera already sits on the first shot behind it.
+	-- until your save is in and you have stood in your zone with its lighting faded in (new players: the Back Alley's
+	-- textures are in too, and the camera already sits on the first shot), but never longer than LoadLimit.
 	-- its own art first (up to 1.5 s), so the pictures don't pop in one by one
 	local artIn = false
 	task.spawn(function()
@@ -166,42 +173,70 @@ local function play()
 		task.wait()
 	end
 	local cover = LoadingScreen.Show(gui, INTRO.Tips[math.random(1, #INTRO.Tips)])
-	local first = INTRO.Shots[1]
-	if first then
-		camera.CFrame = CFrame.lookAt(first.From.Pos, first.From.Look)
-	end
-	local loaded = false
-	task.spawn(function()
-		if not game:IsLoaded() then
-			game.Loaded:Wait()
-		end
-		local alley = Workspace:FindFirstChild(Config.Zones.AssignFolder)
-		if alley then
-			pcall(ContentProvider.PreloadAsync, ContentProvider, { alley })
-		end
-		loaded = true
-	end)
+	local loaded = false -- the game (+ for new players the Back Alley's textures)
 	local alleyWorld = Config.Zones.Worlds[1]
-	local inAlleySince = nil
+	local inZoneSince = nil
 	repeat
-		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		local inside = root ~= nil and alleyWorld ~= nil and Zones.InArea(alleyWorld.Area, root.Position)
-		if inside then
-			inAlleySince = inAlleySince or os.clock()
+		if isNew == nil then
+			isNew = isNewPlayer()
+			if isNew ~= nil then
+				task.spawn(function()
+					if not game:IsLoaded() then
+						game.Loaded:Wait()
+					end
+					local alley = Workspace:FindFirstChild(Config.Zones.AssignFolder)
+					if isNew and alley then
+						pcall(ContentProvider.PreloadAsync, ContentProvider, { alley })
+					end
+					loaded = true
+				end)
+				if isNew then
+					takeCamera()
+				end
+			end
 		end
-		local lit = inAlleySince ~= nil and os.clock() - inAlleySince >= Config.Zones.LookBlend + INTRO.LightSettle
+		-- standing in your zone: new players in the Back Alley, everyone else wherever they spawned
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local inside = root ~= nil
+			and (
+				isNew == false or (isNew == true and alleyWorld ~= nil and Zones.InArea(alleyWorld.Area, root.Position))
+			)
+		if inside then
+			inZoneSince = inZoneSince or os.clock()
+		end
+		local lit = inZoneSince ~= nil and os.clock() - inZoneSince >= Config.Zones.LookBlend + INTRO.LightSettle
 		local waited = os.clock() - started
-		-- the bar: what's done so far (textures in, on your lane, lit), held back so it never beats MinLoad
-		local steps = (if game:IsLoaded() then 0.2 else 0)
+		-- the bar: what's done so far (save in, textures in, in your zone, lit), held back so it never beats MinLoad
+		local steps = (if isNew ~= nil then 0.2 else 0)
 			+ (if loaded then 0.3 else 0)
-			+ (if inAlleySince then 0.2 else 0)
+			+ (if inZoneSince then 0.2 else 0)
 			+ (if lit then 0.3 else 0)
 		cover.SetProgress(math.max(waited / INTRO.LoadLimit, math.min(steps, waited / INTRO.MinLoad)) * 0.99)
 		showSkip()
 		hideOthers()
 		RunService.RenderStepped:Wait()
 	until skipped or (loaded and lit and waited >= INTRO.MinLoad) or waited >= INTRO.LoadLimit
-	cover.Finish() -- STRIKE! on the bar, then it fades over the first shot
+	cover.Finish() -- STRIKE! on the bar, then it fades (over the first shot for new players)
+
+	-- Everyone else: the game is right behind the fading screen. (A save that still hasn't loaded = no fly-over.)
+	if isNew ~= true then
+		skip.Holder.Visible = false
+		for _, bar in bars do
+			bar.Visible = false
+		end
+		for kind, on in core do
+			pcall(StarterGui.SetCoreGuiEnabled, StarterGui, kind, on)
+		end
+		for _, other in hidden do
+			if other.Parent then
+				other.Enabled = true
+			end
+		end
+		ThrowController.Blocked = false
+		JoinIntroController.Playing = false
+		task.delay(0.7, gui.Destroy, gui)
+		return
+	end
 
 	for _, shot in INTRO.Shots do
 		if skipped then
@@ -278,12 +313,6 @@ end
 function JoinIntroController:Start()
 	if not (INTRO and INTRO.Enabled) then
 		return
-	end
-	if not isNewPlayer() then
-		return
-	end
-	if not player.Character then
-		player.CharacterAdded:Wait()
 	end
 	play()
 end
