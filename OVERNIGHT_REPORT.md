@@ -38,3 +38,31 @@ At the end: one combined 2-minute playtest.
   if it already has 4 or more (slots never stack past what a new player can get, max 6 + pass).
 - Studio: no world edits. One new script (Client.Controllers.EggPromptController) was put into Studio by hand and is
   in git; Studio's copy stays unsaved until you save the place (Rojo/git hold it anyway).
+
+## C2 fusion only at the machine + pet bonuses as multipliers (commit 68c8833, restore tag `restore-batchC2-before`)
+- No MERGE in the pets panel (item 15): the "MERGE 3 > SHINY" button on pet cards is gone. Shinies are made only at
+  zone 3's PET FUSION machine. The server now refuses any merge unless zone 3 is open AND you stand within 20 studs of
+  the machine (Config.Fusion.Range; the prompt itself opens at 12). Message if refused: "Fuse pets at the PET FUSION
+  machine". No save change; Shiny pets you already have stay.
+- Pet bonuses as multipliers (item 20): every pet bonus now reads x(1 + bonus), same number style as the multiplier
+  card: Common Neon pet x1.02 (was +2%), Kingpin x3.4 (was +240%), Shiny Kingpin x5.8. Shown on pet cards, the
+  hatch card (counts up from x1), the Shiny reveal ("x5.8 COINS · WAS x3.4"), the fusion window (new line under the
+  Shiny's name), the spin wheel's SECRET PET card and the multiplier card's PETS row.
+  TOTAL PET BONUS = x(1 + all equipped bonuses added up), e.g. two x1.5 pets = x2 (not x2.25). That is exactly how
+  coins are paid today; the coin maths did not change.
+- Test (Studio, ~2 min): TEST panel JUMP TO ZONE 3 + FREE EGG a few times, open PETS -> cards say "x1.xx COINS",
+  no MERGE button, TOTAL PET BONUS says "x... COINS". Walk to the PET FUSION machine, press E -> the window shows
+  the Shiny with its "x... COINS" line under the name; with 3 of one pet FUSE! works as before.
+  Silent failures: a card still showing "+N%" (missed text); FUSE! saying "Fuse pets at the PET FUSION machine"
+  while you stand at it (range too small: raise Config.Fusion.Range).
+- Tested by Claude in Studio: merge refused far away, refused at the machine with zone 3 closed, works at the machine
+  with zone 3 open (3 Pinny -> Shiny Pinny, auto-equipped); panel cards + total read x1.02 / x1.04, 0 MERGE buttons;
+  no new errors in Output. NOT checked on screen: the fusion window's new bonus line and the multiplier card's PETS
+  row (the fusion prompt can't be pressed from a test script); both are one-line text changes.
+- Choices made for you: the total shows as one multiplier x(1 + sum), matching how coins are paid; the fusion
+  window's subtitle now says "A BIGGER COIN BOOST AND A GOLD CROWN" (the old "x2 BONUS" would read wrong next to
+  multipliers, since a Shiny doubles the bonus part: x1.5 -> x2); the egg odds board over each stand shows chances
+  only (it never showed bonuses), so nothing changed there.
+- Noticed, not fixed: Output warns "'MascotMerged' is not in Config.Analytics.Events" on every fusion (older than
+  this step, harmless).
+- Studio: no world edits. Code pushed into Studio's scripts (unsaved in the place until you save; git has it).
