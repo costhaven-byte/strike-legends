@@ -248,6 +248,9 @@ local function onBuyPolish(player: Player, ballId: any)
 	PlayerDataService.Add(player, "Gems", -price)
 	polish[ball.Id] = (level + 1) * POLISH.PointsPerLevel
 	publishPolish(player)
+	if PlayerDataService.Get(player, "PolishHinted") ~= 1 then
+		PlayerDataService.Set(player, "PolishHinted", 1) -- the Ball Book stops pointing at POLISH (Config.PolishHint)
+	end
 	Analytics.Currency(player, "Gems", -price, "Shop", "Polish" .. ball.Id)
 	Analytics.Purchase(player, "Polish", ball.Id)
 	Analytics.Event(player, "PolishLevel", level + 1, { ball.Id })

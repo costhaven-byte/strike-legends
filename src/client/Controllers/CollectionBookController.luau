@@ -218,6 +218,7 @@ function CollectionBookController:Start()
 	local shownPage: number? = nil -- the tab drawn last time (to animate a newly selected tab)
 	local spinning: { Instance } = {}
 	local equipButtons: { [string]: GuiObject } = {}
+	local polishButtons: { [string]: GuiObject } = {} -- ball id -> its POLISH button (for the POLISH lesson)
 	local polishFrom: { [string]: number } = {} -- ball id -> Polish level its bar slides up from on the next draw
 	local slideFrom = 0 -- cards slide in from this many px on the next draw (tab switch / page arrow)
 	local justEquipped: string? = nil
@@ -440,6 +441,7 @@ function CollectionBookController:Start()
 			Button = canPay,
 		})
 		block.Holder.Position = UDim2.fromOffset(x, y)
+		polishButtons[ball.Id] = block.Holder
 		local line = row(block.Face, if phone then 2 else 6)
 		if not phone then
 			fitText(line, "POLISH", Head, 16, if canPay then C.White else C.LockedText, 2, 1, h)
@@ -776,6 +778,7 @@ function CollectionBookController:Start()
 		end
 		table.clear(spinning)
 		table.clear(equipButtons)
+		table.clear(polishButtons)
 
 		local owned = Balls.DecodeOwned(player:GetAttribute("OwnedBalls"))
 		local equipped = player:GetAttribute("EquippedBall")
@@ -1151,6 +1154,49 @@ function CollectionBookController:Start()
 	ballsScale.Parent = ballsButton
 	local ballsPulsing = false
 
+	-- POLISH lesson (batch B3, Config.PolishHint): while the book is open and the equip guide isn't, a gold bubble
+	-- points down at the POLISH button of the ball you throw (or the first one on the page), until a POLISH is bought
+	-- (save PolishHinted). Tapping the bubble hides it for this session.
+	local POLISH_HINT = Config.PolishHint
+	local polishTip, setPolishTip = MomentKit.Callout(guideGui, POLISH_HINT.Text, POLISH_HINT.Sub, "Down")
+	polishTip.Name = "PolishTip"
+	polishTip.Visible = false
+	local polishTipScale = UiKit.ScaleOf(polishTip)
+	local polishTipOn: GuiObject? = nil
+	local polishTipCanPay: boolean? = nil
+	local polishTipDismissed = false
+	local polishTipTap = UiKit.Make("TextButton", {
+		Name = "Tap",
+		Text = "",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1, 1),
+		ZIndex = 60,
+	}, polishTip)
+	polishTipTap.Activated:Connect(function()
+		polishTipDismissed = true
+	end)
+	local function polishTarget(): (GuiObject?, string?)
+		if not POLISH_HINT.Enabled or polishTipDismissed or guideBall or not book.Visible then
+			return nil
+		end
+		if player:GetAttribute("PolishHinted") ~= 0 then
+			return nil -- bought one already (or the save hasn't loaded yet)
+		end
+		local equipped = player:GetAttribute("EquippedBall")
+		local first: GuiObject?, firstId: string? = nil, nil
+		for id, button in polishButtons do
+			if button.Parent then
+				if id == equipped then
+					return button, id
+				end
+				if not first or button.AbsolutePosition.X < first.AbsolutePosition.X then
+					first, firstId = button, id
+				end
+			end
+		end
+		return first, firstId
+	end
+
 	RunService.RenderStepped:Connect(function(dt)
 		-- Equip guide: the BALLS button glows and pulses; in the book an arrow points down at the ball's EQUIP
 		local target: GuiObject? = nil
@@ -1187,6 +1233,26 @@ function CollectionBookController:Start()
 			end
 		end
 		arrowWasOn = target
+
+		local tipOn, tipBall = polishTarget()
+		polishTip.Visible = tipOn ~= nil
+		if tipOn then
+			local ball = Balls.Get(tipBall)
+			local price = ball and Balls.PolishGemPrice(ball, polishLevelOf(ball.Id))
+			local canPay = price ~= nil and (player:GetAttribute("Gems") or 0) >= price
+			if canPay ~= polishTipCanPay then
+				polishTipCanPay = canPay
+				setPolishTip(POLISH_HINT.Text, if canPay then POLISH_HINT.Sub else POLISH_HINT.SubNoGems)
+			end
+			local pos, size = tipOn.AbsolutePosition, tipOn.AbsoluteSize
+			polishTip.Position = UDim2.fromOffset(pos.X + size.X / 2, pos.Y - 2 - wave * 10)
+			if polishTipOn ~= tipOn then
+				local small = guideGui.AbsoluteSize.Y < Config.Ui.CompactHeight
+				polishTipScale.Scale = 0.3
+				UiKit.Tween(polishTipScale, 0.35, Enum.EasingStyle.Back, { Scale = if small then 0.6 else 0.85 })
+			end
+		end
+		polishTipOn = tipOn
 
 		if buttonModel and buttonView.Visible then
 			BallView.Turn(buttonModel, CFrame.Angles(0, dt * BUTTON_SPIN, 0))

@@ -232,12 +232,13 @@ Config.StartingData = {
 	BossWins = 0, -- Pin Titan fights won (with enough hits to get a reward)
 	AchievementTiers = {}, -- achievement tiers claimed, by Config.Profile.Achievements Id: { Throws = 2 }
 	Settings = "", -- SETTINGS window choices that differ from the start, "Vfx=0;Music=0.45" (Config.Settings; v27)
+	PolishHinted = 0, -- 1 = a POLISH was bought with gems, so the Ball Book stops teaching it (Config.PolishHint; v28)
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 27, -- v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 28, -- v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -3267,6 +3268,24 @@ Config.AreaSigns = {
 	},
 }
 
+-- Batch B3 (2026-10-29, teach the first minutes): what the game points out the first times
+-- Ball Book: a gold bubble points at the POLISH button of the ball you throw, every time the book opens, until you buy
+-- a POLISH once (save PolishHinted). Tapping the bubble hides it until the next session.
+Config.PolishHint = {
+	Enabled = true,
+	Text = "POLISH = MORE COINS!",
+	Sub = "EVERY LEVEL BOOSTS THIS BALL", -- shown when you have the gems
+	SubNoGems = "COSTS GEMS - LEVEL UP TO EARN THEM", -- shown when you can't pay yet
+}
+-- Rank trial button: the label flips between "RANK TRIAL READY!" and TapText, and a hand bobs next to it
+Config.TrialHint = {
+	Enabled = true,
+	TapText = "TAP TO START!",
+	FlipSeconds = 1.2, -- seconds each label stays
+	Hand = "👉",
+	Bob = 8, -- px the hand moves toward the button and back
+}
+
 -- Polish P4: a pointing hand on EQUIP BEST in the PETS panel, shown the first time EQUIP BEST would change your pets.
 -- It stays until you tap EQUIP BEST once (save EquipBestHinted).
 Config.EquipBestHint = {
@@ -4136,6 +4155,14 @@ Config.Playtime = {
 -- Phase X: SECRET BALL and SECRET PET give an Epic now (was Legendary), the best rarity zone 2 has (Config.ZoneRarity).
 Config.Spin = {
 	Enabled = true,
+	-- Batch B3: tell players about the wheel. While today's spin is waiting (and zone 2 is open) a FREE SPIN! marker
+	-- with a bobbing arrow floats over the wheel, seen through walls from MarkerRange studs; the first time a session you
+	-- come within ToastRange studs, a toast says so.
+	Marker = true,
+	MarkerText = "FREE SPIN!",
+	MarkerRange = 160,
+	ToastRange = 90,
+	ToastText = "FREE DAILY SPIN! FOLLOW THE ARROW",
 	Zone = 2, -- you need this zone open to use it (it stands inside the zone 2 building anyway)
 	Center = Vector3.new(51, 10.5, -73.5), -- the middle of the wheel
 	Facing = Vector3.new(0, 0, 1), -- the wheel's face looks this way (south, back toward the lobby)

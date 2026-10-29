@@ -131,6 +131,7 @@ local function migrate(saved: any): { [string]: any }
 		-- profile): they start at 0 / empty and count from now on (pins, eggs, crates, streak, rebirths, play time were
 		-- already saved, so those achievements count everything an old player did)
 		-- v27 added Settings (SETTINGS window switches): it starts empty = everything on, nothing to upgrade
+		-- v28 added PolishHinted (batch B3 POLISH lesson): it starts at 0, nothing to upgrade
 		if version < 22 then
 			-- v22: the COIN BOOST became a doubling ladder (x2, x4, x8, x16). An old adding boost (coins x (1 +
 			-- RobuxBoost)) becomes the highest step it already reached or passed, so nobody loses what they paid for.

@@ -13,12 +13,14 @@ local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local Calendar = require(Shared.Modules.Calendar)
 local Mascots = require(Shared.Modules.Mascots)
+local Zones = require(Shared.Modules.Zones)
 local CrateController = require(script.Parent.CrateController)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local MascotView = require(Modules:WaitForChild("MascotView"))
 local Sfx = require(Modules:WaitForChild("Sfx"))
 local UiFx = require(Modules:WaitForChild("UiFx"))
 local RewardKit = require(Modules:WaitForChild("RewardKit"))
+local MomentKit = require(Modules:WaitForChild("MomentKit"))
 
 local player = Players.LocalPlayer
 
@@ -262,7 +264,7 @@ function SpinController:Start()
 	local testRemote = remotes:FindFirstChild("TestSpin") :: RemoteEvent? -- Studio only
 	local playerGui = player:WaitForChild("PlayerGui")
 
-	local _, rotor, base, slices, labels, status, prompt = build()
+	local wheel, rotor, base, slices, labels, status, prompt = build()
 	local angle = 0
 	local spinning = false
 
@@ -348,9 +350,36 @@ function SpinController:Start()
 		prompt.ActionText = if ready or not testRemote then "SPIN!" else "TEST: SPIN AGAIN"
 	end
 	player:GetAttributeChangedSignal("SpinReady"):Connect(refresh)
+
+	-- Batch B3: tell players about the wheel. A FREE SPIN! marker over it while today's spin waits (zone open), and a
+	-- toast the first time a session you come near it
+	local marker = MomentKit.WorldMarker(SPIN.MarkerText, PINK)
+	marker.Name = "SpinMarker"
+	local markerSpot = newPart(wheel, "MarkerSpot", Vector3.one, WHITE, CFrame.new(SPIN.Center + Vector3.new(0, R + 8, 0)))
+	markerSpot.Transparency = 1
+	marker.Adornee = markerSpot
+	marker.MaxDistance = SPIN.MarkerRange
+	marker.Enabled = false
+	marker.Parent = playerGui
+	local toasted = false
+	local function refreshHint()
+		local open = Zones.Unlocked(player:GetAttribute("ZonesOpen"), SPIN.Zone)
+		local waiting = SPIN.Marker and open and not spinning and player:GetAttribute("SpinReady") == true
+		marker.Enabled = waiting
+		if not waiting or toasted then
+			return
+		end
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if root and ((root.Position - SPIN.Center) * Vector3.new(1, 0, 1)).Magnitude <= SPIN.ToastRange then
+			toasted = true
+			toast(SPIN.ToastText, nil, nil, PINK, 4)
+		end
+	end
+
 	task.spawn(function()
 		while true do
 			refresh()
+			refreshHint()
 			task.wait(1)
 		end
 	end)

@@ -226,8 +226,37 @@ function TrialController:Start()
 		end
 	end
 
-	-- Cooldown countdown on the button
+	-- Batch B3 (Config.TrialHint): players didn't see the gold button was something to press, so while a trial is
+	-- ready its label flips between RANK TRIAL READY! and TAP TO START!, and a hand bobs on its left pointing at it
+	local HINT = Config.TrialHint
+	local hand = make("TextLabel", {
+		Name = "TrialHand",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(1, 0.5),
+		Size = UDim2.fromOffset(40, 40),
+		Text = HINT.Hand,
+		TextScaled = true,
+		Visible = false,
+		ZIndex = 20,
+	}, gui) :: TextLabel
+
+	-- Cooldown countdown on the button (and the ready hint)
 	RunService.Heartbeat:Connect(function()
+		local ready = HINT.Enabled and button.Holder.Visible and player:GetAttribute("TrialState") == "Ready"
+		hand.Visible = ready
+		if ready then
+			local flip = math.floor(os.clock() / HINT.FlipSeconds) % 2 == 1
+			local text = if flip then HINT.TapText else "RANK TRIAL READY!"
+			if button.Label.Text ~= text then
+				button:SetText(text)
+			end
+			local holder = button.Holder
+			local pos, size = holder.AbsolutePosition, holder.AbsoluteSize
+			local push = math.abs(math.sin(os.clock() * 5)) * HINT.Bob
+			local side = math.clamp(size.Y * 1.1, 26, 44)
+			hand.Size = UDim2.fromOffset(side, side)
+			hand.Position = UDim2.fromOffset(pos.X - 2 + push, pos.Y + size.Y / 2)
+		end
 		if button.Holder.Visible and player:GetAttribute("TrialState") == "Cooldown" then
 			local left =
 				math.ceil(math.max(0, (player:GetAttribute("TrialCooldownEnd") or 0) - Workspace:GetServerTimeNow()))
