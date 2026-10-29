@@ -2889,7 +2889,8 @@ Config.CrateShop = {
 		DropTime = 0.35, -- seconds to slam down from above
 		DropHeight = 7, -- studs it falls
 		DropSpin = 1, -- turns while falling
-		Hops = 3,
+		Hops = 4, -- same for every crate and prize (item 13: nothing hints the rarity before the reel)
+		RainbowSpeed = 0.9, -- loops per second through all the rarity colours while it hops and blasts
 		HopTime = 0.3, -- seconds per hop
 		HopHeight = 0.6, -- studs of the first hop
 		HopGrow = 0.45, -- each next hop this much higher
@@ -2906,8 +2907,6 @@ Config.CrateShop = {
 		RaySpin = 0.1, -- turns per second when calm
 		RaySpinHot = 0.6, -- extra turns per second when it's about to blow
 		Confetti = 35, -- pieces at the blast
-		-- A2 (2026-10-28): the light climbs one rarity colour per hop up to the prize's real rarity (never past it)
-		ExtraHops = 3, -- rarer prizes hop more: Epic 4 hops, Legendary 5, Mythic 6
 		RingTime = 0.45, -- seconds a ring of light spreads out on each step up
 	},
 	-- A2 crate opening juice (2026-10-28). Honest: the reel only ever slows down to the real prize.
@@ -3242,32 +3241,34 @@ Config.MascotFx = {
 		CameraIn = 0.35, -- seconds the camera takes to swing in
 		Idle = 0.3,
 		Activation = 0.4,
-		Wobbles = { -- each hit: tilt (degrees), seconds, core brightness
-			{ Angle = 10, Time = 0.28, Core = 1.2 },
-			{ Angle = 12, Time = 0.25, Core = 1.5 },
-			{ Angle = 15, Time = 0.22, Core = 2 },
+		Wobbles = { -- each hit: tilt (degrees), seconds, core brightness, Hop = studs the egg jumps (item 14: bigger)
+			{ Angle = 15, Time = 0.3, Core = 1.3, Hop = 0.25 },
+			{ Angle = 19, Time = 0.27, Core = 1.7, Hop = 0.4 },
+			{ Angle = 24, Time = 0.24, Core = 2.2, Hop = 0.55 },
 		},
+		HitShake = 0.05, -- studs the camera jolts on each wobble (x the wobble number)
+		BurstShake = 0.3, -- studs the camera shakes when the shell blows (x the tier's Flash)
 		CrackTime = 0.4, -- cracks + overload + arch flash, the last Hold seconds stand still
 		Hold = 0.1,
 		BeamLength = 3.5, -- studs the light beams out of each crack
 		PillarHeight = 40,
 		BurstTime = 0.35,
-		ShardDistance = 6, -- studs the shell shards fly
+		ShardDistance = 9, -- studs the shell shards fly
 		RingTime = 0.45,
 		RingWidth = 1.6, -- the energy ring spreads to 1.6x the platform's width
 		RevealTime = 0.8,
 		PetSize = 0.85, -- the pet's size compared to the egg
 		PetLift = 0.6, -- studs above the egg's middle where the pet settles
-		PetRise = 0.4, -- studs it rises out of the light
-		PetSettle = 0.45, -- seconds to settle (with a little overshoot)
+		PetRise = 1, -- studs it rises out of the light
+		PetSettle = 0.5, -- seconds to settle (with a little overshoot)
 		CardAt = 0.3, -- seconds into the reveal the name card pops in
 		SkipFrom = 0.7, -- tap to skip from this many seconds in
 		AutoSkipAfter = 5, -- after this many hatches in one session (and on AUTO HATCH) it plays the quick version
 		-- A1 hatch upgrade (2026-10-28): rising tease, mood, camera push, rays + reaction on the reveal
 		ExtraWobbles = { -- rarer pets keep shaking: Epic 4 wobbles, Legendary 5, Mythic 6 (one rarity colour per wobble)
-			{ Angle = 17, Time = 0.21, Core = 2.3 },
-			{ Angle = 19, Time = 0.2, Core = 2.6 },
-			{ Angle = 22, Time = 0.19, Core = 3 },
+			{ Angle = 27, Time = 0.22, Core = 2.5, Hop = 0.65 },
+			{ Angle = 30, Time = 0.21, Core = 2.8, Hop = 0.75 },
+			{ Angle = 33, Time = 0.2, Core = 3.2, Hop = 0.85 },
 		},
 		DimBrightness = -0.15, -- the world darkens while the egg hatches (0 = off)
 		DimTint = Color3.fromRGB(200, 205, 255),
@@ -3275,46 +3276,46 @@ Config.MascotFx = {
 		Spotlight = 5, -- brightness of the light shining down on the egg (in the climbing rarity colour)
 		Motes = 14, -- floating light specks per second around the stand
 		Push = 0.14, -- the camera creeps this share of the way to the stand during the wobbles
-		Punch = 0.22, -- ... and snaps in this far at the crack, then pulls back for the burst
-		RaysSize = 3.4, -- turning rays behind the pet, x the pet's size (Legendary + Mythic get a 2nd layer)
-		ReactLift = 0.45, -- the pet's own reaction (Hop/Spin/Flip/Wiggle) on the reveal lifts it this x its size
+		Punch = 0.32, -- ... and snaps in this far at the crack, then pulls back for the burst
+		RaysSize = 4.2, -- turning rays behind the pet, x the pet's size (Legendary + Mythic get a 2nd layer)
+		ReactLift = 0.6, -- the pet's own reaction (Hop/Spin/Flip/Wiggle) on the reveal lifts it this x its size
 		ReactDelay = 0.15, -- seconds after settling before it reacts (twice)
 		QuickPace = 0.5, -- the quick version plays the tease at this speed (times x 0.5)
 		CountUp = 0.7, -- seconds the COINS bonus on the card counts up
-		Confetti = { Common = 12, Uncommon = 20, Rare = 35, Epic = 70, Legendary = 100, Mythic = 140 },
+		Confetti = { Common = 25, Uncommon = 35, Rare = 50, Epic = 80, Legendary = 110, Mythic = 150 },
 		AutoNextDelay = 1.2, -- Polish P2: AUTO HATCH waits this long on the finished card before the next egg
 		-- Burst grows with rarity, colours stay cyan/magenta. Extra = added seconds (pillar beat), Hold = stand-still
 		TierOf = { Epic = "Epic", Legendary = "Legendary", Mythic = "Mythic" }, -- everything else = Base
 		Tiers = {
-			Base = { Shards = 10, Sparks = 24, Rings = 1, Flash = 1, Sparkles = 16, SparksPerHit = 4 },
+			Base = { Shards = 16, Sparks = 40, Rings = 2, Flash = 1.15, Sparkles = 24, SparksPerHit = 6 },
 			Epic = {
-				Shards = 14,
-				Sparks = 36,
+				Shards = 22,
+				Sparks = 56,
 				Rings = 2,
 				Flash = 1.25,
-				Sparkles = 24,
-				SparksPerHit = 6,
+				Sparkles = 32,
+				SparksPerHit = 8,
 				DoubleFlash = true,
 			},
 			Legendary = {
-				Shards = 18,
-				Sparks = 50,
+				Shards = 28,
+				Sparks = 72,
 				Rings = 2,
 				Flash = 1.5,
-				Sparkles = 36,
-				SparksPerHit = 9,
+				Sparkles = 44,
+				SparksPerHit = 11,
 				CrackSteps = 3,
 				Pillar = true,
 				CamShake = 0.1,
 				Extra = 0.15,
 			},
 			Mythic = {
-				Shards = 24,
-				Sparks = 72,
+				Shards = 34,
+				Sparks = 96,
 				Rings = 3,
 				Flash = 1.8,
-				Sparkles = 48,
-				SparksPerHit = 12,
+				Sparkles = 60,
+				SparksPerHit = 14,
 				CrackSteps = 3,
 				Pillar = true,
 				CamShake = 0.1,

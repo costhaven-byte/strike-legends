@@ -1857,7 +1857,11 @@ function MascotController:Start()
 		oddsBoard.LightInfluence = 0
 
 		oddsBoard.Enabled = false
-		oddsBoard.Parent = shell
+		-- Final changes 11a: pinned to the stand from PlayerGui. Pet viewports on a billboard parented in the Workspace
+		-- often don't draw (Roblox bug), so players saw empty cards.
+		oddsBoard.Adornee = shell
+		oddsBoard.ResetOnSpawn = false
+		oddsBoard.Parent = player:WaitForChild("PlayerGui")
 
 		-- Everything that fades, with its fully-shown transparency
 		local fading: { { any } } = {}

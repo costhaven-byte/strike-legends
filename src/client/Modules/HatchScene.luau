@@ -752,10 +752,17 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 			Sfx.Play("ReelTick", 0.85 + index * 0.15)
 			leakSparks(tier.SparksPerHit)
 			light.Brightness = 1.5 * wobble.Core
+			-- Final changes item 14: every hit jolts the camera, and the egg jumps off the stand while it rocks
+			animate(0.16, function(u)
+				camShake = math.max(camShake, (1 - u) * SETTINGS.HitShake * index)
+			end)
 			if
 				not hold(wobble.Time * pace, function(u)
 					local angle = math.rad(wobble.Angle) * math.sin(u * math.pi * 2) * (1 - u * 0.25)
-					egg:PivotTo(CFrame.new(base) * CFrame.fromAxisAngle(axis, angle) * CFrame.new(-base) * eggPivot)
+					local jump = Vector3.yAxis * (wobble.Hop or 0) * math.sin(u * math.pi)
+					egg:PivotTo(
+						CFrame.new(jump + base) * CFrame.fromAxisAngle(axis, angle) * CFrame.new(-base) * eggPivot
+					)
 					paintCore(1 + (wobble.Core - 1) * (1 - u) + 0.15)
 					light.Brightness = 1.5 + 1.5 * wobble.Core * (1 - u)
 					camPush = SETTINGS.Push * ((index - 1 + u) / #wobbles)
@@ -852,9 +859,10 @@ function HatchScene.Play(ctx: Context): (boolean?) -> ()
 		UiFx.Flash(WHITE, math.min(0.9, 0.5 * flash), 0.18)
 		Sfx.Play("HatchBurst", 1)
 		Sfx.FadeOut(shimmer, 0.3)
-		-- The camera pulls back out to the close shot as the shell flies (A1)
+		-- The camera pulls back out to the close shot as the shell flies (A1), with a kick for every rarity (item 14)
 		animate(SETTINGS.BurstTime, function(u)
 			camPush = SETTINGS.Punch * (1 - ease(u, Enum.EasingStyle.Quad))
+			camShake = (1 - u) * SETTINGS.BurstShake * flash
 		end)
 		light.Color = WHITE
 		light.Range = 24

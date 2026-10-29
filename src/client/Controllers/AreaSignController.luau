@@ -3,6 +3,7 @@
 -- Luckiest Guy) on a BillboardGui sized in studs plus a few pixels per stud, so it reads the same on every screen and
 -- never shrinks to nothing far away. Built from code over the station found at runtime (Config.AreaSigns), so it
 -- needs no Studio work. Client only: nothing here touches the server.
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TextService = game:GetService("TextService")
@@ -52,15 +53,26 @@ end
 
 -- Highest point of an egg stand's odds bubbles (Polish P3), so the sign stays clear of them
 local function bubbleTop(station: Instance): number?
+	-- the board lives in PlayerGui, pinned (Adornee) to a part of the stand
+	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 	local board: BillboardGui? = nil
 	local waited = 0
 	while not board and waited < 20 do
-		board = station:FindFirstChild("EggOdds", true) :: BillboardGui?
+		for _, gui in playerGui:GetChildren() do
+			if
+				gui.Name == "EggOdds"
+				and gui:IsA("BillboardGui")
+				and gui.Adornee
+				and gui.Adornee:IsDescendantOf(station)
+			then
+				board = gui
+			end
+		end
 		if not board then
 			waited += task.wait(0.5)
 		end
 	end
-	local shell = board and board.Parent
+	local shell = board and board.Adornee
 	if not board or not shell or not shell:IsA("BasePart") then
 		return nil
 	end

@@ -1505,9 +1505,20 @@ function CrateController:Start()
 	end
 
 	-- title: the reel screen's crate name (pops when the crate lands)
-	-- rarityIndex: the prize's rarity. A2: the light leaking out of the crate climbs one rarity colour per hop up to
-	-- the real one (never past it), and rarer prizes hop more (Epic 4, Legendary 5, Mythic 6).
-	local function playIntro(crate, title: GuiObject?, rarityIndex: number)
+	-- Final changes item 13 (2026-10-29): the light cycles through EVERY rarity colour and every crate hops the same,
+	-- so nothing hints the prize before the reel.
+	local rainbow = {}
+	for _, rarity in Config.Rarities do
+		table.insert(rainbow, CrateKit.RarityColor(rarity.Name))
+	end
+	local function rainbowAt(k: number): Color3
+		local n = #rainbow
+		local x = (k % 1) * n
+		local i = math.floor(x)
+		return rainbow[i + 1]:Lerp(rainbow[(i + 1) % n + 1], x - i)
+	end
+
+	local function playIntro(crate, title: GuiObject?)
 		local template = crateModels
 			and (crateModels:FindFirstChild(crate.Id) or (crate.Model and crateModels:FindFirstChild(crate.Model)))
 		if not template then
@@ -1556,9 +1567,8 @@ function CrateController:Start()
 			beam.Color = c:Lerp(white, 0.5)
 		end
 		paintTease(color)
-		local hops = math.clamp(rarityIndex, INTRO.Hops, INTRO.Hops + INTRO.ExtraHops)
-		local lidPeek = INTRO.LidPeek * INTRO.Hops / hops -- the lid ends up just as open however many hops
-		local shownRarity = 0
+		local hops = INTRO.Hops
+		local lidPeek = INTRO.LidPeek
 		introView.ImageColor3 = white
 		introView.ImageTransparency = 1
 		introRays.Visible = false
@@ -1608,17 +1618,12 @@ function CrateController:Start()
 				if index + 1 ~= hop then
 					hop = index + 1
 					Sfx.Play("ReelTick", 0.9 + hop * 0.2)
-					local shown = math.min(hop, rarityIndex)
-					if shown ~= shownRarity then
-						paintTease(CrateKit.RarityColor(Config.Rarities[shown].Name))
-						if shownRarity > 0 then
-							-- a step up: chime, flash and a ring in the new colour
-							Sfx.Play("StreakUp", 0.8 + shown * 0.1, 0.7)
-							UiFx.Flash(color, 0.12, 0.2)
-							introRing(color, 1.1 + shown * 0.08)
-							UiFx.Pop(introGlow, 1.8, 0.3)
-						end
-						shownRarity = shown
+					if hop > 1 then
+						-- every hop: chime, flash and a ring in whatever colour the rainbow is on
+						Sfx.Play("StreakUp", 0.8 + hop * 0.1, 0.7)
+						UiFx.Flash(color, 0.12, 0.2)
+						introRing(color, 1.1 + hop * 0.08)
+						UiFx.Pop(introGlow, 1.8, 0.3)
 					end
 					if index > 0 then
 						-- landed the previous hop: thump
@@ -1652,8 +1657,8 @@ function CrateController:Start()
 						kick, shake = 1.6, 1.4
 						Sfx.Play("CrateOpen")
 						Sfx.Play("Firework", 1.1, 0.7)
-						UiFx.Flash(color, 0.5, 0.3)
-						UiFx.Confetti(opening, INTRO.Confetti, { color, white, color:Lerp(white, 0.5) })
+						UiFx.Flash(white, 0.5, 0.3)
+						UiFx.Confetti(opening, INTRO.Confetti, table.clone(rainbow))
 						UiFx.Pop(introGlow, 2.2, 0.4)
 						introRing(color, 1.6)
 					end
@@ -1664,8 +1669,12 @@ function CrateController:Start()
 					local beamWidth = scaled.X * 0.55 * (1 - b * 0.6)
 					beam.Size = Vector3.new(math.max(beamHeight, 0.05), beamWidth, beamWidth)
 					beam.Transparency = 0.25 + b * 0.75
-					introView.ImageColor3 = white:Lerp(color:Lerp(white, 0.4), b)
+					introView.ImageColor3 = white:Lerp(color:Lerp(white, 0.6), b)
 				end
+			end
+
+			if landed then
+				paintTease(rainbowAt(t * INTRO.RainbowSpeed))
 			end
 
 			-- Beat-driven extras: the rays turn faster as it heats up, alternate colours swap on every beat
@@ -2628,7 +2637,7 @@ function CrateController:Start()
 		reelShade.BackgroundTransparency = 1
 		tween(reelShade, 0.2, Enum.EasingStyle.Linear, { BackgroundTransparency = 0.1 })
 		local reel = buildReel(crate)
-		playIntro(crate, reel.Title.Parent, rarityIndex)
+		playIntro(crate, reel.Title.Parent)
 
 		-- The strip: tile i's centre sits under the marker when the strip is at stripX(i)
 		local M = reel.M
