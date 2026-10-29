@@ -374,6 +374,31 @@ Config.Streaks = {
 	{ Streak = 10, Multiplier = 5.0, XpMultiplier = 5.0, Name = "PERFECT RUN", Color = Color3.fromRGB(255, 240, 90) },
 }
 
+-- FEVER MODE (final changes batch D4, item 16 "spice", owner picked 2026-10-29): StreakNeeded strikes in a row by
+-- hand = Seconds of x CoinMultiplier coins and faster throws (FeverService; the multiplier card lists FEVER while it
+-- runs). It starts again at 10, 15 ... in a row if it has run out by then. Auto Bowl throws never start or use it.
+Config.Fever = {
+	Enabled = true,
+	StreakNeeded = 5,
+	Seconds = 15,
+	CoinMultiplier = 3, -- on top of every other multiplier (streak, PERFECT x2 ...)
+	StrikeAddsSeconds = 1, -- each strike during fever adds this, never above Seconds left; a miss doesn't end it
+	-- Faster throws: the lane resets quicker (Config.Lane.PinResetDelay x ResetScale, strike slow motion kept) and
+	-- the server allows a throw every ThrowRateLimit seconds (Config.RateLimits.Throw outside fever)
+	ResetScale = 0.5,
+	CooldownBuffer = 0.1, -- instead of Config.Throw.CooldownBuffer
+	ThrowRateLimit = 1.4,
+	MusicSpeed = 1.15, -- the zone music plays this much faster (MusicController)
+	-- Looks (FeverController; kept warm and soft, never blinding)
+	Color = Color3.fromRGB(255, 122, 26),
+	EdgeGlow = 0.62, -- transparency of the screen-edge glow at its strongest (1 = none); pulses up to EdgeGlowPulse
+	EdgeGlowPulse = 0.78,
+	EdgeGlowSize = 0.16, -- share of the screen height each edge glow reaches in
+	EndWarning = 3, -- the bar blinks in its last seconds
+	LaneFlameRate = 6, -- soft flame wisps per second off each lane light strip
+	BallFlameRate = 30, -- flame wisps per second behind the ball
+}
+
 -- Pro Tiers. Each tier holds 6 of the 60 rank levels (Config.Economy.Ranks: levels 1-6 Rookie, 7-12 Amateur ...
 -- 55-60 Hall of Famer). Levels inside a tier come straight from XP; a tier's first level needs its Rank Trial
 -- (see Config.Trials) once the XP is there. Coin multiplier is permanent; gems are a one-time tier reward.
@@ -4353,6 +4378,7 @@ Config.Analytics = {
 		"OfferShown", -- an offer popup was sent (Config.Monetization.Offers); labels = HardStop/Look, item Id
 		"PolishLevel", -- value = new Polish level; labels = ball
 		"PotionUsed", -- value = minutes left on that potion after drinking; labels = potion
+		"Fever", -- FEVER MODE started (Config.Fever, batch D4); value = streak that started it
 		"PlaytimeClaimed", -- value = the gift's minute mark; labels = Potion/Egg/Crate, item
 		"SpinWheel", -- value = the slice number; labels = Potion/Egg/Crate/Ball/Pet, item
 		"Rebirth", -- later (Milestone 17)

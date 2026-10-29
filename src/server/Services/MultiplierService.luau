@@ -19,6 +19,7 @@ local ThrowRules = require(Shared.Modules.ThrowRules)
 local Zones = require(Shared.Modules.Zones)
 local AwayService = require(script.Parent.AwayService)
 local BallService = require(script.Parent.BallService)
+local FeverService = require(script.Parent.FeverService)
 local FriendService = require(script.Parent.FriendService)
 local MascotService = require(script.Parent.MascotService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
@@ -28,8 +29,21 @@ local ProgressionService = require(script.Parent.ProgressionService)
 local REFRESH = 0.5 -- seconds between checks for a changed multiplier
 
 -- The order the panel lists them in
-local ORDER =
-	{ "Zone", "PowerLevel", "Ball", "Mascots", "Potion", "Rank", "Rebirth", "Friends", "Passes", "RobuxBoost", "Streak", "Modifier" }
+local ORDER = {
+	"Zone",
+	"PowerLevel",
+	"Ball",
+	"Mascots",
+	"Potion",
+	"Rank",
+	"Rebirth",
+	"Friends",
+	"Passes",
+	"RobuxBoost",
+	"Streak",
+	"Modifier",
+	"Fever",
+}
 
 local MultiplierService = {}
 
@@ -50,6 +64,7 @@ function MultiplierService.Coins(player: Player, ball, level, streak: number, mo
 		RobuxBoost = Store.BoostMultiplier(player), -- the COIN BOOST ladder bought with Robux (up to x2)
 		Streak = Progression.GetStreakMultiplier(streak),
 		Modifier = modifier and modifier.CoinMultiplier or 1,
+		Fever = FeverService.Multiplier(player), -- FEVER MODE x3 for 15 s (Config.Fever; ThrowService sets 1 on auto throws)
 		GoldenPin = if goldenHit then Config.GoldenPin.CoinMultiplier else 1,
 	}
 end
@@ -80,7 +95,7 @@ end
 
 -- Multipliers that are on between throws (everything in ORDER but Streak and lane Modifier), multiplied together.
 -- Coins per minute takes these out of past throws and puts today's back in, so an upgrade shows at once.
-local NOT_STEADY = { Streak = true, Modifier = true }
+local NOT_STEADY = { Streak = true, Modifier = true, Fever = true }
 function MultiplierService.Steady(all): number
 	local product = 1
 	for _, name in ORDER do

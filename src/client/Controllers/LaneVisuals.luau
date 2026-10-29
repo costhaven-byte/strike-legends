@@ -461,6 +461,10 @@ local function playThrow(data)
 		then { Update = function() end, Destroy = function() end }
 		else LaneFx.FollowLights(lane, if look then look.Colors[#look.Colors] else ballInfo.Trail)
 	BallFx.Dim(ball)
+	-- FEVER MODE: the ball trails soft flames (Config.Fever; SETTINGS EFFECTS / OTHER PLAYERS' EFFECTS turn them off)
+	if data.Fever and Settings.Get("Vfx") and not hidden(isOwn) then
+		LaneFx.FeverFlame(ball, Config.Fever.BallFlameRate, radius * 1.4)
+	end
 	local fired = data.Traits or {}
 	local curveTrail = if table.find(fired, "Curve") and not hidden(isOwn)
 		then TraitFx.CurveTrail(lane, headDistance)

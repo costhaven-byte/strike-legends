@@ -42,6 +42,7 @@ local SOURCES = {
 	{ Key = "RobuxBoost", Name = "COIN BOOST", Icon = "Coins2" },
 	{ Key = "Streak", Name = "STREAK", Icon = "Flame", Always = true },
 	{ Key = "Modifier", Name = "LANE EVENT", Icon = "Clover" },
+	{ Key = "Fever", Name = "FEVER", Icon = "Flame" }, -- only while FEVER MODE runs (Config.Fever)
 }
 
 local MultiplierController = {}
@@ -183,6 +184,7 @@ function MultiplierController:Start()
 		{ Keys = { "Potion" }, Name = "COIN POTION", HudIcon = "PotionCoin", Color = G("FFC93A"), Extra = true },
 		{ Keys = { "Rebirth" }, Name = "REBIRTHS", HudIcon = "Rebirth", Color = G("FFC93A"), Extra = true },
 		{ Keys = { "Friends" }, Name = "FRIENDS", HudIcon = "GiftPink", Color = G("FFC93A"), Extra = true },
+		{ Keys = { "Fever" }, Name = "FEVER", HudIcon = "Flame", Color = G("FF7A1A"), Extra = true },
 	}
 	local SPECIALS = {
 		{ Name = "PERFECT", Icon = "Perfect", Value = 1 + Config.Rewards.PerfectStrikeBonus },

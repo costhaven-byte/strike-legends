@@ -49,6 +49,7 @@ local SECTIONS = {
 		Title = "EVENTS",
 		Buttons = {
 			{ Text = "BOSS NOW", Action = "Boss" },
+			{ Text = "FEVER NOW", Action = "Fever" },
 		},
 	},
 }

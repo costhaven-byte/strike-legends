@@ -411,4 +411,54 @@ function LaneFx.SetStreakTier(lane: Model, tier: number)
 	end
 end
 
+-- ===== FEVER MODE (Config.Fever): soft warm flame wisps, never white or blinding =====
+local FLAME = "rbxasset://textures/particles/fire_main.dds"
+
+-- Flame wisps on a part: `rate` per second, `size` studs. Returns the emitter (the caller removes it).
+function LaneFx.FeverFlame(part: BasePart, rate: number, size: number): ParticleEmitter
+	local color = Config.Fever.Color
+	local e = Instance.new("ParticleEmitter")
+	e.Name = "FeverFlame"
+	e.Texture = FLAME
+	e.Color =
+		ColorSequence.new(color:Lerp(Color3.fromRGB(255, 200, 80), 0.35), color:Lerp(Color3.new(0.6, 0.1, 0), 0.4))
+	e.LightEmission = 0.35
+	e.LightInfluence = 0.3
+	e.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.6),
+		NumberSequenceKeypoint.new(0.3, 0.45),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	e.Size = NumberSequence.new(size, size * 0.3)
+	e.Lifetime = NumberRange.new(0.35, 0.7)
+	e.Speed = NumberRange.new(1.5, 3)
+	e.Acceleration = Vector3.new(0, 4, 0)
+	e.RotSpeed = NumberRange.new(-90, 90)
+	e.Rotation = NumberRange.new(0, 360)
+	e.SpreadAngle = Vector2.new(20, 20)
+	e.EmissionDirection = Enum.NormalId.Top
+	e.Rate = rate
+	e.Parent = part
+	return e
+end
+
+-- A lane's light strips smoulder while its bowler is in fever (on = false takes the flames off again)
+local feverFlames: { [Model]: { Instance } } = {}
+function LaneFx.SetFever(lane: Model, on: boolean)
+	for _, flame in feverFlames[lane] or {} do
+		flame:Destroy()
+	end
+	feverFlames[lane] = nil
+	if not on then
+		return
+	end
+	local list = {}
+	for _, part in lightParts(lane) do
+		if part.Name == "CapStrip" then
+			table.insert(list, LaneFx.FeverFlame(part, Config.Fever.LaneFlameRate, 1.2))
+		end
+	end
+	feverFlames[lane] = list
+end
+
 return LaneFx

@@ -2,6 +2,7 @@
 -- character stands (the Config.Zones.Gated areas = zones 2-4, anywhere else = zone 1, the Pin Titan
 -- fight = Boss) and cross-fades the music and the ambience loop to that place's tracks.
 -- Both play through the "MusicVolume" SoundGroup, which the SETTINGS slider MUSIC sets.
+-- During your FEVER MODE (Config.Fever) the music plays Config.Fever.MusicSpeed faster.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
@@ -86,6 +87,12 @@ local function layer(name: string, volume: number)
 	end
 end
 
+-- FEVER MODE speeds the music up (and a track that fades in during fever starts fast too)
+local function musicSpeed(): number
+	local fever = Config.Fever.Enabled and Workspace:GetServerTimeNow() < (player:GetAttribute("FeverEndsAt") or 0)
+	return if fever then Config.Fever.MusicSpeed else 1
+end
+
 function MusicController:Start()
 	local setMusic = layer("Music", MUSIC.Volume)
 	local setAmbience = layer("Ambience", MUSIC.AmbienceVolume)
@@ -93,6 +100,12 @@ function MusicController:Start()
 		local spot = currentSpot()
 		setMusic(spot.Music)
 		setAmbience(spot.Ambience)
+		local speed = musicSpeed()
+		for _, sound in folder:GetChildren() do
+			if sound:IsA("Sound") and sound.Name == "Music" and sound.PlaybackSpeed ~= speed then
+				TweenService:Create(sound, TweenInfo.new(0.4, Enum.EasingStyle.Sine), { PlaybackSpeed = speed }):Play()
+			end
+		end
 		task.wait(0.5)
 	end
 end

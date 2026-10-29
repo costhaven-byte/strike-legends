@@ -30,6 +30,7 @@ RewardKit.Paint = {
 	Cyan = { C.Cyan, C.CyanLip },
 	Red = { CrateKit.C.Red, CrateKit.C.RedLip },
 	Grey = { C.Grey, C.GreyLip },
+	Fever = { UiKit.Hex("FF7A1A"), UiKit.Hex("C2410C") }, -- FEVER MODE (Config.Fever)
 }
 
 -- Largest text size (up to max) whose wrapped text fits w x h design px. Measured on the design size, so it is right

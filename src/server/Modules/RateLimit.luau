@@ -10,14 +10,15 @@ local RateLimit = {}
 local last: { [Player]: { [string]: number } } = {}
 
 -- True (and the clock starts again) if this player's last `key` request was at least Config.RateLimits[key] seconds ago
-function RateLimit.Allow(player: Player, key: string): boolean
+-- (or `seconds`, when given: FEVER MODE allows faster throws)
+function RateLimit.Allow(player: Player, key: string, seconds: number?): boolean
 	local now = os.clock()
 	local times = last[player]
 	if not times then
 		times = {}
 		last[player] = times
 	end
-	if now - (times[key] or -math.huge) < (Config.RateLimits[key] or 0) then
+	if now - (times[key] or -math.huge) < (seconds or Config.RateLimits[key] or 0) then
 		return false
 	end
 	times[key] = now

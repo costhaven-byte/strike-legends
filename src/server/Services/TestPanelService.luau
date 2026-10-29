@@ -15,6 +15,7 @@ local Zones = require(Shared.Modules.Zones)
 local StudioTestMode = require(script.Parent.Parent.Modules.StudioTestMode)
 local BallService = require(script.Parent.BallService)
 local BossService = require(script.Parent.BossService)
+local FeverService = require(script.Parent.FeverService)
 local MascotService = require(script.Parent.MascotService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local PotionService = require(script.Parent.PotionService)
@@ -134,6 +135,13 @@ local ACTIONS: { [string]: (Player) -> any } = {
 			return reply(false, "The boss event is already on (or the boss is off)")
 		end
 		return reply(true, "Helicopter boarding is open now (zone 4 roof)")
+	end,
+	Fever = function(player)
+		if not Config.Fever.Enabled then
+			return reply(false, "Fever is off (Config.Fever.Enabled)")
+		end
+		FeverService.Begin(player, 0)
+		return reply(true, "FEVER MODE for " .. Config.Fever.Seconds .. " s: throw now")
 	end,
 }
 

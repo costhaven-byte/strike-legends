@@ -618,8 +618,20 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 
 	refreshBall()
 	local throwSeconds = S.ThrowSeconds
+	-- FEVER MODE (Config.Fever, batch D4): StreakNeeded PERFECTs in a row = Seconds of x CoinMultiplier coins and
+	-- faster throws (the lane resets quicker: PinResetDelay x ResetScale, a smaller cooldown buffer)
+	local FEVER = config.Fever
+	local feverOn = FEVER and FEVER.Enabled
+	local feverSave = if feverOn
+		then config.Lane.PinResetDelay * (1 - FEVER.ResetScale) + (config.Throw.CooldownBuffer - FEVER.CooldownBuffer)
+		else 0
+	local feverLeft = 0
+	extras.Fevers = 0
 	while time < S.Minutes * 60 do
-		time += throwSeconds
+		local fever = feverOn and feverLeft > 0
+		local throwTime = throwSeconds - (if fever then feverSave else 0)
+		time += throwTime
+		feverLeft = math.max(0, feverLeft - throwTime)
 		s.Throws += 1
 		local zone = E.Zones[s.Zone]
 		local level = E.PowerLevels[s.Level]
@@ -640,6 +652,14 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 			pins = math.clamp(math.floor(wanted + 0.5), math.min(math.max(fewest, 2), most), most)
 		end
 		s.Streak = if perfect then s.Streak + 1 else 0
+		if feverOn and perfect then
+			if feverLeft > 0 then
+				feverLeft = math.min(feverLeft + FEVER.StrikeAddsSeconds, FEVER.Seconds)
+			elseif s.Streak % FEVER.StreakNeeded == 0 then
+				feverLeft = FEVER.Seconds
+				extras.Fevers += 1
+			end
+		end
 
 		if time >= modifierEnds then
 			modifier = pickModifier()
@@ -653,8 +673,8 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 			end
 		end
 		local tier = config.Ranks[math.clamp(math.ceil(s.Rank / E.Ranks.LevelsPerTier), 1, #config.Ranks)]
-		local coinPotion = potionMultiplier("Coins", throwSeconds)
-		local xpPotion = potionMultiplier("XP", throwSeconds)
+		local coinPotion = potionMultiplier("Coins", throwTime)
+		local xpPotion = potionMultiplier("XP", throwTime)
 		local rebirthCoins = 1 + E.Formula.RebirthBonus * s.Rebirths
 		local rebirthXp = 1 + (E.Rebirth.XpBonus or 0) * s.Rebirths
 
@@ -669,6 +689,7 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 			* (if golden then config.GoldenPin.CoinMultiplier else 1)
 			* (if perfect then 1 + REWARDS.PerfectStrikeBonus else 1)
 			* (zone.CoinPay or 1)
+			* (if fever then FEVER.CoinMultiplier else 1)
 		local coins = math.floor(pins * REWARDS.BaseCoinsPerPin * multiplier + 0.5)
 		s.Coins += coins
 		recentIndex = recentIndex % 100 + 1
@@ -886,6 +907,17 @@ function EconomySim.Run(config: any?): string
 			table.concat(pay, ", ")
 		)
 	)
+	if config.Fever and config.Fever.Enabled then
+		add(
+			("FEVER: %d PERFECTs in a row = x%g coins for %gs; fevers per player in %g hours (median): %d"):format(
+				config.Fever.StreakNeeded,
+				config.Fever.CoinMultiplier,
+				config.Fever.Seconds,
+				E.Sim.Minutes / 60,
+				extras.Fevers or 0
+			)
+		)
+	end
 	for _, problem in EconomySim.CheckRules(config, P) do
 		add("RULE PROBLEM: " .. problem)
 	end

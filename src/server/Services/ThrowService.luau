@@ -17,6 +17,7 @@ local Analytics = require(script.Parent.Analytics)
 local AwayService = require(script.Parent.AwayService)
 local BallService = require(script.Parent.BallService)
 local BossService = require(script.Parent.BossService)
+local FeverService = require(script.Parent.FeverService)
 local GoldenPinService = require(script.Parent.GoldenPinService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
 local MilestoneService = require(script.Parent.MilestoneService)
@@ -31,6 +32,7 @@ local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
 local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 local StoreService = require(script.Parent.StoreService)
 
+local FEVER = Config.Fever
 local GOLDEN = Config.GoldenPin
 local THROW = Config.Throw
 
@@ -114,7 +116,10 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 	if now < (lane:GetAttribute("ReadyAt") or 0) then
 		return
 	end
-	if not RateLimit.Allow(player, "Throw") then
+	-- FEVER MODE (Config.Fever): hand throws come faster (quicker reset below, looser rate limit) and pay more.
+	-- Auto Bowl throws get neither.
+	local fever = not auto and FeverService.Active(player)
+	if not RateLimit.Allow(player, "Throw", if fever then FEVER.ThrowRateLimit else nil) then
 		return
 	end
 
@@ -162,6 +167,7 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 	if result.Overcharge == "Blast" then
 		multipliers.Overcharge = THROW.Overcharge.CoinMultiplier
 	end
+	multipliers.Fever = if fever then FEVER.CoinMultiplier else 1
 	local reward = RewardResolver.Calculate(
 		result.Count,
 		result.Tier,
@@ -208,9 +214,10 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 	now += THROW.ReleaseDelay
 
 	-- Strikes wait for their slow motion too (the client resets the pins after the same time)
-	local resetDelay = Config.Lane.PinResetDelay
+	local resetDelay = Config.Lane.PinResetDelay * (if fever then FEVER.ResetScale else 1)
 		+ (if isStrike then THROW.SlowMotionStartsAfter + THROW.SlowMotionLength else 0)
-	lane:SetAttribute("ReadyAt", now + result.RollTime + resetDelay + THROW.CooldownBuffer)
+	local buffer = if fever then FEVER.CooldownBuffer else THROW.CooldownBuffer
+	lane:SetAttribute("ReadyAt", now + result.RollTime + resetDelay + buffer)
 
 	ThrowService.Remotes.ThrowResult:FireAllClients({
 		Lane = lane,
@@ -235,6 +242,7 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 		Golden = golden,
 		ModifierGems = modifierGems,
 		Overcharge = result.Overcharge,
+		Fever = fever, -- thrown during FEVER MODE: the ball burns (LaneVisuals)
 	})
 
 	SessionLog.Throw(player, powerLevel, result.Perfect, assisted)
@@ -245,11 +253,15 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 		if player.Parent then
 			local firstCoins = reward.Coins > 0 and (PlayerDataService.Get(player, "LifetimePins") or 0) == 0
 			PlayerDataService.Add(player, "Coins", reward.Coins)
-			AwayService.OnCoins(player, reward.Coins, MultiplierService.Steady(multipliers))
+			-- (fever's x3 is taken out too, so 15 s of fever don't raise coins per minute or away coins)
+			AwayService.OnCoins(player, reward.Coins, MultiplierService.Steady(multipliers) * multipliers.Fever)
 			if reward.Gems > 0 then
 				PlayerDataService.Add(player, "Gems", reward.Gems)
 			end
 			ProgressionService.ShowStreak(player, streak)
+			if isStrike and not auto then
+				FeverService.OnStrike(player, streak)
+			end
 			ProgressionService.AddXP(player, reward.XP)
 			LeaderboardService.RecordThrow(player, result.Count, reward.Coins)
 			-- Lifetime counters for the Profile panel (Polish P5)
