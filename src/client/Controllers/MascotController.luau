@@ -1,8 +1,9 @@
 -- Mascots on screen (Addendum 2 Phase 3 step 8): the PETS button, the mascot panel, the hatching moment and the
 -- egg stand in the lobby (Workspace.Hub.EggPad, the old daily-reward pad).
 -- Hatching happens only at the egg stand (owner's call, 2026-10-19): the panel shows your equipped slots with
--- EQUIP BEST and only the pets you own, with EQUIP buttons (owner 2026-10-21: no egg card, no silhouettes). Step 8b: a MERGE button when you own
--- Config.Economy.Mascots.ShinyMerge of one mascot, and gold Shiny cards once you own a Shiny.
+-- EQUIP BEST and only the pets you own, with EQUIP buttons (owner 2026-10-21: no egg card, no silhouettes), and gold
+-- Shiny cards once you own a Shiny. Batch C2 (owner 2026-10-29): no MERGE button here any more; Shinies are made only
+-- at zone 3's PET FUSION machine (the fusion window below). Pet bonuses show as multipliers (x2.5, Mascots.BonusText).
 -- Owner 2026-10-22: the panel has two tabs, PETS and ITEMS (the potions, PotionController.BuildItems). The button is
 -- always open; before the pets' zone the PETS tab shows where pets unlock and the button opens on ITEMS.
 -- Built in code (not in Studio), so it lives in git. The server rolls every hatch (MascotService); this only shows it.
@@ -256,7 +257,7 @@ function MascotController:Start()
 	local sideX = PAGE_W - 6 - 12 - SIDE_W
 	local totalCaption = RewardKit.Label(stripFace, "TOTAL PET BONUS", UiKit.Body, 13, K.Muted, 0, sideX, 6, SIDE_W, 18)
 	totalCaption.Name = "TotalCaption"
-	local slotsTitle = RewardKit.Label(stripFace, "+0% COINS", UiKit.Head, 28, K.Gold, 2.5, sideX, 22, SIDE_W, 32)
+	local slotsTitle = RewardKit.Label(stripFace, "x1 COINS", UiKit.Head, 28, K.Gold, 2.5, sideX, 22, SIDE_W, 32)
 	slotsTitle.Name = "Total"
 	local best = RewardKit.Button(stripFace, "EQUIP BEST", "Lime", SIDE_W, 46, 22)
 	best.Holder.Name = "EquipBest"
@@ -297,7 +298,6 @@ function MascotController:Start()
 		Equip: any,
 		Outline: UIStroke,
 		Tick: GuiObject,
-		Merge: any?,
 		Mascot: any,
 	}
 	local tiles: { Tile } = {}
@@ -392,20 +392,6 @@ function MascotController:Start()
 				equip:Shake()
 			end
 		end)
-		-- MERGE: three of a kind -> one Shiny (gold, over the lower part of the pet)
-		local merge = nil
-		local cost = Mascots.MergeCost(mascot)
-		if cost then
-			local mergeButton = RewardKit.Button(face, ("MERGE %d > SHINY"):format(cost), "Gold", FACE_W - 12, 32, 15)
-			mergeButton.Holder.Name = "Merge"
-			mergeButton.Holder.Position = UDim2.fromOffset(6, 58)
-			mergeButton.Holder.ZIndex = 6
-			mergeButton.Holder.Visible = false
-			mergeButton.Activated:Connect(function()
-				task.spawn(doMerge, mascot)
-			end)
-			merge = mergeButton
-		end
 		table.insert(tiles, {
 			Frame = frame,
 			Name = name,
@@ -415,7 +401,6 @@ function MascotController:Start()
 			Equip = equip,
 			Outline = tileOutline,
 			Tick = tick,
-			Merge = merge,
 			Mascot = mascot,
 		})
 	end
@@ -523,9 +508,6 @@ function MascotController:Start()
 			local mascot = tile.Mascot
 			local have = mine[mascot.Id] or 0
 			local inUse = countIn(list, mascot.Id)
-			if tile.Merge then
-				tile.Merge.Holder.Visible = have >= (Mascots.MergeCost(mascot) or math.huge)
-			end
 			tile.Frame.Visible = have > 0
 			if have > 0 then
 				tile.Count.Text = ("x%d"):format(have)
@@ -688,7 +670,7 @@ function MascotController:Start()
 	end
 
 	-- The hatch card (UI pass batch 5): a navy plate ringed in the rarity colour with the rarity chip, the pet's
-	-- name, "+12% COINS" counting up, the odds and a NEW! stamp; OK (and AUTO on the stand) under it. A triple hatch
+	-- name, "x1.12 COINS" counting up, the odds and a NEW! stamp; OK (and AUTO on the stand) under it. A triple hatch
 	-- puts the other two pets on small cards either side. Design px; it shrinks to fit the screen's bottom part.
 	local front = make("Frame", {
 		Name = "Front",
@@ -999,7 +981,7 @@ function MascotController:Start()
 		local function info(bonus: number): string
 			return Mascots.BonusText(bonus) .. " COINS"
 		end
-		-- A1: the COINS bonus counts up from +0%
+		-- A1: the COINS bonus counts up from x1
 		local bonus = Mascots.Bonus(mascot)
 		local token = {}
 		cardToken = token
@@ -1311,9 +1293,9 @@ function MascotController:Start()
 		stageRays.Visible = true
 		UiFx.Pop(stageRays, 0.3, 0.4)
 		popCard({ Color = GOLD, Rarity = "SHINY", Name = string.upper(shiny.Name), Stamp = "SHINY!", StampColor = GOLD })
-		revealInfo.Text = ("x%d BONUS  ·  %s COINS"):format(
-			ECONOMY.ShinyMultiplier,
-			Mascots.BonusText(Mascots.Bonus(shiny))
+		revealInfo.Text = ("%s COINS  ·  WAS %s"):format(
+			Mascots.BonusText(Mascots.Bonus(shiny)),
+			Mascots.BonusText(Mascots.Bonus(mascot))
 		)
 		revealOdds.Text = if result.Equipped then "EQUIPPED!" else ""
 		for _, label in { revealName, revealInfo } do
@@ -1378,10 +1360,7 @@ function MascotController:Start()
 		FW,
 		FH,
 		"PET FUSION",
-		("%d OF THE SAME PET MAKE 1 SHINY: x%d BONUS AND A GOLD CROWN"):format(
-			ECONOMY.ShinyMerge,
-			ECONOMY.ShinyMultiplier
-		),
+		("%d OF THE SAME PET MAKE 1 SHINY: A BIGGER COIN BOOST AND A GOLD CROWN"):format(ECONOMY.ShinyMerge),
 		K.Gold
 	)
 	fusionX.Activated:Connect(function()
@@ -1415,15 +1394,19 @@ function MascotController:Start()
 	local resultPet = make("Frame", {
 		Name = "Pet",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(8, 10),
-		Size = UDim2.new(1, -16, 1, -48),
+		Position = UDim2.fromOffset(8, 8),
+		Size = UDim2.new(1, -16, 1, -66),
 	}, resultBlock.Face) :: Frame
 	local crown = CrateKit.Icon(resultBlock.Holder, "Star", 36)
 	crown.AnchorPoint = Vector2.new(0.5, 0.5)
 	crown.Position = UDim2.fromScale(0.5, 0)
 	crown.ZIndex = 6
 	local resultName =
-		RewardKit.Label(resultBlock.Face, "", UiKit.Head, 18, K.Gold, 2, 6, 108, FW - 24 - resultX - 18, 24)
+		RewardKit.Label(resultBlock.Face, "", UiKit.Head, 18, K.Gold, 2, 6, 88, FW - 24 - resultX - 18, 24)
+	-- Batch C2: what the Shiny gives, as a multiplier ("x1.04 COINS")
+	local resultBonus =
+		RewardKit.Label(resultBlock.Face, "", UiKit.Num, 15, K.Lime, 1.5, 6, 112, FW - 24 - resultX - 18, 20)
+	resultBonus.Name = "Bonus"
 	local fusionStatus = RewardKit.Label(fusionCover, "", UiKit.Head, 22, K.Price, 2.5, 24, 236, slotsEnd - 24, 30)
 	local pickLabel = RewardKit.Label(fusionCover, "PICK A PET", UiKit.Body, 14, K.Muted, 0, 24, 272, 300, 18)
 	pickLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -1560,8 +1543,10 @@ function MascotController:Start()
 			local view = MascotView.Viewport(resultPet, MascotView.Mascot(shiny or picked, 2, false), 0.95)
 			view.ImageColor3 = if ready then Color3.new(1, 1, 1) else Color3.fromRGB(70, 70, 95) -- dark until ready
 			resultName.Text = ("SHINY %s"):format(string.upper(picked.Name))
+			resultBonus.Text = if shiny then Mascots.BonusText(Mascots.Bonus(shiny)) .. " COINS" else ""
 		else
 			resultName.Text = "SHINY ?"
+			resultBonus.Text = ""
 		end
 		resultRing.Color = if ready then K.Gold else K.Grey
 		crown.ImageTransparency = if ready then 0 else 0.55

@@ -4,6 +4,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared").Config)
+local Currency = require(script.Parent.Currency)
 local Zones = require(script.Parent.Zones)
 
 local ECONOMY = Config.Economy.Mascots
@@ -130,9 +131,11 @@ function Mascots.Bonus(mascot): number
 	return if mascot.Shiny then bonus * ECONOMY.ShinyMultiplier else bonus
 end
 
--- "+2%", "+150%"
+-- Batch C2 (owner 2026-10-29): a pet bonus shows as the coin multiplier it gives, x(1 + bonus): 0.02 -> "x1.02",
+-- 1.5 -> "x2.5" (same format as the multiplier card). Display only; the coin maths still adds the bonuses up and
+-- pays x (1 + total).
 function Mascots.BonusText(bonus: number): string
-	return ("+%d%%"):format(math.floor(bonus * 100 + 0.5))
+	return Currency.FormatMultiplier(1 + bonus)
 end
 
 -- Equip slots: StartSlots, +1 for each of SlotRebirths reached, never fewer than kept (save PetSlotsKept: what an

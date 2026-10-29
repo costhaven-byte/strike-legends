@@ -378,11 +378,32 @@ local function onEquip(player: Player, mascotId: any, equip: any)
 	publish(player)
 end
 
+-- Batch C2: merges only happen at zone 3's PET FUSION machine (Config.Fusion): zone 3 open and standing by it
+local function atFusionMachine(player: Player): boolean
+	local FUSION = Config.Fusion
+	if not FUSION.Enabled or not Zones.Unlocked(PlayerDataService.Get(player, "ZonesOpen"), FUSION.Zone) then
+		return false
+	end
+	local node: Instance? = Workspace
+	for _, name in FUSION.Path do
+		node = node and node:FindFirstChild(name)
+	end
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not node or not root then
+		return false
+	end
+	local offset = (root.Position - (node :: any):GetPivot().Position) * Vector3.new(1, 0, 1)
+	return offset.Magnitude <= FUSION.Range
+end
+
 -- Step 8b: ShinyMerge copies of one mascot become one Shiny version (bonus x ShinyMultiplier).
 -- Merged copies leave their slots, and the Shiny goes into a free slot if there is one.
 local function onMerge(player: Player, mascotId: any)
 	if not PlayerDataService.IsLoaded(player) or not RateLimit.Allow(player, "EquipMascot") then
 		return { Ok = false, Error = "Try again" }
+	end
+	if not atFusionMachine(player) then
+		return { Ok = false, Error = "Fuse pets at the PET FUSION machine" }
 	end
 	local mascot = Mascots.Get(mascotId)
 	local cost = mascot and Mascots.MergeCost(mascot)

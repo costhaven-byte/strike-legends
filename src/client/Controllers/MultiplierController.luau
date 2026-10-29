@@ -174,7 +174,7 @@ function MultiplierController:Start()
 	local CARD_ROWS = {
 		{ Keys = { "PowerLevel" }, Name = "POWER LEVEL", Icon = "Power", Color = G("2BE4FF") },
 		{ Keys = { "Ball" }, Name = "BALL", Icon = "Ball", Color = G("A98BFF") },
-		{ Keys = { "Mascots" }, Name = "PETS", Icon = "Pets", Color = G("FF4FB0"), Percent = true },
+		{ Keys = { "Mascots" }, Name = "PETS", Icon = "Pets", Color = G("FF4FB0") },
 		{ Keys = { "Rank" }, Name = "RANK", Icon = "Rank", Color = G("C58BFF") },
 		{ Keys = { "Streak" }, Name = "STREAK", Icon = "Streak", Color = G("FF8A1F") },
 		{ Keys = { "Zone" }, Name = "ZONE", Icon = "Zone", Color = G("7DFF3C") },
@@ -215,7 +215,7 @@ function MultiplierController:Start()
 		return frame
 	end
 
-	-- One source row: icon, name, value (x40, or +120% for pets)
+	-- One source row: icon, name, value (x40; pets too since batch C2: x2.2, not +120%)
 	local function sourceRow(parent: Instance, entry, value: number, phone: boolean, order: number): Frame
 		local frame = UiKit.Make("Frame", {
 			Name = entry.Name,
@@ -233,7 +233,7 @@ function MultiplierController:Start()
 		-- Long names shrink to fit instead of being cut off
 		name.TextScaled = true
 		UiKit.Make("UITextSizeConstraint", { MaxTextSize = if phone then 11 else 13 }, name)
-		local shown = if entry.Percent then ("+%d%%"):format(math.floor((value - 1) * 100 + 0.5)) else format(value)
+		local shown = format(value)
 		local amount = UiKit.Text(
 			frame,
 			shown,
@@ -246,7 +246,7 @@ function MultiplierController:Start()
 		amount.AnchorPoint = Vector2.new(1, 0)
 		amount.Position = UDim2.fromScale(1, 0)
 		amount.Size = UDim2.new(0, if phone then 50 else 70, 1, 0)
-		amount.TextScaled = true -- big pet bonuses (+2605%) shrink to fit
+		amount.TextScaled = true -- big values shrink to fit
 		UiKit.Make("UITextSizeConstraint", { MaxTextSize = if phone then 17 else 18 }, amount)
 		return frame
 	end
