@@ -420,24 +420,14 @@ function MascotController:Start()
 		})
 	end
 
-	-- What locks each slot past the open ones: the rank levels, then rebirths, then (store on) the +2 PET SLOTS pass
-	local function lockTexts(level: number): { string }
-		local list = {}
-		for _, rank in ECONOMY.SlotRanks do
-			if level < rank then
-				table.insert(list, ("LV %d"):format(rank))
-			end
-		end
-		local rebirths = player:GetAttribute("Rebirths") or 0
-		for _, needed in ECONOMY.SlotRebirths do
-			if rebirths < needed then
-				table.insert(list, if needed == 1 then "REBIRTH" else ("%d REBIRTHS"):format(needed))
-			end
-		end
-		if Store.Active() and Store.PetSlots(player) == 0 then
+	-- What locks each slot past the open ones: rebirths (Mascots.SlotLocks), then (store on) the +2 PET SLOTS pass
+	local function lockTexts(slots: number): { string }
+		local extra = Store.PetSlots(player)
+		local list = Mascots.SlotLocks(player:GetAttribute("Rebirths") or 0, slots - extra)
+		if Store.Active() and extra == 0 then
 			for _, pass in Config.Monetization.Passes do
 				for _ = 1, pass.PetSlots or 0 do
-					table.insert(list, "PASS")
+					table.insert(list, "ROBUX PASS")
 				end
 			end
 		end
@@ -452,7 +442,7 @@ function MascotController:Start()
 		end
 		local list = equipped()
 		local slots = player:GetAttribute("MascotSlots") or ECONOMY.StartSlots
-		local locks = lockTexts(player:GetAttribute("RankLevel") or 1)
+		local locks = lockTexts(slots)
 		local shown = slots + #locks
 		local rowW = PAGE_W - 6 - SIDE_W - 76
 		local boxSize = math.min(84, math.floor((rowW - (shown - 1) * 10) / shown))

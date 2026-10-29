@@ -150,11 +150,6 @@ end
 local function slots(E, s): number
 	local M = E.Mascots
 	local count = M.StartSlots
-	for _, rank in M.SlotRanks do
-		if s.Rank >= rank then
-			count += 1
-		end
-	end
 	for _, needed in M.SlotRebirths do
 		if s.Rebirths >= needed then
 			count += 1

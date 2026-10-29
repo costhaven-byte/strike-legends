@@ -66,6 +66,9 @@ end
 -- Rank XP thresholds before v4. Kept frozen here so old saves are upgraded with the rules they were earned under.
 local V3_RANK_XP = { 0, 100, 350, 1000, 3000, 9000, 25000, 70000, 200000, 550000 }
 
+-- Pet slot rules before v30, frozen the same way: 3 slots, +1 at rank levels 15 and 30, +1 at 1 rebirth, max 6
+local V29_SLOTS = { Start = 3, Ranks = { 15, 30 }, Rebirths = { 1 }, Max = 6 }
+
 -- Turns a saved record (any version, or nil for a new player) into current-format data.
 -- Keys missing from an old save get their starting value, so new fields need no upgrade step.
 local function migrate(saved: any): { [string]: any }
@@ -134,6 +137,8 @@ local function migrate(saved: any): { [string]: any }
 		-- v28 added PolishHinted (batch B3 POLISH lesson): it starts at 0, nothing to upgrade
 		-- v29 added PlaytimeDay, PlaytimeSeconds and PlaytimeGot (batch B4 playtime gifts once a day): they start at 0 /
 		-- empty = a fresh day of gifts, nothing to upgrade
+		-- v30 added PetSlotsKept (see below) and EggPrompted (first egg popup): EggPrompted starts at 0, and players
+		-- who already hatched an egg never see the popup anyway
 		if version < 22 then
 			-- v22: the COIN BOOST became a doubling ladder (x2, x4, x8, x16). An old adding boost (coins x (1 +
 			-- RobuxBoost)) becomes the highest step it already reached or passed, so nobody loses what they paid for.
@@ -161,6 +166,24 @@ local function migrate(saved: any): { [string]: any }
 			end
 			data.ZonesOpen = math.max(tonumber(data.ZonesOpen) or 1, reached)
 			data.ZoneVisited = data.ZonesOpen -- they know the way already: no walk guide for old players
+		end
+		if version < 30 then
+			-- v30: pet slots come from rebirths now (batch C1). Old players keep every slot the old rules gave them,
+			-- so no equipped pet is taken off (the +2 PET SLOTS pass still adds on top, as before).
+			local level = tonumber(data.RankLevel) or 1
+			local rebirths = tonumber(data.Rebirths) or 0
+			local kept = V29_SLOTS.Start
+			for _, rank in V29_SLOTS.Ranks do
+				if level >= rank then
+					kept += 1
+				end
+			end
+			for _, needed in V29_SLOTS.Rebirths do
+				if rebirths >= needed then
+					kept += 1
+				end
+			end
+			data.PetSlotsKept = math.max(tonumber(data.PetSlotsKept) or 0, math.min(kept, V29_SLOTS.Max))
 		end
 	end
 	-- Rebirths done always keep their zones open (also when a later update moves a zone's rebirth count)

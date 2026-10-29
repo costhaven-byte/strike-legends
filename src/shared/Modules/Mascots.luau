@@ -135,34 +135,31 @@ function Mascots.BonusText(bonus: number): string
 	return ("+%d%%"):format(math.floor(bonus * 100 + 0.5))
 end
 
--- Equip slots: StartSlots, +1 for each of SlotRanks reached (rank level) and SlotRebirths, up to MaxSlots,
--- plus extra (the +2 PET SLOTS game pass, Config.Monetization) on top of that
-function Mascots.Slots(rankLevel: number, rebirths: number, extra: number?): number
+-- Equip slots: StartSlots, +1 for each of SlotRebirths reached, never fewer than kept (save PetSlotsKept: what an
+-- old save had under the old rank-level rule), up to MaxSlots, plus extra (the +2 PET SLOTS game pass,
+-- Config.Monetization) on top of that
+function Mascots.Slots(rebirths: number, extra: number?, kept: number?): number
 	local count = ECONOMY.StartSlots
-	for _, rank in ECONOMY.SlotRanks do
-		if rankLevel >= rank then
-			count += 1
-		end
-	end
 	for _, needed in ECONOMY.SlotRebirths do
 		if rebirths >= needed then
 			count += 1
 		end
 	end
-	return math.min(count, ECONOMY.MaxSlots) + (extra or 0)
+	return math.min(math.max(count, kept or 0), ECONOMY.MaxSlots) + (extra or 0)
 end
 
--- The next locked slot's unlock, as text ("RANK LEVEL 15"), or nil when all slots are open
-function Mascots.NextSlotText(rankLevel: number): string?
-	for _, rank in ECONOMY.SlotRanks do
-		if rankLevel < rank then
-			return ("LEVEL %d"):format(rank)
+-- Why each slot past the open ones is still locked ("5 REBIRTHS"), slot by slot; open = slots open without the
+-- pass. Rebirth slots an old save already has count as open.
+function Mascots.SlotLocks(rebirths: number, open: number): { string }
+	local list = {}
+	local count = ECONOMY.StartSlots
+	for _, needed in ECONOMY.SlotRebirths do
+		count += 1
+		if rebirths < needed and count > open then
+			table.insert(list, if needed == 1 then "REBIRTH" else ("%d REBIRTHS"):format(needed))
 		end
 	end
-	if #ECONOMY.SlotRebirths > 0 then
-		return "REBIRTH"
-	end
-	return nil
+	return list
 end
 
 -- Can this player hatch the egg? Returns false and the reason ("LEVEL 3", "1 REBIRTH") when locked.

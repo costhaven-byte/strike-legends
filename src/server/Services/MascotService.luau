@@ -38,9 +38,9 @@ end
 
 local function slots(player: Player): number
 	return Mascots.Slots(
-		PlayerDataService.Get(player, "RankLevel") or 1,
 		PlayerDataService.Get(player, "Rebirths") or 0,
-		Store.PetSlots(player)
+		Store.PetSlots(player),
+		PlayerDataService.Get(player, "PetSlotsKept") or 0
 	)
 end
 
@@ -446,6 +446,16 @@ end
 function MascotService:Start()
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
 
+	-- Batch C1: the BUY YOUR FIRST PET EGG! popup was shown (Config.EggPrompt); it never shows again
+	local eggPrompted = Instance.new("RemoteEvent")
+	eggPrompted.Name = "EggPrompted"
+	eggPrompted.OnServerEvent:Connect(function(player)
+		if PlayerDataService.IsLoaded(player) and PlayerDataService.Get(player, "EggPrompted") ~= 1 then
+			PlayerDataService.Set(player, "EggPrompted", 1)
+		end
+	end)
+	eggPrompted.Parent = remotes
+
 	local hatchRemote = Instance.new("RemoteFunction")
 	hatchRemote.Name = "HatchEgg"
 	hatchRemote.OnServerInvoke = onHatch
@@ -490,8 +500,8 @@ function MascotService:Start()
 
 	PlayerDataService.OnLoaded(function(player)
 		publish(player)
-		-- New slots open with rank levels (and the +2 PET SLOTS pass, Passes)
-		for _, key in { "RankLevel", "Passes" } do
+		-- New slots open with rebirths (and the +2 PET SLOTS pass, Passes); RankLevel still locks eggs with a Rank
+		for _, key in { "Rebirths", "RankLevel", "Passes" } do
 			player:GetAttributeChangedSignal(key):Connect(function()
 				if PlayerDataService.IsLoaded(player) then
 					publish(player)

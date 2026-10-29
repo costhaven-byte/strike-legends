@@ -237,12 +237,14 @@ Config.StartingData = {
 	PlaytimeDay = 0, -- the day number (see Calendar.Day) the saved gift clock belongs to
 	PlaytimeSeconds = 0, -- seconds played that day (the gift clock)
 	PlaytimeGot = "", -- gifts claimed that day, by number: "1,2,4"
+	EggPrompted = 0, -- 1 = the BUY YOUR FIRST PET EGG! popup was shown (Config.EggPrompt; v30)
+	PetSlotsKept = 0, -- pet slots an old save had under the old rules (rank levels 15/30 + 1 rebirth); never fewer (v30)
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 29, -- v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 30, -- v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -721,6 +723,23 @@ Config.FreeCrates = {
 -- The "almost there" bar above the throw meter: always shows the nearest reward.
 Config.AlmostThere = {
 	PulseAt = 0.8, -- the bar pulses once you are this far (80%) toward the reward
+}
+
+-- First egg prompt (final changes item 6, batch C1; EggPromptController): the first time you have Coins while standing
+-- in zone Zone (open by then), a big popup says to buy your first pet egg, and a gold beam + GO HERE! marker lead to
+-- that zone's egg stand until you hatch an egg (or leave the zone, or the session ends). The popup shows once ever
+-- (save EggPrompted, v30); players who already hatched an egg never see it. The YOU CAN NOW AFFORD note skips that
+-- egg while this applies.
+Config.EggPrompt = {
+	Enabled = true,
+	Coins = 50000, -- owner 2026-10-29: at 50K coins (the Neon Egg's price)
+	Zone = 2, -- eggs open with Neon Lanes; you must be standing in it (Config.Zones.Gated Area)
+	Egg = "Alley", -- the stand the beam leads to (Config.EggStands; "Alley" = the Neon Egg)
+	Title = "BUY YOUR FIRST PET EGG!",
+	Sub = "FOLLOW THE GOLD BEAM TO THE EGG STAND",
+	Marker = "GO HERE!", -- the word over the stand
+	MarkerHeight = 14, -- studs above the egg (over its odds bubbles, Config.EggOdds Height)
+	Delay = 1.5, -- seconds after the coins arrive before the popup (lets the payout pop finish)
 }
 
 -- "YOU CAN NOW AFFORD X" (final changes item 8, batch B2): a note fades in at the top centre and fades out when your
@@ -3263,7 +3282,7 @@ Config.AreaSigns = {
 	Signs = {
 		{ Text = "CRATES", Paint = "Gold", Icon = "Crate", Path = { "BackAlley", "RizzoStand" }, Lift = 6, HideWhile = "CallMarker" }, -- over Rizzo; hidden while his GO HERE! marker shows
 		{ Text = "CRATES", Paint = "Gold", Icon = "Crate", Path = { "Hub", "CrateShop" }, Offset = Vector3.new(-11, -6, 0) }, -- in front of the kiosk (it reaches the ceiling)
-		{ Text = "EGGS", Paint = "Pink", Icon = "Paw", Path = { "Hub", "EggPad" }, Egg = "Alley" },
+		{ Text = "EGGS", Paint = "Pink", Icon = "Paw", Path = { "Hub", "EggPad" }, Egg = "Alley", HideWhile = "EggCallMarker" }, -- hidden while the first-egg GO HERE! shows (Config.EggPrompt)
 		{ Text = "EGGS", Paint = "Pink", Icon = "Paw", Path = { "MainStreetLanes", "EggPad" }, Egg = "Arcade" },
 		{ Text = "FUSION", Paint = "Purple", Icon = "Paw", Path = { "MainStreetLanes", "FusionStation" } },
 		{ Text = "CRATES", Paint = "Gold", Icon = "Crate", Path = { "MainStreetLanes", "CrateShop" } },
@@ -4758,9 +4777,10 @@ Config.Economy.Mascots = {
 	ShinyMerge = 3, -- this many of the same mascot make a Shiny...
 	ShinyMultiplier = 2, -- ...with this much more bonus
 	StartSlots = 3,
-	MaxSlots = 6,
-	SlotRanks = { 15, 30 }, -- each of these ranks adds a slot
-	SlotRebirths = { 1 }, -- each of these rebirth counts adds a slot
+	MaxSlots = 6, -- slots from StartSlots + SlotRebirths (and old saves' PetSlotsKept) stop here; the pass adds on top
+	-- Final changes item 7 (owner 2026-10-29): 3 slots, +1 at 5 rebirths, +2 with the +2 PET SLOTS pass. Was +1 at
+	-- rank levels 15 and 30 and at 1 rebirth; old saves keep the slots they had (save v30 PetSlotsKept).
+	SlotRebirths = { 5 }, -- each of these rebirth counts adds a slot
 }
 for name, power in Config.RarityPower do
 	if name ~= "Step" then

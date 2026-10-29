@@ -2,7 +2,7 @@
 -- first reach something you couldn't buy before, a navy note fades in at the top centre and fades out. Things:
 -- every crate and egg of a zone you have open, the next Power Level, the next rebirth. One note per thing a
 -- session; things you could already afford when you joined get none. Skipped where a bigger moment already says it:
--- the first crate (RIZZO HAS A CRATE FOR YOU!), Power Level 2 (the BUY callout), the first rebirth (REBIRTH IS READY!).
+-- the first crate (RIZZO HAS A CRATE FOR YOU!), the first egg (BUY YOUR FIRST PET EGG!), Power Level 2 (the BUY callout), the first rebirth (REBIRTH IS READY!).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -53,13 +53,17 @@ local function things(): { { [string]: any } }
 		local egg = Mascots.GetEgg(stand.Egg)
 		local look = Config.EggLooks[stand.Egg]
 		if egg and look and Mascots.EggReady(egg.Id) and Zones.Unlocked(zonesOpen, egg.Zone or 1) then
+			-- the first egg has its own BUY YOUR FIRST PET EGG! popup (Config.EggPrompt)
+			local first = Config.EggPrompt.Enabled
+				and egg.Id == Config.EggPrompt.Egg
+				and (player:GetAttribute("EggsHatched") or 0) == 0
 			table.insert(list, {
-				Key = "Egg" .. egg.Id,
+				Key = "Egg" .. egg.Id .. (if first then "First" else ""),
 				Name = look.Name:upper(),
 				Price = egg.Price,
 				Icon = "Paw",
 				Color = look.Color,
-				Ok = true,
+				Ok = not first,
 			})
 		end
 	end
