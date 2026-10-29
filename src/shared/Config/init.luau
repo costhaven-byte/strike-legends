@@ -233,12 +233,16 @@ Config.StartingData = {
 	AchievementTiers = {}, -- achievement tiers claimed, by Config.Profile.Achievements Id: { Throws = 2 }
 	Settings = "", -- SETTINGS window choices that differ from the start, "Vfx=0;Music=0.45" (Config.Settings; v27)
 	PolishHinted = 0, -- 1 = a POLISH was bought with gems, so the Ball Book stops teaching it (Config.PolishHint; v28)
+	-- Playtime gifts once a day (batch B4, Config.Playtime; v29)
+	PlaytimeDay = 0, -- the day number (see Calendar.Day) the saved gift clock belongs to
+	PlaytimeSeconds = 0, -- seconds played that day (the gift clock)
+	PlaytimeGot = "", -- gifts claimed that day, by number: "1,2,4"
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 28, -- v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 29, -- v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -4121,27 +4125,41 @@ Config.Potions = {
 	Tick = 1, -- seconds between timer updates
 }
 
--- Playtime rewards (owner 2026-10-22): a free gift every 15 minutes of play, 12 of them (3 hours). They start over
--- on every visit (not daily). Tap the GIFTS button and CLAIM a gift once its timer is done; unclaimed gifts stay
--- claimable until you leave. A gift is one of: Potion (a Config.Potions Id, goes to the POTIONS stash), Egg (a
--- free hatch of that egg at the egg stand, kept until used) or Crate (opened right away). A Crate from a zone you
--- haven't reached comes as your zone's crate, unless Exact = true (the 3-hour Gold Crate: exactly a Gold Crate).
+-- Playtime rewards (owner 2026-10-22): a free gift every 15 minutes of play, 12 of them. Tap the GIFTS button and
+-- CLAIM a gift once its timer is done.
+-- Batch B4 (owner 2026-10-29): the first gift is ready the moment you join (Minutes = 0), then one every 15 minutes.
+-- The whole set is ONCE A DAY (days change at midnight UTC, like the daily reward): the clock and the claimed gifts are
+-- saved (PlaytimeDay/PlaytimeSeconds/PlaytimeGot, save v29), so leaving and coming back the same day carries on where
+-- you were; a new day starts a fresh set. Gifts grow with your progress (Shared.Modules.PlaytimeRewards):
+--   Coins = like the daily reward's coins: the biggest of Coins x your zone's coin pay, LevelShare of your next Power
+--     Level's price, or IncomeMinutes of your own bowling income (AwayRate).
+--   Potion = a Config.Potions Id, x your zone's Potions count (ByZone). Egg = "Zone": your highest zone's egg.
+--   Crate = 1, 2 or 3: your highest zone's low / middle / best crate (ByZone Crates), opened right away.
 Config.Playtime = {
 	Enabled = true,
 	Rewards = {
+		{ Minutes = 0, Coins = 500, LevelShare = 0.1, IncomeMinutes = 3 }, -- the join gift
 		{ Minutes = 15, Potion = "CoinSmall" },
-		{ Minutes = 30, Egg = "Alley" }, -- the Neon Egg (owner: zone 2 is open by then)
+		{ Minutes = 30, Egg = "Zone" },
 		{ Minutes = 45, Potion = "XpSmall" },
-		{ Minutes = 60, Crate = "Bronze" },
+		{ Minutes = 60, Crate = 1 },
 		{ Minutes = 75, Potion = "CoinSmall" },
 		{ Minutes = 90, Potion = "XpBig" },
-		{ Minutes = 105, Crate = "Bronze" },
+		{ Minutes = 105, Crate = 2 },
 		{ Minutes = 120, Potion = "CoinBig" },
-		{ Minutes = 135, Potion = "XpSmall" },
-		{ Minutes = 150, Crate = "Silver" },
-		{ Minutes = 165, Potion = "CoinBig" },
-		{ Minutes = 180, Crate = "Gold", Exact = true }, -- owner: players are in zone 3 by 3 hours
+		{ Minutes = 135, Coins = 50000, LevelShare = 0.5, IncomeMinutes = 15 },
+		{ Minutes = 150, Potion = "CoinBig" },
+		{ Minutes = 165, Crate = 3 },
 	},
+	-- By your highest open zone (ZonesOpen). Zone 1 gets the Neon Egg (pets open with zone 2; it waits at the stand)
+	-- and a Gold Crate as its best gift, like the old 3-hour gift.
+	ByZone = {
+		{ Egg = "Alley", Crates = { "Basic", "Basic", "Gold" }, Potions = 1 },
+		{ Egg = "Alley", Crates = { "Bronze", "Silver", "Gold" }, Potions = 1 },
+		{ Egg = "Arcade", Crates = { "Gold", "League", "Champion" }, Potions = 2 },
+		{ Egg = "Skyline", Crates = { "SkyBronze", "SkySilver", "SkyGold" }, Potions = 2 },
+	},
+	SaveEvery = 30, -- seconds between saving the clock (and checking for a new day)
 }
 
 -- Daily spin wheel (owner 2026-10-22): a big wheel you walk up to in Neon Lanes (zone 2), at the far end of the east
@@ -4878,38 +4896,38 @@ Config.Profile = {
 		{ Key = "Zones", Name = "ZONES OPEN", Icon = "Portal", Format = "Number" },
 		{ Key = "PlayTime", Name = "TIME PLAYED", Icon = "GiftDaily", Format = "Time" },
 	},
-	-- 15 achievements, 58 tiers. Text: %s = the tier's goal; One = the text when the goal is 1.
+	-- 15 achievements, 58 tiers. Gems go 5, 10, 15, 20 by tier (owner batch B4, was 1/3/6/12). Text: %s = the tier's goal; One = the text when the goal is 1.
 	Achievements = {
 		{ Id = "Throws", Name = "BOWLER", Stat = "Throws", Text = "Throw %s balls", Tiers = {
-			{ Goal = 100, Gems = 1 }, { Goal = 1000, Gems = 3 }, { Goal = 5000, Gems = 6 }, { Goal = 25000, Gems = 12 } } },
+			{ Goal = 100, Gems = 5 }, { Goal = 1000, Gems = 10 }, { Goal = 5000, Gems = 15 }, { Goal = 25000, Gems = 20 } } },
 		{ Id = "Strikes", Name = "STRIKE MACHINE", Stat = "Strikes", Text = "Bowl %s strikes", Tiers = {
-			{ Goal = 25, Gems = 1 }, { Goal = 250, Gems = 3 }, { Goal = 2500, Gems = 6 }, { Goal = 10000, Gems = 12 } } },
+			{ Goal = 25, Gems = 5 }, { Goal = 250, Gems = 10 }, { Goal = 2500, Gems = 15 }, { Goal = 10000, Gems = 20 } } },
 		{ Id = "Perfects", Name = "PERFECTIONIST", Stat = "Perfects", Text = "Hit %s PERFECTS", Tiers = {
-			{ Goal = 10, Gems = 1 }, { Goal = 100, Gems = 3 }, { Goal = 1000, Gems = 6 }, { Goal = 5000, Gems = 12 } } },
+			{ Goal = 10, Gems = 5 }, { Goal = 100, Gems = 10 }, { Goal = 1000, Gems = 15 }, { Goal = 5000, Gems = 20 } } },
 		{ Id = "Pins", Name = "PIN CRUSHER", Stat = "Pins", Text = "Knock down %s pins", Tiers = {
-			{ Goal = 1000, Gems = 1 }, { Goal = 10000, Gems = 3 }, { Goal = 100000, Gems = 6 }, { Goal = 500000, Gems = 12 } } },
+			{ Goal = 1000, Gems = 5 }, { Goal = 10000, Gems = 10 }, { Goal = 100000, Gems = 15 }, { Goal = 500000, Gems = 20 } } },
 		{ Id = "Streak", Name = "ON FIRE", Stat = "BestStreak", Text = "Get %s strikes in a row", Tiers = {
-			{ Goal = 3, Gems = 1 }, { Goal = 5, Gems = 3 }, { Goal = 10, Gems = 6 }, { Goal = 20, Gems = 12 } } },
+			{ Goal = 3, Gems = 5 }, { Goal = 5, Gems = 10 }, { Goal = 10, Gems = 15 }, { Goal = 20, Gems = 20 } } },
 		{ Id = "Coins", Name = "MONEY MAKER", Stat = "Coins", Text = "Earn %s coins", Tiers = {
-			{ Goal = 100000, Gems = 1 }, { Goal = 10000000, Gems = 3 }, { Goal = 1000000000, Gems = 6 }, { Goal = 1000000000000, Gems = 12 } } },
+			{ Goal = 100000, Gems = 5 }, { Goal = 10000000, Gems = 10 }, { Goal = 1000000000, Gems = 15 }, { Goal = 1000000000000, Gems = 20 } } },
 		{ Id = "Eggs", Name = "EGG HUNTER", Stat = "Eggs", Text = "Hatch %s eggs", One = "Hatch your first egg", Tiers = {
-			{ Goal = 1, Gems = 1 }, { Goal = 10, Gems = 3 }, { Goal = 50, Gems = 6 }, { Goal = 200, Gems = 12 } } },
+			{ Goal = 1, Gems = 5 }, { Goal = 10, Gems = 10 }, { Goal = 50, Gems = 15 }, { Goal = 200, Gems = 20 } } },
 		{ Id = "Crates", Name = "CRATE CRACKER", Stat = "Crates", Text = "Open %s crates", One = "Open your first crate", Tiers = {
-			{ Goal = 1, Gems = 1 }, { Goal = 10, Gems = 3 }, { Goal = 50, Gems = 6 }, { Goal = 200, Gems = 12 } } },
+			{ Goal = 1, Gems = 5 }, { Goal = 10, Gems = 10 }, { Goal = 50, Gems = 15 }, { Goal = 200, Gems = 20 } } },
 		{ Id = "Balls", Name = "COLLECTOR", Stat = "Balls", Text = "Own %s different balls", Tiers = {
-			{ Goal = 5, Gems = 1 }, { Goal = 12, Gems = 3 }, { Goal = 20, Gems = 6 }, { Goal = 30, Gems = 12 } } },
+			{ Goal = 5, Gems = 5 }, { Goal = 12, Gems = 10 }, { Goal = 20, Gems = 15 }, { Goal = 30, Gems = 20 } } },
 		{ Id = "Pets", Name = "PET PAL", Stat = "Pets", Text = "Find %s different pets", Tiers = {
-			{ Goal = 3, Gems = 1 }, { Goal = 6, Gems = 3 }, { Goal = 10, Gems = 6 }, { Goal = 14, Gems = 12 } } },
+			{ Goal = 3, Gems = 5 }, { Goal = 6, Gems = 10 }, { Goal = 10, Gems = 15 }, { Goal = 14, Gems = 20 } } },
 		{ Id = "Rebirths", Name = "REBORN", Stat = "Rebirths", Text = "Rebirth %s times", One = "Rebirth for the first time", Tiers = {
-			{ Goal = 1, Gems = 1 }, { Goal = 3, Gems = 3 }, { Goal = 5, Gems = 6 }, { Goal = 10, Gems = 12 } } },
+			{ Goal = 1, Gems = 5 }, { Goal = 3, Gems = 10 }, { Goal = 5, Gems = 15 }, { Goal = 10, Gems = 20 } } },
 		{ Id = "Titan", Name = "TITAN SLAYER", Stat = "BossWins", Text = "Beat the Pin Titan %s times", One = "Beat the Pin Titan", Tiers = {
-			{ Goal = 1, Gems = 3 }, { Goal = 5, Gems = 6 }, { Goal = 25, Gems = 12 } } },
+			{ Goal = 1, Gems = 5 }, { Goal = 5, Gems = 10 }, { Goal = 25, Gems = 15 } } },
 		{ Id = "Level", Name = "CLIMBER", Stat = "Level", Text = "Reach level %s", Tiers = {
-			{ Goal = 10, Gems = 1 }, { Goal = 25, Gems = 3 }, { Goal = 40, Gems = 6 }, { Goal = 60, Gems = 12 } } },
+			{ Goal = 10, Gems = 5 }, { Goal = 25, Gems = 10 }, { Goal = 40, Gems = 15 }, { Goal = 60, Gems = 20 } } },
 		{ Id = "Zones", Name = "EXPLORER", Stat = "Zones", Text = "Open zone %s", Tiers = {
-			{ Goal = 2, Gems = 1 }, { Goal = 3, Gems = 3 }, { Goal = 4, Gems = 6 } } },
+			{ Goal = 2, Gems = 5 }, { Goal = 3, Gems = 10 }, { Goal = 4, Gems = 15 } } },
 		{ Id = "PlayTime", Name = "DEDICATED", Stat = "PlayTime", Text = "Play for %s", Tiers = {
-			{ Goal = 1800, Gems = 1 }, { Goal = 7200, Gems = 3 }, { Goal = 36000, Gems = 6 }, { Goal = 180000, Gems = 12 } } },
+			{ Goal = 1800, Gems = 5 }, { Goal = 7200, Gems = 10 }, { Goal = 36000, Gems = 15 }, { Goal = 180000, Gems = 20 } } },
 	},
 	PublishEvery = 1, -- seconds between the server's stat/achievement updates to the panel
 }

@@ -1,5 +1,6 @@
 -- Playtime gifts on screen (owner 2026-10-22, Config.Playtime): the GIFTS button (top-right corner) with the time
--- to the next gift, and the gifts panel (12 gifts, one every 15 minutes) with a CLAIM button on each ready gift.
+-- to the next gift, and the gifts panel (12 gifts: one on joining, then one every 15 minutes, one set a day) with a
+-- CLAIM button on each ready gift. What each gift gives follows your progress (Shared.Modules.PlaytimeRewards).
 -- The panel is in the owner's kit style (RewardKit, UI pass batch 1, 2026-10-28).
 -- Built in code (not in Studio), so it lives in git. The server runs the clock and hands out gifts (PlaytimeService).
 local Players = game:GetService("Players")
@@ -12,6 +13,8 @@ local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local Mascots = require(Shared.Modules.Mascots)
 local Zones = require(Shared.Modules.Zones)
+local Currency = require(Shared.Modules.Currency)
+local PlaytimeRewards = require(Shared.Modules.PlaytimeRewards)
 local CrateController = require(script.Parent.CrateController)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules:WaitForChild("Sfx"))
@@ -49,24 +52,29 @@ local function potionById(id: string)
 	return nil
 end
 
--- The crate a Crate gift opens as for this player right now (a zone you haven't reached gives your zone's crate)
-local function rewardCrate(reward)
-	local id = if reward.Exact
-		then reward.Crate
-		else Zones.RewardCrateId(reward.Crate, player:GetAttribute("ZonesOpen"))
-	return Balls.GetCrate(id)
+-- What gift number index gives this player right now (it grows with zone, Power Level and income)
+local function resolve(index: number)
+	return PlaytimeRewards.Resolve(index, {
+		PowerLevel = player:GetAttribute("PowerLevel"),
+		ZonesOpen = player:GetAttribute("ZonesOpen"),
+		AwayRate = player:GetAttribute("AwayRate"),
+	}) or {}
 end
 
 -- Name and colour of a gift, as the player sees it now
-local function describe(reward): (string, Color3)
-	if reward.Potion then
-		local potion = potionById(reward.Potion)
-		return if potion then potion.Name else reward.Potion, if potion then potion.Color else PINK
-	elseif reward.Egg then
-		local look = Config.EggLooks[reward.Egg]
+local function describe(gift): (string, Color3)
+	if gift.Coins then
+		return ("%s COINS"):format(Currency.Format(gift.Coins)), GOLD
+	elseif gift.Potion then
+		local potion = potionById(gift.Potion)
+		local name = if potion then potion.Name else gift.Potion
+		return if (gift.Count or 1) > 1 then ("%dx %s"):format(gift.Count, name) else name,
+			if potion then potion.Color else PINK
+	elseif gift.Egg then
+		local look = Config.EggLooks[gift.Egg]
 		return string.upper(if look then look.Name else "EGG"), if look then look.Color else PINK
 	end
-	local crate = rewardCrate(reward)
+	local crate = Balls.GetCrate(gift.Crate)
 	return string.upper(if crate then crate.Name else "CRATE"), if crate then crate.Color else GOLD
 end
 
@@ -104,21 +112,24 @@ function PlaytimeController:Start()
 		W,
 		H,
 		"FREE GIFTS",
-		("A NEW GIFT EVERY %d MINUTES YOU PLAY · THEY START OVER EVERY VISIT"):format(PLAYTIME.Rewards[1].Minutes),
+		("A GIFT WHEN YOU JOIN, THEN ONE EVERY %d MINUTES · NEW GIFTS EVERY DAY"):format(
+			PLAYTIME.Rewards[2].Minutes - PLAYTIME.Rewards[1].Minutes
+		),
 		C.Pink
 	)
 	local COUNT = #PLAYTIME.Rewards
 	local TILE_W, TILE_H = 169, 119
 	local RIGHT_X, RIGHT_W = 84, TILE_W - 6 - 90 -- the text column right of the gift
 
-	local function rewardIcon(reward): (string, any)
-		if reward.Potion then
-			return "Potion", reward.Potion
-		elseif reward.Egg then
-			return "Egg", reward.Egg
+	local function rewardIcon(gift): (string, any)
+		if gift.Coins then
+			return "Coins", nil
+		elseif gift.Potion then
+			return "Potion", gift.Potion
+		elseif gift.Egg then
+			return "Egg", gift.Egg
 		end
-		local crate = rewardCrate(reward)
-		return "Crate", crate and crate.Id
+		return "Crate", gift.Crate
 	end
 
 	local tiles = {}
@@ -149,7 +160,7 @@ function PlaytimeController:Start()
 		rays.Visible = last
 		local giftSize = math.floor(44 + (index - 1) / math.max(COUNT - 1, 1) * 24)
 		local gift = RewardKit.Icon(giftSpot, if last then "GiftGold" else "Gift", nil, giftSize)
-		local kind, value = rewardIcon(reward)
+		local kind, value = rewardIcon(resolve(index))
 		local prize = RewardKit.Icon(giftSpot, kind, value, 58)
 		prize.Visible = false
 		local tick = CrateKit.Icon(giftSpot, "Check", 30)
@@ -163,8 +174,12 @@ function PlaytimeController:Start()
 
 		local mark = RewardKit.Label(
 			face,
-			if reward.Minutes >= 60 and reward.Minutes % 60 == 0
-				then ("%d HOUR%s"):format(reward.Minutes // 60, if reward.Minutes == 60 then "" else "S")
+			if reward.Minutes == 0
+				then "JOIN GIFT"
+				elseif reward.Minutes >= 60 and reward.Minutes % 60 == 0 then ("%d HOUR%s"):format(
+					reward.Minutes // 60,
+					if reward.Minutes == 60 then "" else "S"
+				)
 				else ("%d MIN"):format(reward.Minutes),
 			UiKit.Head,
 			15,
@@ -198,6 +213,7 @@ function PlaytimeController:Start()
 			Rays = rays,
 			Gift = gift,
 			Prize = prize,
+			PrizeKind = kind,
 			PrizeValue = value,
 			Tick = tick,
 			Name = name,
@@ -260,11 +276,12 @@ function PlaytimeController:Start()
 		local nextLeft = nil
 		for index, reward in PLAYTIME.Rewards do
 			local t = tiles[index]
-			t.Name.Text = (describe(reward))
-			-- a crate gift's crate can change when a new zone opens: redraw its 3D crate then
-			local kind, value = rewardIcon(reward)
-			if kind == "Crate" and value ~= t.PrizeValue then
-				t.PrizeValue = value
+			local gift = resolve(index)
+			t.Name.Text = (describe(gift))
+			-- a gift's crate or egg can change when a new zone opens: redraw its prize then
+			local kind, value = rewardIcon(gift)
+			if kind ~= t.PrizeKind or value ~= t.PrizeValue then
+				t.PrizeKind, t.PrizeValue = kind, value
 				RewardKit.Fill(t.Prize, kind, value)
 			end
 			local left = if seconds then reward.Minutes * 60 - seconds else math.huge
@@ -380,9 +397,8 @@ function PlaytimeController:Start()
 			return
 		end
 		refresh()
-		local reward = PLAYTIME.Rewards[index]
 		local tile = tiles[index]
-		local _, color = describe(reward)
+		local _, color = describe(resolve(index))
 		Sfx.Play("Reveal")
 		-- The tile jumps, the tick stamps down on what it gave and confetti bursts out of it
 		local scale = UiKit.ScaleOf(tile.Block.Holder)
@@ -391,10 +407,15 @@ function PlaytimeController:Start()
 		RewardKit.Stamp(tile.Tick)
 		CrateKit.Confetti(cover, tile.X + TILE_W / 2 - W / 2, tile.Y + TILE_H / 2 - H / 2, 24, 180, 0.6)
 		UiFx.Flash(color, 0.3, 0.4)
-		if result.Potion then
+		if result.Coins then
+			toast(("+%s COINS!"):format(Currency.Format(result.Coins)), "Coins", nil, nil, 2.6)
+		elseif result.Potion then
 			local potion = potionById(result.Potion)
+			local name = if potion then potion.Name else "POTION"
 			toast(
-				("%s ADDED TO YOUR POTIONS!"):format(if potion then potion.Name else "POTION"),
+				if (result.Count or 1) > 1
+					then ("%dx %s ADDED TO YOUR POTIONS!"):format(result.Count, name)
+					else ("%s ADDED TO YOUR POTIONS!"):format(name),
 				"Potion",
 				result.Potion,
 				nil,
@@ -403,7 +424,8 @@ function PlaytimeController:Start()
 		elseif result.Egg then
 			local egg = Mascots.GetEgg(result.Egg)
 			local level = player:GetAttribute("RankLevel") or 1
-			local unlocked = egg ~= nil and Mascots.EggUnlocked(egg, level, Zones.Highest(player:GetAttribute("ZonesOpen")))
+			local unlocked = egg ~= nil
+				and Mascots.EggUnlocked(egg, level, Zones.Highest(player:GetAttribute("ZonesOpen")))
 			local look = Config.EggLooks[result.Egg]
 			local eggName = string.upper(if look then look.Name else "EGG")
 			toast(
@@ -478,6 +500,7 @@ function PlaytimeController:Start()
 	player:GetAttributeChangedSignal("PlaytimeClaimed"):Connect(refresh)
 	player:GetAttributeChangedSignal("RankLevel"):Connect(refresh)
 	player:GetAttributeChangedSignal("ZonesOpen"):Connect(refresh)
+	player:GetAttributeChangedSignal("PowerLevel"):Connect(refresh)
 	refresh()
 	gui.Parent = playerGui
 

@@ -18,6 +18,18 @@ local function round(coins: number): number
 	return math.floor(coins / unit) * unit
 end
 
+-- Coins that grow with progress: the biggest of reward.Coins x your zone's coin pay, reward.LevelShare of your next
+-- Power Level's price, or incomeMinutes of your own bowling income (AwayRate). Playtime gifts use it too.
+function DailyRewards.Coins(reward, incomeMinutes: number?, progress: Progress): number
+	local zone = Zones.Highest(progress.ZonesOpen)
+	local coins = math.max(
+		(reward.Coins or 0) * Zones.CoinPay(zone),
+		PowerLevels.DailyCoins(reward, progress.PowerLevel),
+		(incomeMinutes or 0) * 60 * (tonumber(progress.AwayRate) or 0)
+	)
+	return round(coins)
+end
+
 function DailyRewards.ZoneRow(zonesOpen: number?)
 	local zone = Zones.Highest(zonesOpen)
 	return DAILY.ByZone[zone] or DAILY.ByZone[#DAILY.ByZone], zone
@@ -29,15 +41,10 @@ function DailyRewards.Resolve(day: number, progress: Progress)
 	if not reward then
 		return nil
 	end
-	local row, zone = DailyRewards.ZoneRow(progress.ZonesOpen)
+	local row = DailyRewards.ZoneRow(progress.ZonesOpen)
 	local out = { Potions = reward.Potions }
 	if reward.Coins then
-		local coins = math.max(
-			reward.Coins * Zones.CoinPay(zone),
-			PowerLevels.DailyCoins(reward, progress.PowerLevel),
-			(reward.Minutes or 0) * 60 * (tonumber(progress.AwayRate) or 0)
-		)
-		out.Coins = round(coins)
+		out.Coins = DailyRewards.Coins(reward, reward.Minutes, progress)
 	end
 	if reward.Gems then
 		out.Gems = math.floor(reward.Gems * (row.Gems or 1) + 0.5)

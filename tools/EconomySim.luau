@@ -92,7 +92,14 @@ local function prepare(config)
 				end
 			end
 		end
-		local row = { Id = crate.Id, Name = crate.Name, Zone = crate.Zone or 1, Price = crate.Price, Odds = odds, Pools = pools }
+		local row = {
+			Id = crate.Id,
+			Name = crate.Name,
+			Zone = crate.Zone or 1,
+			Price = crate.Price,
+			Odds = odds,
+			Pools = pools,
+		}
 		table.insert(P.Crates, row)
 		P.CrateById[crate.Id] = row
 	end
@@ -316,7 +323,8 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 		if polish == nil then
 			s.Owned[ball.Id] = 0
 		elseif polish < E.Polish.MaxLevel then
-			s.Owned[ball.Id] = math.min(E.Polish.MaxLevel, polish + E.Polish.PointsPerDuplicate / E.Polish.PointsPerLevel)
+			s.Owned[ball.Id] =
+				math.min(E.Polish.MaxLevel, polish + E.Polish.PointsPerDuplicate / E.Polish.PointsPerLevel)
 		end
 		refreshBall()
 	end
@@ -522,7 +530,11 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 		for i = #P.Crates, 1, -1 do
 			local crate = P.Crates[i]
 			local function price(): number
-				if s.CratesBought == 0 and crate.Id == config.Onboarding.FirstCrateGoal and config.Onboarding.FirstCratePrice then
+				if
+					s.CratesBought == 0
+					and crate.Id == config.Onboarding.FirstCrateGoal
+					and config.Onboarding.FirstCratePrice
+				then
 					return math.min(config.Onboarding.FirstCratePrice, crate.Price)
 				end
 				return crate.Price
@@ -696,10 +708,7 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 			giftGiven = true
 			openCrate(config.Onboarding.GiftCrateId, config.Onboarding.GiftRarity)
 		end
-		if
-			not dailyGiven
-			and s.Throws >= config.Onboarding.GiftAfterThrows + config.Onboarding.LegendsAfterThrows
-		then
+		if not dailyGiven and s.Throws >= config.Onboarding.GiftAfterThrows + config.Onboarding.LegendsAfterThrows then
 			dailyGiven = true
 			giveReward(config.Daily.Rewards[1])
 		end
@@ -708,10 +717,20 @@ function EconomySim.RunOne(config, seed: number, P): ({ [string]: number }, { [s
 		local gift = config.Playtime.Enabled and config.Playtime.Rewards[playtimeNext]
 		if gift and time - s.RunStart >= gift.Minutes * 60 then
 			playtimeNext += 1
-			if gift.Potion then
-				givePotion(gift.Potion)
+			-- gifts grow with progress (batch B4, Shared.Modules.PlaytimeRewards): zone row, income-based coins
+			local row = config.Playtime.ByZone[math.clamp(s.Zone, 1, #config.Playtime.ByZone)]
+			if gift.Coins then
+				s.Coins += shareCoins(gift) * (config.Economy.Zones[s.Zone].CoinPay or 1)
+			elseif gift.Potion then
+				givePotion(gift.Potion, row.Potions or 1)
+			elseif gift.Egg then
+				giveReward({ Egg = if gift.Egg == "Zone" then row.Egg else gift.Egg })
+			elseif gift.Crate then
+				giveReward({
+					Crate = if type(gift.Crate) == "number" then row.Crates[gift.Crate] else gift.Crate,
+					Exact = true,
+				})
 			end
-			giveReward({ Egg = gift.Egg, Crate = gift.Crate, Exact = gift.Exact })
 		end
 
 		-- The zone 4 boss: a trip every CooldownMinutes once that zone is open
@@ -879,7 +898,13 @@ function EconomySim.Run(config: any?): string
 			mismatches += 1
 		end
 		add(
-			("%-32s  %5s-%-6s  %9s   %s"):format(row.Text, clock(row.From * 60), clock(row.To * 60), clock(seconds), check)
+			("%-32s  %5s-%-6s  %9s   %s"):format(
+				row.Text,
+				clock(row.From * 60),
+				clock(row.To * 60),
+				clock(seconds),
+				check
+			)
 		)
 	end
 	add(("%d mismatch(es)"):format(mismatches))
@@ -957,15 +982,17 @@ function EconomySim.Run(config: any?): string
 	)
 	add("TOTAL PLAY TIME TO THE FIRST (rebirths included)")
 	local ever = {}
-	for _, goal in {
-		{ "Zone4", "zone 4" },
-		{ "Boss", "boss" },
-		{ "EggSkyline", "Skyline Egg" },
-		{ "CrateSkyGold", "Sky Gold crate" },
-		{ "Level12", "Power Level 12" },
-		{ "Rank30", "level 30" },
-		{ "Rank60", "level 60" },
-	} do
+	for _, goal in
+		{
+			{ "Zone4", "zone 4" },
+			{ "Boss", "boss" },
+			{ "EggSkyline", "Skyline Egg" },
+			{ "CrateSkyGold", "Sky Gold crate" },
+			{ "Level12", "Power Level 12" },
+			{ "Rank30", "level 30" },
+			{ "Rank60", "level 60" },
+		}
+	do
 		table.insert(ever, ("%s %s"):format(goal[2], clock(get("Ever" .. goal[1]))))
 	end
 	add("  " .. table.concat(ever, " | "))
