@@ -163,6 +163,38 @@ local function label(
 	return object
 end
 
+-- Robux prices show Roblox's own green Robux sign (final changes item 26): the Robux glyph every Roblox font has,
+-- drawn as text over the icon spot with an ink outline so it reads on the lime buy buttons. Other icons are images.
+local ROBUX_GLYPH = utf8.char(0xE002)
+local ROBUX_GREEN = Color3.fromRGB(0, 176, 111)
+
+local function setIcon(object: ImageLabel, name: string)
+	local glyph = object:FindFirstChild("RobuxGlyph") :: TextLabel?
+	if name ~= "Robux" then
+		object.Image = AssetSlots.Image(name)
+		if glyph then
+			glyph.Visible = false
+		end
+		return
+	end
+	object.Image = ""
+	if not glyph then
+		local label = make("TextLabel", {
+			Name = "RobuxGlyph",
+			BackgroundTransparency = 1,
+			Size = UDim2.fromScale(1, 1),
+			Text = ROBUX_GLYPH,
+			TextScaled = true,
+			FontFace = Font.fromEnum(Enum.Font.BuilderSansBold),
+			TextColor3 = ROBUX_GREEN,
+			ZIndex = object.ZIndex,
+		}, object)
+		make("UIStroke", { Color = C.Ink, Thickness = 2 }, label)
+		glyph = label
+	end
+	(glyph :: TextLabel).Visible = true
+end
+
 local function image(parent: Instance, name: string, size: number, props: { [string]: any }?): ImageLabel
 	local object = make("ImageLabel", {
 		BackgroundTransparency = 1,
@@ -173,6 +205,9 @@ local function image(parent: Instance, name: string, size: number, props: { [str
 	}, parent)
 	for key, value in props or {} do
 		object[key] = value
+	end
+	if name == "Robux" then
+		setIcon(object, name)
 	end
 	return object
 end
@@ -1089,7 +1124,7 @@ function StoreController:Start()
 					done = "VIP ONLY"
 				end
 				if priceIcon then
-					priceIcon.Image = AssetSlots.Image(if item.Gems then "Gem" else "Robux")
+					setIcon(priceIcon, if item.Gems then "Gem" else "Robux")
 				end
 			end
 			doneText.TextColor3 = C.GreyText
@@ -1821,7 +1856,7 @@ function StoreController:Start()
 		amount.AutomaticSize = Enum.AutomaticSize.X
 		amount.Size = UDim2.fromScale(0, 1)
 		local function set(iconName: string, text: string)
-			button.Icon.Image = AssetSlots.Image(iconName)
+			setIcon(button.Icon, iconName)
 			amount.Text = text
 		end
 		return button, set
