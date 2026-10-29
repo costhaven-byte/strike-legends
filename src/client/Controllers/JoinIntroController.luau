@@ -1,5 +1,5 @@
 -- Join intro (batch B, Config.JoinIntro): brand new players only (first join, before their first throw) see a short
--- fly-over of the Back Alley with big captions and Rizzo's wave. It starts on a title card (name, tip, LOADING) that
+-- fly-over of the Back Alley with big captions and Rizzo's wave. It starts on the loading screen (Modules/LoadingScreen) that
 -- covers the first seconds while Roblox loads textures and builds up the lighting, then fades into the shots. A SKIP button
 -- shows after a second. Every other screen and Roblox's own menus hide while it plays and throws can't start; at the
 -- end (or on SKIP) the camera glides back behind your character and everything comes back.
@@ -16,7 +16,7 @@ local Zones = require(Shared.Modules.Zones)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
 local UiKit = require(Modules.UiKit)
-local CrateKit = require(Modules.CrateKit)
+local LoadingScreen = require(Modules.LoadingScreen)
 local LaneVisuals = require(script.Parent.LaneVisuals)
 local RizzoController = require(script.Parent.RizzoController)
 local ThrowController = require(script.Parent.ThrowController)
@@ -151,57 +151,21 @@ local function play()
 		end
 	end
 
-	-- Title card while the game loads: the game's name, a tip and LOADING dots on a dark navy screen. It stays at
-	-- least MinLoad seconds (Roblox builds the lighting up over the first seconds after joining and no script can
-	-- tell when it's done), until the Back Alley's textures are in and you stand on your lane with the zone's lighting
-	-- faded in, but never longer than LoadLimit. The camera already sits on the first shot behind it.
-	local cover = UiKit.Make("CanvasGroup", {
-		Name = "Loading",
-		Size = UDim2.fromScale(1, 1),
-		BackgroundTransparency = 1,
-		ZIndex = 5,
-	}, gui) :: CanvasGroup
-	-- (the gradient sits on its own layer: on the CanvasGroup itself it would tint the words too)
-	local backdrop = UiKit.Make("Frame", {
-		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = UiKit.C.White,
-		BorderSizePixel = 0,
-	}, cover)
-	UiKit.Make("UIGradient", {
-		Rotation = 90,
-		Color = ColorSequence.new(UiKit.C.Page, UiKit.C.Ink),
-	}, backdrop)
-	local card = UiKit.Make("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(900, 300),
-		BackgroundTransparency = 1,
-	}, cover)
-	local fit = UiKit.Make("UIScale", {}, card) :: UIScale
-	local function refit()
-		local area = gui.AbsoluteSize
-		if area.X > 0 then
-			fit.Scale = math.min(1, (area.X - 32) / 900, area.Y / 420)
-		end
+	-- Loading screen while the game loads (owner's design, Modules/LoadingScreen). It stays at least MinLoad seconds
+	-- (Roblox builds the lighting up over the first seconds after joining and no script can tell when it's done),
+	-- until the Back Alley's textures are in and you stand on your lane with the zone's lighting faded in, but never
+	-- longer than LoadLimit. The camera already sits on the first shot behind it.
+	-- its own art first (up to 1.5 s), so the pictures don't pop in one by one
+	local artIn = false
+	task.spawn(function()
+		pcall(ContentProvider.PreloadAsync, ContentProvider, LoadingScreen.Images())
+		artIn = true
+	end)
+	local artWait = os.clock()
+	while not artIn and os.clock() - artWait < 1.5 do
+		task.wait()
 	end
-	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(refit)
-	refit()
-	local titleBox = UiKit.Make("Frame", {
-		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 120),
-	}, card)
-	local title = CrateKit.Title(titleBox, "STRIKE LEGENDS", 104, UiKit.C.Gold, 6, 8)
-	local titleScale = UiKit.ScaleOf(titleBox)
-	titleScale.Scale = 0.6
-	UiKit.Tween(titleScale, 0.45, Enum.EasingStyle.Back, { Scale = 1 })
-	title.TextXAlignment = Enum.TextXAlignment.Center
-	local tip = UiKit.Text(card, INTRO.Tips[math.random(1, #INTRO.Tips)], UiKit.Body, 26, UiKit.C.Label, 0)
-	tip.Position = UDim2.fromOffset(0, 150)
-	tip.Size = UDim2.new(1, 0, 0, 70)
-	tip.TextWrapped = true
-	local loadingText = UiKit.Text(card, "LOADING", UiKit.Head, 34, UiKit.C.Cyan, 2.5)
-	loadingText.Position = UDim2.fromOffset(0, 240)
-	loadingText.Size = UDim2.new(1, 0, 0, 44)
+	local cover = LoadingScreen.Show(gui, INTRO.Tips[math.random(1, #INTRO.Tips)])
 	local first = INTRO.Shots[1]
 	if first then
 		camera.CFrame = CFrame.lookAt(first.From.Pos, first.From.Look)
@@ -227,13 +191,17 @@ local function play()
 		end
 		local lit = inAlleySince ~= nil and os.clock() - inAlleySince >= Config.Zones.LookBlend + INTRO.LightSettle
 		local waited = os.clock() - started
-		loadingText.Text = "LOADING" .. string.rep(".", math.floor(os.clock() * 3) % 4)
+		-- the bar: what's done so far (textures in, on your lane, lit), held back so it never beats MinLoad
+		local steps = (if game:IsLoaded() then 0.2 else 0)
+			+ (if loaded then 0.3 else 0)
+			+ (if inAlleySince then 0.2 else 0)
+			+ (if lit then 0.3 else 0)
+		cover.SetProgress(math.max(waited / INTRO.LoadLimit, math.min(steps, waited / INTRO.MinLoad)) * 0.99)
 		showSkip()
 		hideOthers()
 		RunService.RenderStepped:Wait()
 	until skipped or (loaded and lit and waited >= INTRO.MinLoad) or waited >= INTRO.LoadLimit
-	UiKit.Tween(cover, INTRO.FadeIn, Enum.EasingStyle.Sine, { GroupTransparency = 1 })
-	task.delay(INTRO.FadeIn, cover.Destroy, cover)
+	cover.Finish() -- STRIKE! on the bar, then it fades over the first shot
 
 	for _, shot in INTRO.Shots do
 		if skipped then
