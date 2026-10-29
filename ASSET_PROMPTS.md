@@ -61,8 +61,6 @@ Not for launch (skip): zones 5-6, the old Neon crate (removed).
 
 | Replaces | File(s) |
 |---|---|
-| Zone 3 ball display cases | ballcase_mainstreet_common/rare/epic/legendary/mythic.glb (row: ballcase_mainstreet_row.glb) |
-| Zone 4 ball display case | skyline_ball_case.glb |
 | Pet fusion station (zone 3) | pet_fusion_machine.glb |
 | Pin Titan boss, arena, helicopter, thrown pin | pin_titan.glb, pin_titan_broken.glb, sky_arena.glb, arena_with_titan.glb, sky_chopper.glb, stone_pin.glb |
 

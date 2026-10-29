@@ -219,8 +219,8 @@ end
 
 -- Case lights: a soft light inside the roof for every case; Beam styles also get a light beam onto the
 -- roof with a spotlight from the same spot; InnerGlow puts a coloured light behind the ball.
--- style.Light scales all of them (Mythic is moodier).
-local function addLights(base: CFrame, model: Model, plinth: BasePart, style)
+-- style.Light scales all of them (Mythic is moodier). shape: the case's ball spot, roof and ceiling (buildCase).
+local function addLights(base: CFrame, model: Model, plinth: BasePart, style, shape)
 	local power = style.Light or 1
 	local inner = Instance.new("SurfaceLight")
 	inner.Face = Enum.NormalId.Bottom
@@ -228,10 +228,10 @@ local function addLights(base: CFrame, model: Model, plinth: BasePart, style)
 	inner.Range = 1.3 * S
 	inner.Brightness = 2 * power * (if style.Beam then 1 else 0.5)
 	inner.Color = style.Beam or T.CaseLight
-	inner.Parent = model:FindFirstChild("Ceiling")
+	inner.Parent = shape.Ceiling
 
 	if style.Beam then
-		local top = at(base, Vector3.new(0, 2.15, 0))
+		local top = base * CFrame.new(0, shape.Roof, 0)
 		local beamTop = Instance.new("Attachment")
 		beamTop.Parent = plinth
 		beamTop.WorldCFrame = top * CFrame.new(0, CASE.BeamHeight, 0)
@@ -272,7 +272,7 @@ local function addLights(base: CFrame, model: Model, plinth: BasePart, style)
 	if style.InnerGlow then
 		local glowSpot =
 			part({ Name = "BackGlow", Size = Vector3.one * 0.2, Transparency = 1, CastShadow = false }, model)
-		glowSpot.CFrame = at(base, Vector3.new(0, 1.4, -0.55))
+		glowSpot.CFrame = base * CFrame.new(0, shape.BallY + 0.01 * S, 0.55 * S)
 		local backGlow = Instance.new("PointLight")
 		backGlow.Color = style.InnerGlow
 		backGlow.Range = 3 * S
@@ -283,9 +283,9 @@ end
 
 -- A faint glow around the whole case in the rarity colour: a soft sprite behind the case and a
 -- dim light on the floor and wall around it
-local function addAura(base: CFrame, model: Model, color: Color3)
+local function addAura(base: CFrame, model: Model, color: Color3, shape)
 	local anchor = part({ Name = "Aura", Size = Vector3.one * 0.2, Transparency = 1, CastShadow = false }, model)
-	anchor.CFrame = at(base, Vector3.new(0, 1.2, -0.25)) -- behind the ball, just in front of the wall
+	anchor.CFrame = base * CFrame.new(0, shape.BallY - 0.19 * S, 0.25 * S) -- behind the ball, just in front of the wall
 	local sprite = Instance.new("BillboardGui")
 	sprite.Size = UDim2.fromScale(2.6 * S, 3.2 * S)
 	sprite.LightInfluence = 0
@@ -306,13 +306,13 @@ local function addAura(base: CFrame, model: Model, color: Color3)
 end
 
 -- Floating glow dots (Dots) and glowing specks circling the case (Motes)
-local function addGlowFx(base: CFrame, model: Model, style)
+local function addGlowFx(base: CFrame, model: Model, style, shape)
 	if style.Dots then
 		local spread = style.Dots.Spread
 		local cloud = part({
 			Name = "GlowDots",
 			Size = Vector3.new(spread, spread * 1.45, spread) * S,
-			CFrame = at(base, Vector3.new(0, 1.4, 0)),
+			CFrame = base * CFrame.new(0, shape.BallY + 0.01 * S, 0),
 			Transparency = 1,
 			CastShadow = false,
 		}, model)
@@ -339,6 +339,7 @@ local function addGlowFx(base: CFrame, model: Model, style)
 	end
 
 	local motes = {}
+	local tall = shape.Roof / (2.15 * S) -- motes fill the case's height
 	for i = 1, style.Motes or 0 do
 		local color = if i % 2 == 0 then CYAN else PINK
 		local mote = part({
@@ -354,11 +355,66 @@ local function addGlowFx(base: CFrame, model: Model, style)
 			Part = mote,
 			Angle = math.random() * math.pi * 2,
 			Radius = (0.64 + math.random() * 0.14) * S, -- outside the case, clear of the next one
-			Height = (0.75 + math.random() * 1.5) * S,
+			Height = (0.75 + math.random() * 1.5) * S * tall,
 			Speed = CASE.MoteSpeed * (0.7 + math.random() * 0.6) * (if i % 3 == 0 then -1 else 1),
 		})
 	end
 	return motes
+end
+
+-- The owner's 3D case for a zone theme (Config.Showcase.Themes Design): ShowcaseModels.<Design>_<Rarity>, else
+-- ShowcaseModels.<Design>. Pivot = bottom centre, front (plaque) on -Z, already at case size (studs).
+local function findDesign(design: string?, rarity: string): Model?
+	local models = ReplicatedStorage:FindFirstChild("ShowcaseModels")
+	if not (design and models) then
+		return nil
+	end
+	local found = models:FindFirstChild(design .. "_" .. rarity) or models:FindFirstChild(design)
+	return if found and found:IsA("Model") then found else nil
+end
+
+-- Puts the owner's case design on the slot. Returns where the ball goes and the parts the effects hang on.
+local function placeDesign(template: Model, base: CFrame, model: Model, style)
+	local design = template:Clone()
+	design:PivotTo(base)
+	local shade = style.Shade or 1
+	local roof = 0
+	for _, p in design:GetChildren() do
+		if not p:IsA("BasePart") then
+			continue
+		end
+		-- Rarity bands glow (Neon); Recolor themes tint them to the rarity's accent
+		if T.Bands and T.Bands[p.Name] then
+			p.Material = Enum.Material.Neon
+			if T.Bands[p.Name] == "Accent" then
+				p.Color = style.Accent
+			end
+		end
+		p.Color = p.Color:Lerp(Color3.new(), 1 - shade)
+		if p.Name ~= "diamond" and p.Name ~= "preview_ball" then
+			roof = math.max(roof, base:PointToObjectSpace(p.Position).Y + p.Size.Y / 2)
+		end
+		p.Parent = model
+	end
+	design:Destroy()
+	for _, name in { "foot", "plinth", "glass" } do
+		local p = model:FindFirstChild(name)
+		if p then
+			(p :: BasePart).CanCollide = true
+		end
+	end
+	-- The design's preview ball marks the ball's spot and size; the real ball replaces it
+	local preview = model:FindFirstChild("preview_ball") :: BasePart
+	local ballY, ballSize = base:PointToObjectSpace(preview.Position).Y, preview.Size.X
+	preview:Destroy()
+	return {
+		BallY = ballY,
+		BallSize = ballSize,
+		Roof = roof,
+		Ceiling = model:FindFirstChild("light_panel") or model:FindFirstChild("top_light"),
+		Crown = model:FindFirstChild("diamond"),
+		Plinth = (model:FindFirstChild("foot") or model:FindFirstChild("plinth")) :: BasePart,
+	}
 end
 
 local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate: BasePart?, theme: string?)
@@ -370,48 +426,65 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 	local model = Instance.new("Model")
 	model.Name = ball.Id
 
-	for _, row in PIECES do
-		piece(base, row, model, style, true)
-	end
-	local plinth = model:FindFirstChild("Plinth") :: BasePart
-	model.PrimaryPart = plinth
-	part({
-		Name = "Glass",
-		Size = Vector3.new(0.94, 1.2, 0.94) * S,
-		CFrame = at(base, Vector3.new(0, 1.33, 0)),
-		Color = T.Glass,
-		Reflectance = 0.1,
-		Transparency = 0.9, -- SmoothPlastic, not Glass: Glass hides the rings and sparkles behind it
-		CastShadow = false,
-	}, model)
-	for _, name in { "Plinth", "Base", "Glass" } do
-		(model:FindFirstChild(name) :: BasePart).CanCollide = true
-	end
-
+	-- Where the ball sits, how big it is and the roof height (studs above the slot): from the owner's 3D case when
+	-- the zone has one, else the built display_case design
+	local template = findDesign(T.Design, ball.Rarity)
+	local shape = if template
+		then placeDesign(template, base, model, style)
+		else { BallY = BALL_Y * S, BallSize = BALL_SIZE, Roof = 2.15 * S }
+	local plinth: BasePart
 	local crown, crownCenter
-	if style.Gems then
-		piece(base, GEM_BASE, model, style, false)
-		for _, pos in CORNER_GEMS do
-			diamond(diamondTemplate, at(base, pos), 0.13, 0.26, style.Gems, model)
+	if template then
+		plinth = shape.Plinth
+		crown = shape.Crown
+		crownCenter = crown and crown.CFrame
+	else
+		for _, row in PIECES do
+			piece(base, row, model, style, true)
 		end
-		crownCenter = at(base, Vector3.new(0, 2.33, 0))
-		crown = diamond(diamondTemplate, crownCenter, 0.19, 0.34, style.Gems, model)
-	end
+		plinth = model:FindFirstChild("Plinth") :: BasePart
+		part({
+			Name = "Glass",
+			Size = Vector3.new(0.94, 1.2, 0.94) * S,
+			CFrame = at(base, Vector3.new(0, 1.33, 0)),
+			Color = T.Glass,
+			Reflectance = 0.1,
+			Transparency = 0.9, -- SmoothPlastic, not Glass: Glass hides the rings and sparkles behind it
+			CastShadow = false,
+		}, model)
+		for _, name in { "Plinth", "Base", "Glass" } do
+			(model:FindFirstChild(name) :: BasePart).CanCollide = true
+		end
+		shape.Ceiling = model:FindFirstChild("Ceiling")
 
-	addLights(base, model, plinth, style)
-	if style.Aura then
-		addAura(base, model, style.Aura)
+		if style.Gems then
+			piece(base, GEM_BASE, model, style, false)
+			for _, pos in CORNER_GEMS do
+				diamond(diamondTemplate, at(base, pos), 0.13, 0.26, style.Gems, model)
+			end
+			crownCenter = at(base, Vector3.new(0, 2.33, 0))
+			crown = diamond(diamondTemplate, crownCenter, 0.19, 0.34, style.Gems, model)
+		end
 	end
-	local motes = addGlowFx(base, model, style)
+	model.PrimaryPart = plinth
+	-- Ball size against the built design's ball: the finger holes, padlock and rings grow with it
+	local k = shape.BallSize / BALL_SIZE
+	local ballBase = base * CFrame.new(0, shape.BallY, 0)
+
+	addLights(base, model, plinth, style, shape)
+	if style.Aura then
+		addAura(base, model, style.Aura, shape)
+	end
+	local motes = addGlowFx(base, model, style, shape)
 
 	-- The ball with its finger holes, in its own model so one outline covers the ball and the padlock
 	local display = Instance.new("Model")
 	display.Name = "Display"
-	local center = at(base, Vector3.new(0, BALL_Y, 0)) * CFrame.new(0, CASE.BobHeight, 0)
+	local center = ballBase * CFrame.new(0, CASE.BobHeight, 0)
 	local ballPart = part({
 		Name = "Ball",
 		Shape = Enum.PartType.Ball,
-		Size = Vector3.one * BALL_SIZE,
+		Size = Vector3.one * shape.BallSize,
 		CFrame = center,
 	}, display)
 	local holes = {}
@@ -419,10 +492,10 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 		local hole = part({
 			Name = "FingerHole",
 			Shape = Enum.PartType.Ball,
-			Size = Vector3.one * 0.07 * S,
+			Size = Vector3.one * 0.07 * S * k,
 			Color = T.Ink,
 		}, display)
-		table.insert(holes, { Part = hole, Offset = CFrame.new(-offset.X * S, offset.Y * S, -offset.Z * S) })
+		table.insert(holes, { Part = hole, Offset = CFrame.new(-offset.X * S * k, offset.Y * S * k, -offset.Z * S * k) })
 	end
 	-- The ball's 3D model (if it has one). Locked, every piece turns solid black so you see its shape
 	-- but not its colours; owned, each piece gets its real look back.
@@ -450,7 +523,11 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 	local lock = Instance.new("Model")
 	lock.Name = "Padlock"
 	for _, row in LOCK do
-		piece(base, row, lock, style, false)
+		-- In front of the ball wherever the ball sits, scaled with it
+		local p = piece(base, row, lock, style, false)
+		local offset = base:ToObjectSpace(p.CFrame) - Vector3.new(0, BALL_Y * S, 0)
+		p.Size *= k
+		p.CFrame = ballBase * (offset.Rotation + offset.Position * k)
 	end
 	display.Parent = model
 
@@ -460,7 +537,7 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 		halo = part({
 			Name = "Halo",
 			Shape = Enum.PartType.Ball,
-			Size = Vector3.one * BALL_SIZE * 1.18,
+			Size = Vector3.one * shape.BallSize * 1.18,
 			CFrame = center,
 			Color = style.Accent,
 			Material = Enum.Material.Neon,
@@ -495,11 +572,21 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 		})
 	end
 
-	-- The sign on the front of the base: rarity badge, name (or ??? while locked) and one info line
+	-- The sign on the front of the base: rarity badge, name (or ??? while locked) and one info line.
+	-- The owner's 3D cases have no room for it (zone 3's brass plaque is too small to read), so there it leans back
+	-- on the floor in front of the case.
+	local signSize, signCFrame = Vector3.new(0.94, 0.41, 0.01) * S, at(base, Vector3.new(0, 0.37, 0.59))
+	if template then
+		local front = shape.Plinth.Size.Z / 2 + 0.6
+		signCFrame = base
+			* CFrame.new(0, 0.1, -front)
+			* CFrame.Angles(math.rad(-15), 0, 0)
+			* CFrame.new(0, signSize.Y / 2, 0)
+	end
 	local sign = part({
 		Name = "Sign",
-		Size = Vector3.new(0.94, 0.41, 0.01) * S,
-		CFrame = at(base, Vector3.new(0, 0.37, 0.59)),
+		Size = signSize,
+		CFrame = signCFrame,
 		Color = T.Ink,
 	}, model)
 	local gui = Instance.new("SurfaceGui")
@@ -574,7 +661,7 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 
 	model.Parent = parent
 	ballFx = BallFx.Attach(ballPart, ball.Id, "Display")
-	local ringRadius = CASE.RingRadius * S
+	local ringRadius = CASE.RingRadius * S * k
 	local phase = math.random() * math.pi * 2
 	return {
 		Id = ball.Id,

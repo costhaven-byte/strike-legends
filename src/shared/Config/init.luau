@@ -792,6 +792,9 @@ Config.Showcase = {
 	},
 	-- Base structure colours per zone (Navy = the case body, NavyTop = roof, BlueCap = base top, Pedestal = the
 	-- ball's stand, SignBg = the sign, CaseLight = the light inside). Materials: optional, per colour name.
+	-- Design: the owner's 3D case (ReplicatedStorage.ShowcaseModels.<Design>_<Rarity>, else <Design>) replaces the
+	-- built case; the colours above then only paint the sign and finger holes. Bands: its parts that glow
+	-- ("Glow" = Neon in the design's colour, "Accent" = Neon in the rarity's accent colour).
 	Themes = {
 		Neon = { -- the owner's display_case design
 			Ink = Color3.fromRGB(14, 13, 26),
@@ -804,7 +807,9 @@ Config.Showcase = {
 			SignTop = Color3.fromRGB(58, 48, 128),
 			CaseLight = Color3.fromRGB(190, 205, 255),
 		},
-		MainStreet = { -- PLACEHOLDER: wood, chrome, warm light
+		MainStreet = { -- the owner's ballcase_mainstreet designs (one per rarity)
+			Design = "MainStreet",
+			Bands = { rarity_band = "Glow" },
 			Ink = Color3.fromRGB(34, 22, 14),
 			Navy = Color3.fromRGB(110, 70, 40),
 			NavyTop = Color3.fromRGB(84, 52, 30),
@@ -821,7 +826,9 @@ Config.Showcase = {
 				Pedestal = Enum.Material.Metal,
 			},
 		},
-		Skyline = { -- PLACEHOLDER: clean, bright, sky tones
+		Skyline = { -- the owner's skyline_ball_case design (one for every rarity, bands in the rarity colour)
+			Design = "Skyline",
+			Bands = { band_common = "Accent", pedestal_glow = "Accent" },
 			Ink = Color3.fromRGB(40, 50, 84),
 			Navy = Color3.fromRGB(232, 240, 255),
 			NavyTop = Color3.fromRGB(205, 222, 250),
