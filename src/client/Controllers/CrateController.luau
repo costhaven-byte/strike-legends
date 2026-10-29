@@ -2382,6 +2382,8 @@ function CrateController:Start()
 
 		-- Buttons: EQUIP (or grey EQUIPPED) and OK
 		local equipped = player:GetAttribute("EquippedBall") == ball.Id
+		-- a gift ball you already throw can't be equipped, so OK + tapping outside stay on (owner 2026-10-29: was stuck)
+		equipPrompt = equipPrompt and not equipped
 		local equip = CrateKit.Button(content, {
 			Name = "Equip",
 			W = if phone then 170 else 280,
