@@ -90,3 +90,43 @@ At the end: one combined 2-minute playtest.
   (3) Shiny pets can't be X'd (they only come from fusion). (4) A deleted Legendary still shows the server-wide pull
   banner (it was a real pull). (5) Deleted pets give nothing back (no coins), like other simulators.
 - Studio: no world edits. Code pushed into Studio's scripts (unsaved in the place until you save; git has it).
+
+## D1 rebirth = full reset + throw follows your rank level (commit 579b13b, restore tag `restore-batchD1-before`)
+- Item 18 (rebirth resets levels): a REBIRTH now also puts you back to rank level 1, 0 XP and Rookie, as well as
+  Power Level 1 and 0 coins. Balls, pets, gems, potions and zones stay. Old saves keep their level until they rebirth.
+  Nothing pays twice: new save fields (v32) BestLevel + BestRank remember your best ever. Level-up gems, the free crate
+  every few levels and the level 7/9 rewards only pay for levels above your best; rank-up gems only for a new best rank.
+  You still get the level-up popup (without gems) when you climb back. A rank you already won comes back by itself
+  (no second rank trial). You can't rebirth in the middle of a rank trial ("Finish your rank trial first").
+  REBIRTH window: YOU GO BACK TO = LEVEL 1, POWER LV 1, 0 COINS; LEVEL is gone from YOU KEEP.
+  Profile: the CLIMBER achievement and the stats line now use your best level ever (stat renamed BEST LEVEL);
+  the subtitle under your name still shows your current level.
+- Item 17b (throw follows your level): the throw animation and the ball's rolling speed now come from your CURRENT
+  rank level, not Power Level (Config.Throw.RankStyle). Level 1 = the clumsy wobbly throw at today's speed; every
+  Rookie level (2-6) a little cleaner and +2% faster; Amateur (level 7) a bigger jump (+15%); level 13 fully clean
+  (+22%); levels 19 / 31 / 43 bigger pro throws (up to +36% speed). The server decides it and tells everyone's screen.
+  A rebirth takes you back to the clumsy throw (wanted, per your decision).
+  Power Level still sets the ball's size, trail, sparks, fire, crash and how many pins a normal throw can knock.
+- Economy sim (levels now reset, nothing retuned; that's D3). Total play time, new vs old rule:
+  rebirth 1 11:37 (same) | rebirth 2 23:04 (was 21:03) | rebirth 3 / zone 3 48:04 (was 44:10) | rebirth 4 1h25m
+  (was 1h17m) | rebirth 5 / zone 4 2h41m (was 2h36m). Zone 2/3/4 coins per minute go down (91K / 2.6M / 945M, was
+  126K / 4.7M / 1.3B) because the rank tier's coin bonus resets too. D3 targets (4 min / 25 min / 1.5 h) still need the
+  economy pass. The sim doesn't count the faster ball at higher levels (a few % more throws per minute).
+- Test (Studio, TEST panel FROM ZERO, ~2 min): throw a few times: the throw looks clumsy. +1 LEVEL x3 -> the throw is
+  cleaner and the ball rolls a bit faster. READY TO REBIRTH, open REBIRTH: "YOU GO BACK TO" shows LEVEL 1 / POWER LV 1 /
+  0 COINS, "YOU KEEP" has no LEVEL. Press REBIRTH twice -> the level bar says LV 1 ROOKIE, the throw is clumsy again.
+  Silent failures: gems going up when you re-reach a level you had (should not; only new levels pay); the REBIRTH
+  window's three chips overlapping or cut off on a phone; other players' throws looking the same at every level.
+- Tested by Claude in Studio (FROM ZERO): levels 2-4 gave 6 gems; rebirth -> level 1 / XP 0 / Rookie, best level kept;
+  climbing back to 4 gave 0 gems, level 5 (new) gave 2; passed the Amateur trial (+5 gems), rebirth, climbed back to
+  7 -> Amateur came back with no trial and no gems, level 7 reward not paid again; a real throw sent Pose 7 at level 7
+  and Pose 1 after the rebirth, roll time 0.54 s vs 0.62 s (x1.15); old v31 save (level 20, tier 4) -> best 20 / tier 4;
+  rebirth window chips fit (443 of 478 px). No errors in Output. NOT watched on screen: the animation itself
+  (the same pose levels Power Level used before, now picked by rank).
+- Choices made for you: (1) only the animation + ball speed moved to rank; ball size/trail/fire stay on Power Level
+  (your Addendum 3 rule, and the Power Level shop sells those looks). (2) Ball speed never goes below today's speed
+  (level 1 = today), so nothing feels slower and the economy isn't hurt. (3) Level rewards and rank gems pay once ever.
+  (4) Ranks you already won come back without redoing the trial (redoing trials every rebirth would drag the middle).
+  (5) The Pin Titan boss's damage bonus stays on Power Level (it's hitting power, not the throw animation).
+  (6) The rebirth level needs (level 4, +2 per rebirth) are unchanged; D3 retunes them.
+- Studio: no world edits. Code pushed into Studio's scripts (unsaved in the place until you save; git has it).
