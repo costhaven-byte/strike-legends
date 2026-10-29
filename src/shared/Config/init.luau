@@ -3313,9 +3313,15 @@ Config.Mascots = {
 -- never a PERFECT (so no strikes past your Power Level's pin cap, no x2). Reserved for the monetization phase
 -- (Addendum 2 section 7: an Auto Bowl gamepass). OFF: nothing is shown and the server ignores it. When on, an AUTO
 -- button appears on the HUD for everyone (the gamepass check comes with monetization).
+-- FREE SLOW AUTO BOWL (final changes batch D6): after FreeAfterRebirths rebirths everyone gets the AUTO button too,
+-- but slower (FreeInterval) and never a strike (auto throws are never PERFECT and only PERFECTs strike, so the pins
+-- are capped by your Power Level). The AUTO BOWL pass stays the strong one: Interval and a strike every throw.
+-- Auto throws never move the streak, fever, lane events, rank trials or the 3-strike challenge.
 Config.AutoBowl = {
-	Enabled = false,
-	Interval = 4.5, -- seconds between auto throws (a manual throw takes about 3)
+	Enabled = false, -- true = the free auto for everyone from the start (Studio tests)
+	Interval = 4.5, -- seconds between auto throws with the AUTO BOWL pass (a manual throw takes about 3)
+	FreeAfterRebirths = 1, -- the free slow auto opens at this many rebirths (0 = never)
+	FreeInterval = 7, -- seconds between free auto throws
 	ChargeMin = 0.4, -- each auto throw's power is picked between these (0 to 1 of the bar, never the red)
 	ChargeMax = 0.85,
 }

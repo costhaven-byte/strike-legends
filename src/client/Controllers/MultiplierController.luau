@@ -4,7 +4,7 @@
 -- the owner's UI Kit COIN MULTIPLIER card (2026-10-26).
 -- When anything changes, the badge pops and the total ticks to the new number.
 -- Numbers come from the CoinMultipliers Player attribute (MultiplierService, the same numbers that pay throws).
--- Also: the AUTO button, only when Config.AutoBowl.Enabled (off until monetization).
+-- Also: the AUTO button, for players with the free slow auto (after rebirth 1, Config.AutoBowl) or the AUTO BOWL pass.
 -- Built in code (not in Studio), so it lives in git.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -26,6 +26,8 @@ local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
 local CARD = Color3.fromRGB(30, 20, 60)
 local INK = Color3.fromHex("06060F")
 local LIME = Color3.fromRGB(125, 255, 60)
+local GOLD_TAG = Color3.fromRGB(255, 201, 58) -- the AUTO button's FREE! tag after the first rebirth
+local AUTO_TAG_SECONDS = 60
 
 -- Each source in the card, in order: attribute key -> name on screen and its HUD Kit icon.
 -- The card lists the sources that change your coins (x1 rows are left out), plus STREAK always.
@@ -597,9 +599,9 @@ function MultiplierController:Start()
 		end
 	end)
 
-	-- Auto Bowl (Config.AutoBowl): for everyone when switched on, or with the AUTO BOWL game pass while the store is
-	-- on (Config.Monetization); the server makes the remote only then. It sits under the badge.
-	if Config.AutoBowl.Enabled or Store.Active() then
+	-- Auto Bowl (Config.AutoBowl): free and slow after FreeAfterRebirths rebirths (or for everyone when Enabled), or
+	-- the AUTO BOWL game pass while the store is on (Config.Monetization). It sits under the badge.
+	do
 		local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SetAutoBowl", 10) :: RemoteEvent?
 		if remote then
 			local auto = Instance.new("TextButton")
@@ -619,12 +621,35 @@ function MultiplierController:Start()
 				auto.Position = position + UDim2.fromOffset(0, h + 6)
 				auto.Size = UDim2.fromOffset((size :: UDim2).X.Offset, math.floor(h * 0.8))
 			end)
+			local AUTO = Config.AutoBowl
+			local function allowed(): boolean
+				local need = AUTO.FreeAfterRebirths or 0
+				return AUTO.Enabled
+					or (need > 0 and (player:GetAttribute("Rebirths") or 0) >= need)
+					or Store.Owns(player, "AutoBowl")
+			end
 			local function show()
-				auto.Visible = Config.AutoBowl.Enabled or Store.Owns(player, "AutoBowl")
+				auto.Visible = allowed()
 				local on = player:GetAttribute("AutoBowl") == true
 				label.Text = if on then "AUTO ON" else "AUTO"
 				auto.BackgroundColor3 = if on then Color3.fromRGB(40, 90, 30) else CARD
 			end
+			-- Opened by a rebirth this session: the button pops in with a gold FREE! tag for a while
+			local wasAllowed = allowed()
+			player:GetAttributeChangedSignal("Rebirths"):Connect(function()
+				local now = allowed()
+				if now and not wasAllowed then
+					show()
+					UiFx.Pop(auto, 0.4, 0.4)
+					local tag = text(auto, "FreeTag", FONT, GOLD_TAG)
+					tag.Text = "FREE!"
+					tag.Size = UDim2.fromScale(0.7, 0.55)
+					tag.Position = UDim2.fromScale(0.65, -0.35)
+					tag.Rotation = 8
+					task.delay(AUTO_TAG_SECONDS, tag.Destroy, tag)
+				end
+				wasAllowed = now
+			end)
 			player:GetAttributeChangedSignal("AutoBowl"):Connect(show)
 			player:GetAttributeChangedSignal("Passes"):Connect(show)
 			show()

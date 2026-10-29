@@ -1,6 +1,6 @@
 -- Times each player's hold on the charge bar, validates the release, works out the result and tells every client.
--- Auto Bowl (Config.AutoBowl, OFF until monetization): the server throws for players who switched it on, slower
--- than by hand and never a PERFECT.
+-- Auto Bowl (Config.AutoBowl): the server throws for players who switched it on, slower than by hand and never a
+-- PERFECT. Free and slow after the first rebirth (batch D6); the AUTO BOWL pass is faster and always strikes.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -375,15 +375,20 @@ local function onThrowRequest(player: Player, clientHold: any)
 end
 
 -- Auto Bowl: players who switched it on (Player attribute AutoBowl) get a throw every Config.AutoBowl.Interval
--- seconds while standing on their lane. throwBall still checks the lane, the cooldown and the rate limit.
+-- seconds with the pass (FreeInterval without) while standing on their lane. throwBall still checks the lane, the
+-- cooldown and the rate limit.
 local autoNext: { [Player]: number } = {}
 local function startAutoBowl(remotes: Folder)
 	local AUTO = Config.AutoBowl
+	-- The free slow auto: Config.AutoBowl.Enabled (for everyone) or enough rebirths
+	local function freeAuto(player: Player): boolean
+		local need = AUTO.FreeAfterRebirths or 0
+		return AUTO.Enabled or (need > 0 and (PlayerDataService.Get(player, "Rebirths") or 0) >= need)
+	end
 	local toggle = Instance.new("RemoteEvent")
 	toggle.Name = "SetAutoBowl"
 	toggle.OnServerEvent:Connect(function(player, on)
-		-- Free for everyone only while Config.AutoBowl.Enabled; otherwise it needs the AUTO BOWL game pass
-		local allowed = AUTO.Enabled or Store.Owns(player, "AutoBowl")
+		local allowed = freeAuto(player) or Store.Owns(player, "AutoBowl")
 		player:SetAttribute("AutoBowl", on == true and allowed)
 	end)
 	toggle.Parent = remotes
@@ -400,7 +405,8 @@ local function startAutoBowl(remotes: Folder)
 						and LaneUtil.IsInThrowZone(lane, root.Position)
 						and Workspace:GetServerTimeNow() >= (lane:GetAttribute("ReadyAt") or 0)
 					if ready then
-						autoNext[player] = now + AUTO.Interval
+						autoNext[player] = now
+							+ (if Store.Owns(player, "AutoBowl") then AUTO.Interval else AUTO.FreeInterval)
 						task.spawn(
 							throwBall,
 							player,
@@ -441,9 +447,7 @@ function ThrowService:Start()
 
 	hold.OnServerEvent:Connect(onHoldStart)
 	request.OnServerEvent:Connect(onThrowRequest)
-	if Config.AutoBowl.Enabled or Store.Active() then
-		startAutoBowl(folder)
-	end
+	startAutoBowl(folder) -- (the free slow auto after rebirth 1 needs it even with the store off)
 	Players.PlayerRemoving:Connect(function(player)
 		holdStarts[player] = nil
 		autoNext[player] = nil
