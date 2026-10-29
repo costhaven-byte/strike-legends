@@ -166,3 +166,56 @@ At the end: one combined 2-minute playtest.
   still has Power Level goals. (3) Arrow written as ">" ("x1.5 > x2"), like "MERGE 3 > SHINY", since the game fonts
   may not have an arrow sign. (4) Level 7/9 reward shares raised (above). (5) Daily/playtime shares unchanged.
 - Studio: no world edits. Code pushed into Studio's scripts (unsaved in the place until you save; git has it).
+
+## D3 economy pass: faster start, no dead stretches (commit 8f53616, restore tag `restore-batchD3-before`)
+- Your targets: rebirth 1 at about 4 min, zone 3 at about 25 min, zone 4 at about 1.5 h. Each rebirth now asks for its
+  own level AND its own coins. The level comes near the end of a run and the coins soon after, so most of a run is
+  spent buying things, not saving up.
+  Rebirth 1: level 3 + 15K (was level 4 + 50K) | 2: level 8 + 500K (was 6 + 700K) | 3 (opens zone 3): level 13 + 4M
+  (was 8 + 9M) | 4: level 21 + 200M (was 10 + 150M) | 5 (opens zone 4): level 24 + 1.5B (was 12 + 4B) | after that
+  +2 levels and x3 coins each time (rebirth 6 = level 26 + 4.5B).
+- Zone 3's shop used to be bought out early, then about 20 minutes with nothing to buy before rebirth 5. It now lasts
+  through both zone 3 runs: League crate 8M -> 30M, Champion crate 40M -> 250M, Main Street Egg 6.3M -> 20M, and
+  Power Level 11 8B -> 1B (now the last buy before zone 4; Power Level 12 is still the long zone 4 goal).
+- Simulator (40 pretend players, total play time; "wait" = median longest time between two buys in that run):
+
+  | | before D3 | after D3 | target |
+  |---|---|---|---|
+  | rebirth 1 = zone 2 | 9:40 | 4:27 | ~4 min |
+  | rebirth 2 | 18:40 | 12:13 | |
+  | rebirth 3 = zone 3 | 29:43 | 26:13 | ~25 min |
+  | rebirth 4 | 45:24 | 47:03 | |
+  | rebirth 5 = zone 4 | 1h09m | 1h35m | ~1.5 h |
+  | longest wait, runs 0 / 1 / 2 / 3 / 4 | 5:00 / 1:39 / 5:03 / 1:39 / 25:15 | 2:09 / 1:15 / 3:33 / 3:27 / 10:09 | 1-2 min |
+
+  First things in order: Power Level 2 at 0:03, first crate 0:24, LV4 0:45, LV5 1:09, LV6 3:09, rebirth 1 4:27,
+  first pet egg 6:42, Bronze crate 6:30, LV7 7:34, Silver crate 14:01, LV8 13:33, Gold crate 23:28, zone 3 26:13,
+  Main Street Egg 29:42, League crate 35:51, LV10 46:36, Champion crate 51:27, LV11 1h23m, zone 4 + boss 1h35m.
+  The waits that are still longer than 2 minutes are the last bit of saving before the zone 3 and zone 4 rebirths
+  (the goal bar shows REBIRTH: OPENS ... with a progress bar then). Fever (D4) and lane events (D5) come next and
+  are NOT in the simulator: they will add coins, so I aimed a little slow (1h35 rather than 1h30).
+- New simulator report: `require(game.ServerStorage.Tools.EconomySim).Gaps()` lists each run's longest wait.
+  The short Sheet() now counts total play time (it said "never" for Power Level 7+ after rebirths).
+- Checked: the rebirth teaser (2:30 in) still comes before the rebirth is ready (4:27), now saying "REACH LEVEL 3";
+  "YOU CAN NOW AFFORD" notes and the goal bar read the new rule by themselves. Robux boosts are multipliers (no
+  price link). Daily rewards, playtime gifts, away coins and boss rewards pay the biggest of a minimum, minutes of your
+  own income, or a share of your next Power Level; only Power Level 11 got cheaper, so at most the share part is lower
+  for players saving for level 11, and income minutes cover it. Not changed.
+- Test (Studio, TEST panel FROM ZERO, ~2 min): throw until you reach level 3 (about 4 minutes; or +1 LEVEL x2):
+  the REBIRTH window says NEEDS LV 3 · 15K COINS, and the goal bar says REBIRTH (OPENS NEON LANES). Rebirth.
+  Then READY TO REBIRTH twice more: the window asks for LV 8 + 500K, then LV 13 + 4M (that one opens Main Street).
+  Look at the zone 3 kiosk: League 30M, Champion 250M; Main Street Egg 20M.
+  Silent failures: rebirth window still saying LV 4 / 50K (old Config in Studio); the rebirth teaser popping up after
+  the rebirth is already ready.
+- Tested by Claude in Studio (Play, FROM ZERO): READY TO REBIRTH + REBIRTH six times: asked for level 3/8/13/21/24/26
+  and 15K/500K/4M/200M/1.5B/4.5B, rebirth 3 opened zone 3, rebirth 5 zone 4. No errors in Output. NOT watched on
+  screen (Studio isn't drawing frames for me): the window text and goal bar; please look.
+- Choices made for you: (1) each rebirth gets its own level, not "+2 each" (+2 each was the reason the first rebirth
+  needed 10 minutes). (2) Rebirth 1 costs 15K, a bit less than Power Level 6 (30K), so a player can rebirth before
+  buying LV6; harmless (LV6 comes again in seconds in zone 2). (3) Zone 3 crate/egg prices and Power Level 11 moved
+  (above). Cheaper zone 3 egg/crates made zone 4 come at 1h16 with a 20-minute dead stretch; dearer eggs slowed
+  everything (pets are the biggest coin boost), so only the crates went up a lot. (4) Zone 4 itself (rebirths 6+,
+  Sky crates, Power Level 12) not tuned: it's past your targets; its later waits are long (10-25 min) and could
+  be a later pass. (5) Rebirth teaser time (150 s) kept. (6) No save changes.
+- Studio: no world edits. Code pushed into Studio's scripts (Config, Rebirth module, EconomySim; unsaved in the place
+  until you save; git has it).

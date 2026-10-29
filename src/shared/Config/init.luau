@@ -4869,7 +4869,7 @@ Config.Economy.Rebirth = {
 	-- Batch D3 economy pass (owner 2026-10-29: rebirth 1 at about 4 min, zone 3 at about 25 min, zone 4 at about 1.5 h).
 	-- Each rebirth needs its own rank level (Levels) and coins (Costs). The level comes near the end of each run and
 	-- the coins a minute or two after it, so the run is spent buying Power Levels, crates and eggs, not saving.
-	-- Sim (40 players): rebirth 1 4:27, 2 ~12 min, zone 3 26:14, rebirth 4 ~49 min, zone 4 1h31m; longest wait between
+	-- Sim (40 players): rebirth 1 4:27, 2 12:13, zone 3 26:13, rebirth 4 47:03, zone 4 1h35m; longest wait between
 	-- two buys (median) 2:09 / 1:15 / 3:33 / 3:27 / 10:09 in runs 0-4 (was 5:00 / 1:39 / 5:03 / 1:39 / 25:15).
 	-- Was: Level 4 + RankStep 2 each, Costs 50K / 700K / 9M / 150M / 4B (zone 2 9:40, zone 3 29:43, zone 4 1h09m).
 	Levels = { 3, 8, 13, 21, 24 }, -- rank level for rebirths 1, 2, 3... (D3)...
