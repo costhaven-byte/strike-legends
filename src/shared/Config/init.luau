@@ -2690,7 +2690,7 @@ Config.Boss = {
 	HealthPerPlayer = 10000, -- the Titan's health = this x players in the arena when the fight starts...
 	MinHealth = 10000, -- ...but never less than this (so a fight never ends in seconds)
 	ArmorShare = 0.33, -- the first third of its health is armor plates
-	Plates = 8, -- how many plates the armor is split into
+	Plates = 6, -- how many plates the armor is split into (the owner's Titan has 6)
 	FinaleAt = 0.15, -- the finale starts when its health falls to this share
 	MeterPerPlayer = 1500, -- team meter size = this x players (filled by damage during the finale)
 	GiantSeconds = 12, -- after the meter fills, players have this long to throw their giant ball

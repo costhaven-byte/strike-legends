@@ -59,9 +59,7 @@ Not for launch (skip): zones 5-6, the old Neon crate (removed).
 
 ### Models ready (designed, not yet in the game)
 
-| Replaces | File(s) |
-|---|---|
-| Pin Titan boss, arena, helicopter, thrown pin | pin_titan.glb, pin_titan_broken.glb, sky_arena.glb, arena_with_titan.glb, sky_chopper.glb, stone_pin.glb |
+None left: every designed model is in the game (Pin Titan set went in 2026-10-29).
 
 ---
 

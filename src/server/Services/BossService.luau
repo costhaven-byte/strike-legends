@@ -13,6 +13,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -209,6 +210,24 @@ local function plates(): { BasePart }
 	return list
 end
 
+-- A piece of the owner's Titan with the parts painted on it (a plate's gold trim is a child of its slate part)
+local function pieceParts(piece: BasePart): { BasePart }
+	local list = { piece }
+	for _, d in piece:GetDescendants() do
+		if d:IsA("BasePart") then
+			table.insert(list, d)
+		end
+	end
+	return list
+end
+
+-- Each part of the owner's Titan carries CFrame attributes relative to Titan.Body: Rest (where it sits on the
+-- Titan) and Fallen (where it lies in the broken Titan design: plates on the floor, core door swung open)
+local function bodyPart(): BasePart?
+	local t = titan()
+	return t and t:FindFirstChild("Body") :: BasePart?
+end
+
 local function setCore(open: boolean)
 	local t = titan()
 	local core = t and t:FindFirstChild("Core") :: BasePart?
@@ -218,6 +237,83 @@ local function setCore(open: boolean)
 		if light then
 			light.Enabled = open
 		end
+	end
+	-- the core door swings open (or shut)
+	local door = t and t:FindFirstChild("CoreDoor") :: BasePart?
+	local body = bodyPart()
+	if door and body then
+		task.spawn(function()
+			for i = 1, 10 do
+				for _, p in pieceParts(door) do
+					local rest, fallen = p:GetAttribute("Rest"), p:GetAttribute("Fallen")
+					if typeof(rest) == "CFrame" and typeof(fallen) == "CFrame" then
+						local from, to = if open then rest else fallen, if open then fallen else rest
+						p.CFrame = body.CFrame * from:Lerp(to, i / 10)
+					end
+				end
+				task.wait(1 / 30)
+			end
+		end)
+	end
+end
+
+-- A broken plate drops off the Titan and lands where the broken design has it (a copy, so it stays on the floor
+-- while the Titan turns and falls)
+local function dropPlate(plate: BasePart)
+	local a = arena()
+	local body = bodyPart()
+	if not a or not body then
+		return
+	end
+	local rubble = a:FindFirstChild("Rubble")
+	if not rubble then
+		rubble = Instance.new("Folder")
+		rubble.Name = "Rubble"
+		rubble.Parent = a
+	end
+	for _, p in pieceParts(plate) do
+		local fallen = p:GetAttribute("Fallen")
+		if typeof(fallen) == "CFrame" then
+			local copy = p:Clone()
+			copy:ClearAllChildren()
+			copy.Parent = rubble
+			TweenService:Create(
+				copy,
+				TweenInfo.new(0.7, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out),
+				{ CFrame = body.CFrame * fallen }
+			):Play()
+		end
+	end
+end
+
+-- The Titan winds its right arm up over its head, holds it, then throws (arm back down)
+local function swingArm(hold: number)
+	local t = titan()
+	local arm = t and t:FindFirstChild("ArmR") :: BasePart?
+	local body = bodyPart()
+	local rest = arm and arm:GetAttribute("Rest")
+	if not arm or not body or typeof(rest) ~= "CFrame" then
+		return
+	end
+	local shoulder = rest.Position + rest:VectorToWorldSpace(Vector3.new(0, arm.Size.Y * 0.4, 0))
+	local function pose(angle: number)
+		local turn = CFrame.new(shoulder) * CFrame.Angles(angle, 0, 0) * CFrame.new(-shoulder)
+		for _, p in pieceParts(arm) do
+			local r = p:GetAttribute("Rest")
+			if typeof(r) == "CFrame" then
+				p.CFrame = body.CFrame * turn * r
+			end
+		end
+	end
+	local up = math.rad(130) -- the Titan's front is -Z: a turn about X lifts the arm forward and up
+	for i = 1, 8 do
+		pose(up * i / 8)
+		task.wait(1 / 30)
+	end
+	task.wait(hold)
+	for i = 5, 0, -1 do
+		pose(up * i / 5)
+		task.wait(1 / 30)
 	end
 end
 
@@ -229,11 +325,17 @@ local function resetTitan()
 	end
 	titanHome = titanHome or t:GetPivot()
 	t:PivotTo(titanHome :: CFrame)
-	for _, p in plates() do
-		if plateLooks[p] == nil then
-			plateLooks[p] = p.Transparency
+	for _, plate in plates() do
+		for _, p in pieceParts(plate) do
+			if plateLooks[p] == nil then
+				plateLooks[p] = p.Transparency
+			end
+			p.Transparency = plateLooks[p]
 		end
-		p.Transparency = plateLooks[p]
+	end
+	local rubble = arena() and (arena() :: Instance):FindFirstChild("Rubble")
+	if rubble then
+		rubble:ClearAllChildren()
 	end
 	setCore(false)
 end
@@ -253,7 +355,10 @@ local function updatePlates()
 	local keep = math.ceil(#list * left / math.max(1, BOSS.Plates))
 	for i, p in list do
 		if i > keep and p.Transparency < 1 then
-			p.Transparency = 1
+			dropPlate(p)
+			for _, part in pieceParts(p) do
+				part.Transparency = 1
+			end
 			toFighters("Plate", { Position = p.Position })
 		end
 	end
@@ -620,6 +725,7 @@ local function pins(spots: { Vector3 }, cfg)
 		Warning = cfg.Warning,
 	})
 	task.spawn(faceTitan, spots[1])
+	task.spawn(swingArm, math.max(0, cfg.Warning - 0.95)) -- the pins leave 0.7 s before they land
 	task.wait(cfg.Warning)
 	if not FIGHTING_PHASES[phase] then
 		return

@@ -510,8 +510,16 @@ function BossController:Start()
 		end)
 	end
 
-	-- PLACEHOLDER thrown pin: a white body with a red band
+	-- The thrown pin: the owner's stone pin (ReplicatedStorage.BossModels.StonePin); a white pin with a red band if
+	-- that is missing
 	local function pinLook(): Model
+		local models = ReplicatedStorage:FindFirstChild("BossModels")
+		local design = models and models:FindFirstChild("StonePin")
+		if design then
+			local copy = design:Clone() :: Model
+			copy.Parent = Workspace
+			return copy
+		end
 		local model = Instance.new("Model")
 		local body = plain({
 			Shape = Enum.PartType.Cylinder,
