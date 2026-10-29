@@ -266,3 +266,67 @@ At the end: one combined 2-minute playtest.
      (zone 4 1h24, still inside your 1h20 limit).
 - **Studio:** no world edits. The code is pushed into Studio's scripts (two new ones, FeverService and
   FeverController, checked: no duplicates). It is unsaved in the place until you save; git has it.
+
+## D5 LANE EVENTS (commit 26fa5c8, restore tag `restore-batchD5-before`)
+- **What it is:** after about 2 minutes of bowling by hand (give or take 20 s; standing around doesn't count), the next
+  rack on your lane is a one-throw event, picked at random:
+  - **GOLDEN RACK** (40%): all 10 pins are gold. A strike on it pays **x5 coins**.
+  - **7-10 SPLIT** (30%): only the two back corner pins stand. Knock both down = **12 PERFECT strikes' worth of coins
+    + 2-4 gems** (by zone). A PERFECT always clears it; any other throw has a 12% chance (50% to get one pin).
+    The split throw never breaks or adds to your strike streak, and doesn't count for fever or the 3-strike challenge.
+  - **GEM PIN** (30%): one pin is a glowing cyan crystal with a gem over it. Knock it down = **+3-5 gems** (by zone).
+- **What you see:** a slam banner when the event lands on your lane (GOLDEN RACK / 7-10 SPLIT / GEM PIN, with what to
+  do), the rack changes, and after the throw a popup: GOLDEN RACK! x5 COINS, SPLIT CLEARED! +coins +gems, GEM PIN!
+  +gems, or "... MISSED · ANOTHER ONE COMES SOON". All numbers are in `Config.LaneEvents` (`Enabled = false` = off).
+- **No events:** in the first minutes (onboarding), during FEVER, a rank trial, the boss fight or AUTO BOWL. A waiting
+  event comes on the first rack after. Auto throws never win one. No Golden Pin on an event rack.
+- **Test (Studio, ~2 min):** Play, walk onto your lane, open the purple TEST tab, EVENTS: press **GOLDEN RACK** ->
+  banner + all pins gold -> throw a PERFECT -> about 5x the usual coin pop + GOLDEN RACK! popup. Then **7-10 SPLIT** ->
+  only 2 pins -> throw (a PERFECT clears it: SPLIT CLEARED! and a big coin number). Then **GEM PIN** -> one cyan pin
+  -> hit it -> +gems popup.
+  Silent failures: rack not changing (pins still normal) = the rack didn't refresh; banner missing; the gold rack's
+  10 glows too bright for you (`Config.LaneEvents.GoldenRack.PinLight`).
+- **Tested by Claude in Studio (Play, FROM ZERO):** GOLDEN RACK strike paid 600 coins (normal ~120), rack back to
+  normal after; SPLIT racks had only Pin7 + Pin10; one split cleared by a non-PERFECT (the 12% chance) paid 1,440
+  coins (= 12 x 120) + 2 gems with the streak unchanged, two others knocked one pin (6 coins); GEM PIN hit = +3 gems,
+  misses = 0; the gem pin had its crystal look. No errors in Output. NOT watched live: the banners and popups (please
+  look) and the natural 2-minute timer (only the TEST buttons were used).
+- **Economy:** not added to the simulator. Rough sum: events add about 7% coins at the sim's 15% PERFECT rate (most
+  from cleared splits), so zone 4 would move from about 1h35 to about 1h29 (target 1.5 h).
+- **Choices made for you:** weights 40/30/30; split prize 12 strikes; gems 2-4 / 3-5 by zone; one throw per event;
+  golden rack x5 replaces fever's x3 (never x15); gem pin never the head or middle pin (those fall every throw).
+
+## D6 FREE SLOW AUTO BOWL (commit de59de0, restore tag `restore-batchD6-before`)
+- After your **first rebirth** the AUTO button appears under the coin multiplier for free (gold "FREE!" tag for a
+  minute when a rebirth unlocks it). Free auto throws every **7 s** and never strikes (auto throws are never PERFECT,
+  and only PERFECTs strike), so pins are capped by your Power Level. The AUTO BOWL pass stays the strong one: every
+  4.5 s and a strike every throw. `Config.AutoBowl.FreeAfterRebirths` / `FreeInterval`.
+- **Test (~1 min):** TEST panel FROM ZERO -> no AUTO button. READY TO REBIRTH -> REBIRTH -> AUTO button with FREE!
+  under the multiplier badge. Walk onto a lane, tap AUTO -> AUTO ON, a throw every ~7 s, never a strike.
+  Silent failure: the button hiding behind something on a phone.
+- **Tested by Claude in Studio:** before rebirth the button was hidden and the server refused to switch it on; after
+  rebirth 1 it showed with FREE!; auto threw every 7.1-7.2 s: 4, 5, 6, 6 pins, no strikes. No errors.
+- **Choices made for you:** 7 s (the pass is 4.5 s, by hand ~3 s); no extra coin cut (no strikes is weak enough).
+
+## E GREEN ROBUX ICON (commit 0e917cf, restore tag `restore-batchE-before`)
+- Every Robux price (store cards, HUD quick-buy pills, Starter Pack card + popup, offer windows, Robux LOOKS) now shows
+  Roblox's own Robux sign, in green with a dark outline, instead of the gold R$ picture. It's the Robux glyph built
+  into every Roblox font (as you said), so it always matches Roblox's. Gem prices keep the gem icon.
+  Screenshot: screenshots/batchE_robux_icon.jpg.
+- **Test (30 s):** open STORE -> every Robux price has the green Robux sign; the x2 COINS / x2 XP pills top-left too.
+- **Tested by Claude in Studio:** 34 Robux signs built with the store open (22 shown; the hidden ones are under gem
+  prices or owned items), no gold R$ picture left, seen on screen (Starter Pack 199).
+- **Choice made for you:** green 0,176,111 with an ink outline so it reads on the lime buy buttons.
+
+## Combined 2-minute playtest (everything from tonight)
+Studio, TEST tab -> START FROM ZERO -> Stop -> Play.
+1. GIFTS has a "1" -> claim the JOIN GIFT (B4).
+2. Throw a few times: the Power LV pill says "x1 > x1.25 COINS"; buy LV 2 (D2).
+3. TEST: EVENTS -> GOLDEN RACK, throw; 7-10 SPLIT, throw; GEM PIN, throw (D5). FEVER NOW -> orange bar + flames (D4).
+4. READY TO REBIRTH -> REBIRTH: window says LV 3 + 15K and LEVEL 1 in "go back to" (D1/D3); after it, AUTO + FREE!
+   under the multiplier (D6).
+5. JUMP TO ZONE 2 -> COINS x10 twice -> egg popup + gold beam (C1). Hatch: on the egg board tap a pet = red X (C3).
+6. JUMP TO ZONE 3 -> PETS: cards say "x1.xx COINS", no MERGE (C2); fusion at the machine.
+7. STORE -> green Robux signs (E).
+Studio note: every script was pushed into Studio's scripts and the place is NOT saved (Save to Roblox when happy).
+No world edits tonight in D5-E.
