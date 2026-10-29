@@ -144,7 +144,12 @@ AssetSlots.Images = {
 	CandySwirl = 86335112452694,
 	CandyCane = 73637543597936,
 	CandyPeppermint = 85641172487164,
-	GlowSoft = 109547705047240, -- the TrailSoft texture of the soft-glow beams (batch A2)
+	GlowSoft = 109547705047240,
+	IceCracks = 103856261486313,
+	IceFrost = 140456217740254,
+	IceSnowflake = 131560215097857,
+	LavaCracks = 123963634666568,
+	LavaFlow = 118539503182657, -- the TrailSoft texture of the soft-glow beams (batch A2)
 }
 
 -- "rbxassetid://..." for an Images slot

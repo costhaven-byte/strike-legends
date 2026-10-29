@@ -4169,15 +4169,31 @@ Config.Cosmetics = {
 		-- Lane skins
 		{ Id = "CandyLane", Kind = "LaneSkin", Name = "CANDY LANE", Gems = 40, Text = "Your lane turns pink.",
 			Colors = { Color3.fromRGB(255, 150, 200) }, Material = Enum.Material.SmoothPlastic,
-			-- Candy decor (LookController): soft swirl bands + sprinkles on every plate, candy cane edges on the
-			-- lane, peppermint "arrows" near the foul line. Textures in AssetSlots.Images; tiles are in studs.
-			Candy = { Swirl = "CandySwirl", SwirlTile = 7, SwirlTransparency = 0.45, Sprinkles = "CandySprinkles", SprinkleTile = 4.5,
-				Cane = "CandyCane", CaneWidth = 0.35, CaneTile = 1.4, Peppermint = "CandyPeppermint",
-				Peppermints = 5, PeppermintSize = 1.3, PeppermintFromFoul = 12 } },
+			-- Decor (LookController): picture layers on every plate (Tile = studs per repeat), an Edge strip on
+			-- each side of the lane and Arrows = a chevron of pictures near the foul line. Images in AssetSlots.
+			Decor = {
+				Textures = { { Image = "CandySwirl", Tile = 7, Transparency = 0.45 }, { Image = "CandySprinkles", Tile = 4.5 } },
+				Edge = { Image = "CandyCane", Tile = 1.4, Width = 0.35 },
+				Arrows = { Image = "CandyPeppermint", Count = 5, Size = 1.3, FromFoul = 12 },
+			} },
 		{ Id = "IceLane", Kind = "LaneSkin", Name = "ICE LANE", Gems = 120, Text = "Bowl on a frozen lake.",
-			Colors = { Color3.fromRGB(170, 225, 255) }, Material = Enum.Material.Ice },
+			Colors = { Color3.fromRGB(170, 225, 255) }, Material = Enum.Material.Ice,
+			Decor = {
+				Textures = { { Image = "IceCracks", Tile = 9, Transparency = 0.15 } },
+				Edge = { Image = "IceFrost", Tile = 2, Width = 0.45 },
+				Arrows = { Image = "IceSnowflake", Count = 5, Size = 1.7, FromFoul = 12 },
+			},
+			Glow = { Color = Color3.fromRGB(170, 230, 255), EdgeWidth = 1.4, EdgeTransparency = 0.6, Height = 0.7,
+				Inset = 0.25, Brightness = 2, Glints = 1.5, GlintSize = 0.22 } },
 		{ Id = "LavaLane", Kind = "LaneSkin", Name = "LAVA LANE", Gems = 300, Text = "Hot rock under your feet.",
-			Colors = { Color3.fromRGB(120, 40, 30) }, Material = Enum.Material.CrackedLava },
+			Colors = { Color3.fromRGB(120, 40, 30) }, Material = Enum.Material.CrackedLava,
+			Decor = {
+				Textures = { { Image = "LavaCracks", Tile = 8 } },
+				Edge = { Image = "LavaFlow", Tile = 3, Width = 0.4, Color = Color3.fromRGB(200, 70, 20), Material = Enum.Material.Neon },
+			},
+			-- Embers drift up off the lane (GlintSpeed / GlintLife = { min, max })
+			Glow = { Color = Color3.fromRGB(255, 120, 40), EdgeWidth = 1.6, EdgeTransparency = 0.55, Height = 0.8,
+				Inset = 0.25, Brightness = 2, Glints = 3, GlintSize = 0.2, GlintSpeed = { 1, 2.2 }, GlintLife = { 1.2, 2 } } },
 		{ Id = "GoldLane", Kind = "LaneSkin", Name = "GOLD LANE", Product = "LookGoldLane", Text = "Pure shiny gold.",
 			Colors = { Color3.fromRGB(255, 195, 60) }, Material = Enum.Material.Foil,
 			-- Very faint gold aura (LookController): a soft upright glow band along both edges + a rare glint.
