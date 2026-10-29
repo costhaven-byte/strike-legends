@@ -1,4 +1,4 @@
--- Zone 3 and 4 stations (Phase X Part 6), all placeholder booths built in Studio:
+-- Zone 3 and 4 stations (Phase X Part 6), placed in Studio:
 --   Fusion station (Main Street Lanes, Config.Fusion): opens the PETS panel, where MERGE makes Shinies.
 -- The helicopter (Pin Titan boss event) lives in BossController. Rebirth is a HUD button now (RebirthController).
 local Players = game:GetService("Players")

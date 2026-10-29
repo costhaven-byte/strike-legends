@@ -2647,13 +2647,13 @@ Config.Crates = {
 	-- the new economy is in. Its Config.Economy.Crates row stays for the simulator; old saves keep its pity.
 }
 
--- Pet fusion station in zone 3 (Phase X Part 6). PLACEHOLDER: no fusion design exists yet, so the station is the
--- walk-up home of the existing Shiny merge (3 copies of a pet = its Shiny). Its prompt opens the PETS panel, where
--- MERGE works as before. Swap in the real fusion rules here when they are decided.
+-- Pet fusion station in zone 3 (Phase X Part 6): the walk-up home of the existing Shiny merge (3 copies of a pet =
+-- its Shiny). Its prompt opens the PETS panel, where MERGE works as before. Swap in the real fusion rules here when
+-- they are decided. Look = the owner's pet_fusion_machine design (2026-10-29), with an invisible Counter part for the prompt.
 Config.Fusion = {
 	Enabled = true,
 	Zone = 3,
-	Path = { "MainStreetLanes", "FusionStation" }, -- placeholder booth built in Studio
+	Path = { "MainStreetLanes", "FusionStation" }, -- owner's fusion machine, placed in Studio
 }
 
 -- Zone 4 boss event: the Pin Titan (owner's milestone 2026-10-26). Every EverySeconds the whole server gets one event:
