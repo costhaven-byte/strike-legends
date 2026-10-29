@@ -66,3 +66,27 @@ At the end: one combined 2-minute playtest.
 - Noticed, not fixed: Output warns "'MascotMerged' is not in Config.Analytics.Events" on every fusion (older than
   this step, harmless).
 - Studio: no world edits. Code pushed into Studio's scripts (unsaved in the place until you save; git has it).
+
+## C3 X out pets on the egg odds board = auto-delete (commit 4bf55a2, restore tag `restore-batchC3-before`)
+- Item 11b: walk up to any egg stand; the floating odds board now has a line under the pets, TAP A PET TO AUTO-DELETE IT.
+  Tap a pet's bubble -> a big red X over it. Tap again -> X gone. One list for all eggs, saved (save v31 AutoDelete;
+  old saves start with an empty list, nothing deleted). The server keeps the list (new remote SetAutoDelete, checks
+  the pet is real and allowed, rate limited).
+- Hatching an X'd pet: it is NOT added to your pets, but the hatch card still shows it, with a red AUTO-DELETED stamp
+  (and "NOT KEPT" next to the odds). Triple hatch: the small side cards say AUTO-DELETED in red. It still counts as an
+  egg hatched (achievements, profile). AUTO hatch keeps going as normal. All numbers/texts in Config.AutoDelete.
+- Test (Studio, TEST panel FROM ZERO, ~2 min): JUMP TO ZONE 2, COINS x10 a few times, walk to the Neon Egg stand.
+  Tap Pinny and LanePup on the board -> red X on both. Tap LanePup again -> its X goes. Hatch until you get a Pinny
+  (the first Pinny is kept, NEW!), then hatch more: the next Pinny shows AUTO-DELETED and PETS still says Pinny x1.
+  Silent failures: tapping does nothing (board not taking taps; nothing in Output); an X that comes back after you
+  untapped it (server refused; check Output); PETS count going up for an X'd pet you already had.
+- Tested by Claude in Studio (server side, 17 hatches incl. 3 triple hatches): X'd pets deleted only once you own one,
+  untapped pet kept, eggs-hatched counted every one; the server refused Mythic, Shiny, fake ids and bad values; the
+  stamp text fits (shrinks to 16 px). NOT seen on screen: Studio was not drawing frames (RenderStepped stopped), so
+  the board taps and the hatch animation with the stamp were not watched live. Please look at those two in your test.
+- Choices made for you: (1) Mythic pets can't be X'd at all (tap = "MYTHIC PETS CAN'T BE AUTO-DELETED"), so a chase
+  pet is never thrown away; Config.AutoDelete.MaxRarity = "Legendary" changes that. (2) The FIRST copy of a pet is
+  always kept even if X'd (KeepFirst = true), so nobody loses a pet they never had; after that X'd copies go.
+  (3) Shiny pets can't be X'd (they only come from fusion). (4) A deleted Legendary still shows the server-wide pull
+  banner (it was a real pull). (5) Deleted pets give nothing back (no coins), like other simulators.
+- Studio: no world edits. Code pushed into Studio's scripts (unsaved in the place until you save; git has it).
