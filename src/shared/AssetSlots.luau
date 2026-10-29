@@ -139,6 +139,12 @@ AssetSlots.Images = {
 	LookIceLane = 112971816146344,
 	LookLavaLane = 116429696023059,
 	LookGoldLane = 99913758403619,
+	-- Lane skin decor (assets/lane_skins, 2026-10-29)
+	CandySprinkles = 118352835502175,
+	CandySwirl = 86335112452694,
+	CandyCane = 73637543597936,
+	CandyPeppermint = 85641172487164,
+	GlowSoft = 109547705047240, -- the TrailSoft texture of the soft-glow beams (batch A2)
 }
 
 -- "rbxassetid://..." for an Images slot

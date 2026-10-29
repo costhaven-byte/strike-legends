@@ -4168,13 +4168,22 @@ Config.Cosmetics = {
 			Colors = { Color3.fromRGB(150, 70, 255), Color3.fromRGB(255, 255, 255), Color3.fromRGB(70, 220, 255) } },
 		-- Lane skins
 		{ Id = "CandyLane", Kind = "LaneSkin", Name = "CANDY LANE", Gems = 40, Text = "Your lane turns pink.",
-			Colors = { Color3.fromRGB(255, 150, 200) }, Material = Enum.Material.SmoothPlastic },
+			Colors = { Color3.fromRGB(255, 150, 200) }, Material = Enum.Material.SmoothPlastic,
+			-- Candy decor (LookController): soft swirl bands + sprinkles on every plate, candy cane edges on the
+			-- lane, peppermint "arrows" near the foul line. Textures in AssetSlots.Images; tiles are in studs.
+			Candy = { Swirl = "CandySwirl", SwirlTile = 7, SwirlTransparency = 0.45, Sprinkles = "CandySprinkles", SprinkleTile = 4.5,
+				Cane = "CandyCane", CaneWidth = 0.35, CaneTile = 1.4, Peppermint = "CandyPeppermint",
+				Peppermints = 5, PeppermintSize = 1.3, PeppermintFromFoul = 12 } },
 		{ Id = "IceLane", Kind = "LaneSkin", Name = "ICE LANE", Gems = 120, Text = "Bowl on a frozen lake.",
 			Colors = { Color3.fromRGB(170, 225, 255) }, Material = Enum.Material.Ice },
 		{ Id = "LavaLane", Kind = "LaneSkin", Name = "LAVA LANE", Gems = 300, Text = "Hot rock under your feet.",
 			Colors = { Color3.fromRGB(120, 40, 30) }, Material = Enum.Material.CrackedLava },
 		{ Id = "GoldLane", Kind = "LaneSkin", Name = "GOLD LANE", Product = "LookGoldLane", Text = "Pure shiny gold.",
-			Colors = { Color3.fromRGB(255, 195, 60) }, Material = Enum.Material.Foil },
+			Colors = { Color3.fromRGB(255, 195, 60) }, Material = Enum.Material.Foil,
+			-- Very faint gold aura (LookController): a soft upright glow band along both edges + a rare glint.
+			-- EdgeWidth = band height, Height = its middle above the lane, Inset = studs in from the edge.
+			Glow = { Color = Color3.fromRGB(255, 205, 90), EdgeWidth = 1.4, EdgeTransparency = 0.55, Height = 0.7,
+				Inset = 0.25, Brightness = 2, Glints = 1.5, GlintSize = 0.22 } },
 	},
 	LaneParts = { "LaneFloor", "PinDeck", "Approach" }, -- the lane parts a lane skin repaints
 	BannerTime = 2.2, -- seconds a strike banner stays up
