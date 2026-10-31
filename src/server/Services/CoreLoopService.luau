@@ -2,20 +2,28 @@
 -- spawn and the hold-to-throw cooldown. Pins knocked fill the bag (ThrowService calls AddToBag); standing on the green
 -- sell pad sells the whole bag for Coins. There is no remote sell: the SELL button only shows the way to the pad.
 -- The server owns the bag: clients only see it through the Bag / BagSize player attributes.
+-- Stage 2: the ball and bag ladders (Config.CoreLoop Balls / BagSizes / BagPrices), bought in turn (ball, bag, ball,
+-- bag) through the CoreBuy remote; you throw the last ball you bought. Crates no longer give balls here.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local AssetSlots = require(Shared.AssetSlots)
+local Balls = require(Shared.Modules.Balls)
+local CoreLadder = require(Shared.Modules.CoreLadder)
 local Currency = require(Shared.Modules.Currency)
 local Analytics = require(script.Parent.Analytics)
+local BallService = require(script.Parent.BallService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
 local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
 local CORE = Config.CoreLoop
 local SELL = CORE.Sell
+local SHOP = CORE.Shop
 
 local CoreLoopService = {}
 
@@ -25,8 +33,64 @@ local soldRemote: RemoteEvent
 
 -- How many coins the bag holds (Config.CoreLoop.BagSizes, by the saved BagLevel)
 function CoreLoopService.BagSize(player: Player): number
-	local level = math.clamp(math.floor(tonumber(PlayerDataService.Get(player, "BagLevel")) or 1), 1, #CORE.BagSizes)
-	return CORE.BagSizes[level]
+	return CORE.BagSizes[CoreLadder.BagLevel(PlayerDataService.Get(player, "BagLevel"))]
+end
+
+-- The ball ladder step the player throws with (Config.CoreLoop.Balls)
+function CoreLoopService.BallStep(player: Player): number
+	return CoreLadder.BallStep(PlayerDataService.Get(player, "BallStep"))
+end
+
+-- Average pins per throw with the player's ball
+function CoreLoopService.PinsAverage(player: Player): number
+	return CORE.Balls[CoreLoopService.BallStep(player)].Pins
+end
+
+-- What the shop sells next ("Ball" / "Bag", step, price; nil = everything bought)
+local function nextBuy(player: Player): (string?, number, number)
+	return CoreLadder.Next(PlayerDataService.Get(player, "BallStep"), PlayerDataService.Get(player, "BagLevel"))
+end
+
+-- Owns and equips the ladder ball of the player's step (model, trail and look come from Config.Balls)
+local function equipLadderBall(player: Player)
+	local id = CORE.Balls[CoreLoopService.BallStep(player)].Ball
+	BallService.GiveBall(player, id) -- (already owned = nothing changes)
+	if PlayerDataService.Get(player, "EquippedBall") ~= id then
+		PlayerDataService.Set(player, "EquippedBall", id)
+	end
+end
+
+-- Buys the next step of the ladder. kind must be what the shop sells next (the client shows the same order).
+local function buy(player: Player, kind: any)
+	if not PlayerDataService.IsLoaded(player) then
+		return { Ok = false, Error = "Still loading" }
+	end
+	if not RateLimit.Allow(player, "CoreBuy", 0.3) then
+		return { Ok = false, Error = "Slow down" }
+	end
+	local want, step, price = nextBuy(player)
+	if not want then
+		return { Ok = false, Error = "You have everything" }
+	end
+	if kind ~= want then
+		return { Ok = false, Error = if want == "Bag" then "Get the next bag first" else "Get the next ball first" }
+	end
+	if not PlayerDataService.Spend(player, "Coins", price) then
+		return { Ok = false, Error = "Not enough coins" }
+	end
+	Analytics.Currency(player, "Coins", -price, "Shop", ("Core%s%d"):format(want, step))
+	if want == "Ball" then
+		PlayerDataService.Set(player, "BallStep", step)
+		equipLadderBall(player)
+		local id = CORE.Balls[step].Ball
+		Analytics.Purchase(player, "Ball", id)
+		SessionLog.BallBought(player, id, "Shop")
+	else
+		PlayerDataService.Set(player, "BagLevel", step)
+		Analytics.Purchase(player, "Bag", tostring(step))
+		SessionLog.Moment(player, ("Bag %d bought"):format(step))
+	end
+	return { Ok = true, Kind = want, Step = step }
 end
 
 -- Seconds between hold-to-throw throws (Cooldown, minus the saved throw speed upgrades, never below CooldownFloor)
@@ -220,6 +284,114 @@ local function buildStation(): Model?
 	return model
 end
 
+-- The ball shop booth: a sky-blue circle with a counter and a sign behind it (standing on the circle opens the shop
+-- on that player's screen, CoreShopController)
+local function buildShop()
+	local roof = Workspace:FindFirstChild(CORE.Folder)
+	if not roof then
+		return
+	end
+	local old = roof:FindFirstChild("BallShop")
+	if old then
+		old:Destroy()
+	end
+	local model = Instance.new("Model")
+	model.Name = "BallShop"
+	local base = SHOP.Position
+	local r = SHOP.Radius
+	part({
+		Name = "Rim",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.3, r * 2 + 1.2, r * 2 + 1.2),
+		CFrame = CFrame.new(base + Vector3.new(0, 0.15, 0)) * UPRIGHT,
+		Color = Color3.fromRGB(250, 248, 240),
+		CanCollide = false,
+	}, model)
+	local pad = part({
+		Name = "Pad",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.34, r * 2, r * 2),
+		CFrame = CFrame.new(base + Vector3.new(0, 0.17, 0)) * UPRIGHT,
+		Color = SHOP.Color,
+		CanCollide = false,
+	}, model)
+	local back = base + Vector3.new(0, 0, r + 2.2)
+	part({
+		Name = "Counter",
+		Size = Vector3.new(9, 3.2, 2.4),
+		CFrame = CFrame.new(back + Vector3.new(0, 1.6, 0)),
+		Color = Color3.fromRGB(255, 196, 64),
+	}, model)
+	part({
+		Name = "CounterTop",
+		Size = Vector3.new(9.6, 0.4, 3),
+		CFrame = CFrame.new(back + Vector3.new(0, 3.4, 0)),
+		Color = Color3.fromRGB(250, 248, 240),
+	}, model)
+	for _, x in { -4.1, 4.1 } do
+		part({
+			Name = "Post",
+			Size = Vector3.new(0.5, 9, 0.5),
+			CFrame = CFrame.new(back + Vector3.new(x, 4.5, 0.6)),
+			Color = Color3.fromRGB(250, 248, 240),
+		}, model)
+	end
+	-- Balls 1, 5 and 10 of the ladder on the counter, in their colours
+	for i, step in { 1, 5, 10 } do
+		local ball = Balls.Get(CORE.Balls[step].Ball)
+		part({
+			Name = "Ball",
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.one * 1.6,
+			CFrame = CFrame.new(back + Vector3.new((i - 2) * 2.6, 4.4, 0)),
+			Color = if ball then ball.Color else Color3.new(1, 1, 1),
+			CanCollide = false,
+		}, model)
+	end
+	local sign = part({
+		Name = "Sign",
+		Size = Vector3.new(9.4, 3.4, 0.4),
+		CFrame = CFrame.lookAt(back + Vector3.new(0, 8.2, 0.6), back + Vector3.new(0, 8.2, -10)),
+		Color = SHOP.Color,
+	}, model)
+	local outline = part({
+		Name = "SignBack",
+		Size = Vector3.new(10, 4, 0.3),
+		CFrame = sign.CFrame * CFrame.new(0, 0, 0.3),
+		Color = Color3.fromRGB(28, 36, 48),
+	}, model)
+	outline.CanCollide = false
+	local surface = Instance.new("SurfaceGui")
+	surface.Face = Enum.NormalId.Front
+	surface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	surface.PixelsPerStud = 40
+	surface.LightInfluence = 0
+	surface.Parent = sign
+	label(surface, "Balls & Bags", UDim2.fromScale(0.86, 0.62), UDim2.fromScale(0.07, 0.04), Color3.new(1, 1, 1), 5)
+	label(
+		surface,
+		"Stand on the blue circle",
+		UDim2.fromScale(0.86, 0.26),
+		UDim2.fromScale(0.07, 0.68),
+		Color3.fromRGB(220, 240, 255),
+		3
+	)
+	model.PrimaryPart = pad
+	model.Parent = roof
+end
+
+-- The rooftop crate kiosk sold balls by luck, which the ladder replaces: kept, but moved out of the world
+local function hideCrateShop()
+	local roof = Workspace:FindFirstChild(CORE.Folder)
+	local kiosk = roof and roof:FindFirstChild("CrateShop", true)
+	if kiosk then
+		local store = ServerStorage:FindFirstChild("CoreLoopHidden") or Instance.new("Folder")
+		store.Name = "CoreLoopHidden"
+		store.Parent = ServerStorage
+		kiosk.Parent = store
+	end
+end
+
 -- The rooftop spawn (the lobby spawn is switched off, not removed)
 local function buildSpawn()
 	for _, spawn in Workspace:GetDescendants() do
@@ -257,8 +429,22 @@ function CoreLoopService:Start()
 	soldRemote.Name = "CoreSold"
 	soldRemote.Parent = ReplicatedStorage:WaitForChild("Remotes")
 
+	local buyRemote = Instance.new("RemoteFunction")
+	buyRemote.Name = "CoreBuy"
+	buyRemote.OnServerInvoke = function(player, kind)
+		local ok, result = pcall(buy, player, kind)
+		if not ok then
+			warn("[CoreLoopService] Buy failed: " .. tostring(result))
+			return { Ok = false, Error = "Something went wrong" }
+		end
+		return result
+	end
+	buyRemote.Parent = soldRemote.Parent
+
 	buildSpawn()
 	buildStation()
+	buildShop()
+	hideCrateShop()
 
 	-- The bag size and throw cooldown the HUD shows
 	local function publish(player: Player)
@@ -266,6 +452,7 @@ function CoreLoopService:Start()
 		player:SetAttribute("ThrowCooldown", CoreLoopService.Cooldown(player))
 	end
 	PlayerDataService.OnLoaded(function(player)
+		equipLadderBall(player)
 		publish(player)
 		for _, key in { "BagLevel", "ThrowSpeedLevel" } do
 			player:GetAttributeChangedSignal(key):Connect(function()

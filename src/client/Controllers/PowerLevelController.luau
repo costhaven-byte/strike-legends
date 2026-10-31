@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
 local Currency = require(Shared.Modules.Currency)
 local PowerLevels = require(Shared.Modules.PowerLevels)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
@@ -381,6 +382,8 @@ function PowerLevelController:Start()
 	player:GetAttributeChangedSignal("Coins"):Connect(refresh)
 	player:GetAttributeChangedSignal("PowerLevel"):Connect(refresh)
 	refresh()
+	-- (Addendum 4 Stage 2: Power Levels pay nothing in the core loop, the ball ladder is the upgrade; kept, hidden)
+	gui.Enabled = not Config.CoreLoop.Enabled
 	gui.Parent = playerGui
 end
 

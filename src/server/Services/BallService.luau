@@ -196,6 +196,9 @@ local function onEquip(player: Player, ballId: any)
 	if not getOwned(player)[ballId] then
 		return
 	end
+	if Config.CoreLoop.Enabled then
+		return -- (Addendum 4 Stage 2: you throw the last ladder ball you bought; CoreLoopService equips it)
+	end
 	if PlayerDataService.Get(player, "EquippedBall") ~= ballId then
 		PlayerDataService.Set(player, "EquippedBall", ballId)
 		Analytics.Step(player, "Equipped Ball")
@@ -382,6 +385,9 @@ local function openCrate(player: Player, crateId: any)
 	end
 	if not PlayerDataService.IsLoaded(player) then
 		return { Ok = false, Error = "Still loading" }
+	end
+	if Config.CoreLoop.Enabled then
+		return { Ok = false, Error = "Balls are in the shop now" } -- (Addendum 4 Stage 2: the ball ladder replaces crates)
 	end
 	if not Zones.CrateUnlocked(crate, PlayerDataService.Get(player, "ZonesOpen")) then
 		return { Ok = false, Error = ("Unlocks in %s"):format(Zones.Name(crate.Zone)) }

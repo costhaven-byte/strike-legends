@@ -42,9 +42,37 @@ Config.CoreLoop = {
 		PinScale = 0.65, -- pin size against Config.Lane PinHeight/PinWidth
 		HeadPinForward = 1.5, -- the head pin stands this many studs closer to the bowler than the lane's PinSpot
 	},
-	-- Pins per throw: the average rolls within +/- Spread of it, capped at the rack. Stage 2 gives each ball its own.
-	PinsAverage = 6,
+	-- Pins per throw: the ball's Pins (Balls below) rolls within +/- PinsSpread of it, capped at the rack, so only
+	-- balls 9 and 10 can ever clear the lane.
 	PinsSpread = 0.2,
+	-- Stage 2 ladders (Addendum 4): balls and bags are bought in a fixed order, alternating ball, bag, ball, bag
+	-- (ball 2, bag 2, ball 3, bag 3 ... ball 10, bag 10). Crates no longer give balls. Ball = the existing ball model
+	-- it borrows (Config.Balls Id; Stage 4 picks the final ones and adds the effects), Pins = average pins per throw.
+	-- Prices: income per minute with the ball you have x the target minutes to the next ball (2, 2, 5, 5, 5, 5, 5, 8,
+	-- 12), with the bag in between taking about 30% of that time. Sell trips counted at 6 s; check with
+	-- require(game.ServerStorage.Tools.EconomySim).CoreLadder(). Full ladder ~53 min of play.
+	Balls = {
+		{ Ball = "Tangerine", Name = "Beach Roller", Pins = 6, Price = 0 },
+		{ Ball = "Bubblegum", Name = "Rubber Bouncer", Pins = 9, Price = 450 },
+		{ Ball = "Lime", Name = "Confetti Popper", Pins = 12, Price = 530 },
+		{ Ball = "Sunburst", Name = "Sunspike", Pins = 15, Price = 1900 },
+		{ Ball = "Frostbite", Name = "Gust", Pins = 19, Price = 2400 },
+		{ Ball = "CloudSwirl", Name = "Cloud Roll", Pins = 23, Price = 3200 },
+		{ Ball = "Crystal", Name = "Rainbow Arc", Pins = 27, Price = 3900 },
+		{ Ball = "Lightning", Name = "Sunbolt", Pins = 31, Price = 4700 },
+		{ Ball = "SolidGold", Name = "Tornado", Pins = 35, Price = 8800 },
+		{ Ball = "Daybreak", Name = "Sonic Boom", Pins = 43, Price = 18000 },
+	},
+	-- Bags: BagSizes[BagLevel] coins fit; BagPrices[n] buys bag n (bag 1 is free). Each bag fills in ~10 s (bag 1)
+	-- to ~40 s (bag 10) with the ball it comes after.
+	BagSizes = { 60, 130, 200, 300, 440, 600, 780, 990, 1500, 2700 },
+	BagPrices = { 0, 170, 700, 930, 1200, 1600, 1900, 3600, 7200, 13000 },
+	-- The ball shop booth in the plaza: stand on its blue circle (or tap BALLS) to open the shop
+	Shop = {
+		Position = Vector3.new(-17, 848.65, -3415),
+		Radius = 4.5,
+		Color = Color3.fromRGB(64, 160, 236), -- sky blue
+	},
 	FullClearMultiplier = 2, -- every pin down pays double
 	-- Coins: each pin = PinValue coins x these multipliers (MultiplierService.Coins names; zone, power, rank, streak
 	-- and ball are left out on purpose, Stage 2 prices balls on pins per throw)
@@ -63,8 +91,7 @@ Config.CoreLoop = {
 	DebrisCap = 60,
 	PopsPerThrow = 8, -- coin numbers over pins per throw (one per pin up to this many; the total pops too)
 	BigClear = 24, -- pins in one throw that count as a big clear: camera shake + crash sound
-	-- Bag: coins from pins go here, not to your coins. BagSizes[BagLevel] is the capacity (the bag shop is Stage 2).
-	BagSizes = { 60, 150, 400, 1000, 2500, 6000, 15000, 40000, 100000, 250000 },
+	-- Bag: coins from pins go here, not to your coins (BagSizes above, bought in the shop).
 	-- Selling only happens at the sell station (owner 2026-11-01); the SELL button points the way there.
 	-- A "sell anywhere" pass or upgrade can come later.
 	Sell = {
@@ -342,6 +369,7 @@ Config.StartingData = {
 	-- Addendum 4 core loop (Config.CoreLoop; v33)
 	Bag = 0, -- coins from pins waiting in the bag; sold for Coins at the sell station
 	BagLevel = 1, -- Config.CoreLoop.BagSizes step (bag capacity)
+	BallStep = 1, -- Config.CoreLoop.Balls step: the ball you throw with (v34)
 	ThrowSpeedLevel = 0, -- throw speed upgrades: each takes CooldownStep off the hold-to-throw cooldown
 	CoreThrows = 0, -- core loop throws ever (first and 10th throw are logged once per player)
 	CoreSells = 0, -- sells ever (the first is logged once per player)
@@ -350,7 +378,7 @@ Config.StartingData = {
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 33, -- v33 Bag, BagLevel, ThrowSpeedLevel, CoreThrows, CoreSells (Addendum 4 core loop; start at 0/1, every old field kept, nothing to upgrade). v32 BestLevel + BestRank (batch D1 rebirth resets levels; old saves start at their RankLevel / Rank). v31 AutoDelete (batch C3 X'd pets on the egg odds boards; starts empty, nothing to upgrade or delete). v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 34, -- v34 BallStep (Addendum 4 Stage 2 ball ladder; starts at 1, nothing to upgrade). v33 Bag, BagLevel, ThrowSpeedLevel, CoreThrows, CoreSells (Addendum 4 core loop; start at 0/1, every old field kept, nothing to upgrade). v32 BestLevel + BestRank (batch D1 rebirth resets levels; old saves start at their RankLevel / Rank). v31 AutoDelete (batch C3 X'd pets on the egg odds boards; starts empty, nothing to upgrade or delete). v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt

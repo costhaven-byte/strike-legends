@@ -1072,6 +1072,9 @@ function CollectionBookController:Start()
 	local setOpen = CollectionBookController.SetOpen
 
 	ballsButton.Activated:Connect(function()
+		if Config.CoreLoop.Enabled then
+			return -- (Addendum 4 Stage 2: BALLS opens the ball ladder shop, CoreShopController)
+		end
 		setOpen(not book.Visible)
 	end)
 	backdrop.Activated:Connect(function()

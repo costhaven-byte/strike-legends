@@ -364,7 +364,7 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 end
 
 -- ===== Addendum 4 core loop (Config.CoreLoop): hold the button to keep throwing =====
--- No timing, no PERFECT: every throw knocks about Config.CoreLoop.PinsAverage of the 40 pins, each pin pays coins into
+-- No timing, no PERFECT: every throw knocks about the ball's Pins (Config.CoreLoop.Balls) of the 40 pins, each pin pays coins into
 -- the bag (a full clear pays double), the lane is ready again after the player's cooldown. The client sends one
 -- CoreThrow per throw while the button is held; the server checks the lane, the cooldown and the rate.
 local CORE_LEVEL = { Value = 1 } -- (Power Levels play no part in core coins)
@@ -390,7 +390,7 @@ local function coreThrow(player: Player)
 	lane:SetAttribute("ReadyAt", now + cooldown)
 
 	local ball = BallService.GetEquipped(player)
-	local result = ThrowResolver.ResolveCore(CORE.PinsAverage, CORE.PinsSpread)
+	local result = ThrowResolver.ResolveCore(CoreLoopService.PinsAverage(player), CORE.PinsSpread)
 	local clear = result.Tier == "Strike"
 	local all = MultiplierService.Coins(player, ball, CORE_LEVEL, 0, nil, false, LaneUtil.ZoneOf(lane))
 	local multiplier = 1

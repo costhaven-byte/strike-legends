@@ -14,6 +14,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Currency = require(Shared.Modules.Currency)
 local Balls = require(Shared.Modules.Balls)
+local CoreLadder = require(Shared.Modules.CoreLadder)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modifiers = require(Shared.Modules.Modifiers)
 local PowerLevels = require(Shared.Modules.PowerLevels)
@@ -548,6 +549,27 @@ function EventController:Start()
 			Icon = "Crate",
 		})
 
+		-- Addendum 4 Stage 2: the only goal is the next step of the ball / bag ladder
+		if Config.CoreLoop.Enabled then
+			local coins = player:GetAttribute("Coins") or 0
+			local kind, step, price = CoreLadder.Next(player:GetAttribute("BallStep"), player:GetAttribute("BagLevel"))
+			if kind then
+				local name = CoreLadder.Name(kind, step)
+				options = {
+					{
+						Progress = math.min(coins / math.max(price, 1), 1),
+						Text = if coins >= price
+							then ("%s: tap BALLS to buy"):format(name)
+							else ("Next: %s  %s / %s"):format(name, short(coins), short(price)),
+						Color = GOLD,
+						Icon = "Ball",
+					},
+				}
+			else
+				options = { { Progress = 1, Text = "Every ball and bag bought", Color = GOLD, Icon = "Ball" } }
+			end
+		end
+
 		local best = options[1]
 		for _, option in options do
 			local priority, bestPriority = option.Priority or 0, best.Priority or 0
@@ -616,6 +638,8 @@ function EventController:Start()
 			"Rebirths",
 			"ZonesOpen",
 			"ZoneVisited",
+			"BallStep",
+			"BagLevel",
 		}
 	do
 		player:GetAttributeChangedSignal(key):Connect(refreshBar)

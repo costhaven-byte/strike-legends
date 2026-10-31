@@ -1118,6 +1118,70 @@ end
 -- The gaps between purchases (Power Levels, eggs, crates) in each rebirth run of one pretend player (batch D3:
 -- "the middle must never feel slow"). Paste in Studio's command bar (edit mode):
 --   require(game.ServerStorage.Tools.EconomySim).Gaps()
+-- Addendum 4 Stage 2: minutes per step of the ball / bag ladder (Config.CoreLoop). One pretend player throws every
+-- Cooldown seconds (no upgrades or multipliers), sells each time the bag is full (TripSeconds there and back), and
+-- buys the next step the moment they can. Each ball's pins roll like ThrowResolver.ResolveCore (a full clear pays x2).
+--   print(require(game.ServerStorage.Tools.EconomySim).CoreLadder())
+function EconomySim.CoreLadder(config: any?, tripSeconds: number?): string
+	config = config or loadConfig()
+	local core = config.CoreLoop
+	local trip = tripSeconds or 6
+	local rack = 40
+	-- Expected coins per throw with one ball (the roll is uniform within +/- PinsSpread, rounded, capped)
+	local function perThrow(pins: number): number
+		local total, n = 0, 2000
+		for i = 1, n do
+			local wanted = pins * (1 + ((i - 0.5) / n * 2 - 1) * core.PinsSpread)
+			local count = math.clamp(math.floor(wanted + 0.5), 1, rack)
+			total += count * (if count >= rack then core.FullClearMultiplier else 1)
+		end
+		return total / n * core.PinValue
+	end
+	local function perMinute(ball: number, bag: number): number
+		local rate = perThrow(core.Balls[ball].Pins) / core.Cooldown
+		local size = core.BagSizes[bag]
+		return 60 * size / (size / rate + trip)
+	end
+	local lines = { ("BALL / BAG LADDER (throw every %.1f s, sell trip %d s)"):format(core.Cooldown, trip) }
+	local ball, bag, minutes, since = 1, 1, 0, 0
+	while true do
+		local kind, step, price
+		if bag < ball and bag < #core.BagSizes then
+			kind, step, price = "Bag", bag + 1, core.BagPrices[bag + 1]
+		elseif ball < #core.Balls then
+			kind, step, price = "Ball", ball + 1, core.Balls[ball + 1].Price
+		elseif bag < #core.BagSizes then
+			kind, step, price = "Bag", bag + 1, core.BagPrices[bag + 1]
+		else
+			break
+		end
+		local took = price / perMinute(ball, bag)
+		minutes += took
+		since += took
+		if kind == "Ball" then
+			ball = step
+			table.insert(
+				lines,
+				("%5.1f min  ball %d %s (%s coins)  %.1f min with the last ball"):format(
+					minutes,
+					step,
+					core.Balls[step].Name,
+					tostring(price),
+					since
+				)
+			)
+			since = 0
+		else
+			bag = step
+			table.insert(
+				lines,
+				("%5.1f min    bag %d holds %d (%s coins)"):format(minutes, step, core.BagSizes[step], tostring(price))
+			)
+		end
+	end
+	return table.concat(lines, "\n")
+end
+
 function EconomySim.Gaps(config: any?, seed: number?): string
 	config = config or loadConfig()
 	local P = prepare(config)
