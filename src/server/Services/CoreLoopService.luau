@@ -1,0 +1,294 @@
+-- Addendum 4 core loop (Config.CoreLoop), the server half: the coin bag, the sell station on the rooftop, the rooftop
+-- spawn and the hold-to-throw cooldown. Pins knocked fill the bag (ThrowService calls AddToBag); standing on the green
+-- sell pad sells the whole bag for Coins. There is no remote sell: the SELL button only shows the way to the pad.
+-- The server owns the bag: clients only see it through the Bag / BagSize player attributes.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local AssetSlots = require(Shared.AssetSlots)
+local Currency = require(Shared.Modules.Currency)
+local Analytics = require(script.Parent.Analytics)
+local PlayerDataService = require(script.Parent.PlayerDataService)
+local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
+
+local CORE = Config.CoreLoop
+local SELL = CORE.Sell
+
+local CoreLoopService = {}
+
+-- Coins already promised to the bag by throws whose ball hasn't reached the pins yet
+local pending: { [Player]: number } = {}
+local soldRemote: RemoteEvent
+
+-- How many coins the bag holds (Config.CoreLoop.BagSizes, by the saved BagLevel)
+function CoreLoopService.BagSize(player: Player): number
+	local level = math.clamp(math.floor(tonumber(PlayerDataService.Get(player, "BagLevel")) or 1), 1, #CORE.BagSizes)
+	return CORE.BagSizes[level]
+end
+
+-- Seconds between hold-to-throw throws (Cooldown, minus the saved throw speed upgrades, never below CooldownFloor)
+function CoreLoopService.Cooldown(player: Player): number
+	local level = math.max(0, tonumber(PlayerDataService.Get(player, "ThrowSpeedLevel")) or 0)
+	return math.max(CORE.CooldownFloor, CORE.Cooldown - level * CORE.CooldownStep)
+end
+
+-- Promises up to `coins` to the bag and drops them in after `delay` seconds (when the ball reaches the pins).
+-- Returns the coins that fit (0 = the bag is full: pins still fall but pay nothing).
+function CoreLoopService.AddToBag(player: Player, coins: number, delay: number): number
+	local room = CoreLoopService.BagSize(player) - (PlayerDataService.Get(player, "Bag") or 0) - (pending[player] or 0)
+	local paid = math.clamp(math.floor(coins), 0, math.max(0, room))
+	if paid <= 0 then
+		return 0
+	end
+	pending[player] = (pending[player] or 0) + paid
+	task.delay(delay, function()
+		if pending[player] then
+			pending[player] -= paid
+		end
+		PlayerDataService.Add(player, "Bag", paid)
+	end)
+	return paid
+end
+
+-- Is the bag full (counting coins on their way)?
+function CoreLoopService.IsFull(player: Player): boolean
+	return (PlayerDataService.Get(player, "Bag") or 0) + (pending[player] or 0) >= CoreLoopService.BagSize(player)
+end
+
+-- A core throw happened (instrumentation: first and 10th throw ever, last action)
+function CoreLoopService.OnThrow(player: Player)
+	PlayerDataService.Add(player, "CoreThrows", 1)
+	SessionLog.CoreThrow(player, PlayerDataService.Get(player, "CoreThrows") or 1)
+end
+
+-- Sells the whole bag for Coins (only ever called while the player stands on the sell pad)
+local function sell(player: Player)
+	local bag = PlayerDataService.Get(player, "Bag") or 0
+	if bag <= 0 then
+		return
+	end
+	PlayerDataService.Set(player, "Bag", Currency.Zero())
+	PlayerDataService.Add(player, "Coins", bag)
+	PlayerDataService.Add(player, "CoreSells", 1)
+	Analytics.Currency(player, "Coins", bag, "Gameplay", "Sell")
+	SessionLog.Sell(player, bag, PlayerDataService.Get(player, "CoreSells") or 1)
+	soldRemote:FireClient(player, bag)
+end
+
+local function onPad(position: Vector3): boolean
+	local offset = position - SELL.Position
+	return Vector2.new(offset.X, offset.Z).Magnitude <= SELL.Radius and offset.Y > -2 and offset.Y < 8
+end
+
+-- ===== The sell station (built from parts at server start, nothing new to upload) =====
+local function part(props: { [string]: any }, parent: Instance): Part
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Material = Enum.Material.SmoothPlastic
+	p.CastShadow = false
+	for key, value in props do
+		(p :: any)[key] = value
+	end
+	p.Parent = parent
+	return p
+end
+
+local UPRIGHT = CFrame.Angles(0, 0, math.rad(90)) -- cylinders lie along X; this stands them up
+
+-- Mixed-case rounded bold text with a thin dark outline (the owner's simulator refs, Addendum 4)
+local function label(parent: Instance, text: string, size: UDim2, position: UDim2, color: Color3, stroke: number)
+	local t = Instance.new("TextLabel")
+	t.BackgroundTransparency = 1
+	t.Size = size
+	t.Position = position
+	t.FontFace = Font.new("rbxasset://fonts/families/FredokaOne.json", Enum.FontWeight.Bold)
+	t.Text = text
+	t.TextScaled = true
+	t.TextColor3 = color
+	local outline = Instance.new("UIStroke")
+	outline.Color = Color3.fromRGB(28, 36, 48)
+	outline.Thickness = stroke
+	outline.Parent = t
+	t.Parent = parent
+	return t
+end
+
+local function buildStation(): Model?
+	local roof = Workspace:FindFirstChild(CORE.Folder)
+	if not roof then
+		return nil
+	end
+	local old = roof:FindFirstChild("SellStation")
+	if old then
+		old:Destroy()
+	end
+	local model = Instance.new("Model")
+	model.Name = "SellStation"
+	local base = SELL.Position
+	local r = SELL.Radius
+	-- The pad: a thick white rim with the coin-green circle on it
+	part({
+		Name = "Rim",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.3, r * 2 + 1.2, r * 2 + 1.2),
+		CFrame = CFrame.new(base + Vector3.new(0, 0.15, 0)) * UPRIGHT,
+		Color = Color3.fromRGB(250, 248, 240),
+		CanCollide = false,
+	}, model)
+	local pad = part({
+		Name = "Pad",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.34, r * 2, r * 2),
+		CFrame = CFrame.new(base + Vector3.new(0, 0.17, 0)) * UPRIGHT,
+		Color = SELL.Color,
+		CanCollide = false,
+	}, model)
+	-- A small coin in the middle of the green circle
+	local top = Instance.new("SurfaceGui")
+	top.Face = Enum.NormalId.Right -- (the cylinder's +X end faces up)
+	top.LightInfluence = 0.3
+	top.CanvasSize = Vector2.new(200, 200)
+	top.Parent = pad
+	local coin = Instance.new("ImageLabel")
+	coin.BackgroundTransparency = 1
+	coin.AnchorPoint = Vector2.new(0.5, 0.5)
+	coin.Position = UDim2.fromScale(0.5, 0.5)
+	coin.Size = UDim2.fromScale(0.36, 0.36)
+	coin.Image = "rbxassetid://" .. AssetSlots.Images.HudCoin
+	coin.Parent = top
+	-- The booth behind the pad (away from the lanes): a counter and a sign facing the lanes
+	local back = base + Vector3.new(0, 0, r + 2.2)
+	part({
+		Name = "Counter",
+		Size = Vector3.new(10, 3.2, 2.4),
+		CFrame = CFrame.new(back + Vector3.new(0, 1.6, 0)),
+		Color = Color3.fromRGB(255, 196, 64),
+	}, model)
+	part({
+		Name = "CounterTop",
+		Size = Vector3.new(10.6, 0.4, 3),
+		CFrame = CFrame.new(back + Vector3.new(0, 3.4, 0)),
+		Color = Color3.fromRGB(250, 248, 240),
+	}, model)
+	for _, x in { -4.6, 4.6 } do
+		part({
+			Name = "Post",
+			Size = Vector3.new(0.5, 9, 0.5),
+			CFrame = CFrame.new(back + Vector3.new(x, 4.5, 0.6)),
+			Color = Color3.fromRGB(250, 248, 240),
+		}, model)
+	end
+	local sign = part({
+		Name = "Sign",
+		Size = Vector3.new(10.4, 3.4, 0.4),
+		CFrame = CFrame.lookAt(back + Vector3.new(0, 8.2, 0.6), back + Vector3.new(0, 8.2, -10)),
+		Color = SELL.Color,
+	}, model)
+	local outline = part({
+		Name = "SignBack",
+		Size = Vector3.new(11, 4, 0.3),
+		CFrame = sign.CFrame * CFrame.new(0, 0, 0.3),
+		Color = Color3.fromRGB(28, 36, 48),
+	}, model)
+	outline.CanCollide = false
+	local surface = Instance.new("SurfaceGui")
+	surface.Face = Enum.NormalId.Front
+	surface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	surface.PixelsPerStud = 40
+	surface.LightInfluence = 0
+	surface.Parent = sign
+	label(surface, "Sell", UDim2.fromScale(0.8, 0.62), UDim2.fromScale(0.1, 0.04), Color3.new(1, 1, 1), 5)
+	label(
+		surface,
+		"Stand on the green circle",
+		UDim2.fromScale(0.86, 0.26),
+		UDim2.fromScale(0.07, 0.68),
+		Color3.fromRGB(255, 240, 160),
+		3
+	)
+	-- The point the SELL button's guide leads to
+	local beacon = Instance.new("Attachment")
+	beacon.Name = "Beacon"
+	beacon.Parent = pad
+	model.PrimaryPart = pad
+	model.Parent = roof
+	return model
+end
+
+-- The rooftop spawn (the lobby spawn is switched off, not removed)
+local function buildSpawn()
+	for _, spawn in Workspace:GetDescendants() do
+		if spawn:IsA("SpawnLocation") and spawn.Name ~= "CoreSpawn" then
+			spawn.Enabled = false
+		end
+	end
+	local roof = Workspace:FindFirstChild(CORE.Folder)
+	if not roof or roof:FindFirstChild("CoreSpawn") then
+		return
+	end
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Name = "CoreSpawn"
+	spawn.Anchored = true
+	spawn.Size = Vector3.new(8, 0.4, 8)
+	spawn.Position = CORE.Spawn
+	spawn.Color = Color3.fromRGB(250, 248, 240)
+	spawn.Material = Enum.Material.SmoothPlastic
+	spawn.TopSurface = Enum.SurfaceType.Smooth
+	spawn.Neutral = true
+	spawn.Duration = 0 -- no force field bubble
+	spawn.CanCollide = true
+	local decal = spawn:FindFirstChildOfClass("Decal")
+	if decal then
+		decal:Destroy()
+	end
+	spawn.Parent = roof
+end
+
+function CoreLoopService:Start()
+	if not CORE.Enabled then
+		return
+	end
+	soldRemote = Instance.new("RemoteEvent")
+	soldRemote.Name = "CoreSold"
+	soldRemote.Parent = ReplicatedStorage:WaitForChild("Remotes")
+
+	buildSpawn()
+	buildStation()
+
+	-- The bag size and throw cooldown the HUD shows
+	local function publish(player: Player)
+		player:SetAttribute("BagSize", CoreLoopService.BagSize(player))
+		player:SetAttribute("ThrowCooldown", CoreLoopService.Cooldown(player))
+	end
+	PlayerDataService.OnLoaded(function(player)
+		publish(player)
+		for _, key in { "BagLevel", "ThrowSpeedLevel" } do
+			player:GetAttributeChangedSignal(key):Connect(function()
+				publish(player)
+			end)
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		pending[player] = nil
+	end)
+
+	-- Who stands on the sell pad
+	task.spawn(function()
+		while true do
+			task.wait(0.2)
+			for _, player in Players:GetPlayers() do
+				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+				if root and PlayerDataService.IsLoaded(player) and onPad(root.Position) then
+					sell(player)
+				end
+			end
+		end
+	end)
+end
+
+return CoreLoopService

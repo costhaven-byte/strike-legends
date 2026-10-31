@@ -142,6 +142,8 @@ local function migrate(saved: any): { [string]: any }
 		-- v31 added AutoDelete (batch C3 X'd pets on the egg odds boards): it starts empty, nothing to upgrade or delete
 		-- v32 added BestLevel and BestRank (batch D1: rebirths reset levels): they start at the save's level and tier,
 		-- see below, so levels and ranks already rewarded never pay twice
+		-- v33 added Bag, BagLevel, ThrowSpeedLevel, CoreThrows and CoreSells (Addendum 4 core loop): they start at
+		-- their starting values, every older field stays as it was
 		if version < 22 then
 			-- v22: the COIN BOOST became a doubling ladder (x2, x4, x8, x16). An old adding boost (coins x (1 +
 			-- RobuxBoost)) becomes the highest step it already reached or passed, so nobody loses what they paid for.

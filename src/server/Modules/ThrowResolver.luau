@@ -51,8 +51,9 @@ end
 
 -- Pins on the ball's path always fall; the rest are picked front-to-back with some luck.
 local function pickPins(count: number): { number }
-	local half = LANE.PinSpacing / 2
-	local rowDepth = LANE.PinSpacing * math.sqrt(3) / 2
+	local spacing = PinRack.Spacing()
+	local half = spacing / 2
+	local rowDepth = spacing * math.sqrt(3) / 2
 	local scored = {}
 	for index, offset in PinRack.Offsets() do
 		local onPath = math.abs(offset.X) < 0.1
@@ -153,6 +154,28 @@ function ThrowResolver.Resolve(
 		Perfect = perfect,
 		Strength = strength,
 		Overcharge = if blasted then "Blast" else nil,
+	}
+end
+
+-- Addendum 4 core loop (Config.CoreLoop): a hold-to-throw throw. No timing: the pin count rolls within +/- spread of
+-- `average`, capped at the rack; every pin down is a full clear. Pins are picked front to back with some luck.
+function ThrowResolver.ResolveCore(average: number, spread: number): Result
+	local rack = PinRack.Count()
+	local wanted = average * (1 + (math.random() * 2 - 1) * spread)
+	local count = math.clamp(math.floor(wanted + 0.5), 1, rack)
+	local clear = count >= rack
+	return {
+		Count = count,
+		Tier = if clear then "Strike" else "Good",
+		Pins = pickPins(count),
+		HitX = 0,
+		Gutter = false,
+		RollTime = Config.CoreLoop.RollTime,
+		CurveFromX = nil,
+		Traits = {},
+		Perfect = false,
+		Strength = 1,
+		Overcharge = nil,
 	}
 end
 

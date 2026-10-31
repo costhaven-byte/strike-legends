@@ -33,9 +33,11 @@ local function placeOnLane(character: Model, lane: Model)
 	character:PivotTo(approach.CFrame * CFrame.new(0, approach.Size.Y / 2 + height, 0))
 end
 
+-- (Addendum 4 core loop: lanes are handed out on the rooftop, Config.CoreLoop.Folder)
 local function assignLane(player: Player): Model?
+	local folder = if Config.CoreLoop.Enabled then Config.CoreLoop.Folder else Config.Zones.AssignFolder
 	for _, lane in LaneUtil.GetLanes() do
-		if lane.Parent.Name == Config.Zones.AssignFolder and lane:GetAttribute("OwnerId") == nil then
+		if lane.Parent.Name == folder and lane:GetAttribute("OwnerId") == nil then
 			lane:SetAttribute("OwnerId", player.UserId)
 			setSign(lane, player.DisplayName)
 			return lane
@@ -182,8 +184,9 @@ function LaneService:Start()
 		end)
 	end
 
+	-- (no zone gates in the Addendum 4 core loop: the rooftop is the only zone and everyone has a lane there)
 	task.spawn(function()
-		while true do
+		while not Config.CoreLoop.Enabled do
 			task.wait(Config.Zones.ClaimCheck)
 			checkGates()
 		end

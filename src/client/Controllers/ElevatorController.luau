@@ -198,6 +198,10 @@ local function moveDoors(car, open: boolean)
 end
 
 function ElevatorController:Start()
+-- (switched off in the Addendum 4 core loop: the rooftop is the only zone)
+	if Config.CoreLoop.Enabled then
+		return
+	end
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
 	local remote = remotes:WaitForChild("RideElevator") :: RemoteEvent
 

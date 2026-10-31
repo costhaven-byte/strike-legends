@@ -134,6 +134,10 @@ local function picture(parent: Instance, zone: number, paint: { Color3 }): Frame
 end
 
 function TeleportController:Start()
+-- (switched off in the Addendum 4 core loop: the rooftop is the only zone)
+	if Config.CoreLoop.Enabled then
+		return
+	end
 	local playerGui = player:WaitForChild("PlayerGui")
 	local hud = playerGui:WaitForChild("HUD") :: ScreenGui
 

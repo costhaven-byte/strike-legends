@@ -412,6 +412,7 @@ local function openCrate(player: Player, crateId: any)
 	Analytics.Purchase(player, "Crate", crate.Id)
 	-- The first crate bought with coins is exactly Config.Onboarding.FirstBoughtRarity
 	local best = BallService.GiveCrate(player, crate, nil, if bought == 0 then Config.Onboarding.FirstBoughtRarity else nil)
+	SessionLog.BallBought(player, best.BallId, "Crate") -- (Addendum 4 instrumentation: each ball bought)
 	if count == 1 then
 		return best
 	end
@@ -419,6 +420,7 @@ local function openCrate(player: Player, crateId: any)
 	local extras = {}
 	for _ = 2, count do
 		local result = BallService.GiveCrate(player, crate)
+		SessionLog.BallBought(player, result.BallId, "Crate")
 		if Balls.RarityIndex(Balls.Get(result.BallId).Rarity) > Balls.RarityIndex(Balls.Get(best.BallId).Rarity) then
 			result, best = best, result
 		end

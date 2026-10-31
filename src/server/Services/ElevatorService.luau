@@ -38,6 +38,9 @@ local function ride(remote: RemoteEvent, player: Player, carId: any)
 	if typeof(carId) ~= "string" or riding[player] or not PlayerDataService.IsLoaded(player) then
 		return
 	end
+	if Config.CoreLoop.Enabled then
+		return -- (Addendum 4 core loop: the rooftop is the only zone, the elevator is switched off)
+	end
 	if not RateLimit.Allow(player, "RideElevator") then
 		return
 	end

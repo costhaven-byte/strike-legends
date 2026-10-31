@@ -26,6 +26,84 @@ Config.Lane = {
 	ThrowZoneMargin = 0.7, -- small, so it never reaches a neighbouring lane
 }
 
+-- ADDENDUM 4 CORE LOOP (Stage 1, 2026-11-01): throw, pins into a bag, sell at the sell station, buy, rebirth.
+-- Enabled = true: the Skyline rooftop (zone 4) is the only zone and the hub; zones 1-3, the boss helicopter, the
+-- elevator, teleports, zone gates and the story layer (Rizzo, join fly-over, first-3-minutes) are switched off but
+-- kept. false = the old game comes back exactly as it was. Every Stage 1 tuning number is in this one table.
+Config.CoreLoop = {
+	Enabled = true,
+	Folder = "SkylineLanes", -- the one zone (its Workspace model); lanes are handed out here
+	-- The rack: a Rows-row triangle (row 1 = the head pin) with the listed { row, place } pins taken out.
+	-- 9 rows = 45 pins, minus 5 back corners = 40. Later zones can use bigger layouts.
+	Rack = {
+		Rows = 9,
+		Remove = { { 9, 1 }, { 9, 9 }, { 8, 1 }, { 8, 8 }, { 9, 5 } },
+		Spacing = 1.5, -- studs between neighbouring pins (the old 10-pin rack is 2.3)
+		PinScale = 0.65, -- pin size against Config.Lane PinHeight/PinWidth
+		HeadPinForward = 1.5, -- the head pin stands this many studs closer to the bowler than the lane's PinSpot
+	},
+	-- Pins per throw: the average rolls within +/- Spread of it, capped at the rack. Stage 2 gives each ball its own.
+	PinsAverage = 6,
+	PinsSpread = 0.2,
+	FullClearMultiplier = 2, -- every pin down pays double
+	-- Coins: each pin = PinValue coins x these multipliers (MultiplierService.Coins names; zone, power, rank, streak
+	-- and ball are left out on purpose, Stage 2 prices balls on pins per throw)
+	PinValue = 1,
+	Multipliers = { "Mascots", "Potion", "Rebirth", "Friends", "Passes", "RobuxBoost" },
+	-- Hold to keep throwing: seconds between throws = Cooldown - ThrowSpeedLevel x CooldownStep, never below
+	-- CooldownFloor (raise the floor if frame time suffers). ThrowSpeedLevel is saved; the upgrade shop is Stage 2.
+	Cooldown = 1.0,
+	CooldownStep = 0.1,
+	CooldownFloor = 0.4,
+	RollTime = 0.45, -- seconds from release to the pins (a fast arcade roll down the 117-stud lane)
+	RefillDelay = 0.25, -- seconds after the ball hits until the fresh rack stands (keep under CooldownFloor)
+	-- Pins: the new rack stands the moment the ball has hit; knocked pins fly on as debris for DebrisLife seconds
+	-- (at most DebrisCap per lane, oldest go first), then go back into the pool.
+	DebrisLife = 0.9,
+	DebrisCap = 60,
+	PopsPerThrow = 8, -- coin numbers over pins per throw (one per pin up to this many; the total pops too)
+	BigClear = 24, -- pins in one throw that count as a big clear: camera shake + crash sound
+	-- Bag: coins from pins go here, not to your coins. BagSizes[BagLevel] is the capacity (the bag shop is Stage 2).
+	BagSizes = { 60, 150, 400, 1000, 2500, 6000, 15000, 40000, 100000, 250000 },
+	-- Selling only happens at the sell station (owner 2026-11-01); the SELL button points the way there.
+	-- A "sell anywhere" pass or upgrade can come later.
+	Sell = {
+		-- floor centre of the pad, in the strip behind the lane approaches (lanes 1 and 6 are ~2.7 s away; the middle
+		-- ball return is just in front of it, the lounge sofas just behind the booth)
+		Position = Vector3.new(-37, 848.65, -3415),
+		Radius = 6, -- studs (flat) from the centre that count as standing on it
+		Color = Color3.fromRGB(64, 196, 92), -- coin green
+	},
+	Spawn = Vector3.new(-37, 849.2, -3398), -- the rooftop spawn, just behind the sell station
+	CameraBack = 9, -- while you throw, the camera hovers this far before the head pin...
+	CameraHeight = 5.5, -- ...this high
+	CameraLook = 6, -- looking this far past the head pin
+	CameraBlend = 0.35, -- seconds to glide into (and out of) the throw camera
+	-- Daytime repaint of the night rooftop, on every screen (the place file keeps the night colours, so Enabled =
+	-- false brings them back): old colour hex -> new colour for SkylineLanes parts; Neon parts in DayNeon colours
+	-- (lit windows, floodlight heads) turn into plain glass/plastic; lights in DayLightsOff switch off.
+	DayColors = {
+		["7a5aa8"] = Color3.fromRGB(150, 205, 240), -- city blocks: sky blue
+		["5a3e8c"] = Color3.fromRGB(236, 206, 158), -- sand
+		["3f2f6e"] = Color3.fromRGB(242, 160, 122), -- coral
+		["6b4ba0"] = Color3.fromRGB(160, 222, 190), -- mint
+		["8a64b0"] = Color3.fromRGB(246, 236, 212), -- cream
+		["1c1630"] = Color3.fromRGB(150, 178, 120), -- the ground far below: park green
+		["3b2f6b"] = Color3.fromRGB(70, 120, 190), -- gutters
+		["2e2a4a"] = Color3.fromRGB(96, 104, 120), -- helipad deck
+		["221a3d"] = Color3.fromRGB(80, 86, 104), -- pit
+		["090f30"] = Color3.fromRGB(40, 80, 150), -- helicopter body
+	},
+	DayNeon = {
+		["ffc65a"] = { Color = Color3.fromRGB(196, 228, 248), Material = Enum.Material.Glass }, -- lit city windows
+		["bf9443"] = { Color = Color3.fromRGB(176, 214, 240), Material = Enum.Material.Glass }, -- tower windows
+		["e0d6bc"] = { Color = Color3.fromRGB(235, 235, 230), Material = Enum.Material.SmoothPlastic }, -- floodlight heads
+		["d8d8d8"] = { Color = Color3.fromRGB(230, 230, 230), Material = Enum.Material.SmoothPlastic },
+	},
+	DayLightsOff = { "FillLight", "HeliLight" }, -- the night fill lights over the lanes and the helipad lamp
+	ThrowRate = 0.33, -- the server never takes core throws faster than this (CooldownFloor is the real limit)
+}
+
 -- The throw (from the Throw Lab, approved 2026-10-18): hold to charge, let go in the gold.
 -- Lab sizes were bigger than the alley's, so pin speeds and pin gravity are scaled down to match automatically.
 Config.Throw = {
@@ -261,12 +339,18 @@ Config.StartingData = {
 	EggPrompted = 0, -- 1 = the BUY YOUR FIRST PET EGG! popup was shown (Config.EggPrompt; v30)
 	PetSlotsKept = 0, -- pet slots an old save had under the old rules (rank levels 15/30 + 1 rebirth); never fewer (v30)
 	AutoDelete = {}, -- pets X'd on the egg odds boards: { Pinny = true }; hatched ones are not kept (Config.AutoDelete; v31)
+	-- Addendum 4 core loop (Config.CoreLoop; v33)
+	Bag = 0, -- coins from pins waiting in the bag; sold for Coins at the sell station
+	BagLevel = 1, -- Config.CoreLoop.BagSizes step (bag capacity)
+	ThrowSpeedLevel = 0, -- throw speed upgrades: each takes CooldownStep off the hold-to-throw cooldown
+	CoreThrows = 0, -- core loop throws ever (first and 10th throw are logged once per player)
+	CoreSells = 0, -- sells ever (the first is logged once per player)
 }
 
 -- Saving (DataStore)
 Config.Data = {
 	StoreName = "PlayerData",
-	SchemaVersion = 32, -- v32 BestLevel + BestRank (batch D1 rebirth resets levels; old saves start at their RankLevel / Rank). v31 AutoDelete (batch C3 X'd pets on the egg odds boards; starts empty, nothing to upgrade or delete). v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 33, -- v33 Bag, BagLevel, ThrowSpeedLevel, CoreThrows, CoreSells (Addendum 4 core loop; start at 0/1, every old field kept, nothing to upgrade). v32 BestLevel + BestRank (batch D1 rebirth resets levels; old saves start at their RankLevel / Rank). v31 AutoDelete (batch C3 X'd pets on the egg odds boards; starts empty, nothing to upgrade or delete). v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -287,7 +371,7 @@ Config.Data = {
 -- and the FirstCrateGoal crate until the player has bought a crate; when that crate is the goal and affordable,
 -- a beam leads to its kiosk station).
 Config.Onboarding = {
-	Enabled = true,
+	Enabled = not Config.CoreLoop.Enabled, -- the first-3-minutes story is off while the Addendum 4 core loop is on
 	GiftAfterThrows = 20, -- about 1:00-1:15, after the first bought crate (owner 2026-10-29, final changes batch B2: was 65, about 4:00)
 	GiftCrateId = "Basic", -- the gift opens as this crate
 	GiftRarity = nil, -- nil = the gift crate rolls normal odds (owner 2026-10-21: only the first crate is guaranteed)
@@ -581,7 +665,7 @@ Config.Numbers = {
 	Suffixes = { "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc", "Ud", "Dd", "Td", "Qad", "Qid" },
 	ShortFrom = 1000, -- smaller numbers show whole, with commas ("950")
 	Decimals = 2, -- "12.34M"; numbers of 100 or more in a unit get one less ("123.4M"); trailing zeros are trimmed
-	Currencies = { "Coins", "Gems", "WeeklyCoins", "LifetimeCoins" }, -- saved values that are money: they go through Currency
+	Currencies = { "Coins", "Gems", "WeeklyCoins", "LifetimeCoins", "Bag" }, -- saved values that are money: they go through Currency
 	-- Precision guard: plain Roblox numbers stop counting whole coins exactly at about 9 quadrillion (9e15).
 	-- Any coin value at WarnAt or above logs a warning (once per place in the code), long before that limit.
 	SafeMax = 9e15,
@@ -2799,7 +2883,7 @@ Config.Fusion = {
 -- as Workspace.TitanArena wins over the code-built one (keep the part names: Floor, Spots, Titan.Plates/Core/Body).
 -- All numbers below are safe to tune; nothing else needs changing.
 Config.Boss = {
-	Enabled = true,
+	Enabled = not Config.CoreLoop.Enabled, -- the helicopter + Pin Titan arena are switched off in the Addendum 4 core loop
 	Zone = 4, -- you need this zone unlocked to board
 	EverySeconds = 45 * 60, -- an event every 45 minutes (on the clock: :00 and :45 slots, same on every server)
 	StudioFirstEventIn = 25, -- Studio only: the first event opens this many seconds after you press Play (0 = off)
@@ -2919,7 +3003,7 @@ Config.Rizzo = {
 -- Each shot moves the camera From -> To (Pos = where it is, Look = what it looks at) over Time seconds.
 -- Text = big caption, Rizzo = his speech bubble line (he waves too), Deal = show the FIRST CRATE % OFF sign.
 Config.IntroCinematic = {
-	Enabled = true,
+	Enabled = not Config.CoreLoop.Enabled, -- (Studio-only video intro in the Back Alley; off in the core loop)
 	Key = Enum.KeyCode.K,
 	Lane = "Lane3", -- your character stands on this Back Alley lane's approach, facing the pins
 	FieldOfView = 70,
@@ -4420,6 +4504,9 @@ Config.Analytics = {
 		"Bought Power Level",
 		"Gift Crate",
 		"Saw Legends",
+		"Tenth Throw", -- Addendum 4 core loop instrumentation (once per player)
+		"First Sell",
+		"Bought Ball",
 	},
 	PlayTimeInterval = 30, -- seconds between adding play time to the save
 	-- Every custom event name the game logs (MASTER_PLAN.md section 7). A name not on this list prints a warning in
@@ -4456,6 +4543,11 @@ Config.Analytics = {
 		"SpinWheel", -- value = the slice number; labels = Potion/Egg/Crate/Ball/Pet, item
 		"Rebirth", -- later (Milestone 17)
 		"QuestCompleted", -- later (Milestone 18)
+		-- Addendum 4 core loop instrumentation (Config.CoreLoop)
+		"Sell", -- value = coins sold; labels = sells ever, session seconds
+		"CoreMilestone", -- value = seconds played in total when it happened; labels = FirstThrow/TenthThrow/FirstSell
+		"BallBought", -- value = seconds played in total; labels = ball, how (Crate/Shop/...)
+		"LastAction", -- value = seconds from the last throw or sell to leaving; labels = what it was
 	},
 }
 
@@ -4575,23 +4667,26 @@ Config.Zones = {
 			},
 		},
 		{
-			-- The design's mood: a night rooftop over a purple city, warm gold lights, light violet haze
+			-- Addendum 4 (2026-11-01): the launch zone is a bright, sunny, saturated DAYTIME rooftop (was a night
+			-- rooftop over a purple city: Ambient 62,56,88 / Outdoor 72,66,102 / Exposure -0.15 / Saturation 0.22 /
+			-- Tint 236,228,255 / Haze 5B4A8A>FF9F6B 0.25, 0.5 / Bloom 0.15). ClockTime + Brightness set the sun.
 			Id = "SkylineLanes",
 			Folder = "SkylineLanes",
 			Area = { Center = Vector3.new(0, 870, -3500), Size = Vector3.new(220, 60, 236) },
 			Look = {
-				-- 2026-10-25 owner: "too bright" (was Ambient 100,90,135 / Outdoor 115,105,155 / Exposure 0.35 / Bloom 0.25)
-				Ambient = Color3.fromRGB(62, 56, 88),
-				OutdoorAmbient = Color3.fromRGB(72, 66, 102),
-				Exposure = -0.15, -- batch A3 2026-10-29: floor + lanes still too bright (was -0.05)
-				Saturation = 0.22, -- brightness pass 2026-10-28 (was 0.12)
-				Contrast = 0.1,
-				Tint = Color3.fromRGB(236, 228, 255),
-				HazeColor = Color3.fromHex("5B4A8A"),
-				HazeDecay = Color3.fromHex("FF9F6B"),
-				HazeDensity = 0.25,
-				Haze = 0.5,
-				Bloom = 0.15,
+				ClockTime = 14,
+				Brightness = 2.4,
+				Ambient = Color3.fromRGB(120, 128, 140),
+				OutdoorAmbient = Color3.fromRGB(150, 160, 175),
+				Exposure = 0.1,
+				Saturation = 0.25,
+				Contrast = 0.08,
+				Tint = Color3.fromRGB(255, 252, 240),
+				HazeColor = Color3.fromHex("BFE3FF"),
+				HazeDecay = Color3.fromHex("FFF1D6"),
+				HazeDensity = 0.22,
+				Haze = 0.6,
+				Bloom = 0.08,
 			},
 		},
 	},

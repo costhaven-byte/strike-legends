@@ -23,7 +23,7 @@ local REBIRTH = Config.Economy.Rebirth
 local RebirthService = {}
 
 local function rebirth(player: Player)
-	if not REBIRTH.Enabled then
+	if not REBIRTH.Enabled or Config.CoreLoop.Enabled then -- (Addendum 4: the old zone rebirth is off; Stage 5 rebuilds it)
 		return { Ok = false, Error = "Rebirth is coming soon" }
 	end
 	if not PlayerDataService.IsLoaded(player) or not RateLimit.Allow(player, "Rebirth") then

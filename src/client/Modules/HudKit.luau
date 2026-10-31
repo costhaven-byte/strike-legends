@@ -118,6 +118,12 @@ HudKit.Layout = {
 	MinTop = 218, -- (computer) the right-hand column never goes above this (under SETTINGS)
 	Potions = { Pc = { 32, 996, nil, 52, "L", "B" }, Phone = { 500, 340, nil, 38, "C", "B" } },
 	Hold = { Pc = { 880, 984, 160, 50, "C", "B" }, Phone = { 356, 332, 132, 46, "C", "B" } },
+	-- Addendum 4 core loop (CoreHudController): pin counter under the level bar, bag bar + SELL bottom-left,
+	-- the BAG FULL prompt over the middle
+	PinCounter = { Pc = { 830, 76, 260, 64, "C", "T" }, Phone = { 377, 44, 90, 34, "C", "T" } },
+	Bag = { Pc = { 32, 896, 300, 64, "L", "B" }, Phone = { 12, 294, 168, 40, "L", "B" } },
+	Sell = { Pc = { 344, 896, 132, 64, "L", "B" }, Phone = { 186, 294, 74, 40, "L", "B" } },
+	BagFull = { Pc = { 700, 160, 520, 66, "C", "T" }, Phone = { 297, 84, 250, 40, "C", "T" } },
 }
 
 -- Phones held sideways (short screens) get the phone layout

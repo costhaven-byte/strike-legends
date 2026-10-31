@@ -115,6 +115,10 @@ local function buildBubble(head: BasePart)
 end
 
 function RizzoController:Start()
+-- (switched off in the Addendum 4 core loop: the rooftop is the only zone)
+	if Config.CoreLoop.Enabled then
+		return
+	end
 	local alley = Workspace:WaitForChild("BackAlley", 30)
 	local stand = alley and alley:WaitForChild("RizzoStand", 10)
 	local cart = stand and stand:WaitForChild("RizzoCart", 10)

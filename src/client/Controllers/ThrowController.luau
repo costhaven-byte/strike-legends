@@ -21,6 +21,8 @@ local ThrowPose = require(Modules.ThrowPose)
 local SlUi = require(Modules.SlUi)
 local HudKit = require(Modules.HudKit)
 local ResultText = require(Modules.ResultText)
+local CameraShake = require(Modules.CameraShake)
+local ThrowFx = require(Modules.ThrowFx)
 
 local THROW = Config.Throw
 local player = Players.LocalPlayer
@@ -32,8 +34,12 @@ local C = SlUi.Colors
 local OUTLINE_IDLE = SlUi.Hex("1C5872")
 local FLOW_MID = SlUi.Hex("1FE6FF")
 local OVER = THROW.Overcharge
-local READY_HINT = if OVER.Enabled
-	then "HOLD - LET GO IN THE GOLD, OR GAMBLE ON RED"
+-- Addendum 4 core loop (Config.CoreLoop): hold the button to keep throwing, no meter, no PERFECT
+local CORE = Config.CoreLoop
+local CORE_ON = CORE.Enabled
+local READY_HINT = if CORE_ON
+	then "HOLD TO KEEP THROWING"
+	elseif OVER.Enabled then "HOLD - LET GO IN THE GOLD, OR GAMBLE ON RED"
 	else "HOLD TO CHARGE - LET GO IN THE GOLD"
 
 -- The arc: a half circle like the top of a bowling ball. Empty on the left, full on the right.
@@ -882,6 +888,9 @@ function ThrowController:Start()
 			return
 		end
 		held = input
+		if CORE_ON then
+			return -- (the core loop throws from RenderStepped while this is held)
+		end
 		if state == "Ready" and currentLane and laneReady(currentLane) then
 			setState("Charging")
 		end
@@ -1000,12 +1009,89 @@ function ThrowController:Start()
 	end
 
 	throwResult.OnClientEvent:Connect(function(data)
-		if data.UserId == player.UserId then
+		if data.UserId == player.UserId and not data.Core then
 			-- Strikes show the moment the ball hits; other results a beat later
 			local isStrike = data.Tier == "Strike" or data.Tier == "PerfectStrike"
 			task.delay(data.RollTime + (if isStrike then 0 else 0.25), showResult, data)
 		end
 	end)
+
+	-- ===== Addendum 4 core loop: hold to keep throwing =====
+	-- While the button is held on your lane, one CoreThrow goes to the server every time the lane is ready (the server
+	-- checks the cooldown itself). The camera glides down to watch your pins and back when you let go.
+	local coreThrowRemote = remotes:WaitForChild("CoreThrow") :: RemoteEvent
+	local coreSentAt = 0
+	local coreLastThrow = 0
+	if CORE_ON then
+		holder.Visible = false
+		perfectSpot.Visible = false
+	end
+	local function coreStep(dt: number)
+		if state == "Hidden" then
+			setState("Ready")
+		end
+		local lane = currentLane :: Model
+		if held and (popupOpen(gui) or ThrowController.Blocked) then
+			held = nil -- a popup opened: the press doesn't count any more
+		end
+		if held then
+			if state ~= "Throwing" then
+				state = "Throwing"
+				setButton("THROWING", "Held")
+				setHint("KEEP HOLDING!")
+				lockFeet(true)
+				HudKit.Bowled()
+			end
+			faceLane(dt)
+			local cooldown = player:GetAttribute("ThrowCooldown") or CORE.Cooldown
+			if laneReady(lane) and os.clock() - coreSentAt >= cooldown - 0.05 then
+				coreSentAt = os.clock()
+				coreLastThrow = coreSentAt
+				hintThrows += 1
+				lastAction = coreSentAt
+				coreThrowRemote:FireServer()
+				ThrowPose.Release(player.Character, ThrowRules.Style(player:GetAttribute("RankLevel")).Pose)
+			end
+		elseif state == "Throwing" then
+			setState("Ready")
+		end
+	end
+
+	-- The throw camera: from behind your bowler to a spot just in front of your pins (and back)
+	local camera = Workspace.CurrentCamera
+	local camBlend = 0 -- 0 = the normal camera, 1 = the throw camera
+	local camLane: Model? = nil
+	local camHeld = false
+	if CORE_ON then
+		RunService.RenderStepped:Connect(function(dt)
+			local want = currentLane ~= nil and (state == "Throwing" or os.clock() - coreLastThrow < 0.8)
+			if want then
+				camLane = currentLane
+			end
+			camBlend = math.clamp(camBlend + (if want then dt else -dt) / CORE.CameraBlend, 0, 1)
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local lane = camLane
+			if camBlend <= 0 or not root or not lane then
+				if camHeld then
+					camHeld = false
+					camera.CameraType = Enum.CameraType.Custom
+				end
+				return
+			end
+			camHeld = true
+			camera.CameraType = Enum.CameraType.Scriptable
+			local forward = (lane:FindFirstChild("BallStart") :: BasePart).CFrame.LookVector
+			local head = (lane:FindFirstChild("PinSpot") :: BasePart).Position - forward * CORE.Rack.HeadPinForward
+			local eye = head - forward * CORE.CameraBack + Vector3.yAxis * CORE.CameraHeight
+			local laneCam = CFrame.lookAt(eye, head + forward * CORE.CameraLook)
+			local home = CFrame.lookAt(
+				(root.CFrame * CFrame.new(0, 4, 11)).Position,
+				root.Position + root.CFrame.LookVector * 20
+			)
+			local t = camBlend * camBlend * (3 - 2 * camBlend)
+			camera.CFrame = home:Lerp(laneCam, t) * CameraShake.Offset(dt) * ThrowFx.CameraOffset(dt)
+		end)
+	end
 
 	RunService.RenderStepped:Connect(function(dt)
 		-- Smaller arc on short screens (phones held sideways)
@@ -1032,7 +1118,9 @@ function ThrowController:Start()
 			return
 		end
 
-		if state == "Hidden" then
+		if CORE_ON then
+			coreStep(dt)
+		elseif state == "Hidden" then
 			getReady()
 		elseif popupOpen(gui) and (state == "Ready" or state == "Charging") then
 			-- A popup opened: no throw until it's closed (a charge in progress is called off, nothing is sent)

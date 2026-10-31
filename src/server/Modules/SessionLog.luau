@@ -24,6 +24,14 @@ type Entry = {
 	Crates: number,
 	Level: number,
 	First5: { Moment }?, -- only in a new player's first session
+	-- Addendum 4 core loop instrumentation (seconds into this session; nil = didn't happen this session)
+	Sells: number?,
+	FirstThrowAt: number?, -- the player's first throw ever
+	TenthThrowAt: number?, -- the player's 10th throw ever
+	FirstSellAt: number?, -- the player's first sell ever
+	Balls: { string }?, -- "Galaxy@312" for every ball bought this session (with the session second)
+	LastActionAt: number?, -- the last throw or sell
+	LastAction: string?,
 }
 
 local current: { [Player]: Entry } = {}
@@ -48,7 +56,22 @@ end
 function SessionLog.Describe(entry: Entry): string
 	local leave = if entry.Leave > 0 then entry.Leave else os.time()
 	local rate = SessionLog.PerfectRate(entry)
-	return ("joined %s, left %s (%d min), %d throws, %d PERFECT (%s), %d crates, Power Level %d"):format(
+	local core = ""
+	if Config.CoreLoop.Enabled then
+		local function at(seconds: number?): string
+			return if seconds then clock(seconds) else "-"
+		end
+		core = (", %d sells, first throw %s, 10th throw %s, first sell %s, balls bought [%s], last action %s at %s"):format(
+			entry.Sells or 0,
+			at(entry.FirstThrowAt),
+			at(entry.TenthThrowAt),
+			at(entry.FirstSellAt),
+			table.concat(entry.Balls or {}, ", "),
+			entry.LastAction or "-",
+			at(entry.LastActionAt)
+		)
+	end
+	return ("joined %s, left %s (%d min), %d throws, %d PERFECT (%s), %d crates, Power Level %d" .. core):format(
 		stamp(entry.Join),
 		if entry.Leave > 0 then stamp(entry.Leave) else "still playing",
 		math.floor((leave - entry.Join) / 60 + 0.5),
@@ -102,6 +125,66 @@ function SessionLog.Throw(player: Player, level: number, perfect: boolean?, assi
 			entry.Perfects = (entry.Perfects or 0) + 1
 		end
 	end
+end
+
+-- ===== Addendum 4 core loop instrumentation (Config.CoreLoop) =====
+-- Seconds into this session
+local function now(player: Player): number
+	return math.floor((os.clock() - (started[player] or os.clock())) * 10) / 10
+end
+
+local function acted(player: Player, entry: Entry, what: string)
+	entry.LastActionAt = now(player)
+	entry.LastAction = what
+end
+
+-- A once-per-player moment: an onboarding funnel step plus a CoreMilestone event (value = seconds played in total)
+local function milestone(player: Player, entry: Entry, field: string, step: string, label: string)
+	(entry :: any)[field] = now(player)
+	Analytics.Step(player, step)
+	Analytics.Event(player, "CoreMilestone", math.floor(Analytics.MinutesPlayed(player) * 60), { label })
+	print(("[SessionLog] %s: %s at %s into the session"):format(player.Name, label, clock(now(player))))
+end
+
+-- A core loop throw. throwsEver = the player's core throws ever, counting this one.
+function SessionLog.CoreThrow(player: Player, throwsEver: number)
+	local entry = current[player]
+	if not entry then
+		return
+	end
+	entry.Throws += 1
+	acted(player, entry, "Throw")
+	if throwsEver == 1 then
+		milestone(player, entry, "FirstThrowAt", "First Throw", "FirstThrow")
+	elseif throwsEver == 10 then
+		milestone(player, entry, "TenthThrowAt", "Tenth Throw", "TenthThrow")
+	end
+end
+
+-- A sell at the sell station. sellsEver = sells ever, counting this one.
+function SessionLog.Sell(player: Player, coins: number, sellsEver: number)
+	local entry = current[player]
+	if not entry then
+		return
+	end
+	entry.Sells = (entry.Sells or 0) + 1
+	acted(player, entry, "Sell")
+	Analytics.Event(player, "Sell", coins, { tostring(sellsEver), tostring(now(player)) })
+	if sellsEver == 1 then
+		milestone(player, entry, "FirstSellAt", "First Sell", "FirstSell")
+	end
+end
+
+-- A ball bought (how = "Crate" today, the Stage 2 shop later)
+function SessionLog.BallBought(player: Player, ballId: string, how: string)
+	local entry = current[player]
+	if not entry then
+		return
+	end
+	entry.Balls = entry.Balls or {}
+	table.insert(entry.Balls :: { string }, ("%s@%s"):format(ballId, clock(now(player))))
+	Analytics.Step(player, "Bought Ball")
+	Analytics.Event(player, "BallBought", math.floor(Analytics.MinutesPlayed(player) * 60), { ballId, how })
 end
 
 function SessionLog.Crate(player: Player)
@@ -161,12 +244,22 @@ end)
 -- Runs just before the final save
 PlayerDataService.OnRelease(function(player)
 	local entry = current[player]
+	local at = started[player]
 	current[player] = nil
 	started[player] = nil
 	if not entry then
 		return
 	end
 	entry.Leave = os.time()
+	if Config.CoreLoop.Enabled and entry.LastActionAt and at then
+		-- time of last action: how long they stayed after their last throw or sell
+		Analytics.Event(
+			player,
+			"LastAction",
+			math.floor(os.clock() - at - entry.LastActionAt),
+			{ entry.LastAction or "-" }
+		)
+	end
 	local rate = SessionLog.PerfectRate(entry)
 	if rate then
 		Analytics.Event(player, "PerfectRate", math.floor(rate * 100 + 0.5), {

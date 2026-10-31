@@ -219,7 +219,8 @@ local function play()
 	cover.Finish() -- STRIKE! on the bar, then it fades (over the first shot for new players)
 
 	-- Everyone else: the game is right behind the fading screen. (A save that still hasn't loaded = no fly-over.)
-	if isNew ~= true then
+	-- (Addendum 4 core loop: no Back Alley fly-over, everyone goes straight to the rooftop)
+	if isNew ~= true or Config.CoreLoop.Enabled then
 		skip.Holder.Visible = false
 		for _, bar in bars do
 			bar.Visible = false

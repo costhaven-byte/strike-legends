@@ -413,6 +413,9 @@ function EventController:Start()
 	end
 	-- The zone the walk guide is leading to (the first open zone not visited yet), or nil
 	local function walkZone(): number?
+		if Config.CoreLoop.Enabled then
+			return nil -- (Addendum 4 core loop: no other zones to walk to)
+		end
 		local visited = player:GetAttribute("ZoneVisited") or 1
 		local open = Zones.Highest(player:GetAttribute("ZonesOpen"))
 		return if open > visited then visited + 1 else nil

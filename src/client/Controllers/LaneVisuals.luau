@@ -53,7 +53,7 @@ local busy: { [Model]: boolean } = {} -- a throw is playing on this lane; rack c
 -- Pin size and the Golden Pin come from the lane modifier and lane attributes; applied when the rack is standing
 local function refreshRack(lane: Model)
 	local rack = racks[lane]
-	if not rack or busy[lane] then
+	if not rack or busy[lane] or Config.CoreLoop.Enabled then -- (the core loop's 40-pin rack has no surprises)
 		return
 	end
 	local modifier = Modifiers.Current()
@@ -397,10 +397,139 @@ local function playTraits(data, position: Vector3, isOwn: boolean)
 	end
 end
 
+-- ===== Addendum 4 core loop (Config.CoreLoop): a hold-to-throw throw =====
+-- A fast roll, then the pins the server picked fall: real physics on your own lane, a light scripted topple on
+-- everyone else's. Coin numbers pop over a few of the pins plus the total; big clears shake the camera and crash.
+-- The fresh rack stands RefillDelay seconds after the hit (knocked pins fly on as pooled, capped debris).
+local CORE = Config.CoreLoop
+local function playCoreThrow(data)
+	local lane: Model = data.Lane
+	local rack = racks[lane]
+	if not rack then
+		return
+	end
+	local isOwn = data.UserId == Players.LocalPlayer.UserId
+	rack.Throw = (rack.Throw or 0) + 1
+
+	local ballStart = lane.BallStart :: BasePart
+	local forward = ballStart.CFrame.LookVector
+	local level = ThrowRules.Level(data.PowerLevel)
+	local ballInfo = Balls.Get(data.BallId) or Config.Balls[1]
+	local ball = makeBall(data.BallId, level)
+	local radius = ball.Size.X / 2
+	local start = ballStart.Position + Vector3.new(0, radius - LANE.BallDiameter / 2, 0)
+	local headDistance = (rack.HeadPinCFrame.Position - ballStart.Position):Dot(forward)
+	local endDistance = headDistance + 14 -- past the back row, into the pit
+	local speed = headDistance / data.RollTime
+	ball.CFrame = CFrame.new(start)
+	ball.Parent = lane
+	local fx = if isOwn or not hidden(isOwn)
+		then BallFx.Attach(ball, data.BallId, "Lane", forward, { Level = level, Others = not isOwn })
+		else nil
+	BallFx.Dim(ball)
+	local thrower = Players:GetPlayerByUserId(data.UserId)
+	if thrower and thrower.Character and not isOwn then
+		ThrowPose.Release(thrower.Character, data.Pose or 1)
+	end
+	if isOwn then
+		Sfx.Play("Throw", 1 + math.random() * 0.1, 0.7)
+	end
+
+	local count = #data.Pins
+	local clear = data.Tier == "Strike"
+	local paid = data.Paid or 0
+	local each = if count > 0 then paid / count else 0
+	local force = THROW.Levels[level].Force * (if clear then 1.3 else 1)
+
+	local function impact()
+		local hitPoint = rack.HeadPinCFrame.Position - forward * 1 + Vector3.new(0, 0.4, 0)
+		local big = count >= CORE.BigClear or clear
+		Sfx.PlayAt(
+			if big then "StrikeCrash" elseif count >= 10 then "SpareCrash" else "PinHit",
+			lane.PinSpot,
+			1 + math.random() * 0.08,
+			if isOwn then math.clamp(0.5 + count * 0.03, 0.5, 1.3) else 0.5
+		)
+		local popped = 0
+		for _, index in data.Pins do
+			local pin = rack.Pins[index]
+			local body = pin and pin.PrimaryPart
+			if body then
+				if isOwn then
+					local distance = (body.Position - hitPoint).Magnitude
+					task.delay(THROW.PinSpreadTime * math.clamp(distance / 12, 0, 1), function()
+						rack:Knock(index, hitPoint, force)
+					end)
+					if paid > 0 and popped < CORE.PopsPerThrow then
+						popped += 1
+						ThrowFx.NumberPop(
+							body.Position + Vector3.new(0, 1, 0),
+							math.max(1, math.floor(each + 0.5)),
+							THROW.NumberPopSize * 0.8,
+							if clear then "gold" else "white"
+						)
+					end
+				else
+					rack:Topple(index, hitPoint)
+				end
+			end
+		end
+		if not isOwn then
+			return
+		end
+		ThrowFx.PinHitSound(lane.PinSpot, 1, false)
+		if paid > 0 then
+			ThrowFx.NumberPop(
+				rack.HeadPinCFrame.Position + forward * 4 + Vector3.new(0, 3.5, 0),
+				paid,
+				THROW.NumberPopSize * (if big then 1.5 else 1.15),
+				if clear then "gold" else "pink"
+			)
+		end
+		ThrowFx.Shake(THROW.CameraShakeStrength * 0.2, THROW.CameraShakeTime * 0.5)
+		if big then
+			CameraShake.Add(if clear then 0.7 else 0.4)
+			burst(isOwn, hitPoint + forward * 3, ballInfo.Trail or ballInfo.Color, 30, 30 * PIN_SCALE, 0.8)
+		end
+		if clear then
+			Sfx.Play("Cheer", 1.1, 0.8)
+			LaneFx.Confetti(lane, JUICE.ConfettiAmount)
+			UiFx.Flash(GOLD, 0.25, 0.25)
+		end
+	end
+
+	local travelled = 0
+	local hit = false
+	local connection
+	connection = RunService.Heartbeat:Connect(function(dt)
+		travelled += speed * dt * (if hit then 0.5 else 1)
+		local position = start + forward * travelled
+		ball.CFrame = CFrame.new(position) * CFrame.fromAxisAngle(Vector3.yAxis:Cross(forward).Unit, travelled / radius)
+		if fx then
+			fx:Move(position)
+		end
+		if not hit and travelled >= headDistance - 0.5 then
+			hit = true
+			impact()
+			task.delay(data.ResetDelay or CORE.RefillDelay, function()
+				rack:Refill()
+			end)
+		end
+		if travelled >= endDistance then
+			connection:Disconnect()
+			ball:Destroy()
+		end
+	end)
+end
+
 local function playThrow(data)
 	local lane: Model = data.Lane
 	local rack = racks[lane]
 	if not rack then
+		return
+	end
+	if data.Core then
+		playCoreThrow(data)
 		return
 	end
 	local isOwn = data.UserId == Players.LocalPlayer.UserId
@@ -800,7 +929,9 @@ function LaneVisuals:Start()
 
 	for _, lane in LaneUtil.GetLanes() do
 		local pinSpot = lane.PinSpot :: BasePart
-		racks[lane] = PinRack.new(pinSpot.CFrame * CFrame.new(0, -pinSpot.Size.Y / 2, 0), lane)
+		-- (the core loop's bigger rack stands a little closer to the bowler so its back row fits on the deck)
+		local forward = if Config.CoreLoop.Enabled then Config.CoreLoop.Rack.HeadPinForward else 0
+		racks[lane] = PinRack.new(pinSpot.CFrame * CFrame.new(0, -pinSpot.Size.Y / 2, forward), lane)
 	end
 
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")

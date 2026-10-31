@@ -22,6 +22,8 @@ local bloom = Lighting:FindFirstChildOfClass("BloomEffect")
 -- The place's own lighting, read once, so leaving a zone puts it back exactly
 local function readLook()
 	return {
+		ClockTime = Lighting.ClockTime,
+		Brightness = Lighting.Brightness,
 		Ambient = Lighting.Ambient,
 		OutdoorAmbient = Lighting.OutdoorAmbient,
 		Exposure = Lighting.ExposureCompensation,
@@ -39,6 +41,11 @@ end
 local function applyLook(look)
 	local info = TweenInfo.new(ZONES.LookBlend, Enum.EasingStyle.Sine)
 	TweenService:Create(Lighting, info, { Ambient = look.Ambient, OutdoorAmbient = look.OutdoorAmbient }):Play()
+	-- (only the Addendum 4 daytime rooftop sets the sun; the place itself is night)
+	if look.ClockTime then
+		Lighting.ClockTime = look.ClockTime
+		TweenService:Create(Lighting, info, { Brightness = look.Brightness or Lighting.Brightness }):Play()
+	end
 	if look.Exposure then
 		TweenService:Create(Lighting, info, { ExposureCompensation = look.Exposure }):Play()
 	end
@@ -112,7 +119,48 @@ local function flicker(world)
 	end)
 end
 
+-- Addendum 4 core loop: the night rooftop repainted for daytime on this screen (Config.CoreLoop DayColors/DayNeon/
+-- DayLightsOff). The place file keeps the night colours.
+local function daylight()
+	local core = Config.CoreLoop
+	local roof = Workspace:WaitForChild(core.Folder, 30)
+	if not roof then
+		return
+	end
+	local lightsOff = {}
+	for _, name in core.DayLightsOff do
+		lightsOff[name] = true
+	end
+	local function repaint(object: Instance)
+		if object:IsA("BasePart") then
+			local hex = object.Color:ToHex()
+			local neon = object.Material == Enum.Material.Neon and core.DayNeon[hex]
+			if neon then
+				object.Material = neon.Material
+				object.Color = neon.Color
+			elseif core.DayColors[hex] then
+				object.Color = core.DayColors[hex]
+			end
+		elseif object:IsA("Light") and (lightsOff[object.Name] or lightsOff[object.Parent and object.Parent.Name or ""]) then
+			object.Enabled = false
+		end
+	end
+	local count = 0
+	for _, object in roof:GetDescendants() do
+		repaint(object)
+		count += 1
+		if count % 2000 == 0 then
+			task.wait()
+		end
+	end
+	-- (parts that stream in later get the same paint)
+	roof.DescendantAdded:Connect(repaint)
+end
+
 function ZoneLookController:Start()
+	if Config.CoreLoop.Enabled then
+		task.spawn(daylight)
+	end
 	local base = readLook()
 	for _, world in ZONES.Worlds do
 		if world.Flicker then

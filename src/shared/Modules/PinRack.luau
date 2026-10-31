@@ -228,9 +228,48 @@ local function buildMeshPin(baseCFrame: CFrame, scale: number, golden: boolean, 
 	return pin
 end
 
--- Standard triangle: row 0 has the head pin, row 3 has four pins.
+-- Addendum 4 core loop rack (Config.CoreLoop.Rack): a Rows-row triangle minus the Remove pins, numbered row by row
+-- from the head pin, left to right. Worked out once.
+local coreOffsets: { Vector3 }? = nil
+local function coreRack(): { Vector3 }
+	if coreOffsets then
+		return coreOffsets
+	end
+	local rack = Config.CoreLoop.Rack
+	local removed = {}
+	for _, spot in rack.Remove do
+		removed[spot[1] .. ":" .. spot[2]] = true
+	end
+	local offsets = {}
+	local rowDepth = rack.Spacing * math.sqrt(3) / 2
+	for row = 1, rack.Rows do
+		for place = 1, row do
+			if not removed[row .. ":" .. place] then
+				local x = (place - 1 - (row - 1) / 2) * rack.Spacing
+				table.insert(offsets, Vector3.new(x, 0, -(row - 1) * rowDepth))
+			end
+		end
+	end
+	coreOffsets = offsets
+	return offsets
+end
+
+-- Pins in one rack (40 in the core loop, else Config.Lane.PinCount)
+function PinRack.Count(): number
+	return if Config.CoreLoop.Enabled then #coreRack() else LANE.PinCount
+end
+
+-- Distance between neighbouring pins in the rack in use
+function PinRack.Spacing(): number
+	return if Config.CoreLoop.Enabled then Config.CoreLoop.Rack.Spacing else LANE.PinSpacing
+end
+
+-- Standard triangle: row 0 has the head pin, row 3 has four pins (the core loop's rack when that is on).
 -- Offsets are relative to the head pin; -Z points down the lane.
 function PinRack.Offsets(): { Vector3 }
+	if Config.CoreLoop.Enabled then
+		return coreRack()
+	end
 	local offsets = {}
 	local rowDepth = LANE.PinSpacing * math.sqrt(3) / 2
 	for row = 0, 3 do
@@ -256,6 +295,13 @@ function PinRack.new(headPinCFrame: CFrame, parent: Instance)
 	self.Event = "" -- the lane event on this rack ("" = none)
 	self.EventPin = 0 -- the GemPin event's pin
 	self.TimeScale = 1 -- below 1 during strike slow motion
+	-- Addendum 4 core loop: pins are pooled and knocked pins fly on as capped debris while the next rack stands
+	self.Core = Config.CoreLoop.Enabled
+	self.Pool = {} -- spare pin models (parented to nothing)
+	self.Debris = {} -- { Pin = Model, At = os.clock() } knocked pins still flying, oldest first
+	if self.Core then
+		self.Scale = Config.CoreLoop.Rack.PinScale
+	end
 	-- Which zone the lane is in (its Workspace lane folder), for that zone's pin set
 	for _, folder in Config.Zones.LaneFolders do
 		if parent:FindFirstAncestor(folder) then
@@ -366,9 +412,143 @@ function PinRack:SetOffset(offset: number)
 	end
 end
 
+-- ===== Addendum 4 core loop: pooled pins and capped debris =====
+-- A pin taken back from the debris: no trail, no pull, standing and anchored, out of the world
+local function cleanPin(pin: Model)
+	local body = pin.PrimaryPart :: BasePart
+	body.Anchored = true
+	for _, child in body:GetChildren() do
+		if child:IsA("Trail") or child:IsA("Attachment") or child:IsA("VectorForce") then
+			child:Destroy()
+		end
+	end
+	for _, part in pin:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.LocalTransparencyModifier = 0
+		end
+	end
+	pin:SetAttribute("Down", nil)
+	pin.Parent = nil
+end
+
+-- A standing pin at spot `index`, from the pool when there is one
+function PinRack:_takePin(index: number): Model
+	local spot = self:SpotFor(index)
+	local pin = table.remove(self.Pool)
+	if pin then
+		pin:PivotTo(spot * (pin:GetAttribute("Stand") :: CFrame? or CFrame.identity))
+	else
+		pin = buildMeshPin(spot, self.Scale, false, self.Zone) or buildPin(spot, self.Scale)
+		-- how the pin's pivot sits on its spot, so a pooled pin stands the same way again
+		pin:SetAttribute("Stand", spot:ToObjectSpace(pin:GetPivot()))
+	end
+	pin.Name = "Pin" .. index
+	pin.PrimaryPart.Anchored = true
+	pin.Parent = self.Folder
+	return pin
+end
+
+-- Debris older than DebrisLife (or over DebrisCap, oldest first) goes back into the pool
+function PinRack:_sweep()
+	local core = Config.CoreLoop
+	local now = os.clock()
+	while #self.Debris > 0 and (#self.Debris > core.DebrisCap or now - self.Debris[1].At >= core.DebrisLife) do
+		local item = table.remove(self.Debris, 1)
+		cleanPin(item.Pin)
+		table.insert(self.Pool, item.Pin)
+	end
+end
+
+-- The instant refill: every knocked pin becomes debris (it keeps flying) and a fresh pin stands in its spot
+function PinRack:Refill()
+	self.TimeScale = 1
+	local now = os.clock()
+	for index, pin in self.Pins do
+		local body = pin.PrimaryPart
+		if not body or not body.Anchored or pin:GetAttribute("Down") then
+			pin.Name = "Debris"
+			table.insert(self.Debris, { Pin = pin, At = now })
+			self.Pins[index] = self:_takePin(index)
+		end
+	end
+	self:_sweep()
+	if #self.Debris > 0 and not self.Sweeping then
+		-- keep sweeping until the last debris is gone
+		self.Sweeping = true
+		task.spawn(function()
+			while #self.Debris > 0 and self.Folder.Parent do
+				task.wait(0.2)
+				self:_sweep()
+			end
+			self.Sweeping = false
+		end)
+	end
+end
+
+-- Other players' lanes: a light scripted knockdown (no physics). The pin tips over away from `from`, slides back
+-- and fades while it falls; it stays anchored the whole time.
+function PinRack:Topple(index: number, from: Vector3)
+	local pin = self.Pins[index]
+	local body = pin and pin.PrimaryPart
+	if not body or not body.Anchored or pin:GetAttribute("Down") then
+		return
+	end
+	pin:SetAttribute("Down", true)
+	local start = pin:GetPivot()
+	local away = (body.Position - from) * Vector3.new(1, 0, 1)
+	if away.Magnitude < 0.05 then
+		away = self.HeadPinCFrame.LookVector
+	end
+	away = (away.Unit + self.HeadPinCFrame.LookVector).Unit
+	local axis = Vector3.yAxis:Cross(away).Unit
+	local slide = away * (1.5 + math.random() * 2.5)
+	local lie = math.rad(80 + math.random() * 20)
+	local parts = {}
+	for _, part in pin:GetDescendants() do
+		if part:IsA("BasePart") then
+			table.insert(parts, part)
+		end
+	end
+	local began = os.clock()
+	local TIME = 0.35
+	task.spawn(function()
+		while pin.Parent == self.Folder or pin.Name == "Debris" do
+			local t = math.min((os.clock() - began) / TIME, 1)
+			local k = 1 - (1 - t) * (1 - t) -- ease out
+			pin:PivotTo(CFrame.fromAxisAngle(axis, lie * k) * start.Rotation + start.Position + slide * k)
+			if t >= 0.6 then
+				for _, part in parts do
+					part.LocalTransparencyModifier = (t - 0.6) / 0.4
+				end
+			end
+			if t >= 1 or not pin:GetAttribute("Down") then
+				break
+			end
+			task.wait()
+		end
+	end)
+end
+
 -- Puts all 10 pins back, standing and anchored (they only move when knocked).
 function PinRack:Reset()
 	self.TimeScale = 1
+	if self.Core then
+		-- core loop: every pin goes back into the pool and the whole rack stands again from it
+		for _, pin in self.Pins do
+			cleanPin(pin)
+			table.insert(self.Pool, pin)
+		end
+		for _, item in self.Debris do
+			cleanPin(item.Pin)
+			table.insert(self.Pool, item.Pin)
+		end
+		table.clear(self.Debris)
+		table.clear(self.Pins)
+		for index in PinRack.Offsets() do
+			self.Pins[index] = self:_takePin(index)
+		end
+		return
+	end
 	self.Folder:ClearAllChildren()
 	table.clear(self.Pins)
 
@@ -417,7 +597,7 @@ end
 
 -- Lab numbers were tuned on bigger pins; this scales speeds and gravity so flights look the same here
 local function labScale(): number
-	return LANE.PinSpacing / Config.Throw.LabPinSpacing
+	return PinRack.Spacing() / Config.Throw.LabPinSpacing
 end
 
 -- Flying pins fall with Config.Throw.PinGravity (lighter than the world's, for floatier flights) without
@@ -519,6 +699,12 @@ end
 
 function PinRack:Destroy()
 	self.Folder:Destroy()
+	for _, pin in self.Pool do
+		pin:Destroy()
+	end
+	for _, item in self.Debris do
+		item.Pin:Destroy()
+	end
 end
 
 return PinRack

@@ -171,6 +171,10 @@ local function waitForCalm()
 end
 
 function ZoneGateController:Start()
+-- (switched off in the Addendum 4 core loop: the rooftop is the only zone)
+	if Config.CoreLoop.Enabled then
+		return
+	end
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
 	local zoneSeen = remotes:WaitForChild("ZoneSeen") :: RemoteEvent
 	while not player:GetAttribute("DataLoaded") do

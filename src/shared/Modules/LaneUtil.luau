@@ -5,9 +5,11 @@ local Config = require(script.Parent.Parent.Config)
 
 local LaneUtil = {}
 
+-- (Addendum 4 core loop: only the rooftop's lanes exist for the game; the switched-off zones' lanes are left alone)
 function LaneUtil.GetLanes(): { Model }
 	local lanes = {}
-	for _, folderName in Config.Zones.LaneFolders do
+	local folders = if Config.CoreLoop.Enabled then { Config.CoreLoop.Folder } else Config.Zones.LaneFolders
+	for _, folderName in folders do
 		local alley = Workspace:WaitForChild(folderName)
 		local found = {}
 		for _, lane in alley:GetChildren() do

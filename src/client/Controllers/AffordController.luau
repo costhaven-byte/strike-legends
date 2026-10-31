@@ -80,7 +80,7 @@ local function things(): { { [string]: any } }
 		})
 	end
 	local done = player:GetAttribute("Rebirths") or 0
-	if Config.Economy.Rebirth.Enabled then
+	if Config.Economy.Rebirth.Enabled and not Config.CoreLoop.Enabled then
 		table.insert(list, {
 			Key = "Rebirth" .. done,
 			Name = ("REBIRTH %d"):format(done + 1),

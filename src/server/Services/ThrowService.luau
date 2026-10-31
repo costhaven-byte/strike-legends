@@ -18,6 +18,7 @@ local Analytics = require(script.Parent.Analytics)
 local AwayService = require(script.Parent.AwayService)
 local BallService = require(script.Parent.BallService)
 local BossService = require(script.Parent.BossService)
+local CoreLoopService = require(script.Parent.CoreLoopService)
 local FeverService = require(script.Parent.FeverService)
 local GoldenPinService = require(script.Parent.GoldenPinService)
 local LaneEventService = require(script.Parent.LaneEventService)
@@ -38,6 +39,7 @@ local FEVER = Config.Fever
 local GOLDEN = Config.GoldenPin
 local EVENTS = Config.LaneEvents
 local THROW = Config.Throw
+local CORE = Config.CoreLoop
 
 -- A sliding gold zone counts as hit if the release was in it at any moment this many seconds back
 -- (covers the time the release takes to reach the server)
@@ -99,6 +101,9 @@ end
 -- With the AUTO BOWL game pass every auto throw is a plain strike (no PERFECT x2); auto throws never change the streak
 -- and never count for rank trials or the 3-strike challenge.
 local function throwBall(player: Player, charge: number, auto: boolean)
+	if CORE.Enabled then
+		return -- (the Addendum 4 core loop has its own throw, coreThrow; Auto Bowl is off with it)
+	end
 	-- No throws until the player's save has loaded, so rewards always have somewhere to go
 	if not PlayerDataService.IsLoaded(player) then
 		return
@@ -358,7 +363,88 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 	end)
 end
 
+-- ===== Addendum 4 core loop (Config.CoreLoop): hold the button to keep throwing =====
+-- No timing, no PERFECT: every throw knocks about Config.CoreLoop.PinsAverage of the 40 pins, each pin pays coins into
+-- the bag (a full clear pays double), the lane is ready again after the player's cooldown. The client sends one
+-- CoreThrow per throw while the button is held; the server checks the lane, the cooldown and the rate.
+local CORE_LEVEL = { Value = 1 } -- (Power Levels play no part in core coins)
+
+local function coreThrow(player: Player)
+	if not PlayerDataService.IsLoaded(player) then
+		return
+	end
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local lane = LaneUtil.GetOwnedLane(player.UserId)
+	if not root or not lane or not LaneUtil.IsInThrowZone(lane, root.Position) then
+		return
+	end
+	local now = Workspace:GetServerTimeNow()
+	-- (a little slack, so a throw sent on the dot of the cooldown isn't lost to timing noise)
+	if now < (lane:GetAttribute("ReadyAt") or 0) - 0.05 then
+		return
+	end
+	if not RateLimit.Allow(player, "CoreThrow", CORE.ThrowRate) then
+		return
+	end
+	local cooldown = CoreLoopService.Cooldown(player)
+	lane:SetAttribute("ReadyAt", now + cooldown)
+
+	local ball = BallService.GetEquipped(player)
+	local result = ThrowResolver.ResolveCore(CORE.PinsAverage, CORE.PinsSpread)
+	local clear = result.Tier == "Strike"
+	local all = MultiplierService.Coins(player, ball, CORE_LEVEL, 0, nil, false, LaneUtil.ZoneOf(lane))
+	local multiplier = 1
+	for _, name in CORE.Multipliers do
+		multiplier *= all[name] or 1
+	end
+	local coins = Currency.Round(
+		Currency.Scale(result.Count * CORE.PinValue * (if clear then CORE.FullClearMultiplier else 1), multiplier)
+	)
+	-- Coins land in the bag when the ball reaches the pins; a full bag takes nothing (pins still fall)
+	local paid = CoreLoopService.AddToBag(player, coins, result.RollTime)
+
+	ThrowService.Remotes.ThrowResult:FireAllClients({
+		Core = true,
+		Lane = lane,
+		UserId = player.UserId,
+		BallId = ball.Id,
+		PowerLevel = ThrowRules.Level(PlayerDataService.Get(player, "PowerLevel")), -- how the ball looks
+		Pose = ThrowRules.Style(PlayerDataService.Get(player, "RankLevel")).Pose,
+		Charge = 1,
+		Power = 1,
+		Perfect = false,
+		ResetDelay = CORE.RefillDelay,
+		Count = result.Count,
+		Tier = result.Tier, -- "Strike" = every pin down
+		Pins = result.Pins,
+		HitX = 0,
+		Gutter = false,
+		RollTime = result.RollTime,
+		Traits = {},
+		Coins = coins, -- what the pins were worth...
+		Paid = paid, -- ...and what fitted in the bag
+		BagFull = paid < coins,
+		Cooldown = cooldown,
+	})
+
+	CoreLoopService.OnThrow(player)
+	BallService.HideHeldBall(player, result.RollTime)
+	task.delay(result.RollTime, function()
+		if player.Parent then
+			LeaderboardService.RecordThrow(player, result.Count, 0)
+			PlayerDataService.Add(player, "TotalThrows", 1)
+			if clear then
+				PlayerDataService.Add(player, "TotalStrikes", 1)
+			end
+			Analytics.Event(player, "Throw", result.Count, { if clear then "Clear" else "Pins", ball.Id })
+		end
+	end)
+end
+
 local function onThrowRequest(player: Player, clientHold: any)
+	if CORE.Enabled and not BossService.InFight(player) then
+		return -- the core loop throws through CoreThrow only
+	end
 	if not isValidNumber(clientHold) then
 		return
 	end
@@ -437,7 +523,15 @@ function ThrowService:Start()
 	hold.Name = "ThrowHold"
 	hold.Parent = folder
 
-	self.Remotes = { ThrowRequest = request, ThrowResult = resultEvent, ThrowHold = hold }
+	-- Addendum 4 core loop: one throw per message while the button is held (Config.CoreLoop)
+	local core = Instance.new("RemoteEvent")
+	core.Name = "CoreThrow"
+	core.Parent = folder
+	if CORE.Enabled then
+		core.OnServerEvent:Connect(coreThrow)
+	end
+
+	self.Remotes = { ThrowRequest = request, ThrowResult = resultEvent, ThrowHold = hold, CoreThrow = core }
 
 	for _, lane in LaneUtil.GetLanes() do
 		lane:SetAttribute("ReadyAt", 0)

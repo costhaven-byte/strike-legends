@@ -15,6 +15,9 @@ function ModifierService.Current()
 end
 
 function ModifierService:Start()
+	if Config.CoreLoop.Enabled then
+		return -- (no lane modifiers in the Addendum 4 core loop: they change the 10-pin rack)
+	end
 	task.spawn(function()
 		local previous = nil
 		while true do

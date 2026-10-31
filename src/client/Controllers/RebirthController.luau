@@ -233,6 +233,10 @@ local function celebration(): (number, number?) -> ()
 end
 
 function RebirthController:Start()
+-- (switched off in the Addendum 4 core loop: the rooftop is the only zone)
+	if Config.CoreLoop.Enabled then
+		return
+	end
 	local playerGui = player:WaitForChild("PlayerGui")
 	local hud = playerGui:WaitForChild("HUD") :: ScreenGui
 	local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Rebirth") :: RemoteFunction
