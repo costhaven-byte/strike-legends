@@ -55,6 +55,7 @@ local SECTIONS = {
 			{ Text = "7-10 SPLIT", Action = "Split" },
 			{ Text = "GEM PIN", Action = "GemPin" },
 			{ Text = "PACING", Action = "Pacing" }, -- (Addendum 5 E: prints the pacing record in Output)
+			{ Text = "BOOSTS", Action = "Boosts" }, -- (Addendum 6 1.1: prints every coin + pin multiplier source)
 		},
 	},
 }
@@ -201,7 +202,9 @@ function TestPanelController:Start()
 				busy = false
 				if ok and type(result) == "table" then
 					status.Text = tostring(result.Text)
-					status.TextColor3 = if result.Ok then Color3.fromRGB(140, 240, 140) else Color3.fromRGB(255, 140, 120)
+					status.TextColor3 = if result.Ok
+						then Color3.fromRGB(140, 240, 140)
+						else Color3.fromRGB(255, 140, 120)
 				else
 					status.Text = "No answer from the server"
 					status.TextColor3 = Color3.fromRGB(255, 140, 120)

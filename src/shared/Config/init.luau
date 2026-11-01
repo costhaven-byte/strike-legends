@@ -111,7 +111,7 @@ Config.CoreLoop = {
 			BlackHole = { Force = 1.7, KnockFrom = "Center", Shake = 0.75, Color = Color3.fromHex("B45CFF") }, -- black hole pulls in, then a sonic boom
 		},
 	},
-	-- Bags: BagSizes[BagLevel] coins fit; BagPrices[n] buys bag n (bag 1 is free). Bag n fills in ~10 throws (bag 1)
+	-- Bags: BagSizes[BagLevel] pins fit (Addendum 6: the bag holds pins, a sell turns them into coins); BagPrices[n] buys bag n (bag 1 is free). Bag n fills in ~10 throws (bag 1)
 	-- to ~40 throws (bag 10) with ball n. Bag pacing (A2): its own ladder, each bag lands about 40% of the way
 	-- between two balls (bag 2 ~1 min, bags 3-4 ~2 min apart, then ~5 min apart, bag 10 ~3 min after ball 10).
 	-- A small bag caps your income (a throw that doesn't fit pays only what fits), so bags matter as much as balls.
@@ -266,7 +266,8 @@ Config.CoreLoop = {
 		-- (EconomySim.CorePacing). Was Prices { 10000000 }, Growth 3.
 		Prices = { 10000000, 25000000, 60000000, 120000000, 220000000, 380000000 }, -- rebirth 1, 2, 3... (then the last one x Growth each)
 		Growth = 1.5,
-		Bonus = 1, -- x2 after rebirth 1, x3 after rebirth 2 ...
+		Bonus = 1, -- coins: +100% a rebirth, added into the Add group of Boosts.Coins (Addendum 6 1.1)
+		PinBonus = 1, -- pins per swing: +100% a rebirth (Boosts.Pins; was the same Bonus before Addendum 6)
 		LadderPower = 1.6,
 		Tiers = {
 			{ From = 1, Name = "BRONZE", Color = Color3.fromRGB(222, 140, 70) },
@@ -289,7 +290,20 @@ Config.CoreLoop = {
 	-- and ball are left out on purpose, Stage 2 prices balls on pins per throw)
 	PinValue = 1,
 	-- (Addendum 5 step C: "Rebirth" left out: the rebirth multiplier pays on the SELL instead, CoreLoop.Rebirth)
+	-- (Addendum 6 1.1: no longer used to pay: Boosts below is the only formula. Kept for the old loop's code.)
 	Multipliers = { "Mascots", "Potion", "Friends", "Passes", "RobuxBoost" },
+	-- Addendum 6 1.1: the ONE coin multiplier and the ONE pin multiplier (MultiplierService.GetCoinMultiplier /
+	-- GetPinMultiplier; nothing else computes one). The bag holds PINS; a sell pays pins x PinValue x the coin
+	-- multiplier, so every coin boost shows on every sell (before, boosts went in before the bag's limit and a full bag
+	-- swallowed them). Total = (1 + every Add source's bonus added up) x every Times source, in order.
+	-- Add: Pets = the equipped pets' Coins / Pins stat (0.5 = +50%), Rebirth = Config.CoreLoop.Rebirth Bonus / PinBonus
+	-- x rebirths, Friends = +10% a friend in the server (Config.Friends).
+	-- Times: Potion = the strongest running potion of that kind (Config.Potions), Passes = owned game passes' Coins /
+	-- Pins (Config.Monetization), CoinBoost = the COIN BOOST ladder bought with Robux.
+	Boosts = {
+		Coins = { Add = { "Pets", "Rebirth", "Friends" }, Times = { "Potion", "Passes", "CoinBoost" } },
+		Pins = { Add = { "Pets", "Rebirth" }, Times = { "Potion", "Passes" } },
+	},
 	-- Stage 3c: XP per throw = pins x XpPerPin x these (MultiplierService.Xp names; zone and streak left out), so levels,
 	-- level rewards and ranks move again. Ranks come with levels: no rank trials in the core loop.
 	XpPerPin = 1,
@@ -313,7 +327,7 @@ Config.CoreLoop = {
 	DebrisCap = 60,
 	PopsPerThrow = 8, -- coin numbers over pins per throw (one per pin up to this many; the total pops too)
 	BigClear = 24, -- drawn pins a LUCKY throw needs for the camera shake + crash sound (Addendum 5 A1)
-	-- Bag: coins from pins go here, not to your coins (BagSizes above, bought in the shop).
+	-- Bag: pins go here (Addendum 6: pins, not coins), not to your coins (BagSizes above, bought in the shop).
 	-- Selling only happens at the sell station (owner 2026-11-01); the SELL button teleports you onto its pad
 	-- (Addendum 5 A2, Teleport above), where the bag sells.
 	-- A "sell anywhere" pass or upgrade can come later.
@@ -365,8 +379,12 @@ Config.CoreLoop = {
 			Color3.fromRGB(64, 184, 240), Color3.fromRGB(84, 132, 240), Color3.fromRGB(140, 110, 236),
 			Color3.fromRGB(190, 100, 230), Color3.fromRGB(244, 104, 190), Color3.fromRGB(255, 120, 140),
 		},
-		Wood = { Color3.fromRGB(240, 204, 150), Color3.fromRGB(230, 188, 132) }, -- the two strip tones, alternating
-		Deck = Color3.fromRGB(248, 222, 176),
+		-- Addendum 6 1.2: a mid-dark saturated lane (deep teal, matt) so ball effects read; the world stays bright.
+		-- Was Wood { 240,204,150 / 230,188,132 }, Deck 248,222,176 (pale wood washed the effects out).
+		Wood = { Color3.fromRGB(24, 82, 102), Color3.fromRGB(20, 72, 92) }, -- the two strip tones, alternating
+		Deck = Color3.fromRGB(30, 96, 118),
+		LaneMaterial = Enum.Material.Wood, -- matt (Reflectance 0)
+		EdgeLine = { Color = Color3.fromRGB(255, 250, 238), Width = 0.6 }, -- bright lines down both outer edges
 		Lights = 5, -- soft lights over the lane (across), each SurfaceLight at Brightness
 		LightBrightness = 0.65,
 		-- moved to ServerStorage.A5OldLanes at start: paths from <Folder>
@@ -645,7 +663,7 @@ Config.StartingData = {
 	PetSlotsKept = 0, -- pet slots an old save had under the old rules (rank levels 15/30 + 1 rebirth); never fewer (v30)
 	AutoDelete = {}, -- pets X'd on the egg odds boards: { Pinny = true }; hatched ones are not kept (Config.AutoDelete; v31)
 	-- Addendum 4 core loop (Config.CoreLoop; v33)
-	Bag = 0, -- coins from pins waiting in the bag; sold for Coins at the sell station
+	Bag = 0, -- pins waiting in the bag (coins before Addendum 6, same field); sold for Coins at the sell station
 	BagLevel = 1, -- Config.CoreLoop.BagSizes step (bag capacity)
 	BallStep = 1, -- Config.CoreLoop.Balls step: the ball you throw with (v34)
 	PetSlotsBought = 0, -- pet equip slots bought with coins at the shop (Config.PetStats.SlotPrices; v35)
@@ -968,7 +986,7 @@ Config.Ui = {
 	-- Computers keep every button where it is.
 	-- The gold xN multiplier badge right of the coins (owner 2026-10-28: removed on computer + phone). The breakdown
 	-- card still opens from PROFILE.
-	MultiplierBadge = false,
+	MultiplierBadge = true, -- (Addendum 6 1.1: back on: the HUD shows the total coin multiplier, tap = breakdown)
 	PhoneMenu = {
 		Enabled = true,
 		Keys = { "Daily", "Gifts", "Teleport", "Profile", "Settings" },

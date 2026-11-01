@@ -502,7 +502,7 @@ function CoreShopController:Start()
 					row.Line.Text = ("%s pins a throw"):format(Currency.Format(entry.Pins))
 				else
 					row.Name.Text = ("Bag %d"):format(step)
-					row.Line.Text = ("Holds %s coins"):format(Currency.Format(CORE.BagSizes[step]))
+					row.Line.Text = ("Holds %s pins"):format(Currency.Format(CORE.BagSizes[step]))
 				end
 				local fullPrice = if kind == "Ball" then CoreLadder.BallPrice(step, rebirths) else CoreLadder.BagPrice(step, rebirths)
 				local state

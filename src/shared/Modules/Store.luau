@@ -61,6 +61,11 @@ function Store.CoinMultiplier(player: Player): number
 	return product(player, "Coins")
 end
 
+-- Pins per swing multiplier from owned passes (2X PINS, Addendum 6 stage 8; 1 until a pass has Pins)
+function Store.PinMultiplier(player: Player): number
+	return product(player, "Pins")
+end
+
 -- XP multiplier from owned passes
 function Store.XpMultiplier(player: Player): number
 	return product(player, "Xp")

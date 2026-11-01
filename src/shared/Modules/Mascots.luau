@@ -465,36 +465,49 @@ function Mascots.BestContext(player: Player): { [string]: number }?
 	end
 	local bagLevel = math.clamp(math.floor(tonumber(player:GetAttribute("BagLevel")) or 1), 1, #core.BagSizes)
 	local step = math.clamp(math.floor(tonumber(player:GetAttribute("BallStep")) or 1), 1, #core.Balls)
-	local rebirths = math.max(0, math.floor(tonumber(player:GetAttribute("Rebirths")) or 0))
-	local rebirth = if core.Rebirth and core.Rebirth.Enabled then 1 + core.Rebirth.Bonus * rebirths else 1
-	-- coins a pin from everything but the pets (passes, potions, friends...: Config.CoreLoop.Multipliers)
-	local perPin = core.PinValue
-	local parts = tostring(player:GetAttribute("CoinMultipliers") or "")
-	for _, name in core.Multipliers do
-		if name ~= "Mascots" then
-			perPin *= tonumber(string.match(parts, name .. "=([%d%.e%+%-]+)")) or 1
+	-- Addendum 6 1.1: everything but the pets from the one coin / pin multiplier's sources (CoinBoosts / PinBoosts,
+	-- formula Config.CoreLoop.Boosts): the other Add bonuses and the Times multipliers
+	local function split(kind: string, attribute: string): (number, number)
+		local text = tostring(player:GetAttribute(attribute) or "")
+		local add, times = 1, 1
+		for name, value in text:gmatch("([^;=]+)=([^;]+)") do
+			local number = tonumber(value)
+			if number and name ~= "Pets" then
+				if table.find(core.Boosts[kind].Add, name) then
+					add += number
+				else
+					times *= number
+				end
+			end
 		end
+		return add, times
 	end
+	local coinAdd, coinTimes = split("Coins", "CoinBoosts")
+	local pinAdd, pinTimes = split("Pins", "PinBoosts")
 	local level = math.max(0, tonumber(player:GetAttribute("ThrowSpeedLevel")) or 0)
 	return {
 		Bag = core.BagSizes[bagLevel],
-		Coins = core.Balls[step].Pins * rebirth * perPin, -- coins a throw before pets
+		Pins = core.Balls[step].Pins * pinTimes, -- pins a throw before the Add bonuses
+		PinAdd = pinAdd,
+		CoinAdd = coinAdd,
+		PerPin = core.PinValue * coinTimes, -- coins a pin before the Add bonuses
 		Cooldown = core.Cooldown - level * core.CooldownStep,
 		Floor = core.CooldownFloor,
 		Trip = STATS.SellTrip,
 	}
 end
 
--- Coins a second a set of pet stats earns for this player (Mascots.BestContext): throw until the bag is full, then
--- the sell trip (SELL teleport + walk back) earns nothing. The rebirth sell bonus multiplies every set the same.
+-- Coins a second a set of pet stats earns for this player (Mascots.BestContext): throw until the bag (in pins) is
+-- full, then the sell trip (SELL teleport + walk back) earns nothing; the sell pays pins x the coin multiplier.
+-- Pets' Coins and Pins stats add into the Add groups of Config.CoreLoop.Boosts (Addendum 6 1.1).
 function Mascots.Income(stats: { [string]: number }, ctx: { [string]: number }): number
 	local bag = ctx.Bag * (1 + (stats.Bag or 0))
 	local cooldown = math.max(ctx.Floor, ctx.Cooldown / (1 + (stats.Speed or 0)))
-	local rate = ctx.Coins * (1 + (stats.Coins or 0)) * (1 + (stats.Pins or 0)) / cooldown
+	local rate = ctx.Pins * (ctx.PinAdd + (stats.Pins or 0)) / cooldown
 	if rate <= 0 then
 		return 0
 	end
-	return bag / (bag / rate + ctx.Trip)
+	return bag / (bag / rate + ctx.Trip) * ctx.PerPin * (ctx.CoinAdd + (stats.Coins or 0))
 end
 
 -- The pets EQUIP BEST puts out. With a context (Mascots.BestContext): one slot at a time, the pet that raises real

@@ -64,7 +64,9 @@ end
 function Rebirth.CorePrice(rebirths: number?): number
 	local done = math.max(0, math.floor(tonumber(rebirths) or 0))
 	local prices = CORE_REBIRTH.Prices
-	local price = if done < #prices then prices[done + 1] else prices[#prices] * CORE_REBIRTH.Growth ^ (done + 1 - #prices)
+	local price = if done < #prices
+		then prices[done + 1]
+		else prices[#prices] * CORE_REBIRTH.Growth ^ (done + 1 - #prices)
 	local unit = 10 ^ math.max(math.floor(math.log10(price)) - 1, 0)
 	return math.floor(price / unit + 0.5) * unit
 end
@@ -72,6 +74,16 @@ end
 -- The rebirth multiplier on pins per swing and on what a sell pays: 1 + Bonus x rebirths
 function Rebirth.CoreMultiplier(rebirths: number?): number
 	return 1 + CORE_REBIRTH.Bonus * math.max(0, math.floor(tonumber(rebirths) or 0))
+end
+
+-- Addendum 6 1.1: the rebirth bonus that goes into the Add group of Config.CoreLoop.Boosts ("Coins" or "Pins"):
+-- Bonus / PinBonus x rebirths (0.5 = +50%). 0 when the core rebirth is off.
+function Rebirth.CoreBonus(rebirths: number?, kind: string): number
+	if not Rebirth.CoreOn() then
+		return 0
+	end
+	local per = if kind == "Pins" then CORE_REBIRTH.PinBonus or CORE_REBIRTH.Bonus else CORE_REBIRTH.Bonus
+	return per * math.max(0, math.floor(tonumber(rebirths) or 0))
 end
 
 -- The tier row for a rebirth count ({ From, Name, Color }), nil before the first rebirth

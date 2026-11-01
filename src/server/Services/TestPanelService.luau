@@ -20,6 +20,7 @@ local BossService = require(script.Parent.BossService)
 local FeverService = require(script.Parent.FeverService)
 local LaneEventService = require(script.Parent.LaneEventService)
 local MascotService = require(script.Parent.MascotService)
+local MultiplierService = require(script.Parent.MultiplierService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local PotionService = require(script.Parent.PotionService)
 local ProgressionService = require(script.Parent.ProgressionService)
@@ -136,7 +137,10 @@ local ACTIONS: { [string]: (Player) -> any } = {
 			if not egg or not MascotService.GiveFreeEgg(player, egg.Id, 1) then
 				return reply(false, "No egg to give")
 			end
-			return reply(true, ("+1 free %s: hatch it at its stand on the egg row"):format(Config.EggLooks[egg.Id].Name))
+			return reply(
+				true,
+				("+1 free %s: hatch it at its stand on the egg row"):format(Config.EggLooks[egg.Id].Name)
+			)
 		end
 		local zone = math.max(Zones.Highest(PlayerDataService.Get(player, "ZonesOpen")), 2)
 		local pick = nil
@@ -197,6 +201,11 @@ local ACTIONS: { [string]: (Player) -> any } = {
 		print(Pacing.Report(player))
 		return reply(true, "Pacing record printed in Output")
 	end,
+	-- Addendum 6 1.1: prints the coin + pin multiplier and every source (MultiplierService.Report)
+	Boosts = function(player)
+		print(MultiplierService.Report(player))
+		return reply(true, "Boost breakdown printed in Output")
+	end,
 }
 
 local function onRequest(player: Player, action: any, mode: any)
@@ -211,7 +220,7 @@ local function onRequest(player: Player, action: any, mode: any)
 	if not run or not PlayerDataService.IsLoaded(player) then
 		return reply(false, "Not ready yet")
 	end
-	if action == "Pacing" then
+	if action == "Pacing" or action == "Boosts" then
 		return run(player) -- (read only: works in any test)
 	end
 	if not PlayerDataService.IsTestSession(player) then

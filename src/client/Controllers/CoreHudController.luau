@@ -300,9 +300,11 @@ function CoreHudController:Start()
 		local coins = player:GetAttribute("Coins") or 0
 		local amount = player:GetAttribute("Bag") or 0
 		local size = player:GetAttribute("BagSize") or CORE.BagSizes[1]
+		-- (Addendum 6: the bag holds pins; what they sell for = pins x PinValue x the coin multiplier)
+		local worth = amount * CORE.PinValue * (tonumber(player:GetAttribute("CoinMultiplier")) or 1)
 		if coins >= firstBall.Price then
 			return 3
-		elseif amount > 0 and (amount >= size or coins + amount >= firstBall.Price) then
+		elseif amount > 0 and (amount >= size or coins + worth >= firstBall.Price) then
 			return 2
 		end
 		return 1
@@ -377,7 +379,9 @@ function CoreHudController:Start()
 		flying += 1
 		local phone = HudKit.Phone()
 		local base = gui.AbsolutePosition
-		local from = counter.AbsolutePosition + Vector2.new(counter.AbsoluteSize.X / 2, counter.AbsoluteSize.Y + 6) - base
+		local from = counter.AbsolutePosition
+			+ Vector2.new(counter.AbsoluteSize.X / 2, counter.AbsoluteSize.Y + 6)
+			- base
 		local to = bagIcon.AbsolutePosition + bagIcon.AbsoluteSize / 2 - base
 		local tag = text(gui, "+" .. Currency.Format(paid), {
 			Name = "Gain",
@@ -420,7 +424,7 @@ function CoreHudController:Start()
 	end)
 
 	-- Sold at the station: coins fly up from the bag
-	remotes:WaitForChild("CoreSold").OnClientEvent:Connect(function(amount, multiplier)
+	remotes:WaitForChild("CoreSold").OnClientEvent:Connect(function(amount, multiplier, _sources)
 		guideUntil = 0
 		Sfx.Play("Coin", 1, 1.4)
 		Sfx.Play("SpinWin", 1.2, 0.6)
@@ -446,15 +450,16 @@ function CoreHudController:Start()
 			Position = UDim2.new(0.3, 0, 0.15, 0),
 			TextXAlignment = Enum.TextXAlignment.Left,
 		})
-		-- Addendum 5 step C: the rebirth multiplier paid on this sell, as a gold tag on the pop's corner
-		if type(multiplier) == "number" and multiplier > 1 then
-			local tag, tagFace = plate(pop, "RebirthTag", GOLD, 6)
+		-- Addendum 6 1.1: the coin multiplier this sell used (every source, MultiplierService.GetCoinMultiplier), as a
+		-- gold tag on the pop's corner, on every sell (x1 too, so it is clear nothing boosted it)
+		if type(multiplier) == "number" then
+			local tag, tagFace = plate(pop, "BoostTag", if multiplier > 1 then GOLD else K.CreamLip, 6)
 			tag.AnchorPoint = Vector2.new(0.5, 0.5)
 			tag.Position = UDim2.fromScale(0.92, 0.02)
 			tag.Size = UDim2.fromScale(0.5, 0.52)
 			tag.Rotation = 8
 			tag.ZIndex = 6
-			text(tagFace, Currency.FormatMultiplier(multiplier) .. " REBIRTH", {
+			text(tagFace, Currency.FormatMultiplier(multiplier) .. " BOOST", {
 				Size = UDim2.new(1, -8, 0.8, 0),
 				Position = UDim2.new(0, 4, 0.1, 0),
 			})

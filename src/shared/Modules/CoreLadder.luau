@@ -129,6 +129,50 @@ function CoreLadder.GiftCoins(minutes: number, ballStep: any, bagLevel: any, reb
 end
 
 -- "Rubber Bouncer" / "Bag 3" (what a step is called on screen)
+-- ===== Addendum 6 1.1: the boost formula (Config.CoreLoop.Boosts), shared so the server pays and the HUD shows the
+-- same numbers. sources: { Pets = 0.5, Rebirth = 1, Potion = 2, ... } (Add sources = their bonus, Times = their x).
+
+-- Total for "Coins" or "Pins": (1 + every Add bonus) x every Times multiplier
+function CoreLadder.Combine(kind: string, sources: { [string]: number }): number
+	local formula = CORE.Boosts[kind]
+	local total = 1
+	for _, name in formula.Add do
+		total += tonumber(sources[name]) or 0
+	end
+	for _, name in formula.Times do
+		total *= tonumber(sources[name]) or 1
+	end
+	return total
+end
+
+-- True when this source adds a bonus (+50%) rather than multiplying (x2)
+function CoreLadder.IsAdd(kind: string, name: string): boolean
+	return table.find(CORE.Boosts[kind].Add, name) ~= nil
+end
+
+-- Sources -> "Pets=0.5;Rebirth=1;Potion=2" (the CoinBoosts / PinBoosts Player attributes), in the formula's order
+function CoreLadder.EncodeBoosts(kind: string, sources: { [string]: number }): string
+	local formula = CORE.Boosts[kind]
+	local parts = {}
+	for _, list in { formula.Add, formula.Times } do
+		for _, name in list do
+			local value = tonumber(sources[name]) or (if list == formula.Add then 0 else 1)
+			table.insert(parts, ("%s=%s"):format(name, tostring(math.floor(value * 1000 + 0.5) / 1000)))
+		end
+	end
+	return table.concat(parts, ";")
+end
+
+function CoreLadder.DecodeBoosts(text: any): { [string]: number }
+	local sources = {}
+	if type(text) == "string" then
+		for name, value in text:gmatch("([^;=]+)=([^;]+)") do
+			sources[name] = tonumber(value)
+		end
+	end
+	return sources
+end
+
 function CoreLadder.Name(kind: string, step: number): string
 	return if kind == "Ball" then CORE.Balls[step].Name else ("Bag %d"):format(step)
 end

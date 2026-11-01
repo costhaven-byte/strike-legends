@@ -213,7 +213,7 @@ local function buildSpot(n: number, spots: Instance, visuals: Instance)
 			Vector3.new(width + left + right, 0.4, length),
 			CFrame.new(mid, floorTop - 0.2, (LANE.FoulZ + LANE.DeckZ) / 2),
 			LANE.Wood[(n - 1) % 2 + 1],
-			Enum.Material.WoodPlanks
+			LANE.LaneMaterial or Enum.Material.WoodPlanks
 		)
 		wood.Parent = visuals
 		local deckPart = part(
@@ -221,7 +221,7 @@ local function buildSpot(n: number, spots: Instance, visuals: Instance)
 			Vector3.new(width + left + right, 0.4, deck),
 			CFrame.new(mid, floorTop - 0.2, (LANE.DeckZ + LANE.EndZ) / 2),
 			LANE.Deck,
-			Enum.Material.WoodPlanks
+			LANE.LaneMaterial or Enum.Material.WoodPlanks
 		)
 		deckPart.Parent = visuals
 
@@ -231,8 +231,7 @@ local function buildSpot(n: number, spots: Instance, visuals: Instance)
 			local arm = part(
 				"Arrow",
 				Vector3.new(0.35, 0.05, 2.6),
-				CFrame.new(x + side * 0.55, floorTop + 0.025, -3470)
-					* CFrame.Angles(0, math.rad(side * 28), 0),
+				CFrame.new(x + side * 0.55, floorTop + 0.025, -3470) * CFrame.Angles(0, math.rad(side * 28), 0),
 				Color3.fromRGB(255, 200, 60),
 				Enum.Material.Neon
 			)
@@ -269,12 +268,8 @@ local function buildSpot(n: number, spots: Instance, visuals: Instance)
 		inner.Shape = Enum.PartType.Cylinder
 		flat(inner)
 		inner.Parent = spot
-		local numberPlate = marker(
-			"Number",
-			Vector3.new(3.4, 0.05, 3.4),
-			CFrame.new(x, LANE.ApproachTop + 0.08, LANE.StandZ),
-			spot
-		)
+		local numberPlate =
+			marker("Number", Vector3.new(3.4, 0.05, 3.4), CFrame.new(x, LANE.ApproachTop + 0.08, LANE.StandZ), spot)
 		local gui = Instance.new("SurfaceGui")
 		gui.Face = Enum.NormalId.Top
 		gui.PixelsPerStud = 40
@@ -329,6 +324,25 @@ local function buildLane(folder: Instance): Model
 		line.Parent = visuals
 	end
 
+	-- Addendum 6 1.2: bright edge lines down both outer sides, so the dark lane still reads as a lane
+	if LANE.EdgeLine then
+		for _, side in { -1, 1 } do
+			local line = part(
+				"EdgeLine",
+				Vector3.new(LANE.EdgeLine.Width, 0.04, LANE.FoulZ - LANE.EndZ),
+				CFrame.new(
+					LANE.Centre + side * (LANE.Width / 2 - LANE.EdgeLine.Width / 2),
+					LANE.FloorY + 0.02,
+					(LANE.FoulZ + LANE.EndZ) / 2
+				),
+				LANE.EdgeLine.Color,
+				Enum.Material.SmoothPlastic
+			)
+			flat(line)
+			line.Parent = visuals
+		end
+	end
+
 	-- Soft lights over the lane (bright like a sunny arena; one strip per Width / Lights)
 	local across = LANE.Width / LANE.Lights
 	for i = 1, LANE.Lights do
@@ -378,11 +392,23 @@ local function buildLane(folder: Instance): Model
 			gui.LightInfluence = 0
 			gui.Parent = board
 			local gradient = Instance.new("UIGradient")
-			local title = label(gui, LANE.Sign.Title, UDim2.fromScale(0.92, 0.62), UDim2.fromScale(0.5, 0.38), Color3.new(1, 1, 1))
+			local title = label(
+				gui,
+				LANE.Sign.Title,
+				UDim2.fromScale(0.92, 0.62),
+				UDim2.fromScale(0.5, 0.38),
+				Color3.new(1, 1, 1)
+			)
 			gradient.Color = ColorSequence.new(Color3.fromRGB(255, 226, 90), Color3.fromRGB(255, 140, 40))
 			gradient.Rotation = 90
 			gradient.Parent = title
-			label(gui, LANE.Sign.Sub, UDim2.fromScale(0.86, 0.26), UDim2.fromScale(0.5, 0.82), Color3.fromRGB(110, 220, 255))
+			label(
+				gui,
+				LANE.Sign.Sub,
+				UDim2.fromScale(0.86, 0.26),
+				UDim2.fromScale(0.5, 0.82),
+				Color3.fromRGB(110, 220, 255)
+			)
 		end
 		local pennants = 26
 		local span = beam.Size.X - 4

@@ -18,10 +18,10 @@ local Balls = require(Shared.Modules.Balls)
 local CoreLadder = require(Shared.Modules.CoreLadder)
 local Currency = require(Shared.Modules.Currency)
 local Mascots = require(Shared.Modules.Mascots)
-local Rebirth = require(Shared.Modules.Rebirth)
 local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
+local MultiplierService = require(script.Parent.MultiplierService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
 local Pacing = require(script.Parent.Parent.Modules.Pacing)
@@ -33,7 +33,7 @@ local SHOP = CORE.Shop
 
 local CoreLoopService = {}
 
--- Coins already promised to the bag by throws whose ball hasn't reached the pins yet
+-- Pins already promised to the bag by throws whose ball hasn't reached the pins yet
 local pending: { [Player]: number } = {}
 -- Addendum 5 step C: bumped by a rebirth, so coins still on their way don't land in the fresh bag
 local epoch: { [Player]: number } = {}
@@ -47,23 +47,10 @@ function CoreLoopService.PetStats(player: Player): { [string]: number }
 	return Mascots.TotalStats(PlayerDataService.Get(player, "EquippedMascots") or {})
 end
 
--- How many coins the bag holds (Config.CoreLoop.BagSizes, by the saved BagLevel), x (1 + the pets' Bag stat)
+-- How many pins the bag holds (Addendum 6 1.1: the bag holds pins, the sell turns them into coins) (Config.CoreLoop.BagSizes, by the saved BagLevel), x (1 + the pets' Bag stat)
 function CoreLoopService.BagSize(player: Player): number
 	local size = CORE.BagSizes[CoreLadder.BagLevel(PlayerDataService.Get(player, "BagLevel"))]
 	return math.floor(size * (1 + CoreLoopService.PetStats(player).Bag) + 0.5)
-end
-
--- The rebirth multiplier (Addendum 5 step C, Config.CoreLoop.Rebirth): pins per swing AND what a sell pays
-function CoreLoopService.RebirthMultiplier(player: Player): number
-	if not Rebirth.CoreOn() then
-		return 1
-	end
-	return Rebirth.CoreMultiplier(PlayerDataService.Get(player, "Rebirths"))
-end
-
--- Pins per swing multiplier: 1 + the pets' Pins stat (Addendum 5 B1), x the rebirth multiplier (step C)
-function CoreLoopService.PinsMultiplier(player: Player): number
-	return (1 + CoreLoopService.PetStats(player).Pins) * CoreLoopService.RebirthMultiplier(player)
 end
 
 -- The ball ladder step the player throws with (Config.CoreLoop.Balls)
@@ -71,9 +58,9 @@ function CoreLoopService.BallStep(player: Player): number
 	return CoreLadder.BallStep(PlayerDataService.Get(player, "BallStep"))
 end
 
--- Average pins per throw with the player's ball (x the pets' Pins stat, PinsMultiplier)
+-- Average pins per throw with the player's ball x the pin multiplier (Addendum 6 1.1: MultiplierService.GetPinMultiplier)
 function CoreLoopService.PinsAverage(player: Player): number
-	return CORE.Balls[CoreLoopService.BallStep(player)].Pins * CoreLoopService.PinsMultiplier(player)
+	return CORE.Balls[CoreLoopService.BallStep(player)].Pins * MultiplierService.GetPinMultiplier(player)
 end
 
 -- The throw animation level: follows the ball step (Addendum 5 A1; it used to follow the rank level)
@@ -158,11 +145,13 @@ local function buy(player: Player, kind: any)
 	local want = kind
 	local step, price = nextBuy(player, kind)
 	if not step then
-		local all = if kind == "Ball" then CoreLadder.NextBall(PlayerDataService.Get(player, "BallStep")) == nil
+		local all = if kind == "Ball"
+			then CoreLadder.NextBall(PlayerDataService.Get(player, "BallStep")) == nil
 			else CoreLadder.NextBag(PlayerDataService.Get(player, "BagLevel")) == nil
 		return {
 			Ok = false,
-			Error = if all then "You've got them all"
+			Error = if all
+				then "You've got them all"
 				elseif kind == "Bag" then "Get the next ball first"
 				else "Get the next bag first",
 		}
@@ -195,11 +184,11 @@ function CoreLoopService.Cooldown(player: Player): number
 	return math.max(CORE.CooldownFloor, math.floor(seconds * 1000 + 0.5) / 1000)
 end
 
--- Promises up to `coins` to the bag and drops them in after `delay` seconds (when the ball reaches the pins).
--- Returns the coins that fit (0 = the bag is full: pins still fall but pay nothing).
-function CoreLoopService.AddToBag(player: Player, coins: number, delay: number): number
+-- Promises up to `pins` to the bag and drops them in after `delay` seconds (when the ball reaches the pins).
+-- Returns the pins that fit (0 = the bag is full: pins still fall but pay nothing).
+function CoreLoopService.AddToBag(player: Player, pins: number, delay: number): number
 	local room = CoreLoopService.BagSize(player) - (PlayerDataService.Get(player, "Bag") or 0) - (pending[player] or 0)
-	local paid = math.clamp(math.floor(coins), 0, math.max(0, room))
+	local paid = math.clamp(math.floor(pins), 0, math.max(0, room))
 	if paid <= 0 then
 		return 0
 	end
@@ -217,7 +206,7 @@ function CoreLoopService.AddToBag(player: Player, coins: number, delay: number):
 	return paid
 end
 
--- Is the bag full (counting coins on their way)?
+-- Is the bag full (counting pins on their way)?
 function CoreLoopService.IsFull(player: Player): boolean
 	return (PlayerDataService.Get(player, "Bag") or 0) + (pending[player] or 0) >= CoreLoopService.BagSize(player)
 end
@@ -229,7 +218,7 @@ function CoreLoopService.OnThrow(player: Player)
 end
 
 -- Addendum 5 step C: a rebirth empties the bag and puts the ball, the bag and the throw speed back to the start
--- (RebirthService does the coins, pets and the count). Coins still on their way are dropped.
+-- (RebirthService does the coins, pets and the count). Pins still on their way are dropped.
 function CoreLoopService.ResetForRebirth(player: Player)
 	epoch[player] = (epoch[player] or 0) + 1
 	pending[player] = nil
@@ -240,15 +229,16 @@ function CoreLoopService.ResetForRebirth(player: Player)
 	equipLadderBall(player)
 end
 
--- Sells the whole bag for Coins (only ever called while the player stands on the sell pad). Step C: it pays the
--- bag's coins x the rebirth multiplier.
+-- Sells the whole bag for Coins (only ever called while the player stands on the sell pad). Addendum 6 1.1: it
+-- pays the bag's pins x PinValue x the coin multiplier (MultiplierService.GetCoinMultiplier: pets, rebirth, friends,
+-- potion, passes, COIN BOOST), so every boost shows on every sell.
 local function sell(player: Player)
 	local bag = PlayerDataService.Get(player, "Bag") or 0
 	if bag <= 0 then
 		return
 	end
-	local multiplier = CoreLoopService.RebirthMultiplier(player)
-	local paid = Currency.Round(Currency.Scale(bag, multiplier))
+	local multiplier, sources = MultiplierService.GetCoinMultiplier(player)
+	local paid = Currency.Round(Currency.Scale(bag, CORE.PinValue * multiplier))
 	PlayerDataService.Set(player, "Bag", Currency.Zero())
 	PlayerDataService.Add(player, "Coins", paid)
 	PlayerDataService.Add(player, "CoreSells", 1)
@@ -256,7 +246,7 @@ local function sell(player: Player)
 	Analytics.Currency(player, "Coins", paid, "Gameplay", "Sell")
 	SessionLog.Sell(player, paid, PlayerDataService.Get(player, "CoreSells") or 1)
 	Pacing.Sold(player, paid)
-	soldRemote:FireClient(player, paid, multiplier)
+	soldRemote:FireClient(player, paid, multiplier, CoreLadder.EncodeBoosts("Coins", sources))
 end
 
 local function onPad(position: Vector3): boolean
@@ -651,8 +641,11 @@ local function placeOnFloor(copy: Model, at: Vector3, turn: number?, skip: { Ins
 	for _, d in copy:GetDescendants() do
 		if d:IsA("BasePart") and d.Transparency < 1 then
 			local cf, s = d.CFrame, d.Size
-			local half = (math.abs(cf.RightVector.Y) * s.X + math.abs(cf.UpVector.Y) * s.Y + math.abs(cf.LookVector.Y) * s.Z)
-				/ 2
+			local half = (
+				math.abs(cf.RightVector.Y) * s.X
+				+ math.abs(cf.UpVector.Y) * s.Y
+				+ math.abs(cf.LookVector.Y) * s.Z
+			) / 2
 			bottom = math.min(bottom, cf.Position.Y - half)
 		end
 	end
@@ -836,12 +829,10 @@ function CoreLoopService:Start()
 	hideCrateShop()
 	buildEggRow() -- (after hideCrateShop: the roof's own Skyline stand is copied from its hiding place)
 
-	-- The bag size and throw cooldown the HUD shows (B1: and the pins multiplier, PinsMultiplier)
+	-- The bag size and throw cooldown the HUD shows (Addendum 6: the multipliers come from MultiplierService)
 	local function publish(player: Player)
 		player:SetAttribute("BagSize", CoreLoopService.BagSize(player))
 		player:SetAttribute("ThrowCooldown", CoreLoopService.Cooldown(player))
-		player:SetAttribute("PinsMultiplier", CoreLoopService.PinsMultiplier(player))
-		player:SetAttribute("RebirthMultiplier", CoreLoopService.RebirthMultiplier(player)) -- (step C)
 	end
 	PlayerDataService.OnLoaded(function(player)
 		equipLadderBall(player)

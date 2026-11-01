@@ -165,8 +165,17 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 	local forward = lane.BallStart.CFrame.LookVector
 	local distance = (lane.PinSpot.Position - lane.BallStart.Position):Dot(forward)
 	local autoStrike = auto and Store.Owns(player, "AutoBowl")
-	local result =
-		ThrowResolver.Resolve(charge, perfect, hooked, overcharged, ball, distance, level.Power, autoStrike, style.Speed)
+	local result = ThrowResolver.Resolve(
+		charge,
+		perfect,
+		hooked,
+		overcharged,
+		ball,
+		distance,
+		level.Power,
+		autoStrike,
+		style.Speed
+	)
 	-- 7-10 SPLIT: only pins 7 and 10 stand. A PERFECT clears both, other throws have a small chance.
 	local split = event == "Split"
 	if split then
@@ -368,7 +377,6 @@ end
 -- cap, only up to the 40 drawn pins fall), each pin pays coins into the bag, the lane is ready again after the
 -- player's cooldown. The client sends one
 -- CoreThrow per throw while the button is held; the server checks the lane, the cooldown and the rate.
-local CORE_LEVEL = { Value = 1 } -- (Power Levels play no part in core coins)
 
 local function coreThrow(player: Player)
 	if not PlayerDataService.IsLoaded(player) then
@@ -392,18 +400,14 @@ local function coreThrow(player: Player)
 
 	local ball = BallService.GetEquipped(player)
 	local result = ThrowResolver.ResolveCore(CoreLoopService.PinsAverage(player), CORE.PinsSpread)
-	local all = MultiplierService.Coins(player, ball, CORE_LEVEL, 0, nil, false, LaneUtil.ZoneOf(lane))
-	local multiplier = 1
-	for _, name in CORE.Multipliers do
-		multiplier *= all[name] or 1
-	end
-	local coins = Currency.Round(Currency.Scale(result.Count * CORE.PinValue, multiplier))
-	-- Coins land in the bag when the ball reaches the pins; a full bag takes nothing (pins still fall)
-	local paid = CoreLoopService.AddToBag(player, coins, result.RollTime)
+	-- Addendum 6 1.1: pins land in the bag when the ball reaches them (the pin multiplier is in PinsAverage); a full
+	-- bag takes nothing (pins still fall). The sell turns them into coins with the coin multiplier.
+	local pins = result.Count
+	local paid = CoreLoopService.AddToBag(player, pins, result.RollTime)
 	if paid > 0 then
-		-- (coins/min on the HUD and away coins measure real throws; step C: x the rebirth multiplier the sell pays)
-		local rebirth = CoreLoopService.RebirthMultiplier(player)
-		AwayService.OnCoins(player, paid * rebirth, multiplier * rebirth)
+		-- (coins/min on the HUD and away coins measure real throws, at what a sell would pay for them now)
+		local multiplier = MultiplierService.GetCoinMultiplier(player)
+		AwayService.OnCoins(player, paid * CORE.PinValue * multiplier, multiplier)
 	end
 
 	local data = {
@@ -425,9 +429,9 @@ local function coreThrow(player: Player)
 		Gutter = false,
 		RollTime = result.RollTime,
 		Traits = {},
-		Coins = coins, -- what the pins were worth...
-		Paid = paid, -- ...and what fitted in the bag
-		BagFull = paid < coins,
+		Coins = pins, -- the pins knocked... (Addendum 6: the bag holds pins)
+		Paid = paid, -- ...and how many fitted in the bag
+		BagFull = paid < pins,
 		Cooldown = cooldown,
 	}
 	if LaneUtil.Shared() then

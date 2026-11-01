@@ -13,6 +13,7 @@ local SunKit = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local CoreLadder = require(Shared.Modules.CoreLadder)
 local Currency = require(Shared.Modules.Currency)
 local Store = require(Shared.Modules.Store)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
@@ -49,9 +50,38 @@ local SOURCES = {
 	{ Key = "Fever", Name = "FEVER", Icon = "Flame" }, -- only while FEVER MODE runs (Config.Fever)
 }
 
+-- Addendum 6 1.1: in the core loop the badge and card show the one coin multiplier (CoinMultiplier attribute) and
+-- its sources (CoinBoosts, formula Config.CoreLoop.Boosts): Add sources as "+50%", Times sources as "x2".
+local CORE = Config.CoreLoop.Enabled
+local CORE_SOURCES = {
+	{ Key = "Pets", Name = "PETS", Icon = "Paw" },
+	{ Key = "Rebirth", Name = "REBIRTHS", Icon = "Rebirth" },
+	{ Key = "Friends", Name = "FRIENDS", Icon = "GiftPink" },
+	{ Key = "Potion", Name = "COIN POTION", Icon = "PotionCoin" },
+	{ Key = "Passes", Name = "GAME PASSES", Icon = "Store" },
+	{ Key = "CoinBoost", Name = "COIN BOOST", Icon = "Coins2" },
+}
+
 local MultiplierController = {}
 -- The Profile panel's BOOSTS page lists the same sources (Polish P5)
 MultiplierController.Sources = SOURCES
+MultiplierController.CoreSources = CORE_SOURCES
+
+-- One core source as shown: "+50%" for an Add source, "x2" for a Times one (kind "Coins" or "Pins")
+function MultiplierController.ShowBoost(kind: string, key: string, value: number?): string
+	if CoreLadder.IsAdd(kind, key) then
+		return ("+%s%%"):format(Currency.Format(math.floor((value or 0) * 100 + 0.5)))
+	end
+	return Currency.FormatMultiplier(value or 1)
+end
+
+-- Is this core source doing anything right now?
+function MultiplierController.BoostOn(kind: string, key: string, value: number?): boolean
+	if CoreLadder.IsAdd(kind, key) then
+		return math.abs(value or 0) > 1e-6
+	end
+	return math.abs((value or 1) - 1) > 1e-6
+end
 
 -- 2.345 -> "x2.35", 3 -> "x3", 1500 -> "x1,500"
 local format = Currency.FormatMultiplier
@@ -222,7 +252,14 @@ function MultiplierController:Start()
 	end
 
 	-- One source row: icon, name, value (x40; pets too since batch C2: x2.2, not +120%)
-	local function sourceRow(parent: Instance, entry, value: number, phone: boolean, order: number): Frame
+	local function sourceRow(
+		parent: Instance,
+		entry,
+		value: number,
+		phone: boolean,
+		order: number,
+		shown: string?
+	): Frame
 		local frame = UiKit.Make("Frame", {
 			Name = entry.Name,
 			BackgroundTransparency = 1,
@@ -239,7 +276,7 @@ function MultiplierController:Start()
 		-- Long names shrink to fit instead of being cut off
 		name.TextScaled = true
 		UiKit.Make("UITextSizeConstraint", { MaxTextSize = if phone then 11 else 13 }, name)
-		local shown = format(value)
+		shown = shown or format(value)
 		local amount = UiKit.Text(
 			frame,
 			shown,
@@ -312,7 +349,24 @@ function MultiplierController:Start()
 		local K2 = UiKit.C
 		local values = decode(player:GetAttribute("CoinMultipliers"))
 		local entries = {}
-		for _, entry in CARD_ROWS do
+		if CORE then
+			-- (Addendum 6: every core source, always listed, so the player sees what can boost them)
+			local boosts = CoreLadder.DecodeBoosts(player:GetAttribute("CoinBoosts"))
+			for _, source in CORE_SOURCES do
+				local value = boosts[source.Key]
+				local on = MultiplierController.BoostOn("Coins", source.Key, value)
+				table.insert(entries, {
+					Entry = {
+						Name = source.Name,
+						HudIcon = source.Icon,
+						Color = if on then G("FFC93A") else G("8A80B0"),
+					},
+					Value = if on then 2 else 1,
+					Shown = MultiplierController.ShowBoost("Coins", source.Key, value),
+				})
+			end
+		end
+		for _, entry in if CORE then {} else CARD_ROWS do
 			local value = 1
 			for _, key in entry.Keys do
 				value *= values[key] or 1
@@ -322,7 +376,16 @@ function MultiplierController:Start()
 			end
 		end
 		local specials = {}
-		for _, special in SPECIALS do
+		if CORE then
+			-- (the pins per swing multiplier, MultiplierService.GetPinMultiplier, in place of the special throws)
+			table.insert(specials, {
+				Name = "PINS A SWING",
+				Icon = "Ball",
+				HudIcon = "Ball",
+				Value = tonumber(player:GetAttribute("PinsMultiplier")) or 1,
+			})
+		end
+		for _, special in if CORE then {} else SPECIALS do
 			if special.Value then
 				table.insert(specials, special)
 			end
@@ -365,7 +428,8 @@ function MultiplierController:Start()
 			value.Position = UDim2.fromOffset(0, 30)
 			value.Size = UDim2.new(1, 0, 0, 44)
 			bigTotal = value
-			local special = UiKit.Text(cover, "ON SPECIAL THROWS", UiKit.Head, 14, K2.Pink, 2)
+			local special =
+				UiKit.Text(cover, if CORE then "PIN MULTIPLIER" else "ON SPECIAL THROWS", UiKit.Head, 14, K2.Pink, 2)
 			special.TextXAlignment = Enum.TextXAlignment.Left
 			special.Position = UDim2.fromOffset(14, bodyY + 84 + 8)
 			special.Size = UDim2.fromOffset(200, 16)
@@ -374,7 +438,7 @@ function MultiplierController:Start()
 				UiKit.Place(chipBox, 14, bodyY + 84 + 8 + 16 + 8 + (i - 1) * 42, 200, 34)
 				local l = line(chipBox, 6)
 				UiKit.Make("UIPadding", { PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5) }, l)
-				UiKit.Icon(l, s.Icon, 22).LayoutOrder = 1
+				rowIcon(l, s, 22).LayoutOrder = 1
 				local n = UiKit.Text(l, s.Name, UiKit.Body, 11, K2.White, 0)
 				n.TextXAlignment = Enum.TextXAlignment.Left
 				n.Size = UDim2.new(1, -28 - 50, 1, 0)
@@ -402,7 +466,7 @@ function MultiplierController:Start()
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			}, grid)
 			for i, item in entries do
-				local cell = sourceRow(grid, item.Entry, item.Value, true, i)
+				local cell = sourceRow(grid, item.Entry, item.Value, true, i, item.Shown)
 				local rule = UiKit.Make("Frame", {
 					Name = "Rule",
 					BackgroundColor3 = G("2A1E55"),
@@ -470,10 +534,11 @@ function MultiplierController:Start()
 				VerticalAlignment = Enum.VerticalAlignment.Center,
 			}, stack)
 			for i, item in entries do
-				table.insert(rowFrames, sourceRow(stack, item.Entry, item.Value, false, i))
+				table.insert(rowFrames, sourceRow(stack, item.Entry, item.Value, false, i, item.Shown))
 			end
 			y += listH + 8
-			local special = UiKit.Text(cover, "ON SPECIAL THROWS", UiKit.Head, 16, K2.Pink, 2)
+			local special =
+				UiKit.Text(cover, if CORE then "PIN MULTIPLIER" else "ON SPECIAL THROWS", UiKit.Head, 16, K2.Pink, 2)
 			special.TextXAlignment = Enum.TextXAlignment.Left
 			special.Position = UDim2.fromOffset(16, y + 2)
 			special.Size = UDim2.fromOffset(w - 32, 16)
@@ -482,7 +547,7 @@ function MultiplierController:Start()
 			for i, s in specials do
 				local chipBox = UiKit.Box(cover, s.Name, K2.Card, 12)
 				UiKit.Place(chipBox, 16 + (i - 1) * (chipW + 6), y, chipW, 46)
-				local icon = UiKit.Icon(chipBox, s.Icon, 26)
+				local icon = rowIcon(chipBox, s, 26)
 				icon.AnchorPoint = Vector2.new(0, 0.5)
 				icon.Position = UDim2.new(0, 3, 0.5, 0)
 				local n = UiKit.Text(chipBox, s.Name, UiKit.Body, 9, K2.Label, 0)
@@ -536,6 +601,9 @@ function MultiplierController:Start()
 		for _, source in SOURCES do
 			total *= values[source.Key] or 1
 		end
+		if CORE then
+			total = tonumber(player:GetAttribute("CoinMultiplier")) or 1 -- (Addendum 6: the one coin multiplier)
+		end
 		if currentTotal == nil then
 			currentTotal = total
 			shownTotal.Value = total
@@ -561,7 +629,9 @@ function MultiplierController:Start()
 			build(false)
 		end
 	end
-	player:GetAttributeChangedSignal("CoinMultipliers"):Connect(refresh)
+	for _, key in { "CoinMultipliers", "CoinMultiplier", "CoinBoosts", "PinsMultiplier" } do
+		player:GetAttributeChangedSignal(key):Connect(refresh)
+	end
 	refresh()
 
 	-- Opens out of the badge: starts on it at UIScale 0.3 and moves to its spot while growing to full size
