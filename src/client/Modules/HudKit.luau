@@ -67,18 +67,18 @@ HudKit.Num = Font.new("rbxasset://fonts/families/FredokaOne.json")
 HudKit.Body = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
 
 -- Addendum 4 Stage 3d (Config.Ui.Sunny): the sunny palette and two fonts replace the night kit. Same names, so every
--- screen built with the kit follows. Buttons: sky / coral / green / yellow; dark panels turn a neutral slate (windows
--- keep white text readable until their own restyle); no white shine band.
+-- screen built with the kit follows. Buttons: sky / coral / green / yellow; panels and cards cream / sand; no white
+-- shine band.
 local SUNNY = Config.Ui.Sunny == true
 HudKit.Sunny = SUNNY
 if SUNNY then
 	local SunKit = require(script.Parent:WaitForChild("SunKit"))
 	local S = SunKit.C
-	C.Panel = hex("2E3442")
-	C.Card = hex("3A4152")
-	C.CardLip = hex("242936")
+	C.Panel = S.Cream -- (3d-2: windows cream with dark text, SunKit.Daylight)
+	C.Card = S.Sand
+	C.CardLip = S.CreamLip
 	C.Ink = S.Ink
-	C.Divider = hex("4A5266")
+	C.Divider = S.CreamLip
 	C.Gold, C.GoldLip = S.Sun, S.SunLip
 	C.Cyan, C.CyanLip = S.Sky, S.SkyLip
 	C.Pink, C.PinkLip = S.Coral, S.CoralLip

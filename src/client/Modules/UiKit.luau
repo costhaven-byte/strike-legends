@@ -50,21 +50,24 @@ UiKit.C = {
 }
 local C = UiKit.C
 
--- Addendum 4 Stage 3d (Config.Ui.Sunny): the night navy turns a neutral slate and the neon buttons take the sunny
--- colours (Modules/SunKit), same names, so every screen built with the kit follows
+-- Addendum 4 Stage 3d (Config.Ui.Sunny): windows turn cream with dark text (3d-2) and the neon buttons take the sunny
+-- colours (Modules/SunKit), same names, so every screen built with the kit follows. White text left on the light
+-- panels is turned dark by SunKit.Daylight.
 if Config.Ui.Sunny == true then
 	local S = SunKit.C
 	C.Ink = S.Ink
-	C.Cover = hex("2E3442")
-	C.Page = hex("242936")
-	C.Card = hex("3A4152")
-	C.Missing = hex("2A2F3C")
-	C.Chip = hex("4A5266")
-	C.Slot = hex("232733")
-	C.Dash = hex("5A6278")
-	C.Label = hex("DCE1EA")
-	C.Muted = hex("A9B0BE")
-	C.Faded = hex("7A8193")
+	C.Cover = S.Cream
+	C.Page = S.Sand
+	C.Card = S.Paper
+	C.Missing = S.Dim
+	C.Chip = S.Dim
+	C.Slot = S.Dim
+	C.Dash = S.CreamLip
+	C.Label = S.Ink
+	C.Muted = S.Muted
+	C.Faded = S.Faded
+	C.MissingTrait = S.Muted
+	C.LockedText = S.Muted
 	C.Gold, C.GoldLip = S.Sun, S.SunLip
 	C.Cyan, C.CyanLip = S.Sky, S.SkyLip
 	C.Pink, C.PinkLip = S.Coral, S.CoralLip

@@ -76,6 +76,22 @@ local C = {
 	Track = hex("0B0820"),
 	PressRing = hex("5B47A8"),
 }
+-- Addendum 4 Stage 3d-2: the sunny look, cream window and sand cards (white text on them turns dark by
+-- SunKit.Daylight)
+if SUNNY then
+	local S = SunKit.C
+	C.Panel, C.Card, C.Ink = S.Cream, S.Sand, S.Ink
+	C.PanelRing, C.CardRing = S.Ink, S.Ink
+	C.Body, C.GreyText = S.Muted, S.Ink
+	C.Grey, C.GreyLip = S.Grey, S.GreyLip
+	C.Gold, C.GoldLip, C.GoldDown = S.Sun, S.SunLip, S.SunLip
+	C.Cyan = S.Sky
+	C.Pink, C.PinkLip, C.PinkDown = S.Coral, S.CoralLip, S.CoralLip
+	C.Lime, C.LimeLip, C.LimeDown = S.Green, S.GreenLip, S.GreenLip
+	C.Red, C.RedLip = S.Red, S.RedLip
+	C.Track = S.Dim
+	C.PressRing = S.SkyLip
+end
 
 -- Icon per pass / product Id (cards and the toast)
 local ICONS = {

@@ -18,6 +18,9 @@ SunKit.C = {
 	Cream = hex("FFF6DF"), -- light panels
 	CreamLip = hex("D9C9A0"),
 	Sand = hex("F1E4C2"), -- cards and tracks inside a light panel
+	Paper = hex("FFFDF5"), -- cards on a sand page
+	Dim = hex("E6D8B4"), -- empty slots, locked cards
+	Faded = hex("A0957A"), -- third-line text, empty-slot marks
 	Track = hex("3A4152"), -- dark bar tracks
 	Sky = hex("38B6FF"),
 	SkyLip = hex("1C82C4"),
@@ -173,6 +176,162 @@ local LIPS = {
 }
 function SunKit.Lip(color: Color3): Color3
 	return LIPS[color] or C.Ink
+end
+
+-- ===== Daylight (3d-2): white text left on a light panel turns dark =====
+-- The windows were built for dark panels with white text. Their panels are cream now (HudKit/UiKit palettes), so
+-- any light text whose backdrop (the nearest filled frame above it) is light turns ink, grey text turns muted, and
+-- coloured text without an outline gets darker. Labels with the KeepColor attribute are left alone.
+local function luma(c: Color3): number
+	return 0.299 * c.R + 0.587 * c.G + 0.114 * c.B
+end
+local function chroma(c: Color3): number
+	return math.max(c.R, c.G, c.B) - math.min(c.R, c.G, c.B)
+end
+
+-- The colour this label sits on: its own fill, or the nearest filled frame above it
+local function backdrop(label: GuiObject): Color3?
+	local node: Instance? = label
+	while node and node:IsA("GuiObject") do
+		local filled = node:IsA("Frame")
+			or node:IsA("CanvasGroup")
+			or node:IsA("TextLabel")
+			or node:IsA("TextButton")
+			or node:IsA("ScrollingFrame")
+		if filled and (node :: GuiObject).BackgroundTransparency < 0.4 then
+			return (node :: GuiObject).BackgroundColor3
+		end
+		node = node.Parent
+	end
+	return nil
+end
+
+local function outlined(label: Instance): boolean
+	for _, child in label:GetChildren() do
+		if child:IsA("UIStroke") and child.Enabled and child.Thickness >= 1 and luma(child.Color) < 0.3 then
+			return true
+		end
+	end
+	return false
+end
+
+local busy: { [Instance]: boolean } = {}
+local function fix(label: TextLabel | TextButton | TextBox)
+	if busy[label] or label:GetAttribute("KeepColor") then
+		return
+	end
+	local under = backdrop(label)
+	if not under or luma(under) < 0.75 or chroma(under) > 0.25 then
+		return -- dark or coloured backdrop: light text stays
+	end
+	local color = label.TextColor3
+	local new: Color3? = nil
+	local dropStroke = false
+	if chroma(color) < 0.2 then
+		if luma(color) > 0.7 then
+			new, dropStroke = C.Ink, true
+		elseif luma(color) > 0.35 then
+			new, dropStroke = C.Muted, true
+		end
+	elseif luma(color) > 0.45 and not outlined(label) then
+		-- the same hue, deeper (yellows lean amber, a darker yellow reads olive)
+		local h, s = color:ToHSV()
+		if h > 0.09 and h < 0.2 then
+			h = 0.11
+		end
+		new = Color3.fromHSV(h, math.max(s, 0.8), 0.7)
+	end
+	if not new then
+		return
+	end
+	busy[label] = true
+	label.TextColor3 = new
+	if dropStroke then
+		label.TextStrokeTransparency = 1
+		for _, child in label:GetChildren() do
+			if child:IsA("UIStroke") and child.ApplyStrokeMode == Enum.ApplyStrokeMode.Contextual then
+				child.Enabled = false
+			end
+		end
+	end
+	busy[label] = nil
+end
+
+local watched = setmetatable({}, { __mode = "k" }) :: { [Instance]: boolean }
+local function watch(object: Instance)
+	if not (object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox")) then
+		return
+	end
+	task.defer(fix, object)
+	if not watched[object] then
+		watched[object] = true
+		object:GetPropertyChangedSignal("TextColor3"):Connect(function()
+			task.defer(fix, object)
+		end)
+	end
+end
+
+-- Runs over a ScreenGui now and on everything added to it later
+function SunKit.Daylight(gui: Instance)
+	if Config.Ui.Sunny ~= true then
+		return
+	end
+	for _, object in gui:GetDescendants() do
+		watch(object)
+	end
+	gui.DescendantAdded:Connect(watch)
+end
+
+-- A night-look board in the world (lane scoreboards, the leaderboard wall), repainted on this screen: navy
+-- screens turn cream (nested ones sand), the dark backdrop gradient turns flat sky, neon frame rings turn ink,
+-- then Daylight darkens the text. Studio-built boards, so the place file keeps the night look (Sunny off = as is).
+function SunKit.Board(gui: LayerCollector)
+	if Config.Ui.Sunny ~= true then
+		return
+	end
+	local painted: { [Instance]: boolean } = {}
+	for _, object in gui:GetDescendants() do
+		if object:IsA("Frame") and object.BackgroundTransparency < 0.4 then
+			local color = object.BackgroundColor3
+			if object.Name == "Background" then
+				object.BackgroundColor3 = C.Sky
+				painted[object] = true
+			elseif luma(color) < 0.2 then
+				local nested = false
+				local node = object.Parent
+				while node and node ~= gui do
+					if painted[node] and node.Name ~= "Background" then
+						nested = true
+					end
+					node = node.Parent
+				end
+				object.BackgroundColor3 = if object.Name == "AvatarFrame"
+					then C.Dim
+					elseif nested then C.Sand
+					else C.Cream
+				object.BackgroundTransparency = 0
+				painted[object] = true
+			end
+			if painted[object] then
+				for _, child in object:GetChildren() do
+					if child:IsA("UIGradient") then
+						child.Enabled = false
+					elseif child:IsA("UIStroke") and child.ApplyStrokeMode == Enum.ApplyStrokeMode.Border then
+						if chroma(child.Color) > 0.5 and child.Color.B > 0.6 then
+							child.Color = C.Ink -- neon cyan / pink rings
+						end
+					end
+				end
+			end
+		end
+	end
+	-- White text left on the sky backdrop gets the ink outline
+	for _, object in gui:GetDescendants() do
+		if object:IsA("TextLabel") and backdrop(object) == C.Sky and not object:FindFirstChildWhichIsA("UIStroke") then
+			new("UIStroke", { Color = C.Ink, Thickness = 3, LineJoinMode = Enum.LineJoinMode.Round }, object)
+		end
+	end
+	SunKit.Daylight(gui)
 end
 
 return SunKit
