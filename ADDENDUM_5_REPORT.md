@@ -459,7 +459,7 @@ the shop, pets and slots kept, x2 pins after. No errors. Fixed where the steps c
 **Screenshots:** tried again (Play and Edit, with and without a camera position): `screen_capture` timed out; Studio's
 view is 1x1 and draws no frames. Not restarted (it may hold unsaved work). So nothing new was looked at by eye.
 
-**Restore tag:** `restore-a5-F-before`. **Commit:** see git log ("Addendum 5 F"). **Save:** no new fields.
+**Restore tag:** `restore-a5-F-before`. **Commit:** 621f432. **Save:** no new fields.
 
 **Studio-only edits:** none (the 18 changed scripts were pushed into the open Studio; save the place or reconnect Rojo).
 
