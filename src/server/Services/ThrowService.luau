@@ -364,8 +364,9 @@ local function throwBall(player: Player, charge: number, auto: boolean)
 end
 
 -- ===== Addendum 4 core loop (Config.CoreLoop): hold the button to keep throwing =====
--- No timing, no PERFECT: every throw knocks about the ball's Pins (Config.CoreLoop.Balls) of the 40 pins, each pin pays coins into
--- the bag (a full clear pays double), the lane is ready again after the player's cooldown. The client sends one
+-- No timing, no PERFECT: every throw counts about the ball's Pins (Config.CoreLoop.Balls; Addendum 5 A1: a number with no
+-- cap, only up to the 40 drawn pins fall), each pin pays coins into the bag, the lane is ready again after the
+-- player's cooldown. The client sends one
 -- CoreThrow per throw while the button is held; the server checks the lane, the cooldown and the rate.
 local CORE_LEVEL = { Value = 1 } -- (Power Levels play no part in core coins)
 
@@ -391,15 +392,12 @@ local function coreThrow(player: Player)
 
 	local ball = BallService.GetEquipped(player)
 	local result = ThrowResolver.ResolveCore(CoreLoopService.PinsAverage(player), CORE.PinsSpread)
-	local clear = result.Tier == "Strike"
 	local all = MultiplierService.Coins(player, ball, CORE_LEVEL, 0, nil, false, LaneUtil.ZoneOf(lane))
 	local multiplier = 1
 	for _, name in CORE.Multipliers do
 		multiplier *= all[name] or 1
 	end
-	local coins = Currency.Round(
-		Currency.Scale(result.Count * CORE.PinValue * (if clear then CORE.FullClearMultiplier else 1), multiplier)
-	)
+	local coins = Currency.Round(Currency.Scale(result.Count * CORE.PinValue, multiplier))
 	-- Coins land in the bag when the ball reaches the pins; a full bag takes nothing (pins still fall)
 	local paid = CoreLoopService.AddToBag(player, coins, result.RollTime)
 	if paid > 0 then
@@ -412,14 +410,15 @@ local function coreThrow(player: Player)
 		UserId = player.UserId,
 		BallId = ball.Id,
 		PowerLevel = ThrowRules.Level(PlayerDataService.Get(player, "PowerLevel")), -- how the ball looks
-		Pose = ThrowRules.Style(PlayerDataService.Get(player, "RankLevel")).Pose,
+		Pose = CoreLoopService.Pose(player), -- (Addendum 5 A1: follows the ball step, not the rank level)
 		Charge = 1,
 		Power = 1,
 		Perfect = false,
 		ResetDelay = CORE.RefillDelay,
 		Count = result.Count,
-		Tier = result.Tier, -- "Strike" = every pin down
-		Pins = result.Pins,
+		Tier = result.Tier,
+		Pins = result.Pins, -- the drawn pins that fall (at most the 40 of the rack; Count is the real number)
+		Lucky = result.Lucky,
 		HitX = 0,
 		Gutter = false,
 		RollTime = result.RollTime,
@@ -435,17 +434,16 @@ local function coreThrow(player: Player)
 	task.delay(result.RollTime, function()
 		if player.Parent then
 			LeaderboardService.RecordThrow(player, result.Count, 0)
-			local xpAll = MultiplierService.Xp(player, 0, LaneUtil.ZoneOf(lane))
-			local xpMultiplier = 1
-			for _, name in CORE.XpMultipliers do
-				xpMultiplier *= xpAll[name] or 1
+			if not CORE.NoLevels then -- (Addendum 5 A1: no XP, levels or ranks in the loop; code kept)
+				local xpAll = MultiplierService.Xp(player, 0, LaneUtil.ZoneOf(lane))
+				local xpMultiplier = 1
+				for _, name in CORE.XpMultipliers do
+					xpMultiplier *= xpAll[name] or 1
+				end
+				ProgressionService.AddXP(player, math.floor(result.Count * CORE.XpPerPin * xpMultiplier + 0.5))
 			end
-			ProgressionService.AddXP(player, math.floor(result.Count * CORE.XpPerPin * xpMultiplier + 0.5))
 			PlayerDataService.Add(player, "TotalThrows", 1)
-			if clear then
-				PlayerDataService.Add(player, "TotalStrikes", 1)
-			end
-			Analytics.Event(player, "Throw", result.Count, { if clear then "Clear" else "Pins", ball.Id })
+			Analytics.Event(player, "Throw", result.Count, { if result.Lucky then "Lucky" else "Pins", ball.Id })
 		end
 	end)
 end

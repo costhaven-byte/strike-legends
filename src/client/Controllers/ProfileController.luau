@@ -197,7 +197,8 @@ function ProfileController:Start()
 		return box, total, rows, rule
 	end
 	local _, coinTotal, coinRows = sourceList("Coins", "COINS", C.Gold, 0, 400, BODY_H)
-	local _, xpTotal, xpRows = sourceList("Xp", "XP", C.Cyan, 412, 400, 54 + #XP_SOURCES * 25 + 12)
+	local xpBox, xpTotal, xpRows = sourceList("Xp", "XP", C.Cyan, 412, 400, 54 + #XP_SOURCES * 25 + 12)
+	xpBox.Visible = not (Config.CoreLoop.Enabled and Config.CoreLoop.NoLevels) -- (Addendum 5 A1: no XP)
 	local note = RewardKit.Label(
 		boosts,
 		"Every boost multiplies the others. Grey ones are still x1: pets, potions, rebirths and the STORE raise them.",
@@ -528,6 +529,14 @@ function ProfileController:Start()
 	local function refreshSub()
 		local level = player:GetAttribute("RankLevel") or 1
 		local rebirths = player:GetAttribute("Rebirths") or 0
+		if Config.CoreLoop.Enabled and Config.CoreLoop.NoLevels then -- (Addendum 5 A1: no levels)
+			sub.Text = ("%s  ·  %d REBIRTH%s"):format(
+				string.upper(player.DisplayName),
+				rebirths,
+				if rebirths == 1 then "" else "S"
+			)
+			return
+		end
 		sub.Text = ("%s  ·  LEVEL %d  ·  %d REBIRTH%s"):format(
 			string.upper(player.DisplayName),
 			level,

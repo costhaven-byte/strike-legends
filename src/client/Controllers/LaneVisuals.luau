@@ -399,7 +399,9 @@ end
 
 -- ===== Addendum 4 core loop (Config.CoreLoop): a hold-to-throw throw =====
 -- A fast roll, then the pins the server picked fall: real physics on your own lane, a light scripted topple on
--- everyone else's. Coin numbers pop over a few of the pins plus the total; big clears shake the camera and crash.
+-- everyone else's. Coin numbers pop over a few of the pins plus the total; LUCKY rolls shake the camera and crash.
+-- Addendum 5 A1: data.Count is the real pin count (no cap, can be thousands); data.Pins are the drawn rack pins
+-- that fall (never more than the 40 of the rack).
 -- The fresh rack stands RefillDelay seconds after the hit (knocked pins fly on as pooled, capped debris).
 local CORE = Config.CoreLoop
 local function playCoreThrow(data)
@@ -435,20 +437,20 @@ local function playCoreThrow(data)
 		Sfx.Play("Throw", 1 + math.random() * 0.1, 0.7)
 	end
 
-	local count = #data.Pins
-	local clear = data.Tier == "Strike"
+	local shown = #data.Pins
+	local lucky = data.Lucky == true
 	local paid = data.Paid or 0
-	local each = if count > 0 then paid / count else 0
-	local force = THROW.Levels[level].Force * (if clear then 1.3 else 1)
+	local each = if shown > 0 then paid / shown else 0
+	local force = THROW.Levels[level].Force * (if lucky then 1.3 else 1)
 
 	local function impact()
 		local hitPoint = rack.HeadPinCFrame.Position - forward * 1 + Vector3.new(0, 0.4, 0)
-		local big = count >= CORE.BigClear or clear
+		local big = lucky and shown >= CORE.BigClear
 		Sfx.PlayAt(
-			if big then "StrikeCrash" elseif count >= 10 then "SpareCrash" else "PinHit",
+			if big then "StrikeCrash" elseif shown >= 10 then "SpareCrash" else "PinHit",
 			lane.PinSpot,
 			1 + math.random() * 0.08,
-			if isOwn then math.clamp(0.5 + count * 0.03, 0.5, 1.3) else 0.5
+			if isOwn then math.clamp(0.5 + shown * 0.03, 0.5, 1.3) else 0.5
 		)
 		local popped = 0
 		for _, index in data.Pins do
@@ -466,7 +468,7 @@ local function playCoreThrow(data)
 							body.Position + Vector3.new(0, 1, 0),
 							math.max(1, math.floor(each + 0.5)),
 							THROW.NumberPopSize * 0.8,
-							if clear then "gold" else "white"
+							if lucky then "gold" else "white"
 						)
 					end
 				else
@@ -482,19 +484,15 @@ local function playCoreThrow(data)
 			ThrowFx.NumberPop(
 				rack.HeadPinCFrame.Position + forward * 4 + Vector3.new(0, 3.5, 0),
 				paid,
-				THROW.NumberPopSize * (if big then 1.5 else 1.15),
-				if clear then "gold" else "pink"
+				THROW.NumberPopSize * (if lucky then 1.5 else 1.15),
+				if lucky then "gold" else "pink",
+				if lucky then "LUCKY!" else nil
 			)
 		end
 		ThrowFx.Shake(THROW.CameraShakeStrength * 0.2, THROW.CameraShakeTime * 0.5)
 		if big then
-			CameraShake.Add(if clear then 0.7 else 0.4)
+			CameraShake.Add(0.4)
 			burst(isOwn, hitPoint + forward * 3, ballInfo.Trail or ballInfo.Color, 30, 30 * PIN_SCALE, 0.8)
-		end
-		if clear then
-			Sfx.Play("Cheer", 1.1, 0.8)
-			LaneFx.Confetti(lane, JUICE.ConfettiAmount)
-			UiFx.Flash(GOLD, 0.25, 0.25)
 		end
 	end
 

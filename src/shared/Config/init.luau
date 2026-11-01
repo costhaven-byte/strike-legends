@@ -42,31 +42,40 @@ Config.CoreLoop = {
 		PinScale = 0.65, -- pin size against Config.Lane PinHeight/PinWidth
 		HeadPinForward = 1.5, -- the head pin stands this many studs closer to the bowler than the lane's PinSpot
 	},
-	-- Pins per throw: the ball's Pins (Balls below) rolls within +/- PinsSpread of it, capped at the rack, so only
-	-- balls 9 and 10 can ever clear the lane.
+	-- Pins per throw: the ball's Pins (Balls below) rolls within +/- PinsSpread of it. Addendum 5 A1: pins are a
+	-- number, no cap: the counter and pops show the real count, only up to the 40 rack pins fall on screen.
 	PinsSpread = 0.2,
+	-- A roll in the top LuckyFrom share of the spread (0.25 = the best quarter, +10% to +20%) pops LUCKY!
+	LuckyFrom = 0.25,
+	-- Addendum 5 A1: no levels in the loop: throws give no XP, the level bar, level-up and rank screens, level
+	-- rewards and the nameplate level are off, nothing asks for a level (code kept; false = Addendum 4 levels back)
+	NoLevels = true,
+	-- Throw animation level per ball step (Config.Throw pose levels: 1 = scuffed .. 9 = clean .. 12 = biggest)
+	Poses = { 1, 2, 3, 4, 5, 6, 7, 9, 10, 12 },
 	-- Stage 2 ladders (Addendum 4): balls and bags are bought in a fixed order, alternating ball, bag, ball, bag
 	-- (ball 2, bag 2, ball 3, bag 3 ... ball 10, bag 10). Crates no longer give balls. Ball = the existing ball model
 	-- it borrows (Config.Balls Id; Stage 4 picks the final ones and adds the effects), Pins = average pins per throw.
 	-- Prices: income per minute with the ball you have x the target minutes to the next ball (2, 2, 5, 5, 5, 5, 5, 8,
 	-- 12), with the bag in between taking about 30% of that time. Sell trips counted at 6 s; check with
-	-- require(game.ServerStorage.Tools.EconomySim).CoreLadder(). Full ladder ~53 min of play.
+	-- require(game.ServerStorage.Tools.EconomySim).CoreLadder(). Full ladder ~51 min of play.
+	-- Addendum 5 A1: steeper pins curve (about x2 a ball; was 6, 9, 12 .. 43), bag sizes and prices scaled with it
+	-- so every step still takes the same minutes. Step A2 splits balls and bags into two ladders.
 	Balls = {
 		{ Ball = "Tangerine", Name = "Beach Roller", Pins = 6, Price = 0 },
-		{ Ball = "Bubblegum", Name = "Rubber Bouncer", Pins = 9, Price = 50 }, -- one bag: bought in the first 30 s (Stage 3)
-		{ Ball = "Lime", Name = "Confetti Popper", Pins = 12, Price = 530 },
-		{ Ball = "Sunburst", Name = "Sunspike", Pins = 15, Price = 1900 },
-		{ Ball = "Frostbite", Name = "Gust", Pins = 19, Price = 2400 },
-		{ Ball = "CloudSwirl", Name = "Cloud Roll", Pins = 23, Price = 3200 },
-		{ Ball = "Crystal", Name = "Rainbow Arc", Pins = 27, Price = 3900 },
-		{ Ball = "Lightning", Name = "Sunbolt", Pins = 31, Price = 4700 },
-		{ Ball = "SolidGold", Name = "Tornado", Pins = 35, Price = 8800 },
-		{ Ball = "Daybreak", Name = "Sonic Boom", Pins = 43, Price = 18000 },
+		{ Ball = "Bubblegum", Name = "Rubber Bouncer", Pins = 10, Price = 50 }, -- one bag: bought in the first 30 s (Stage 3)
+		{ Ball = "Lime", Name = "Confetti Popper", Pins = 18, Price = 580 },
+		{ Ball = "Sunburst", Name = "Sunspike", Pins = 35, Price = 2800 },
+		{ Ball = "Frostbite", Name = "Gust", Pins = 70, Price = 5600 },
+		{ Ball = "CloudSwirl", Name = "Cloud Roll", Pins = 140, Price = 12000 },
+		{ Ball = "Crystal", Name = "Rainbow Arc", Pins = 300, Price = 24000 },
+		{ Ball = "Lightning", Name = "Sunbolt", Pins = 650, Price = 52000 },
+		{ Ball = "SolidGold", Name = "Tornado", Pins = 1400, Price = 180000 },
+		{ Ball = "Daybreak", Name = "Sonic Boom", Pins = 3200, Price = 600000 },
 	},
 	-- Bags: BagSizes[BagLevel] coins fit; BagPrices[n] buys bag n (bag 1 is free). Each bag fills in ~10 s (bag 1)
 	-- to ~40 s (bag 10) with the ball it comes after.
-	BagSizes = { 60, 130, 200, 300, 440, 600, 780, 990, 1500, 2700 },
-	BagPrices = { 0, 170, 700, 930, 1200, 1600, 1900, 3600, 7200, 13000 },
+	BagSizes = { 60, 140, 300, 700, 1600, 3700, 8700, 21000, 50000, 130000 },
+	BagPrices = { 0, 180, 920, 1900, 3800, 8400, 18000, 65000, 220000, 570000 },
 	-- Gifts in the core loop (owner 2026-11-01: scale to income): daily, playtime and level rewards pay CoreMinutes
 	-- (on each reward row; RewardMinutes when a row has none) of the income your ball + bag make now (ladder income,
 	-- sell trips of TripSeconds counted, no multipliers). A crate in a reward pays CrateMinutes of it instead, since
@@ -109,7 +118,7 @@ Config.CoreLoop = {
 		Enabled = true,
 		DoneSeconds = 3, -- the "done" card stays this long after ball 2
 	},
-	FullClearMultiplier = 2, -- every pin down pays double
+	FullClearMultiplier = 2, -- (Addendum 4 only: every pin down paid double; Addendum 5 A1 has no full clear, unused)
 	-- Coins: each pin = PinValue coins x these multipliers (MultiplierService.Coins names; zone, power, rank, streak
 	-- and ball are left out on purpose, Stage 2 prices balls on pins per throw)
 	PinValue = 1,
@@ -121,7 +130,8 @@ Config.CoreLoop = {
 	-- Stage 3c: profile stats (Config.Profile.Stats Key) and achievements (their Stat) the rooftop can't move; hidden
 	-- Rooftop stations moved to ServerStorage.CoreLoopHidden (Stage 2 crate kiosk; Stage 3c egg stand, pets wait for Stage 5)
 	HiddenStations = { "CrateShop", "EggPad" },
-	HideProfile = { "Perfects", "BestStreak", "Eggs", "Crates", "Pets", "Rebirths", "BossWins", "Zones" },
+	HideProfile = { "Perfects", "BestStreak", "Eggs", "Crates", "Pets", "Rebirths", "BossWins", "Zones", "Level", "Strikes" },
+	-- (Addendum 5 A1: "Level" and "Strikes" too: no levels, no full clears)
 	-- Hold to keep throwing: seconds between throws = Cooldown - ThrowSpeedLevel x CooldownStep, never below
 	-- CooldownFloor (raise the floor if frame time suffers). ThrowSpeedLevel is saved; the upgrade shop is Stage 2.
 	Cooldown = 1.0,
@@ -134,7 +144,7 @@ Config.CoreLoop = {
 	DebrisLife = 0.9,
 	DebrisCap = 60,
 	PopsPerThrow = 8, -- coin numbers over pins per throw (one per pin up to this many; the total pops too)
-	BigClear = 24, -- pins in one throw that count as a big clear: camera shake + crash sound
+	BigClear = 24, -- drawn pins a LUCKY throw needs for the camera shake + crash sound (Addendum 5 A1)
 	-- Bag: coins from pins go here, not to your coins (BagSizes above, bought in the shop).
 	-- Selling only happens at the sell station (owner 2026-11-01); the SELL button points the way there.
 	-- A "sell anywhere" pass or upgrade can come later.
@@ -4146,8 +4156,11 @@ Config.Monetization = {
 			Id = "DoubleCoins", -- Id kept from 12a
 			PassId = 2058239949,
 			Robux = 399,
-			Name = "2X COINS + 2X XP",
-			Text = "Double coins and XP. Stacks with potions.",
+			-- (Addendum 5 A1: no XP in the loop, so the screen names only the coins)
+			Name = if Config.CoreLoop.NoLevels then "2X COINS" else "2X COINS + 2X XP",
+			Text = if Config.CoreLoop.NoLevels
+				then "Double coins forever. Stacks with potions."
+				else "Double coins and XP. Stacks with potions.",
 			Coins = 2,
 			Xp = 2,
 		},
@@ -5289,5 +5302,35 @@ Config.Profile = {
 	},
 	PublishEvery = 1, -- seconds between the server's stat/achievement updates to the panel
 }
+
+-- Addendum 5 A1: no XP in the loop, so gifts that gave an XP potion give the coin potion of the same size instead
+-- (daily calendar, playtime gifts, spin wheel). The XP potion rows stay in Config.Potions.
+if Config.CoreLoop.Enabled and Config.CoreLoop.NoLevels then
+	local swap = { XpSmall = "CoinSmall", XpBig = "CoinBig" }
+	for _, row in Config.Playtime.Rewards do
+		row.Potion = swap[row.Potion] or row.Potion
+	end
+	for _, row in Config.Daily.Rewards do
+		if row.Potions then
+			local merged, byId = {}, {}
+			for _, potion in row.Potions do
+				local id = swap[potion.Id] or potion.Id
+				if byId[id] then
+					byId[id].Count += potion.Count
+				else
+					byId[id] = { Id = id, Count = potion.Count }
+					table.insert(merged, byId[id])
+				end
+			end
+			row.Potions = merged
+		end
+	end
+	for _, slice in Config.Spin.Slices or {} do
+		if swap[slice.Potion] then
+			slice.Potion = swap[slice.Potion]
+			slice.Label = if slice.Potion == "CoinBig" then "MEGA COINS" else "COIN POTION"
+		end
+	end
+end
 
 return Config

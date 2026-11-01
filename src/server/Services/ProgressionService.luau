@@ -33,6 +33,14 @@ local function updateBadge(player: Player)
 	if not head then
 		return
 	end
+	if Config.CoreLoop.Enabled and Config.CoreLoop.NoLevels then
+		-- (Addendum 5 A1: no levels, so no "LV 12 PRO" over the head)
+		local old = head:FindFirstChild("RankBadge")
+		if old then
+			old:Destroy()
+		end
+		return
+	end
 	local rank = Progression.GetRank(player:GetAttribute("Rank") or 1)
 	local level = player:GetAttribute("RankLevel") or 1
 

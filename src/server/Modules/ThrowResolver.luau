@@ -28,6 +28,7 @@ export type Result = {
 	Perfect: boolean,
 	Strength: number, -- how hard the release was (Config.Throw.PerfectPowerBonus for a PERFECT)
 	Overcharge: string?, -- released in the red cap: "Blast" (paid off) or "Wasted" (gutter)
+	Lucky: boolean?, -- core loop: the luck roll came out high (Addendum 5 A1)
 }
 
 local OVER = THROW.Overcharge
@@ -158,16 +159,16 @@ function ThrowResolver.Resolve(
 end
 
 -- Addendum 4 core loop (Config.CoreLoop): a hold-to-throw throw. No timing: the pin count rolls within +/- spread of
--- `average`, capped at the rack; every pin down is a full clear. Pins are picked front to back with some luck.
+-- `average`. Addendum 5 A1: pins are a number, so the count has no cap (a strong ball counts thousands); only the
+-- 40-pin rack is drawn, so `Pins` (which rack pins fall, front to back with some luck) is at most the rack. No full
+-- clear any more. Lucky = the roll landed in the top Config.CoreLoop.LuckyFrom share of the spread (a LUCKY! pop).
 function ThrowResolver.ResolveCore(average: number, spread: number): Result
-	local rack = PinRack.Count()
-	local wanted = average * (1 + (math.random() * 2 - 1) * spread)
-	local count = math.clamp(math.floor(wanted + 0.5), 1, rack)
-	local clear = count >= rack
+	local roll = math.random() * 2 - 1 -- -1 .. 1
+	local count = math.max(math.floor(average * (1 + roll * spread) + 0.5), 1)
 	return {
 		Count = count,
-		Tier = if clear then "Strike" else "Good",
-		Pins = pickPins(count),
+		Tier = "Good",
+		Pins = pickPins(math.min(count, PinRack.Count())),
 		HitX = 0,
 		Gutter = false,
 		RollTime = Config.CoreLoop.RollTime,
@@ -176,6 +177,7 @@ function ThrowResolver.ResolveCore(average: number, spread: number): Result
 		Perfect = false,
 		Strength = 1,
 		Overcharge = nil,
+		Lucky = roll >= 1 - 2 * Config.CoreLoop.LuckyFrom,
 	}
 end
 

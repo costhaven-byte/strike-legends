@@ -47,6 +47,11 @@ function CoreLoopService.PinsAverage(player: Player): number
 	return CORE.Balls[CoreLoopService.BallStep(player)].Pins
 end
 
+-- The throw animation level: follows the ball step (Addendum 5 A1; it used to follow the rank level)
+function CoreLoopService.Pose(player: Player): number
+	return CoreLadder.Pose(PlayerDataService.Get(player, "BallStep"))
+end
+
 -- What the shop sells next ("Ball" / "Bag", step, price; nil = everything bought)
 local function nextBuy(player: Player): (string?, number, number)
 	return CoreLadder.Next(PlayerDataService.Get(player, "BallStep"), PlayerDataService.Get(player, "BagLevel"))

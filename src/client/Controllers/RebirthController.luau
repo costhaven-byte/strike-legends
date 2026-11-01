@@ -430,12 +430,17 @@ function RebirthController:Start()
 		xpBig.Text = ("%s XP"):format(Currency.FormatMultiplier(Rebirth.XpMultiplier(done + 1)))
 		local zone = Rebirth.OpensZone(done)
 		opens.Text = if zone then ("OPENS %s!"):format(Zones.Name(zone):upper()) else ""
-		needs.Text = ('NEEDS  <font color="%s">LV %d</font>  ·  <font color="%s">%s COINS</font>'):format(
-			hex(if hasLevel then C.Lime else C.Red),
-			needLevel,
-			hex(if hasCoins then C.Lime else C.Red),
-			Currency.Format(cost)
-		)
+		needs.Text = if needLevel <= 0 -- (Addendum 5 A1: no levels, coins only)
+			then ('NEEDS  <font color="%s">%s COINS</font>'):format(
+				hex(if hasCoins then C.Lime else C.Red),
+				Currency.Format(cost)
+			)
+			else ('NEEDS  <font color="%s">LV %d</font>  ·  <font color="%s">%s COINS</font>'):format(
+				hex(if hasLevel then C.Lime else C.Red),
+				needLevel,
+				hex(if hasCoins then C.Lime else C.Red),
+				Currency.Format(cost)
+			)
 
 		local confirming = ready and os.clock() < confirmUntil
 		if not REBIRTH.Enabled then

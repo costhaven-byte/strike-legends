@@ -1,4 +1,5 @@
--- Addendum 4 core loop (Config.CoreLoop), the screen half: the live pin counter ("12/40"), the bag bar, the SELL
+-- Addendum 4 core loop (Config.CoreLoop), the screen half: the live pin counter ("+1.2K" pins this throw, with a
+-- LUCKY! badge on high rolls; Addendum 5 A1), the bag bar, the SELL
 -- button (it shows the way to the sell station: selling only happens there), the BAG FULL, SELL prompt and the
 -- sold pop. Style from the owner's simulator refs (assets/ui_refs_addendum4): rounded bold Fredoka text with a thin
 -- dark outline, flat fills, one hard offset shadow, thick dark outlines, corners that differ by element.
@@ -13,7 +14,6 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local AssetSlots = require(Shared.AssetSlots)
 local Currency = require(Shared.Modules.Currency)
-local PinRack = require(Shared.Modules.PinRack)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local HudKit = require(Modules.HudKit)
 local Sfx = require(Modules.Sfx)
@@ -68,10 +68,10 @@ function CoreHudController:Start()
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 	}, nil)
 
-	-- ===== Pin counter: "12/40", counts up as your pins fall =====
+	-- ===== Pin counter: the real pins of your last throw (big-number format), counts up as your pins fall =====
 	local counter, counterFace = plate(gui, "PinCounter", PANEL, 8)
 	place(counter, "PinCounter")
-	local counterText = text(counterFace, "0/" .. PinRack.Count(), {
+	local counterText = text(counterFace, "0", {
 		Size = UDim2.new(1, -16, 0.68, 0),
 		Position = UDim2.new(0, 8, 0.06, 0),
 		TextColor3 = INK,
@@ -83,25 +83,51 @@ function CoreHudController:Start()
 		TextColor3 = MUTED,
 	})
 	local counterScale = new("UIScale", {}, counter)
+	-- LUCKY! badge: a tilted gold tag on the counter's top-right corner, pops in on a high luck roll
+	local lucky, luckyFace = plate(counter, "Lucky", GOLD, 8)
+	lucky.AnchorPoint = Vector2.new(0.5, 0.5)
+	lucky.Position = UDim2.fromScale(0.9, 0)
+	lucky.Size = UDim2.new(0.42, 0, 0.5, 0)
+	lucky.Rotation = 8
+	lucky.ZIndex = 5
+	lucky.Visible = false
+	text(luckyFace, "LUCKY!", { Size = UDim2.new(1, -8, 0.84, 0), Position = UDim2.new(0, 4, 0.08, 0) })
+	local luckyScale = new("UIScale", { Scale = 0 }, lucky)
+	local luckyRun = 0
+	local function popLucky()
+		luckyRun += 1
+		local run = luckyRun
+		lucky.Visible = true
+		luckyScale.Scale = 0
+		TweenService:Create(luckyScale, TweenInfo.new(0.22, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+		task.delay(0.75, function()
+			if run == luckyRun then
+				local out = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+				TweenService:Create(luckyScale, out, { Scale = 0 }):Play()
+			end
+		end)
+	end
 	local counterRun = 0
-	local function showCount(count: number, clear: boolean, full: boolean)
+	local function showCount(count: number, isLucky: boolean, full: boolean)
 		counterRun += 1
 		local run = counterRun
-		local total = PinRack.Count()
-		SunKit.Recolor(counterText, if clear then GOLD else INK)
-		counterNote.Text = if clear then "Cleared it! x2" elseif full then "Bag full, sell" else "Pins down"
-		counterNote.TextColor3 = if clear then K.SunLip elseif full then K.CoralLip else MUTED
-		counterScale.Scale = if clear then 1.2 else 1.08
+		SunKit.Recolor(counterText, if isLucky then K.SunLip else INK)
+		counterNote.Text = if full then "Bag full, sell" else "Pins down"
+		counterNote.TextColor3 = if full then K.CoralLip else MUTED
+		counterScale.Scale = if isLucky then 1.2 else 1.08
 		TweenService:Create(counterScale, TweenInfo.new(0.18, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+		if isLucky then
+			popLucky()
+		end
 		local began = os.clock()
 		task.spawn(function()
 			while run == counterRun do
 				local t = math.min((os.clock() - began) / 0.15, 1)
-				counterText.Text = ("%d/%d"):format(math.floor(count * t + 0.5), total)
+				counterText.Text = Currency.Format(math.floor(count * t + 0.5))
 				if t >= 1 then
 					break
 				end
-				RunService.RenderStepped:Wait()
+				RunService.Heartbeat:Wait()
 			end
 		end)
 	end
@@ -325,7 +351,7 @@ function CoreHudController:Start()
 		if type(data) ~= "table" or not data.Core or data.UserId ~= player.UserId then
 			return
 		end
-		task.delay(data.RollTime or 0, showCount, data.Count or 0, data.Tier == "Strike", data.BagFull == true)
+		task.delay(data.RollTime or 0, showCount, data.Count or 0, data.Lucky == true, data.BagFull == true)
 	end)
 
 	-- Sold at the station: coins fly up from the bag

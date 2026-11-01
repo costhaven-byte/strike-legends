@@ -24,6 +24,7 @@ local SunKit = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local NO_LEVELS = Config.CoreLoop.Enabled and Config.CoreLoop.NoLevels -- (Addendum 5 A1: no levels in the loop)
 local AssetSlots = require(Shared.AssetSlots)
 local Store = require(Shared.Modules.Store)
 local Cosmetics = require(Shared.Modules.Cosmetics)
@@ -672,6 +673,9 @@ function StoreController:Start()
 		{ Ladder = "Coins", What = "COINS", Color = C.Gold, Icon = "Coin", Delay = 0 },
 		{ Ladder = "Xp", What = "XP", Color = C.Cyan, Icon = "XpStar", Delay = 2 },
 	}
+	if NO_LEVELS then
+		table.remove(LADDERS, 2) -- (Addendum 5 A1: no levels, so XP BOOST is not sold)
+	end
 	local pills = {}
 	local pillPhone = nil
 	local function buildPills()
@@ -1598,7 +1602,11 @@ function StoreController:Start()
 			table.insert(cardRefs, buildStarter(row, 176, 1))
 		end
 		sectionHeader("boosts", "BOOSTS")
-		cardRow({ { "Ladder", { Ladder = "Coins" } }, { "Ladder", { Ladder = "Xp" } } })
+		cardRow(
+			if NO_LEVELS
+				then { { "Ladder", { Ladder = "Coins" } } }
+				else { { "Ladder", { Ladder = "Coins" } }, { "Ladder", { Ladder = "Xp" } } }
+		)
 		sectionHeader("passes", "GAME PASSES")
 		local passItems = {}
 		for _, pass in MONEY.Passes do

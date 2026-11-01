@@ -15,6 +15,12 @@ function CoreLadder.BagLevel(value: any): number
 	return math.clamp(math.floor(tonumber(value) or 1), 1, #CORE.BagSizes)
 end
 
+-- Addendum 5 A1: the throw animation level (Config.Throw pose levels) for a ball step, so the throw gets cleaner as
+-- you buy balls (levels are gone)
+function CoreLadder.Pose(ballStep: any): number
+	return CORE.Poses[CoreLadder.BallStep(ballStep)] or 1
+end
+
 -- What the shop sells next: "Ball" or "Bag", its step and price. They alternate: ball 2, bag 2, ball 3, bag 3 ...
 -- ball 10, bag 10. nil = everything bought.
 function CoreLadder.Next(ballStep: any, bagLevel: any): (string?, number, number)
@@ -30,16 +36,14 @@ function CoreLadder.Next(ballStep: any, bagLevel: any): (string?, number, number
 	return nil, 0, 0
 end
 
--- Coins per minute with this ball and bag: the ball's average throw (a full clear pays FullClearMultiplier) every
--- Cooldown, with a sell trip (Gifts.TripSeconds) each time the bag fills. No multipliers. Same rule as
--- EconomySim.CoreLadder.
+-- Coins per minute with this ball and bag: the ball's average throw every Cooldown, with a sell trip
+-- (Gifts.TripSeconds) each time the bag fills. No multipliers. Same rule as EconomySim.CoreLadder.
 function CoreLadder.IncomePerMinute(ballStep: any, bagLevel: any): number
 	local pins = CORE.Balls[CoreLadder.BallStep(ballStep)].Pins
 	local total, n = 0, 200
 	for i = 1, n do
 		local wanted = pins * (1 + ((i - 0.5) / n * 2 - 1) * CORE.PinsSpread)
-		local count = math.clamp(math.floor(wanted + 0.5), 1, 40)
-		total += count * (if count >= 40 then CORE.FullClearMultiplier else 1)
+		total += math.max(math.floor(wanted + 0.5), 1) -- (Addendum 5 A1: no 40 cap, no full-clear x2)
 	end
 	local rate = total / n * CORE.PinValue / CORE.Cooldown
 	local size = CORE.BagSizes[CoreLadder.BagLevel(bagLevel)]

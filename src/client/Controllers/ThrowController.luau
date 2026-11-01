@@ -10,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local CoreLadder = require(Shared.Modules.CoreLadder)
 local Balls = require(Shared.Modules.Balls)
 local Modifiers = require(Shared.Modules.Modifiers)
 local LaneUtil = require(Shared.Modules.LaneUtil)
@@ -1050,7 +1051,8 @@ function ThrowController:Start()
 				hintThrows += 1
 				lastAction = coreSentAt
 				coreThrowRemote:FireServer()
-				ThrowPose.Release(player.Character, ThrowRules.Style(player:GetAttribute("RankLevel")).Pose)
+				-- (Addendum 5 A1: the pose follows your ball step; levels are gone)
+				ThrowPose.Release(player.Character, CoreLadder.Pose(player:GetAttribute("BallStep")))
 			end
 		elseif state == "Throwing" then
 			setState("Ready")

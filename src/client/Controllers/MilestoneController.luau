@@ -298,7 +298,9 @@ function MilestoneController:Start()
 			end
 		end
 
-		local nextRow = if MILESTONES.Preview then nextLevelReward(player:GetAttribute("RankLevel") or 1) else nil
+		local nextRow = if MILESTONES.Preview and not (Config.CoreLoop.Enabled and Config.CoreLoop.NoLevels)
+			then nextLevelReward(player:GetAttribute("RankLevel") or 1)
+			else nil -- (Addendum 5 A1: no levels, no level rewards)
 		-- Only from zone 2 on: in the Back Alley the next goal bar already points the way
 		preview.Holder.Visible = nextRow ~= nil and zone >= 2
 		if nextRow then

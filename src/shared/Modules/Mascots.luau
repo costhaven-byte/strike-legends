@@ -168,7 +168,8 @@ end
 -- Can this player hatch the egg? Returns false and the reason ("LEVEL 3", "1 REBIRTH") when locked.
 -- zone = the player's highest open zone (Zones.Highest).
 function Mascots.EggUnlocked(egg, rankLevel: number, zone: number): (boolean, string?)
-	if egg.Rank and rankLevel < egg.Rank then
+	local noLevels = Config.CoreLoop.Enabled and Config.CoreLoop.NoLevels -- (Addendum 5 A1: no level gates)
+	if egg.Rank and rankLevel < egg.Rank and not noLevels then
 		return false, ("LEVEL %d"):format(egg.Rank)
 	end
 	if egg.Zone and zone < egg.Zone then

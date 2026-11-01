@@ -72,7 +72,8 @@ local function snapshot(player: Player): { { store: string, board: any, value: n
 			value = 0
 		end
 		if type(value) == "number" and value > 0 then
-			table.insert(list, { store = storeName(board), board = board, value = math.floor(value) })
+			-- (OrderedDataStores take whole numbers under 2^63; pins are uncapped since Addendum 5 A1, so clamp)
+			table.insert(list, { store = storeName(board), board = board, value = math.floor(math.min(value, 2 ^ 53)) })
 		end
 	end
 	return list

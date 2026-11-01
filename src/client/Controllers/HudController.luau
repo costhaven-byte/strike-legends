@@ -648,6 +648,14 @@ function HudController:Start()
 		bindIncome(bar)
 	end
 	bindRankBar(gui:WaitForChild("RankBar"))
+	if Config.CoreLoop.Enabled and Config.CoreLoop.NoLevels then
+		-- (Addendum 5 A1: no levels, so no XP bar; it stays in place, hidden, for the screens that line up under it)
+		local rankBar = gui:WaitForChild("RankBar") :: GuiObject
+		rankBar.Visible = false
+		rankBar:GetPropertyChangedSignal("Visible"):Connect(function()
+			rankBar.Visible = false
+		end)
+	end
 	bindStreak(gui:WaitForChild("Streak"))
 	HudKit.MoreButton(gui)
 

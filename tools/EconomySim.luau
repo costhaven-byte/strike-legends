@@ -1126,14 +1126,13 @@ function EconomySim.CoreLadder(config: any?, tripSeconds: number?): string
 	config = config or loadConfig()
 	local core = config.CoreLoop
 	local trip = tripSeconds or 6
-	local rack = 40
-	-- Expected coins per throw with one ball (the roll is uniform within +/- PinsSpread, rounded, capped)
+	-- Expected coins per throw with one ball (the roll is uniform within +/- PinsSpread, rounded; Addendum 5 A1: no
+	-- 40 cap, no full-clear x2)
 	local function perThrow(pins: number): number
 		local total, n = 0, 2000
 		for i = 1, n do
 			local wanted = pins * (1 + ((i - 0.5) / n * 2 - 1) * core.PinsSpread)
-			local count = math.clamp(math.floor(wanted + 0.5), 1, rack)
-			total += count * (if count >= rack then core.FullClearMultiplier else 1)
+			total += math.max(math.floor(wanted + 0.5), 1)
 		end
 		return total / n * core.PinValue
 	end

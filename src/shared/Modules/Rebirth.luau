@@ -12,6 +12,9 @@ local Rebirth = {}
 -- Rank level the next rebirth needs (rebirths = rebirths done so far): its own level from the Levels list, then
 -- RankStep more for each one after it (no list: Level + RankStep each)
 function Rebirth.Level(rebirths: number): number
+	if Config.CoreLoop.Enabled and Config.CoreLoop.NoLevels then
+		return 0 -- (Addendum 5 A1: no levels; rebirth asks for coins only)
+	end
 	local levels = REBIRTH.Levels
 	if not levels or #levels == 0 then
 		return REBIRTH.Level + REBIRTH.RankStep * rebirths
