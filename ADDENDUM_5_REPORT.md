@@ -186,7 +186,7 @@ Shiny = every stat x2.
 - LUCKY passes now help every egg (before, eggs 2-4 had no luck at all because luck started at Rare).
 - TEST panel FREE EGG gives a free hatch of the next roof egg each press.
 
-**Restore tag:** `restore-a5-B2-before`. **Commit:** see below. **Save:** no new fields.
+**Restore tag:** `restore-a5-B2-before`. **Commit:** 3d57f7b. **Save:** no new fields.
 
 **Prices (EconomySim.CoreEggs, a player buying the cheapest next thing, one of each egg):** Neon Egg at ~2 min, Main Street ~11 min, Skyline ~23 min, Volcano ~31 min. The pets pull ball 10 in from ~31 to ~26 min, which leaves room for extra hatches (Shinies need 3) and for step C's rebirth.
 
