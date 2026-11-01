@@ -19,7 +19,7 @@ At the end: one combined morning playtest.
 - The throw animation now follows your ball (ball 1 = scuffed, ball 8 = clean, ball 10 = the biggest pro throw), not your level.
 - Leaderboard numbers are clamped so huge pin counts can't break the save.
 
-**Restore tag:** `restore-a5-A1-before`. **Commit:** see git log ("Addendum 5 A1").
+**Restore tag:** `restore-a5-A1-before`. **Commit:** 5ced992.
 
 **2-minute test**
 1. Play. Hold THROW on your lane. Expected: the counter shows "5" or "6" (no "/40"); about 1 throw in 4 shows a gold LUCKY! tag on the counter for under a second.
