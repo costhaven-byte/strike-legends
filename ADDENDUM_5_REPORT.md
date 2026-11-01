@@ -142,7 +142,7 @@ At the end: one combined morning playtest.
 | Perfecto | Mythic | +500% Pins, +60% Speed |
 Shiny = every stat x2.
 
-**Restore tag:** `restore-a5-B1-before`. **Commit:** (see below). **Save:** v35 adds `PetSlotsBought` (starts at 0); old saves keep every slot they had (`PetSlotsKept` counts as bought).
+**Restore tag:** `restore-a5-B1-before`. **Commit:** 3485257. **Save:** v35 adds `PetSlotsBought` (starts at 0); old saves keep every slot they had (`PetSlotsKept` counts as bought).
 
 **2-minute test**
 1. Play (TEST panel: START FROM ZERO). Note the bag size on the HUD (60). Open TEST > GIVE PET three times (Pinny, Gus, Lane Pup).
