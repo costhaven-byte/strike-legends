@@ -244,3 +244,48 @@ Shiny = every stat x2.
 **Studio-only edits:** none (scripts pushed into the open Studio; save the place or reconnect Rojo to keep them in the place file).
 
 **Placeholders:** none new.
+
+## Step 7 (D): ball effects (2026-11-01)
+**What changed**
+- Every ladder ball now has its own effect when it hits your pins. It's all built from the game's own images, particles and sounds (no new art), and it only changes how a throw looks and feels. No numbers change.
+
+| Ball | Effect |
+|---|---|
+| 1 Beach Roller | kicks up sand dust as it rolls, sand puff + small ring on the hit |
+| 2 Rubber Bouncer | hops down the lane (3 bounces, lower each time), bubble-gum pop + pink ring + a "boing" |
+| 3 Confetti Popper | sprinkles confetti as it rolls, confetti cannon over the pins with a pop |
+| 4 Sunspike | rolls on fire, a burst of flames and embers, the pins it hits burn for a moment |
+| 5 Gust | trails snowflakes, an icy gust blows the pins sideways (they fly sideways too), frost ring |
+| 6 Cloud Roll | two cloud "magic arms" reach out of the ball and wrap round both sides of the rack |
+| 7 Rainbow Arc | six rainbow rings ripple out, crystal shards fly, a rainbow arcs over the rack, pins burst outward |
+| 8 Sunbolt | lightning jumps from the ball to a pin, then pin to pin (3 to 12 jumps), a yellow flash on big ones |
+| 9 Tornado | a gold twister spins up out of the rack and lifts the pins, gold dust rises |
+| 10 Sonic Boom | sonic rings peel off the ball as it rolls; at the pins a black hole opens, sucks in stars, then bursts in a white sonic boom (screen flash, big shake, pins blown outward) |
+
+- **Bigger throws look bigger.** The effect grows with the real pin count of the throw (not the 40 drawn pins): more particles, bigger rings, flashes and fire, more lightning jumps, stronger camera shake, a louder crash (strong balls play the big strike crash), a bigger coin pop over the pins, and a harder punch on the HUD pin counter. Strength: 6 pins = 0, 650 pins (ball 8) = 0.39, 3.2K (ball 10) = 0.52, 30K = 0.71, 1M and up = full. So the same ball keeps getting louder as pets and rebirths push the count up.
+- The heavy bits (screen flash, black hole, confetti cannon, rainbow arc) play at most once every 1.2 s (LUCKY throws after 0.6 s), so holding THROW never turns into a strobe. The other throws still show the lighter version.
+- Settings: EFFECTS off = none of the visuals (sounds stay); SCREEN SHAKE off = no shake; other players' balls stay plain balls as before (the effects only play on your own throws).
+
+**Restore tag:** `restore-a5-D-before`. **Commit:** 5845187. **Save:** no new fields.
+
+**2-minute test**
+1. Play. Hold THROW on your spot with ball 1. Expected: a sand puff on each hit, the counter punches a little.
+2. TEST > COINS a few times, go to the shop and buy balls 2, 3, 4 one by one, throwing a few times with each. Expected: ball 2 bounces down the lane with a pink pop, ball 3 throws confetti, ball 4 rolls on fire and the pins flame.
+3. TEST > COINS until you can buy up to ball 10, try each. Expected: frost gust (pins fly sideways), cloud arms, rainbow rings + arc, lightning between pins, gold twister, black hole then a white boom with a screen flash.
+4. With ball 10, TEST > GIVE PET a few times + EQUIP BEST (more pins). Expected: the boom, shake and crash get visibly bigger.
+5. SETTINGS: EFFECTS off and throw. Expected: no effects (ball, pins, numbers and sounds stay). SCREEN SHAKE off: no shake.
+- Silent failures to watch for: effects floating off the rack (to one side or under the floor), the cloud arms or rainbow arc going the wrong way, Rubber Bouncer sinking into the lane, the black hole staying black on screen, the screen flash too strong, frame drops while holding THROW with ball 10.
+
+**Checked by numbers** (`screenshots/addendum5/D/PLAYTEST_LOG.md`): every ball's effect fired (parts, emitters, beams, fire, the bounce height counted per throw), more pieces at 1M pins than at 3.2K, nothing with EFFECTS off, real throws work, a 1M-pin Sonic Boom every 0.4 s for 8 s peaks at 26 effect holders and cleans up to 0. No errors. **Not checked by eye:** Studio's Play captures drew only the HUD again (3D white), so how the effects LOOK (sizes, colours, directions) is unverified. Please look at step 3 first.
+
+**Choices made for you**
+- Effect names follow the old Addendum 4 Stage 4 ball names where they fit (bouncer, confetti, gust, rainbow, bolt, tornado, sonic boom), plus the addendum's examples: Sunspike = burning, Cloud Roll = magic arms, Sonic Boom = black hole + explosion. Lightning stays on Sunbolt.
+- Strength is a log scale from 6 pins (0) to 1M pins (1): `Config.CoreLoop.BallEffects` From/Full. Each effect's shake, pin force and knock direction are in `BallEffects.Effects`; `Fx` on each ball row picks the effect.
+- The pins really fly differently per ball (sideways for Gust, outward for Rainbow Arc / Sonic Boom, harder for later balls); the count is untouched. Sonic Boom holds the pins 0.2 s while the black hole pulls, then they blow out.
+- Other players' throws: unchanged plain balls (cheapest, and the A3 rule). The old non-shared-lane mode also shows signatures only for your own throws.
+- Sounds reused: Tap (boing), Firework (pop), Teleport (gust whoosh), Reveal (rainbow), OverchargeWarn (crackle), PowerUp (twister), OverchargeBlast (boom). They may need swapping by ear.
+- Left as is: the balls' existing trails/halos (BallFx) are unchanged; balls 1-3 still have no BallVfx row of their own (plain trail + the new effect).
+
+**Studio-only edits:** a new ModuleScript `StarterPlayer.StarterPlayerScripts.Client.Modules.BallSignature` was created in the open Studio (same as the repo file). Save the place or reconnect Rojo to keep it.
+
+**Placeholders:** none new (all existing images and sounds).
