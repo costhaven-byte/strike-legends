@@ -27,6 +27,7 @@ local UiFx = require(Modules.UiFx)
 local BallFx = require(Modules.BallFx)
 local TraitFx = require(Modules.TraitFx)
 local ThrowFx = require(Modules.ThrowFx)
+local BallSignature = require(Modules.BallSignature)
 local ThrowPose = require(Modules.ThrowPose)
 local Settings = require(Modules.Settings)
 
@@ -403,6 +404,8 @@ end
 -- everyone else's. Coin numbers pop over a few of the pins plus the total; LUCKY rolls shake the camera and crash.
 -- Addendum 5 A1: data.Count is the real pin count (no cap, can be thousands); data.Pins are the drawn rack pins
 -- that fall (never more than the 40 of the rack).
+-- Addendum 5 D: your own throw plays its ladder ball's signature effect (BallSignature: fire, hops, lightning, black
+-- hole...), sized by the real pin count (crash volume, shake, coin pop too). Visual only.
 -- The fresh rack stands RefillDelay seconds after the hit (knocked pins fly on as pooled, capped debris).
 local CORE = Config.CoreLoop
 local function playCoreThrow(data)
@@ -430,6 +433,9 @@ local function playCoreThrow(data)
 		then BallFx.Attach(ball, data.BallId, "Lane", forward, { Level = level, Others = not isOwn })
 		else nil
 	BallFx.Dim(ball)
+	local signature = if isOwn then BallSignature.For(data.BallId) else nil
+	local strength = BallSignature.Strength(data.Count or #data.Pins)
+	local roll = BallSignature.Roll(ball, signature, strength, forward)
 	local thrower = Players:GetPlayerByUserId(data.UserId)
 	if thrower and thrower.Character and not isOwn then
 		ThrowPose.Release(thrower.Character, data.Pose or 1)
@@ -443,16 +449,39 @@ local function playCoreThrow(data)
 	local paid = data.Paid or 0
 	local each = if shown > 0 then paid / shown else 0
 	local force = THROW.Levels[level].Force * (if lucky then 1.3 else 1)
+	local hold = 0 -- seconds the signature holds the pins before they fly (the black hole pulls first)
 
 	local function impact()
 		local hitPoint = rack.HeadPinCFrame.Position - forward * 1 + Vector3.new(0, 0.4, 0)
 		local big = lucky and shown >= CORE.BigClear
+		local effects = CORE.BallEffects
+		local loud = if signature then 1 + effects.CrashLoud * strength else 1
 		Sfx.PlayAt(
-			if big then "StrikeCrash" elseif shown >= 10 then "SpareCrash" else "PinHit",
+			if big or (signature and strength >= effects.CrashBig) then "StrikeCrash"
+				elseif shown >= 10 then "SpareCrash"
+				else "PinHit",
 			lane.PinSpot,
 			1 + math.random() * 0.08,
-			if isOwn then math.clamp(0.5 + shown * 0.03, 0.5, 1.3) else 0.5
+			if isOwn then math.clamp(0.5 + shown * 0.03, 0.5, 1.3) * loud else 0.5
 		)
+		local knockFrom, knockForce = hitPoint, 1
+		if signature then
+			local depth = (CORE.Rack.Rows - 1) * PinRack.Spacing() * math.sqrt(3) / 2
+			local context = {
+				Lane = lane,
+				Rack = rack,
+				Hit = hitPoint,
+				Center = rack.HeadPinCFrame.Position + forward * depth / 2,
+				FloorY = ballStart.Position.Y - LANE.BallDiameter / 2,
+				Forward = forward,
+				Right = ballStart.CFrame.RightVector,
+				T = strength,
+				Lucky = lucky,
+				Pins = data.Pins,
+			}
+			hold = BallSignature.Impact(signature, context)
+			knockFrom, knockForce = BallSignature.Knock(signature, context)
+		end
 		local popped = 0
 		for _, index in data.Pins do
 			local pin = rack.Pins[index]
@@ -460,8 +489,8 @@ local function playCoreThrow(data)
 			if body then
 				if isOwn then
 					local distance = (body.Position - hitPoint).Magnitude
-					task.delay(THROW.PinSpreadTime * math.clamp(distance / 12, 0, 1), function()
-						rack:Knock(index, hitPoint, force)
+					task.delay(hold + THROW.PinSpreadTime * math.clamp(distance / 12, 0, 1), function()
+						rack:Knock(index, knockFrom, force * knockForce)
 					end)
 					if paid > 0 and popped < CORE.PopsPerThrow then
 						popped += 1
@@ -485,12 +514,14 @@ local function playCoreThrow(data)
 			ThrowFx.NumberPop(
 				rack.HeadPinCFrame.Position + forward * 4 + Vector3.new(0, 3.5, 0),
 				paid,
-				THROW.NumberPopSize * (if lucky then 1.5 else 1.15),
+				THROW.NumberPopSize * (if lucky then 1.5 else 1.15) * (1 + CORE.BallEffects.PopGrow * strength),
 				if lucky then "gold" else "pink",
 				if lucky then "LUCKY!" else nil
 			)
 		end
-		ThrowFx.Shake(THROW.CameraShakeStrength * 0.2, THROW.CameraShakeTime * 0.5)
+		if not signature then -- the signature shakes by itself, by the pin count
+			ThrowFx.Shake(THROW.CameraShakeStrength * 0.2, THROW.CameraShakeTime * 0.5)
+		end
 		if big then
 			CameraShake.Add(0.4)
 			burst(isOwn, hitPoint + forward * 3, ballInfo.Trail or ballInfo.Color, 30, 30 * PIN_SCALE, 0.8)
@@ -503,14 +534,20 @@ local function playCoreThrow(data)
 	connection = RunService.Heartbeat:Connect(function(dt)
 		travelled += speed * dt * (if hit then 0.5 else 1)
 		local position = start + forward * travelled
+		if roll.Lift and not hit then
+			position += Vector3.new(0, roll.Lift(travelled / headDistance), 0)
+		end
 		ball.CFrame = CFrame.new(position) * CFrame.fromAxisAngle(Vector3.yAxis:Cross(forward).Unit, travelled / radius)
 		if fx then
 			fx:Move(position)
 		end
+		if roll.Step then
+			roll.Step(position)
+		end
 		if not hit and travelled >= headDistance - 0.5 then
 			hit = true
 			impact()
-			task.delay(data.ResetDelay or CORE.RefillDelay, function()
+			task.delay(hold + (data.ResetDelay or CORE.RefillDelay), function()
 				rack:Refill()
 			end)
 		end

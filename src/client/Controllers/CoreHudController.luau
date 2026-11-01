@@ -26,6 +26,7 @@ local CoreHudController = {}
 
 -- The sunny look (Modules/SunKit, Addendum 4 Stage 3d): light panels with dark text, colour buttons with white text
 local SunKit = require(Modules.SunKit)
+local BallSignature = require(Modules.BallSignature)
 local K = SunKit.C
 local INK = K.Ink
 local PANEL = K.Cream -- light panels
@@ -114,7 +115,9 @@ function CoreHudController:Start()
 		SunKit.Recolor(counterText, if isLucky then K.SunLip else INK)
 		counterNote.Text = if full then "Bag full, sell" else "Pins down"
 		counterNote.TextColor3 = if full then K.CoralLip else MUTED
-		counterScale.Scale = if isLucky then 1.2 else 1.08
+		-- Addendum 5 D: bigger throws punch the counter harder
+		counterScale.Scale = (if isLucky then 1.2 else 1.08)
+			+ Config.CoreLoop.BallEffects.CounterGrow * BallSignature.Strength(count)
 		TweenService:Create(counterScale, TweenInfo.new(0.18, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 		if isLucky then
 			popLucky()

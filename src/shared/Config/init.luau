@@ -65,16 +65,48 @@ Config.CoreLoop = {
 	-- about 2 min each, balls 6-10 about 5 min each (ball 10 at ~31 min). Check with
 	-- require(game.ServerStorage.Tools.EconomySim).CoreLadder(). Rarity = the colour its row shows in the shop.
 	Balls = {
-		{ Ball = "Tangerine", Name = "Beach Roller", Pins = 6, Price = 0, Rarity = "Common" },
-		{ Ball = "Bubblegum", Name = "Rubber Bouncer", Pins = 10, Price = 50, Rarity = "Common" }, -- one bag: bought in the first 30 s (Stage 3)
-		{ Ball = "Lime", Name = "Confetti Popper", Pins = 18, Price = 500, Rarity = "Uncommon" },
-		{ Ball = "Sunburst", Name = "Sunspike", Pins = 35, Price = 950, Rarity = "Uncommon" },
-		{ Ball = "Frostbite", Name = "Gust", Pins = 70, Price = 1900, Rarity = "Rare" },
-		{ Ball = "CloudSwirl", Name = "Cloud Roll", Pins = 140, Price = 10000, Rarity = "Rare" },
-		{ Ball = "Crystal", Name = "Rainbow Arc", Pins = 300, Price = 21000, Rarity = "Epic" },
-		{ Ball = "Lightning", Name = "Sunbolt", Pins = 650, Price = 45000, Rarity = "Epic" },
-		{ Ball = "SolidGold", Name = "Tornado", Pins = 1400, Price = 99000, Rarity = "Legendary" },
-		{ Ball = "Daybreak", Name = "Sonic Boom", Pins = 3200, Price = 220000, Rarity = "Mythic" },
+		{ Ball = "Tangerine", Name = "Beach Roller", Fx = "Sand", Pins = 6, Price = 0, Rarity = "Common" },
+		{ Ball = "Bubblegum", Name = "Rubber Bouncer", Fx = "Bounce", Pins = 10, Price = 50, Rarity = "Common" }, -- one bag: bought in the first 30 s (Stage 3)
+		{ Ball = "Lime", Name = "Confetti Popper", Fx = "Confetti", Pins = 18, Price = 500, Rarity = "Uncommon" },
+		{ Ball = "Sunburst", Name = "Sunspike", Fx = "Burn", Pins = 35, Price = 950, Rarity = "Uncommon" },
+		{ Ball = "Frostbite", Name = "Gust", Fx = "Frost", Pins = 70, Price = 1900, Rarity = "Rare" },
+		{ Ball = "CloudSwirl", Name = "Cloud Roll", Fx = "Arms", Pins = 140, Price = 10000, Rarity = "Rare" },
+		{ Ball = "Crystal", Name = "Rainbow Arc", Fx = "Prism", Pins = 300, Price = 21000, Rarity = "Epic" },
+		{ Ball = "Lightning", Name = "Sunbolt", Fx = "Bolt", Pins = 650, Price = 45000, Rarity = "Epic" },
+		{ Ball = "SolidGold", Name = "Tornado", Fx = "Tornado", Pins = 1400, Price = 99000, Rarity = "Legendary" },
+		{ Ball = "Daybreak", Name = "Sonic Boom", Fx = "BlackHole", Pins = 3200, Price = 220000, Rarity = "Mythic" },
+	},
+	-- Addendum 5 D: each ladder ball's own signature effect (Fx on its row above; client Modules/BallSignature).
+	-- Visual and feel only, never a number. Strength 0..1 grows with the REAL pin count of the throw on a log scale:
+	-- 0 at From pins, 1 at Full pins (so ball 10 with pets and rebirths keeps getting bigger even though only the 40
+	-- rack pins fall). It scales particles, rings, flashes, camera shake, the crash volume and the coin pop.
+	-- Only your own throws play it; other players' balls stay plain (SharedLane.OtherBalls). SETTINGS: EFFECTS off =
+	-- no signature visuals (sounds stay), SCREEN SHAKE off = no shake. Big bits (screen flash, black hole pull,
+	-- confetti cannon) play at most once every BigGap seconds so holding THROW never turns into a strobe.
+	-- Effects: Force = how hard the drawn pins fly (x the normal knock), KnockFrom = where they fly away from
+	-- ("Ball" = the hit point, "Center" = the middle of the rack: blast outward, "Side" = blown sideways, "Under" =
+	-- lifted from the middle), Shake = camera shake at full strength, Color = its main colour.
+	BallEffects = {
+		Enabled = true,
+		From = 6, -- pins at strength 0 (ball 1)
+		Full = 1000000, -- pins at strength 1
+		BigGap = 1.2, -- seconds between big bits
+		PopGrow = 0.6, -- the total coin pop is up to this much bigger at strength 1
+		CounterGrow = 0.3, -- the HUD pin counter punches up to this much more at strength 1
+		CrashLoud = 0.6, -- the crash is up to this much louder at strength 1 (strength 0 = as before)
+		CrashBig = 0.35, -- from this strength on the hit plays the big strike crash
+		Effects = {
+			Sand = { Force = 1, KnockFrom = "Ball", Shake = 0.15, Color = Color3.fromHex("F2C27A") }, -- sand puff
+			Bounce = { Force = 1.05, KnockFrom = "Ball", Shake = 0.2, Color = Color3.fromHex("FF7AC8"), Hops = 3, HopHeight = 1.4 }, -- hops down the lane, bubble burst
+			Confetti = { Force = 1.1, KnockFrom = "Ball", Shake = 0.25, Color = Color3.fromHex("9BE84A") }, -- confetti cannon
+			Burn = { Force = 1.15, KnockFrom = "Ball", Shake = 0.3, Color = Color3.fromHex("FF8A1E") }, -- rolls on fire, flame burst, pins burn
+			Frost = { Force = 1.2, KnockFrom = "Side", Shake = 0.3, Color = Color3.fromHex("8FDCFF") }, -- icy gust blows the pins sideways
+			Arms = { Force = 1.25, KnockFrom = "Ball", Shake = 0.35, Color = Color3.fromHex("CFEBFF") }, -- two cloud arms sweep the rack
+			Prism = { Force = 1.3, KnockFrom = "Center", Shake = 0.4, Color = Color3.fromHex("B48CFF") }, -- rainbow rings + arc
+			Bolt = { Force = 1.35, KnockFrom = "Ball", Shake = 0.5, Color = Color3.fromHex("FFE45A") }, -- lightning chains pin to pin
+			Tornado = { Force = 1.4, KnockFrom = "Under", Shake = 0.55, Color = Color3.fromHex("FFD45A") }, -- gold twister lifts the rack
+			BlackHole = { Force = 1.7, KnockFrom = "Center", Shake = 0.75, Color = Color3.fromHex("B45CFF") }, -- black hole pulls in, then a sonic boom
+		},
 	},
 	-- Bags: BagSizes[BagLevel] coins fit; BagPrices[n] buys bag n (bag 1 is free). Bag n fills in ~10 throws (bag 1)
 	-- to ~40 throws (bag 10) with ball n. Bag pacing (A2): its own ladder, each bag lands about 40% of the way
