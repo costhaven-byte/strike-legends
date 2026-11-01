@@ -185,3 +185,53 @@
 - I didn't hatch a Neon Egg by hand. The server's lock now uses the same rule as the stand label I checked.
 - Sounds: there are no water sounds in the game yet, so the sea effects borrow the whoosh, thud and boss-hit sounds. New sound slots would make them better (placeholder).
 - **Placeholders still in use:** the map is simple part art (tagged "ZoneArt"). The Neon Egg stand is still the old neon-on-dark design, which doesn't fit the sunny rule, so it needs a beach-style stand. The effects use borrowed sounds.
+
+## Stage 5: Zone 3, Jungle Falls (2026-11-02, code tag `restore-a6-s5-before`)
+
+### What changed
+- **Zone 3 has a real map now** in place of the flat placeholder. It's a sunny green jungle valley:
+  - Grass ground with a dirt clearing round the sell pad, shop, egg stand and gates.
+  - The lane is **deep mahogany** (matt), with aqua gutters and mossy stone walls with an orange cap, so the green, gold and water effects stand out (the rule from 1.2).
+  - A bamboo back wall behind the pins and a carved stone **JUNGLE FALLS** sign with vines and big leaves on top.
+  - Flower garlands over the lane (orange, pink, yellow and green) on bamboo poles.
+  - Past the pins: a pool with lily pads and rocks, and a tall cliff with **four waterfalls** pouring into it (moving water, foam at the bottom), leafy ledges, hanging vines, trees along the top and **two high rope bridges** across the cliff face.
+  - To the east: a river with a **rope bridge you can walk across** to a **temple ruin** (stepped stone, a stair, moss, vines, a gold sun on top, two stone statues).
+  - Jungle trees, palms, giant leafy plants, flowers and mossy boulders all round the edges. Lower cliffs close the valley in on the other sides.
+  - The sell pad and shop got bamboo stalls with straw roofs.
+- The map is built from simple parts and terrain when the server starts, all tagged "ZoneArt" so designed models can replace it later.
+- **10 new ball effects, one for each zone 3 ball**, all different and jungle themed:
+  - 21 Vine Swinger: vines whip down and lash across the pins, leaves fly.
+  - 22 Coconut: coconuts rain onto the pins and crack open in white splashes.
+  - 23 Toucan Roll: a big toucan swoops down through the pins and flies off, rainbow feathers burst.
+  - 24 Leaf Storm: a whirl of giant leaves spins round the pins, then blows outward.
+  - 25 Waterfall: a waterfall pours out of the sky onto the pins, big splash, mist and a rainbow.
+  - 26 Jaguar: yellow eyes flash, then three glowing claw marks rip across the pins, spots burst.
+  - 27 Rope Bridge: a rope bridge swings in over the pins, snaps, and the planks crash down.
+  - 28 Temple Stone: carved stones with gold glyphs circle the pins and slam together, gold sunburst.
+  - 29 Monsoon: a dark storm cloud rolls over, heavy rain, then one huge lightning strike.
+  - 30 Jungle King: a giant gold crown with gems slams onto the pins, gold and green shock rings, leaves and flowers everywhere.
+  - On the way down the lane: falling leaves, feathers, water spray, dust, gold dust or gold sparkles, depending on the ball.
+  - Effects that drop something (coconuts, crown, bridge planks...) make the pins wait up to 0.2 seconds for it to land, same as zone 2's Pier Pounder.
+- Standing in one outdoor zone now also hides the other outdoor zones' maps on your screen (they're 2,500 studs apart, but you could see them far off).
+- The egg stand (Main Street Egg) and the gate were already in from Stage 3.
+
+### Checklist (3.4)
+- Map: lane, sell, shop, egg stand, gate and spawn all in the bright outdoor valley: **done**
+- Lane passes the effect-readability test: **done** (mahogany lane, all 10 effects checked on it)
+- 10 balls with their own effects: **done**. 10 bags: **already there** (bags 21 to 30 from Stage 3)
+- One egg with its own pets: **done** (Main Street Egg, Stage 3)
+- Gate wired in, price in the config: **done** (Stage 3, 190M)
+- Silhouette shop rows for zone 3: **done** (Stage 2/3)
+- Screenshots: **done**, in `screenshots/addendum6-stage5/` (the lane from the spawn in Play, the falls, the river + temple, a top view, and one of each effect)
+
+### Tested (Studio, with screenshots)
+- Jumped to zone 3 in a Play test: sunny look, map and lane all there, stations sit under their stalls, no new errors in Output.
+- Played each of the 10 effects on a zone 3 throw spot and looked at it. Five got fixes after looking: Vine was too thin, Jaguar's claw marks were too faint (now solid glowing marks), Rope Bridge planks vanished before you could see them, Temple Stone showed a wrong picture on the floor, Monsoon's storm cloud was off screen and too faint.
+- Map fixes after looking: the waterfalls were hidden inside the cliff rock, the cliff was bare grey (now leafy ledges, vines, trees on top, warmer rock), the temple stair stuck out over the river.
+
+### Not verified
+- I didn't throw a zone 3 ball by hand. The effects were played straight on the lane, the same way a throw calls them.
+- Studio's 3D view froze at the start of the session, so some map pictures (02 to 04) were taken in edit mode with the zone's daytime lighting switched on just for the picture (all put back after). In one of those, part of the north cliff didn't draw, though the cliff is there. The Play-test picture (01) is the real in-game look.
+- Rock and leafy-grass colours in the game are shared across every zone, so zone 2's lighthouse rocks are now the same warm green-grey stone.
+- Sounds: still borrowed (whoosh, thud, boss hit, crate land). Jungle sounds (birds, rain, roar) would need new sound slots (placeholder).
+- **Placeholders still in use:** the map is simple part art (tagged "ZoneArt"). The Main Street Egg stand is still the old Main Street design and doesn't match the jungle. Zone 3's balls still use the old ball models (only their effects are new). Borrowed sounds.

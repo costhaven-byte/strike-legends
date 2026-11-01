@@ -79,8 +79,8 @@ Config.CoreLoop = {
 		{ Ball = "SolidGold", Name = "Tornado", Fx = "Tornado", Pins = 1400, Price = 150000, Rarity = "Legendary" },
 		{ Ball = "Daybreak", Name = "Sonic Boom", Fx = "BlackHole", Pins = 3200, Price = 590000, Rarity = "Mythic" },
 		-- Addendum 6 Stage 3: zones 2-4, 10 balls each (Zone = the zone that must be open to buy it). Zone 2 (Stage 4) has
-		-- its own sea/beach effects and the original ball designs. PLACEHOLDER (zones 3-4): Fx re-uses a zone 1 effect
-		-- until that zone's stage builds its own; Ball = existing models (no new designs yet).
+		-- its own sea/beach effects and the original ball designs. Zone 3 (Stage 5) has its own jungle effects. PLACEHOLDER:
+		-- zone 4 Fx re-uses a zone 1 effect until Stage 6 builds its own; zone 3/4 Ball = existing models (no new designs yet).
 		-- Numbers: pins x1.7 a ball from ball 10 of the zone before; price = income with the ball before (pins x the
 		-- zone's PinValue x 84 throws a minute, zone 1's late pace with pets) x Zone 1's gaps (3, 2, 2, 2, 2, 5, 5, 5, 5, 5
 		-- min). Stage 9 tunes them from the pacing sim.
@@ -94,16 +94,16 @@ Config.CoreLoop = {
 		{ Ball = "Plasma", Name = "Pier Pounder", Fx = "Pound", Pins = 220000, Price = 330000000, Rarity = "Epic", Zone = 2 },
 		{ Ball = "Nebula", Name = "Tsunami", Fx = "Tsunami", Pins = 380000, Price = 550000000, Rarity = "Epic", Zone = 2 },
 		{ Ball = "Golden", Name = "Lighthouse Beam", Fx = "Lighthouse", Pins = 650000, Price = 960000000, Rarity = "Legendary", Zone = 2 },
-		{ Ball = "LeagueBlack", Name = "Vine Swinger", Fx = "Prism", Pins = 1100000, Price = 5900000000, Rarity = "Rare", Zone = 3, Placeholder = true },
-		{ Ball = "CherrySwirl", Name = "Coconut", Fx = "Bolt", Pins = 1900000, Price = 6700000000, Rarity = "Rare", Zone = 3, Placeholder = true },
-		{ Ball = "BlueMarble", Name = "Toucan Roll", Fx = "Tornado", Pins = 3200000, Price = 11000000000, Rarity = "Rare", Zone = 3, Placeholder = true },
-		{ Ball = "Phantom", Name = "Leaf Storm", Fx = "BlackHole", Pins = 5400000, Price = 19000000000, Rarity = "Epic", Zone = 3, Placeholder = true },
-		{ Ball = "PearlPro", Name = "Waterfall", Fx = "Sand", Pins = 9200000, Price = 33000000000, Rarity = "Epic", Zone = 3, Placeholder = true },
-		{ Ball = "TigerSwirl", Name = "Jaguar", Fx = "Bounce", Pins = 16000000, Price = 140000000000, Rarity = "Epic", Zone = 3, Placeholder = true },
-		{ Ball = "Inferno", Name = "Rope Bridge", Fx = "Confetti", Pins = 27000000, Price = 240000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
-		{ Ball = "Championship", Name = "Temple Stone", Fx = "Burn", Pins = 45000000, Price = 410000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
-		{ Ball = "Dragon", Name = "Monsoon", Fx = "Frost", Pins = 77000000, Price = 680000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
-		{ Ball = "Void", Name = "Jungle King", Fx = "Arms", Pins = 130000000, Price = 1200000000000, Rarity = "Mythic", Zone = 3, Placeholder = true },
+		{ Ball = "LeagueBlack", Name = "Vine Swinger", Fx = "Vine", Pins = 1100000, Price = 5900000000, Rarity = "Rare", Zone = 3, Placeholder = true },
+		{ Ball = "CherrySwirl", Name = "Coconut", Fx = "Coconut", Pins = 1900000, Price = 6700000000, Rarity = "Rare", Zone = 3, Placeholder = true },
+		{ Ball = "BlueMarble", Name = "Toucan Roll", Fx = "Toucan", Pins = 3200000, Price = 11000000000, Rarity = "Rare", Zone = 3, Placeholder = true },
+		{ Ball = "Phantom", Name = "Leaf Storm", Fx = "LeafStorm", Pins = 5400000, Price = 19000000000, Rarity = "Epic", Zone = 3, Placeholder = true },
+		{ Ball = "PearlPro", Name = "Waterfall", Fx = "Waterfall", Pins = 9200000, Price = 33000000000, Rarity = "Epic", Zone = 3, Placeholder = true },
+		{ Ball = "TigerSwirl", Name = "Jaguar", Fx = "Jaguar", Pins = 16000000, Price = 140000000000, Rarity = "Epic", Zone = 3, Placeholder = true },
+		{ Ball = "Inferno", Name = "Rope Bridge", Fx = "Bridge", Pins = 27000000, Price = 240000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
+		{ Ball = "Championship", Name = "Temple Stone", Fx = "Temple", Pins = 45000000, Price = 410000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
+		{ Ball = "Dragon", Name = "Monsoon", Fx = "Monsoon", Pins = 77000000, Price = 680000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
+		{ Ball = "Void", Name = "Jungle King", Fx = "JungleKing", Pins = 130000000, Price = 1200000000000, Rarity = "Mythic", Zone = 3, Placeholder = true },
 		{ Ball = "Hubcap", Name = "Dust Devil", Fx = "BlackHole", Pins = 220000000, Price = 7100000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
 		{ Ball = "DumpsterDiamond", Name = "Cactus Roller", Fx = "Sand", Pins = 380000000, Price = 8000000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
 		{ Ball = "DuctTape", Name = "Mesa Smash", Fx = "Bounce", Pins = 640000000, Price = 14000000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
@@ -156,6 +156,17 @@ Config.CoreLoop = {
 			Pound = { Force = 1.5, KnockFrom = "Center", Shake = 0.65, Color = Color3.fromHex("C8945A") }, -- a pier post drops out of the sky
 			Tsunami = { Force = 1.6, KnockFrom = "Ball", Shake = 0.7, Color = Color3.fromHex("2AA8E0") }, -- a towering wave crashes over the rack
 			Lighthouse = { Force = 1.7, KnockFrom = "Center", Shake = 0.75, Color = Color3.fromHex("FFE27A") }, -- lighthouse beam sweep, light pillar
+			-- Zone 3, Jungle Falls (Addendum 6 Stage 5)
+			Vine = { Force = 1.3, KnockFrom = "Side", Shake = 0.35, Color = Color3.fromHex("5CD65C") }, -- vines whip down and lash the rack
+			Coconut = { Force = 1.35, KnockFrom = "Ball", Shake = 0.4, Color = Color3.fromHex("A8743E") }, -- coconuts rain down and crack open
+			Toucan = { Force = 1.35, KnockFrom = "Under", Shake = 0.4, Color = Color3.fromHex("FF9A2E") }, -- a toucan swoops through, feathers burst
+			LeafStorm = { Force = 1.4, KnockFrom = "Center", Shake = 0.45, Color = Color3.fromHex("6CF06C") }, -- a whirl of giant leaves blows out
+			Waterfall = { Force = 1.45, KnockFrom = "Under", Shake = 0.5, Color = Color3.fromHex("7FE8FF") }, -- a waterfall pours onto the rack
+			Jaguar = { Force = 1.5, KnockFrom = "Ball", Shake = 0.55, Color = Color3.fromHex("FFB020") }, -- three claw slashes rip across
+			Bridge = { Force = 1.5, KnockFrom = "Side", Shake = 0.55, Color = Color3.fromHex("D6A060") }, -- a rope bridge snaps over the rack
+			Temple = { Force = 1.6, KnockFrom = "Center", Shake = 0.65, Color = Color3.fromHex("FFC83C") }, -- glyph stones slam in, a gold sunburst
+			Monsoon = { Force = 1.65, KnockFrom = "Center", Shake = 0.7, Color = Color3.fromHex("9BC8FF") }, -- storm cloud, rain, one huge lightning strike
+			JungleKing = { Force = 1.8, KnockFrom = "Center", Shake = 0.8, Color = Color3.fromHex("FFD23C") }, -- a giant gold crown slams down, jungle roar
 		},
 	},
 	-- Bags: BagSizes[BagLevel] pins fit (Addendum 6: the bag holds pins, a sell turns them into coins); BagPrices[n] buys bag n (bag 1 is free). Bag n fills in ~10 throws (bag 1)
@@ -356,8 +367,12 @@ Config.CoreLoop = {
 				Offset = Vector3.new(2500, -800, 8000),
 				PinValue = 36,
 				Price = 190000000,
-				Placeholder = true,
+				-- Stage 5: the real map (server/Modules/ZoneMaps "Jungle"): a grass valley, a waterfall pool and Terrain
+				-- cliffs past the pit (four falls, high rope bridges), a river with a rope bridge to a temple ruin
+				Map = "Jungle",
 				Palette = { Ground = Color3.fromRGB(96, 184, 84), Edge = Color3.fromRGB(70, 210, 220), Accent = Color3.fromRGB(255, 150, 50) },
+				-- the lane in deep mahogany (matt), so the green, gold and water effects read on it (Addendum 6 1.2)
+				Lane = { Wood = { Color3.fromRGB(78, 40, 34), Color3.fromRGB(70, 36, 30) }, Deck = Color3.fromRGB(88, 48, 40) },
 			},
 			{
 				Name = "Canyon Oasis",
@@ -5343,12 +5358,19 @@ do
 			for key, value in info.LookChanges or {} do
 				look[key] = value
 			end
+			-- (Stage 5: and the other outdoor zones' maps, 2,500 studs along)
+			local hide = table.clone(far)
+			for other, otherInfo in Config.CoreLoop.Zones.List do
+				if other > 1 and other ~= zone then
+					table.insert(hide, { otherInfo.Folder })
+				end
+			end
 			table.insert(Config.Zones.Worlds, {
 				Id = info.Folder,
 				Folder = info.Folder,
 				Area = { Center = Vector3.new(-10, 870, -3480) + info.Offset, Size = Vector3.new(600, 180, 640) },
 				Look = look,
-				Hide = far,
+				Hide = hide,
 			})
 		end
 	end

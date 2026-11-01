@@ -505,7 +505,392 @@ local function buildBoardwalk(info: any)
 	kite(Vector3.new(190, TOP + 62, -3600), Vector3.new(180, TOP, -3560), BOARD.Coral, BOARD.Turquoise)
 end
 
-local BUILDERS = { Boardwalk = buildBoardwalk }
+---------------------------------------------------------------------------------------------------------------
+-- Jungle props
+---------------------------------------------------------------------------------------------------------------
+
+-- A big flat leaf (a squashed sphere with a pale midrib) from `base`, pointing `yaw` degrees round and `droop` down
+local function leaf(groupName: string, base: Vector3, length: number, yaw: number, droop: number, color: Color3)
+	local cf = CFrame.new(base) * CFrame.Angles(0, math.rad(yaw), 0) * CFrame.Angles(math.rad(-droop), 0, 0)
+	local p = add(groupName, "Leaf", Vector3.new(length * 0.42, 0.3, length), cf * CFrame.new(0, 0, -length / 2), color, { Collide = false })
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = p
+	add(groupName, "Midrib", Vector3.new(0.18, 0.34, length * 0.9), cf * CFrame.new(0, 0.04, -length / 2), color:Lerp(Color3.new(1, 1, 0.8), 0.35), { Collide = false, Shadow = false })
+end
+
+local GREENS = { Color3.fromRGB(46, 150, 64), Color3.fromRGB(72, 178, 70), Color3.fromRGB(34, 122, 58), Color3.fromRGB(104, 196, 78) }
+
+-- A giant leafy plant: a fan of huge leaves from the ground
+local function bigPlant(at: Vector3, size: number, seed: number)
+	local count = 6 + seed % 3
+	for i = 1, count do
+		leaf("Plants", at + Vector3.new(0, 0.6 + (i % 3) * 0.5, 0), size * (0.75 + (i % 3) * 0.15), i * 360 / count + seed * 17, 18 + (i % 4) * 12, GREENS[(i + seed) % #GREENS + 1])
+	end
+end
+
+-- A flower: a yellow middle and five petals (orange or pink)
+local function flower(at: Vector3, color: Color3, size: number)
+	local g = "Flowers"
+	post(g, "Stem", at, size * 1.6, 0.08, GREENS[3], { Collide = false })
+	local top = at + Vector3.new(0, size * 1.6, 0)
+	for i = 1, 5 do
+		local cf = CFrame.new(top) * CFrame.Angles(0, math.rad(i * 72), 0) * CFrame.Angles(math.rad(-20), 0, 0)
+		local p = add(g, "Petal", Vector3.new(size * 0.6, 0.12, size), cf * CFrame.new(0, 0, -size * 0.45), color, { Collide = false, Shadow = false })
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = p
+	end
+	add(g, "Centre", Vector3.one * size * 0.45, CFrame.new(top + Vector3.new(0, 0.1, 0)), Color3.fromRGB(255, 220, 60), { Shape = Enum.PartType.Ball, Collide = false })
+end
+
+-- A jungle tree: a tall trunk with root flares and a canopy of round leaf clumps
+local function jungleTree(at: Vector3, height: number, seed: number)
+	local g = "Trees"
+	local bark = Color3.fromRGB(120, 86, 58)
+	post(g, "Trunk", at, height, 1.6 + height * 0.03, bark, { Material = Enum.Material.Wood })
+	for i = 1, 4 do
+		local a = math.rad(i * 90 + seed * 23)
+		add(g, "Root", Vector3.new(1.2, 3, 4.5), CFrame.new(at + Vector3.new(math.cos(a) * 2, 1.2, math.sin(a) * 2)) * CFrame.Angles(0, -a, 0) * CFrame.Angles(math.rad(-30), math.rad(90), 0), bark, { Material = Enum.Material.Wood })
+	end
+	local top = at + Vector3.new(0, height, 0)
+	for i = 1, 5 do
+		local a = math.rad(i * 72 + seed * 31)
+		local r = if i == 5 then 0 else 5 + (i % 2) * 2
+		local s = 11 + (i + seed) % 3 * 3
+		add(g, "Canopy", Vector3.one * s, CFrame.new(top + Vector3.new(math.cos(a) * r, (i % 3) * 2 - 1 + (if i == 5 then 3 else 0), math.sin(a) * r)), GREENS[(i + seed) % #GREENS + 1], { Shape = Enum.PartType.Ball, Material = Enum.Material.Grass, Collide = false })
+	end
+end
+
+-- A hanging vine (a green curved Beam) between two points, with a few leaves along it
+local function vine(from: Vector3, to: Vector3, sag: number)
+	local foot = add("Vines", "VineEnd", Vector3.one * 0.3, CFrame.new(from), GREENS[3], { Collide = false, Transparency = 1 })
+	local tip = add("Vines", "VineEnd", Vector3.one * 0.3, CFrame.new(to), GREENS[3], { Collide = false, Transparency = 1 })
+	local a0 = Instance.new("Attachment")
+	a0.Parent = foot
+	local a1 = Instance.new("Attachment")
+	a1.Parent = tip
+	local b = Instance.new("Beam")
+	b.Attachment0 = a0
+	b.Attachment1 = a1
+	b.Width0 = 0.35
+	b.Width1 = 0.25
+	b.Color = ColorSequence.new(Color3.fromRGB(58, 140, 52))
+	b.LightInfluence = 1
+	b.FaceCamera = true
+	b.Segments = 14
+	b.CurveSize0 = -sag
+	b.CurveSize1 = sag
+	b.Parent = foot
+	for k = 1, 4 do
+		local at = from:Lerp(to, k / 5) - Vector3.new(0, math.sin(k / 5 * math.pi) * sag * 0.55, 0)
+		add("Vines", "VineLeaf", Vector3.new(0.9, 0.12, 1.6), CFrame.new(at) * CFrame.Angles(math.rad(40), math.rad(k * 70), 0), GREENS[k % #GREENS + 1], { Collide = false, Shadow = false })
+	end
+end
+
+-- A mossy boulder
+local function boulder(at: Vector3, size: number)
+	add("Rocks", "Boulder", Vector3.new(size * 1.3, size, size * 1.1), CFrame.new(at + Vector3.new(0, size * 0.3, 0)) * CFrame.Angles(0, math.rad(at.X * 13 % 90), 0), Color3.fromRGB(134, 138, 128), { Shape = Enum.PartType.Ball, Material = Enum.Material.Slate })
+	add("Rocks", "Moss", Vector3.new(size * 1.1, size * 0.4, size * 0.9), CFrame.new(at + Vector3.new(0, size * 0.72, 0)), Color3.fromRGB(86, 160, 66), { Shape = Enum.PartType.Ball, Material = Enum.Material.Grass, Collide = false })
+end
+
+-- A rope bridge between two points: planks with a sag, rope rails (Beams) and posts at both ends
+local function ropeBridge(from: Vector3, to: Vector3, sag: number, walkable: boolean)
+	local g = "RopeBridges"
+	local length = (to - from).Magnitude
+	local dir = (to - from).Unit
+	local look = CFrame.lookAt(Vector3.zero, dir)
+	local side = dir:Cross(Vector3.yAxis).Unit
+	local planks = math.floor(length / 1.6)
+	local wood = { Color3.fromRGB(176, 128, 78), Color3.fromRGB(156, 110, 66) }
+	for i = 0, planks do
+		local k = i / planks
+		local at = from:Lerp(to, k) - Vector3.new(0, math.sin(k * math.pi) * sag, 0)
+		add(g, "Plank", Vector3.new(5, 0.35, 1.3), CFrame.new(at) * look * CFrame.Angles(0, 0, math.rad(((i * 7) % 5) - 2)), wood[i % 2 + 1], { Material = Enum.Material.WoodPlanks, Collide = walkable })
+	end
+	for _, s in { -1, 1 } do
+		local ends = {}
+		for _, at in { from, to } do
+			local p = post(g, "BridgePost", at + side * s * 2.8 - Vector3.new(0, 1, 0), 5, 0.3, Color3.fromRGB(120, 86, 58), { Material = Enum.Material.Wood })
+			local a = Instance.new("Attachment")
+			a.Position = Vector3.new(2.3, 0, 0) -- (the post's top: cylinders run along X)
+			a.Parent = p
+			table.insert(ends, a)
+		end
+		local rope = Instance.new("Beam")
+		rope.Attachment0 = ends[1]
+		rope.Attachment1 = ends[2]
+		rope.Width0 = 0.2
+		rope.Width1 = 0.2
+		rope.Color = ColorSequence.new(Color3.fromRGB(214, 180, 120))
+		rope.FaceCamera = true
+		rope.Segments = 16
+		rope.CurveSize0 = -sag * 1.3
+		rope.CurveSize1 = sag * 1.3
+		rope.Parent = ends[1].Parent
+	end
+	if walkable then
+		-- invisible rails so nobody falls off the walkable bridge
+		for _, s in { -1, 1 } do
+			local mid = (from + to) / 2 + side * s * 2.8 + Vector3.new(0, 1.5 - sag * 0.6, 0)
+			add(g, "BridgeRail", Vector3.new(0.4, 4 + sag, length), CFrame.new(mid) * look, WHITE, { Transparency = 1 })
+		end
+	end
+end
+
+-- A waterfall: a sheet of falling water (scrolling Beam) from `top` down to `bottomY`, with foam where it lands
+local function waterfall(top: Vector3, bottomY: number, width: number)
+	local g = "Waterfalls"
+	local height = top.Y - bottomY
+	local sheet = add(g, "Sheet", Vector3.new(width, height, 0.6), CFrame.new(top.X, bottomY + height / 2, top.Z), Color3.fromRGB(150, 228, 244), { Collide = false, Transparency = 0.1, Shadow = false })
+	local a0 = Instance.new("Attachment")
+	a0.Position = Vector3.new(0, height / 2, 0.5)
+	a0.Parent = sheet
+	local a1 = Instance.new("Attachment")
+	a1.Position = Vector3.new(0, -height / 2, 0.5)
+	a1.Parent = sheet
+	local flow = Instance.new("Beam")
+	flow.Attachment0 = a0
+	flow.Attachment1 = a1
+	flow.Width0 = width
+	flow.Width1 = width * 1.1
+	flow.Texture = Config.BallVfx.Images.TrailWisp
+	flow.TextureMode = Enum.TextureMode.Wrap
+	flow.TextureLength = 10
+	flow.TextureSpeed = -1.4
+	flow.Color = ColorSequence.new(WHITE, Color3.fromRGB(200, 244, 255))
+	flow.LightEmission = 0.4
+	flow.Transparency = NumberSequence.new(0.05)
+	flow.Segments = 4
+	flow.Parent = sheet
+	-- the lip of the fall and the foam cloud at its foot
+	add(g, "Lip", Vector3.new(width + 1, 0.8, 2.4), CFrame.new(top + Vector3.new(0, 0.2, 0.6)), Color3.fromRGB(220, 248, 255), { Collide = false })
+	local foam = add(g, "Foam", Vector3.new(width, 1, 4), CFrame.new(top.X, bottomY + 0.5, top.Z + 2), WHITE, { Collide = false, Transparency = 1 })
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = Config.BallVfx.Images.Smoke
+	e.Color = ColorSequence.new(WHITE, Color3.fromRGB(220, 246, 255))
+	e.LightEmission = 0.15
+	e.Size = NumberSequence.new(width * 0.25, width * 0.5)
+	e.Transparency = NumberSequence.new(0.35, 1)
+	e.Lifetime = NumberRange.new(1.2, 2)
+	e.Speed = NumberRange.new(3, 6)
+	e.SpreadAngle = Vector2.new(50, 50)
+	e.Rate = 6 + width * 0.6
+	e.Rotation = NumberRange.new(0, 360)
+	e.RotSpeed = NumberRange.new(-20, 20)
+	e.Parent = foam
+end
+
+---------------------------------------------------------------------------------------------------------------
+-- Zone 3: Jungle Falls
+---------------------------------------------------------------------------------------------------------------
+local JUNGLE = {
+	Ground = { X0 = -150, X1 = 168, Z0 = -3596, Z1 = -3330 }, -- the grass valley floor (zone 1's layout)
+	EastBank = { X0 = 196, X1 = 270, Z0 = -3596, Z1 = -3330 }, -- across the river: the temple
+	PoolTop = 846.4, -- the waterfall pool and the river, 2.25 studs under the grass
+	CliffZ = -3640, -- the cliff face behind the pool
+	CliffTop = 848.65 + 70,
+	Grass = Color3.fromRGB(96, 184, 84),
+	Dirt = Color3.fromRGB(196, 158, 104),
+	Stone = Color3.fromRGB(150, 156, 132),
+	Orange = Color3.fromRGB(255, 150, 50),
+	Aqua = Color3.fromRGB(70, 210, 220),
+	Pink = Color3.fromRGB(255, 104, 150),
+	Thatch = Color3.fromRGB(222, 184, 104),
+	Bamboo = { Color3.fromRGB(176, 206, 96), Color3.fromRGB(214, 222, 110) },
+}
+
+local function buildJungle(info: any)
+	local palette = info.Palette
+	local gr = JUNGLE.Ground
+
+	-- The valley floor: grass, with a dirt clearing round the stations and the spawn
+	add("Ground", "Grass", Vector3.new(gr.X1 - gr.X0, 6, gr.Z1 - gr.Z0), CFrame.new((gr.X0 + gr.X1) / 2, TOP - 3, (gr.Z0 + gr.Z1) / 2), JUNGLE.Grass, { Material = Enum.Material.Grass })
+	add("Ground", "Clearing", Vector3.new(118, 0.1, 50), CFrame.new(-34, TOP + 0.03, -3410), JUNGLE.Dirt, { Material = Enum.Material.Ground, Collide = false })
+	add("Ground", "PathToEgg", Vector3.new(40, 0.1, 10), CFrame.new(18, TOP + 0.03, -3436), JUNGLE.Dirt, { Material = Enum.Material.Ground, Collide = false })
+	add("Ground", "PathToGates", Vector3.new(12, 0.1, 40), CFrame.new(-96, TOP + 0.03, -3410), JUNGLE.Dirt, { Material = Enum.Material.Ground, Collide = false })
+	add("Ground", "PathToBridge", Vector3.new(96, 0.1, 8), CFrame.new(120, TOP + 0.03, -3470), JUNGLE.Dirt, { Material = Enum.Material.Ground, Collide = false })
+	local e = JUNGLE.EastBank
+	add("Ground", "EastBank", Vector3.new(e.X1 - e.X0, 6, e.Z1 - e.Z0), CFrame.new((e.X0 + e.X1) / 2, TOP - 3, (e.Z0 + e.Z1) / 2), JUNGLE.Grass, { Material = Enum.Material.Grass })
+	-- an invisible fence round the edges you could fall off (the pool's edge, the river banks)
+	local function fence(size: Vector3, at: Vector3)
+		add("Ground", "EdgeFence", size, CFrame.new(at), WHITE, { Transparency = 1 })
+	end
+	fence(Vector3.new(gr.X1 - gr.X0, 8, 1), Vector3.new((gr.X0 + gr.X1) / 2, TOP + 4, gr.Z0 - 0.5))
+	fence(Vector3.new(1, 8, gr.Z1 - gr.Z0), Vector3.new(gr.X1 + 0.5, TOP + 4, (gr.Z0 + gr.Z1) / 2 + 12)) -- (gap at the bridge)
+	fence(Vector3.new(1, 8, gr.Z1 - gr.Z0), Vector3.new(e.X0 - 0.5, TOP + 4, (gr.Z0 + gr.Z1) / 2 + 12))
+	fence(Vector3.new(e.X1 - e.X0, 8, 1), Vector3.new((e.X0 + e.X1) / 2, TOP + 4, e.Z0 - 0.5))
+
+	-- The lane: aqua gutters, mossy stone walls with a wood cap, the pit and a bamboo back wall
+	local length = LANE.FoulZ - LANE.EndZ
+	local midZ = (LANE.FoulZ + LANE.EndZ) / 2
+	for _, side in { -1, 1 } do
+		add("Lane", "Gutter", Vector3.new(2.4, 0.3, length), CFrame.new(LANE.Centre + side * (LANE.Width / 2 + 1.2), TOP + 0.05, midZ), palette.Edge)
+		add("Lane", "GutterWall", Vector3.new(0.9, 1.6, length + 10), CFrame.new(LANE.Centre + side * (LANE.Width / 2 + 2.8), TOP + 0.8, midZ - 5), JUNGLE.Stone, { Material = Enum.Material.Slate })
+		add("Lane", "GutterCap", Vector3.new(1.1, 0.3, length + 10), CFrame.new(LANE.Centre + side * (LANE.Width / 2 + 2.8), TOP + 1.75, midZ - 5), JUNGLE.Orange)
+	end
+	add("Lane", "Pit", Vector3.new(LANE.Width + 6, 0.3, 8), CFrame.new(LANE.Centre, TOP + 0.02, LANE.EndZ - 4), Color3.fromRGB(52, 70, 44))
+	local backZ = LANE.EndZ - 8.6
+	local wallWidth = LANE.Width + 6.4
+	local canes = math.floor(wallWidth / 1.4)
+	for i = 1, canes do
+		local sx = LANE.Centre - wallWidth / 2 + wallWidth * (i - 0.5) / canes
+		post("Lane", "Bamboo", Vector3.new(sx, TOP, backZ), 8 + (i % 3) * 0.6, 0.7, JUNGLE.Bamboo[i % 2 + 1])
+	end
+	add("Lane", "BambooTie", Vector3.new(wallWidth, 0.4, 1.7), CFrame.new(LANE.Centre, TOP + 2.5, backZ), Color3.fromRGB(150, 104, 60), { Collide = false })
+	add("Lane", "BambooTie", Vector3.new(wallWidth, 0.4, 1.7), CFrame.new(LANE.Centre, TOP + 6, backZ), Color3.fromRGB(150, 104, 60), { Collide = false })
+
+	-- The JUNGLE FALLS sign behind the pit: two carved stone pillars wrapped in vines, a wooden board
+	local signZ = backZ - 3
+	for _, side in { -1, 1 } do
+		local sx = LANE.Centre + side * 36
+		for k = 0, 4 do
+			add("Arch", "Pillar", Vector3.new(4.6 - k * 0.2, 4.8, 4.6 - k * 0.2), CFrame.new(sx, TOP + 2.4 + k * 4.8, signZ), if k % 2 == 0 then JUNGLE.Stone else JUNGLE.Stone:Lerp(Color3.new(0, 0, 0), 0.12), { Material = Enum.Material.Slate })
+			add("Arch", "Glyph", Vector3.new(2, 2, 0.3), CFrame.new(sx, TOP + 2.4 + k * 4.8, signZ + 2.3), if k % 2 == 0 then JUNGLE.Orange else JUNGLE.Aqua, { Collide = false })
+		end
+		add("Arch", "PillarTop", Vector3.new(6, 1.4, 6), CFrame.new(sx, TOP + 24.7, signZ), Color3.fromRGB(120, 126, 104), { Material = Enum.Material.Slate })
+		bigPlant(Vector3.new(sx, TOP + 25.4, signZ), 5, side + 3)
+		vine(Vector3.new(sx - 2.4, TOP + 24, signZ + 2.4), Vector3.new(sx + 2.4, TOP + 6, signZ + 2.4), 2)
+	end
+	local board = add("Arch", "NameBoard", Vector3.new(64, 11, 1), CFrame.new(LANE.Centre, TOP + 19, signZ), Color3.fromRGB(166, 116, 66), { Material = Enum.Material.WoodPlanks })
+	add("Arch", "NameBoardTrim", Vector3.new(66, 13, 0.6), CFrame.new(LANE.Centre, TOP + 19, signZ - 0.5), Color3.fromRGB(110, 76, 44), { Material = Enum.Material.Wood })
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Back -- (faces the bowlers, +Z)
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 24
+	gui.LightInfluence = 0
+	gui.Parent = board
+	local title = label(gui, "JUNGLE FALLS", UDim2.fromScale(0.94, 0.62), UDim2.fromScale(0.5, 0.4), Color3.new(1, 1, 1))
+	local gradient = Instance.new("UIGradient")
+	gradient.Color = ColorSequence.new(Color3.fromRGB(200, 255, 110), Color3.fromRGB(255, 170, 60))
+	gradient.Rotation = 90
+	gradient.Parent = title
+	label(gui, "ZONE 3", UDim2.fromScale(0.3, 0.26), UDim2.fromScale(0.5, 0.83), JUNGLE.Aqua)
+	for i = 1, 6 do
+		leaf("Arch", Vector3.new(LANE.Centre - 32 + (i - 1) * 12.8, TOP + 24.4, signZ - 0.4), 6, 180 + (i % 2) * 20 - 10, -30, GREENS[i % #GREENS + 1])
+	end
+
+	-- Flower garlands over the lane (in place of zone 2's bunting), on bamboo poles at the gutter walls
+	local garland = { JUNGLE.Orange, GREENS[2], JUNGLE.Pink, Color3.fromRGB(255, 220, 60), GREENS[4] }
+	for _, bz in { -3470, -3505, -3540 } do
+		for _, side in { -1, 1 } do
+			post("Garlands", "GarlandPole", Vector3.new(LANE.Centre + side * (LANE.Width / 2 + 2.8), TOP + 1.9, bz), 17, 0.4, JUNGLE.Bamboo[1])
+		end
+		bunting(Vector3.new(LANE.Centre - LANE.Width / 2 - 2.8, TOP + 18.4, bz), Vector3.new(LANE.Centre + LANE.Width / 2 + 2.8, TOP + 18.4, bz), garland)
+	end
+
+	-- Thatched leaf roofs over the sell pad and the shop, on bamboo posts
+	local function thatch(back: Vector3, width: number)
+		for _, s in { -1, 1 } do
+			post("Huts", "HutPost", back + Vector3.new(s * (width / 2 - 0.3), 0, -3.4), 10.6, 0.35, JUNGLE.Bamboo[1], { Collide = false })
+		end
+		local strips = math.floor(width / 1.8)
+		for i = 1, strips do
+			local x = -width / 2 + width * (i - 0.5) / strips
+			add("Huts", "Thatch", Vector3.new(width / strips + 0.4, 0.5, 5.6), CFrame.new(back + Vector3.new(x, 11, -1.2)) * CFrame.Angles(math.rad(-18), 0, math.rad((i % 2) * 4 - 2)), if i % 2 == 0 then JUNGLE.Thatch else JUNGLE.Thatch:Lerp(Color3.new(1, 1, 1), 0.15), { Collide = false })
+			leaf("Huts", back + Vector3.new(x, 10.2, -3.6), 2.4, 180, 70, GREENS[i % #GREENS + 1])
+		end
+	end
+	local sell, shop = CORE.Sell, CORE.Shop
+	thatch(sell.Position + Vector3.new(0, 0, sell.Radius + 2.2), 12)
+	thatch(shop.Position + Vector3.new(0, 0, shop.Radius + 2.2), 11)
+
+	-- The pool under the falls and the cliff behind it are Terrain (ZoneMaps.Terrain); three waterfalls pour into it
+	local pool = JUNGLE.PoolTop
+	local fallZ = JUNGLE.CliffZ + 4.5 -- (in front of the rock: Terrain rounds to 4-stud cells)
+	waterfall(Vector3.new(-104, JUNGLE.CliffTop, fallZ), pool, 14)
+	waterfall(Vector3.new(-36, JUNGLE.CliffTop, fallZ), pool, 26)
+	waterfall(Vector3.new(44, JUNGLE.CliffTop, fallZ), pool, 12)
+	waterfall(Vector3.new(130, JUNGLE.CliffTop, fallZ), pool, 10)
+	-- trees and giant plants along the cliff top, leafy ledges and vines down its face
+	for i = 0, 13 do
+		local x = -190 + i * 34 + (i % 3) * 5
+		if math.abs(x + 104) > 12 and math.abs(x + 36) > 18 and math.abs(x - 44) > 10 and math.abs(x - 130) > 10 then
+			jungleTree(Vector3.new(x, JUNGLE.CliffTop + 2, JUNGLE.CliffZ - 10 - (i % 2) * 8), 14 + (i % 3) * 5, i)
+		end
+		bigPlant(Vector3.new(x + 15, JUNGLE.CliffTop + 2, JUNGLE.CliffZ - 3), 7, i)
+	end
+	for i = 0, 22 do
+		local x = -180 + i * 15
+		vine(Vector3.new(x, JUNGLE.CliffTop + 1, fallZ - 1), Vector3.new(x + 2, JUNGLE.CliffTop - 14 - (i * 7) % 24, fallZ - 0.5), 1)
+	end
+	-- rocks round the pool, and lily pads on it
+	for i, at in { { -140, -3604 }, { -120, -3628 }, { 8, -3630 }, { 80, -3606 }, { 150, -3624 }, { 176, -3600 } } do
+		boulder(Vector3.new(at[1], pool - 1.5, at[2]), 5 + i % 3 * 2)
+	end
+	for i = 1, 14 do
+		local at = Vector3.new(-140 + (i * 23) % 300, pool + 0.1, -3602 - (i * 11) % 30)
+		add("Pool", "LilyPad", Vector3.new(0.15, 3 + i % 3, 3 + i % 3), CFrame.new(at) * UP, GREENS[i % #GREENS + 1], { Shape = Enum.PartType.Cylinder, Collide = false })
+		if i % 3 == 0 then
+			flower(at, JUNGLE.Pink, 0.8)
+		end
+	end
+	-- a high rope bridge across the cliff face, between the falls (seen over the sign)
+	ropeBridge(Vector3.new(-92, TOP + 42, JUNGLE.CliffZ + 8), Vector3.new(-50, TOP + 42, JUNGLE.CliffZ + 8), 3, false)
+	ropeBridge(Vector3.new(-22, TOP + 38, JUNGLE.CliffZ + 8), Vector3.new(36, TOP + 38, JUNGLE.CliffZ + 8), 4, false)
+	for _, at in { { -92, 42 }, { -50, 42 }, { -22, 38 }, { 36, 38 } } do
+		add("RopeBridges", "Ledge", Vector3.new(8, 2, 8), CFrame.new(at[1], TOP + at[2] - 1.2, JUNGLE.CliffZ + 7), Color3.fromRGB(120, 124, 110), { Material = Enum.Material.Slate })
+	end
+
+	-- The river along the east side (Terrain water) with a walkable rope bridge to the temple bank
+	ropeBridge(Vector3.new(gr.X1 - 2, TOP + 0.2, -3470), Vector3.new(e.X0 + 2, TOP + 0.2, -3470), 1.2, true)
+
+	-- The temple ruin on the east bank: four stepped stone tiers, a stair, a gold sun on top, moss and vines
+	local temple = Vector3.new(240, TOP, -3500)
+	local S = 1.3 -- (the whole ruin's scale)
+	local function at(x: number, y: number, z: number): CFrame
+		return CFrame.new(temple + Vector3.new(x, y, z) * S)
+	end
+	for k = 0, 3 do
+		local w = 30 - k * 7
+		add("Temple", "Tier", Vector3.new(w, 6, w) * S, at(0, 3 + k * 6, 0), if k % 2 == 0 then JUNGLE.Stone else JUNGLE.Stone:Lerp(Color3.new(0, 0, 0), 0.1), { Material = Enum.Material.Slate })
+		add("Temple", "Moss", Vector3.new(w + 0.2, 0.6, w * 0.6) * S, at(0, 6 + k * 6, w * 0.15), Color3.fromRGB(96, 168, 70), { Material = Enum.Material.Grass, Collide = false })
+	end
+	add("Temple", "Stair", Vector3.new(7, 24, 16) * S, at(-15 - 8, 12, 0) * CFrame.Angles(0, math.rad(90), 0), JUNGLE.Stone:Lerp(Color3.new(1, 1, 1), 0.1), { Class = "WedgePart", Material = Enum.Material.Slate })
+	add("Temple", "Shrine", Vector3.new(8, 7, 8) * S, at(0, 27.5, 0), Color3.fromRGB(128, 134, 112), { Material = Enum.Material.Slate })
+	add("Temple", "Door", Vector3.new(0.4, 4.5, 3.4) * S, at(-4.1, 26.3, 0), Color3.fromRGB(40, 46, 36), { Collide = false })
+	add("Temple", "Sun", Vector3.new(0.6, 5, 5) * S, at(0, 36, 0), Color3.fromRGB(255, 200, 60), { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Metal })
+	add("Temple", "SunStand", Vector3.new(1.4, 4, 1.4) * S, at(0, 32, 0), Color3.fromRGB(128, 134, 112), { Material = Enum.Material.Slate })
+	for i = 1, 4 do
+		vine((at(-15 + i * 2, 22 - i * 2, -15 + i * 6)).Position, (at(-15.4, 4, -15 + i * 6.5)).Position, 1.4)
+	end
+	for _, o in { { -21, -16 }, { -21, 16 } } do
+		add("Temple", "Statue", Vector3.new(3, 6, 3) * S, at(o[1], 3, o[2]), JUNGLE.Stone, { Material = Enum.Material.Slate })
+		add("Temple", "StatueHead", Vector3.new(3.6, 3.2, 3.6) * S, at(o[1], 7.6, o[2]), JUNGLE.Stone:Lerp(Color3.new(0, 0, 0), 0.15), { Material = Enum.Material.Slate })
+		add("Temple", "StatueEyes", Vector3.new(0.3, 0.6, 2.4) * S, at(o[1] - 1.85, 8, o[2]), JUNGLE.Aqua, { Collide = false })
+	end
+
+	-- Trees, palms, giant plants and flowers all round the edges (the play area stays open)
+	local trees = {
+		{ -136, -3340, 34 }, { -140, -3380, 28 }, { -138, -3470, 32 }, { -132, -3540, 30 }, { -140, -3580, 36 },
+		{ -108, -3338, 26 }, { 30, -3336, 30 }, { 80, -3340, 34 }, { 128, -3338, 28 }, { 156, -3380, 30 },
+		{ 156, -3560, 32 }, { 210, -3340, 32 }, { 262, -3360, 36 }, { 262, -3430, 30 }, { 210, -3580, 34 }, { 262, -3580, 30 },
+	}
+	for i, t in trees do
+		jungleTree(Vector3.new(t[1], TOP, t[2]), t[3], i)
+	end
+	for _, p in { { 60, -3390, 15, 40 }, { 112, -3420, 17, 200 }, { 140, -3500, 14, 300 }, { 100, -3570, 16, 120 }, { -120, -3430, 15, 80 } } do
+		palm(Vector3.new(p[1], TOP, p[2]), p[3], p[4])
+	end
+	local plants = {
+		{ -126, -3360 }, { -120, -3500 }, { -124, -3560 }, { -100, -3590 }, { 30, -3590 }, { 60, -3460 }, { 84, -3520 },
+		{ 120, -3584 }, { 150, -3440 }, { 76, -3360 }, { -70, -3344 }, { 0, -3346 }, { 220, -3440 }, { 250, -3560 },
+	}
+	for i, p in plants do
+		bigPlant(Vector3.new(p[1], TOP, p[2]), 6 + i % 3 * 2, i)
+	end
+	local flowerColors = { JUNGLE.Orange, JUNGLE.Pink, Color3.fromRGB(255, 120, 60) }
+	for i = 1, 36 do
+		local x = if i % 2 == 0 then 22 + (i * 37) % 140 else -140 + (i * 29) % 46
+		local z = -3340 - (i * 53) % 250
+		flower(Vector3.new(x, TOP, z), flowerColors[i % #flowerColors + 1], 0.9 + (i % 3) * 0.3)
+	end
+	for _, b in { { -128, -3410, 4 }, { 64, -3420, 3 }, { 140, -3540, 5 }, { -110, -3520, 3 }, { 100, -3350, 4 } } do
+		boulder(Vector3.new(b[1], TOP, b[2]), b[3])
+	end
+end
+
+local BUILDERS = { Boardwalk = buildBoardwalk, Jungle = buildJungle }
 
 -- Builds a zone's map in zone 1's layout (SharedLane moves it by the zone's Offset and parents it)
 function ZoneMaps.Build(name: string, zone: number, info: any): Model
@@ -544,6 +929,41 @@ function ZoneMaps.Terrain(name: string, info: any)
 		terrain.WaterReflectance = 0.35
 		terrain.WaterWaveSize = 0.18
 		terrain.WaterWaveSpeed = 8
+	elseif name == "Jungle" then
+		-- (the water look is shared by every zone's water: zone 2's turquoise fits the jungle's aqua too)
+		local o = offset
+		local pool = JUNGLE.PoolTop
+		local gr, e = JUNGLE.Ground, JUNGLE.EastBank
+		local function block(x0: number, x1: number, y0: number, y1: number, z0: number, z1: number, material: Enum.Material)
+			terrain:FillBlock(CFrame.new(Vector3.new((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2) + o), Vector3.new(x1 - x0, y1 - y0, z1 - z0), material)
+		end
+		-- the bed under everything, then the waterfall pool (south) and the river (east) on it
+		block(-260, 360, pool - 16, pool - 6, -3760, -3220, Enum.Material.Mud)
+		block(-200, 300, pool - 6, pool, JUNGLE.CliffZ, gr.Z0, Enum.Material.Water)
+		block(gr.X1, e.X0, pool - 6, pool, gr.Z0, gr.Z1 + 40, Enum.Material.Water)
+		-- the cliff behind the pool, grass on top; lower cliffs round the west, north and east so the valley is closed
+		block(-260, 360, pool - 6, JUNGLE.CliffTop, JUNGLE.CliffZ - 80, JUNGLE.CliffZ, Enum.Material.Rock)
+		block(-260, 360, JUNGLE.CliffTop, JUNGLE.CliffTop + 4, JUNGLE.CliffZ - 80, JUNGLE.CliffZ - 2, Enum.Material.LeafyGrass)
+		block(-240, gr.X0, pool - 6, TOP + 34, -3720, -3240, Enum.Material.Rock)
+		block(-240, gr.X0 - 2, TOP + 34, TOP + 38, -3720, -3240, Enum.Material.LeafyGrass)
+		block(-240, 360, pool - 6, TOP + 22, -3300, -3220, Enum.Material.Rock)
+		block(-240, 360, TOP + 22, TOP + 26, -3298, -3220, Enum.Material.LeafyGrass)
+		block(e.X1, 360, pool - 6, TOP + 30, -3720, -3240, Enum.Material.Rock)
+		block(e.X1 + 2, 360, TOP + 30, TOP + 34, -3720, -3240, Enum.Material.LeafyGrass)
+		-- the gaps between the ground slabs and the cliffs (north and west) filled with grass, level with the floor
+		block(-240, 360, pool - 6, TOP, gr.Z1, -3300, Enum.Material.Grass)
+		block(gr.X0 - 2, gr.X0, pool - 6, TOP, -3720, -3240, Enum.Material.Grass)
+		-- leafy ledges across the cliff face, and the jungle's rock and grass colours (Terrain colours are shared by
+		-- every zone: zone 2's island rocks take the warm stone too)
+		for _, y in { 18, 36, 52 } do
+			block(-260, 360, TOP + y, TOP + y + 3, JUNGLE.CliffZ - 2, JUNGLE.CliffZ + 2, Enum.Material.LeafyGrass)
+		end
+		terrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(104, 114, 92))
+		terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(88, 170, 64))
+		-- rocky outcrops on the cliff face (between the falls)
+		for i, at in { { -70, 30, 14 }, { 0, 48, 12 }, { 90, 22, 16 }, { -150, 40, 15 }, { 170, 50, 13 } } do
+			terrain:FillBall(Vector3.new(at[1], TOP + at[2], JUNGLE.CliffZ + 1) + o, at[3] - i % 2 * 2, Enum.Material.Rock)
+		end
 	end
 end
 
