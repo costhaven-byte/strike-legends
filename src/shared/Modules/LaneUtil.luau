@@ -16,23 +16,35 @@ function LaneUtil.GetLanes(): { Model }
 		if sharedSpots then
 			return table.clone(sharedSpots)
 		end
-		local model = Workspace:WaitForChild(Config.CoreLoop.Folder):WaitForChild("SharedLane")
-		while model:GetAttribute("Ready") ~= true do
-			model:GetAttributeChangedSignal("Ready"):Wait()
-		end
-		local spots = model:WaitForChild("Spots")
-		local want = model:GetAttribute("SpotCount") or 0
-		while #spots:GetChildren() < want do
-			spots.ChildAdded:Wait()
-		end
-		for _, lane in spots:GetChildren() do
-			if lane:IsA("Model") and lane:FindFirstChild("PinSpot") and lane:FindFirstChild("BallStart") then
-				table.insert(lanes, lane)
+		-- Addendum 6 Stage 3: one shared lane per zone (Config.CoreLoop.Zones), zone 1's first, then zone 2's ...
+		local zones = Config.CoreLoop.Zones
+		local folders = { Config.CoreLoop.Folder }
+		if zones and zones.Enabled then
+			for zone = 2, #zones.List do
+				table.insert(folders, zones.List[zone].Folder)
 			end
 		end
-		table.sort(lanes, function(a, b)
-			return (tonumber(a.Name:match("%d+")) or 0) < (tonumber(b.Name:match("%d+")) or 0)
-		end)
+		for _, folderName in folders do
+			local model = Workspace:WaitForChild(folderName):WaitForChild("SharedLane")
+			while model:GetAttribute("Ready") ~= true do
+				model:GetAttributeChangedSignal("Ready"):Wait()
+			end
+			local spots = model:WaitForChild("Spots")
+			local want = model:GetAttribute("SpotCount") or 0
+			while #spots:GetChildren() < want do
+				spots.ChildAdded:Wait()
+			end
+			local found = {}
+			for _, lane in spots:GetChildren() do
+				if lane:IsA("Model") and lane:FindFirstChild("PinSpot") and lane:FindFirstChild("BallStart") then
+					table.insert(found, lane)
+				end
+			end
+			table.sort(found, function(a, b)
+				return (tonumber(a.Name:match("%d+")) or 0) < (tonumber(b.Name:match("%d+")) or 0)
+			end)
+			table.move(found, 1, #found, #lanes + 1, lanes)
+		end
 		sharedSpots = table.clone(lanes)
 		return lanes
 	end
@@ -90,6 +102,9 @@ end
 
 -- The zone number a lane belongs to (its model's place in Config.Zones.LaneFolders), 1 if unknown
 function LaneUtil.ZoneOf(lane: Instance): number
+	if LaneUtil.Shared() then
+		return lane:GetAttribute("Zone") or 1 -- (Addendum 6 Stage 3: the shared lane's spots know their zone)
+	end
 	local node: Instance? = lane
 	while node do
 		local index = table.find(Config.Zones.LaneFolders, node.Name)

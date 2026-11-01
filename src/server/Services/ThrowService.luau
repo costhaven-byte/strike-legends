@@ -8,6 +8,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
+local CoreLadder = require(Shared.Modules.CoreLadder)
 local Currency = require(Shared.Modules.Currency)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Modifiers = require(Shared.Modules.Modifiers)
@@ -407,7 +408,8 @@ local function coreThrow(player: Player)
 	if paid > 0 then
 		-- (coins/min on the HUD and away coins measure real throws, at what a sell would pay for them now)
 		local multiplier = MultiplierService.GetCoinMultiplier(player)
-		AwayService.OnCoins(player, paid * CORE.PinValue * multiplier, multiplier)
+		-- (Addendum 6 Stage 3: at the PinValue of this lane's zone)
+		AwayService.OnCoins(player, paid * CoreLadder.ZoneValue(LaneUtil.ZoneOf(lane)) * multiplier, multiplier)
 	end
 
 	local data = {

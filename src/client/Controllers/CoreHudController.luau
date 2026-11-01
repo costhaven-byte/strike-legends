@@ -193,11 +193,30 @@ function CoreHudController:Start()
 	})
 
 	-- ===== Pointers: a beam from you to a pad and a bobbing marker over it (sell station, and the shop for the guide) =====
-	local roof = Workspace:WaitForChild(CORE.Folder)
+	-- Addendum 6 Stage 3: the zone you stand in (its own sell pad, shop and gates)
+	local function zoneNow(): number
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		return if root then CoreLadder.ZoneAt(root.Position) else 1
+	end
 	local function pointer(name: string, model: string, color: Color3, words: string): (boolean) -> ()
-		local station = roof:WaitForChild(model, 30)
-		local pad = station and station:WaitForChild("Pad", 10) :: BasePart?
-		local beacon = pad and pad:WaitForChild("Beacon", 10) :: Attachment?
+		-- (Addendum 6 Stage 3: the station in the zone you're in, looked up again when you change zone)
+		local pad: BasePart? = nil
+		local beacon: Attachment? = nil
+		local beaconZone = 0
+		local function find()
+			local zone = zoneNow()
+			if zone == beaconZone and beacon and beacon.Parent then
+				return
+			end
+			local folder = Workspace:FindFirstChild(CoreLadder.ZoneFolder(zone))
+			local station = folder and folder:FindFirstChild(model)
+			pad = station and station:FindFirstChild("Pad") :: BasePart?
+			beacon = pad and pad:FindFirstChild("Beacon") :: Attachment?
+			if beacon then
+				beaconZone = zone
+			end
+		end
+		find()
 		local beam: Beam? = nil
 		local from: Attachment? = nil
 		local marker = new("BillboardGui", {
@@ -219,6 +238,10 @@ function CoreHudController:Start()
 			TextColor3 = color,
 		})
 		return function(on: boolean)
+			if on then
+				find()
+				marker.Adornee = pad
+			end
 			marker.Enabled = on
 			marker.StudsOffset = Vector3.new(0, 14 + math.sin(os.clock() * 3) * 0.8, 0)
 			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -301,7 +324,7 @@ function CoreHudController:Start()
 		local amount = player:GetAttribute("Bag") or 0
 		local size = player:GetAttribute("BagSize") or CORE.BagSizes[1]
 		-- (Addendum 6: the bag holds pins; what they sell for = pins x PinValue x the coin multiplier)
-		local worth = amount * CORE.PinValue * (tonumber(player:GetAttribute("CoinMultiplier")) or 1)
+		local worth = amount * CoreLadder.ZoneValue(zoneNow()) * (tonumber(player:GetAttribute("CoinMultiplier")) or 1)
 		if coins >= firstBall.Price then
 			return 3
 		elseif amount > 0 and (amount >= size or coins + worth >= firstBall.Price) then
@@ -565,6 +588,105 @@ function CoreHudController:Start()
 		player:GetAttributeChangedSignal(key):Connect(refreshDot)
 	end
 	task.delay(3, refreshDot) -- (the BALLS button is found a moment after start)
+
+	-- ===== Addendum 6 Stage 3: the zone gates. Each gate's gatePrompt and sign say what it costs you (shut: the price,
+	-- coral when you can't pay yet; open: Go) and a hold asks the server (CoreGate). A short note says how it went. =====
+	local note, noteFace = plate(gui, "ZoneNote", PANEL, 6)
+	note.AnchorPoint = Vector2.new(0.5, 0)
+	note.Position = UDim2.new(0.5, 0, 0.16, 0)
+	note.Size = UDim2.fromOffset(340, 56)
+	note.Visible = false
+	local noteText = text(noteFace, "", { Size = UDim2.new(1, -20, 0.8, 0), Position = UDim2.new(0, 10, 0.1, 0), TextColor3 = INK })
+	local noteToken = 0
+	local function showNote(words: string, color: Color3?)
+		noteToken += 1
+		local token = noteToken
+		noteText.Text = words
+		SunKit.Recolor(noteText, color or INK)
+		note.Visible = true
+		UiFx.Pop(note, 1.08, 0.18)
+		task.delay(2.4, function()
+			if token == noteToken then
+				note.Visible = false
+			end
+		end)
+	end
+	local gateRemote = remotes:WaitForChild("CoreGate", 10) :: RemoteFunction?
+	local prompts: { ProximityPrompt } = {}
+	local function paintGates()
+		local open = CoreLadder.ZonesOpen(player:GetAttribute("CoreZonesOpen"))
+		local coins = player:GetAttribute("Coins") or 0
+		local rebirths = player:GetAttribute("Rebirths")
+		for _, gatePrompt in prompts do
+			local target = gatePrompt:GetAttribute("Target") or 1
+			local gate = gatePrompt:FindFirstAncestorOfClass("Model")
+			local sub = gate and gate:FindFirstChild("Sub", true) :: TextLabel?
+			if target <= open then
+				gatePrompt.ActionText = "Go"
+				if sub then
+					sub.Text = ("Zone %d · open"):format(target)
+				end
+			else
+				local price = CoreLadder.GatePrice(target, rebirths)
+				local shut = target > open + 1
+				gatePrompt.ActionText = if shut
+					then ("Open zone %d first"):format(open + 1)
+					else ("Open for %s"):format(Currency.Format(price))
+				if sub then
+					sub.Text = if shut then ("Zone %d · locked"):format(target) else ("%s coins"):format(Currency.Format(price))
+					sub.TextColor3 = if not shut and Currency.CanAfford(coins, price) then GREEN else CORAL
+				end
+			end
+		end
+	end
+	local busy = false
+	local function hookPrompt(gatePrompt: ProximityPrompt)
+		if table.find(prompts, gatePrompt) then
+			return
+		end
+		table.insert(prompts, gatePrompt)
+		gatePrompt.Triggered:Connect(function()
+			if busy or not gateRemote then
+				return
+			end
+			busy = true
+			local target = gatePrompt:GetAttribute("Target") or 1
+			local ok, result = pcall(function()
+				return (gateRemote :: RemoteFunction):InvokeServer(target)
+			end)
+			busy = false
+			if ok and type(result) == "table" and result.Ok then
+				local info = CoreLadder.ZoneInfo(target)
+				Sfx.Play(if result.Opened then "Cheer" else "Teleport", 1, 0.7)
+				showNote(
+					(if result.Opened then "%s is open!" else "Welcome to %s"):format(if info then info.Name else "zone " .. target),
+					if result.Opened then GREEN else INK
+				)
+			else
+				Sfx.Play("Error", 1, 0.6)
+				showNote(if ok and type(result) == "table" and result.Error then result.Error else "Try again", CORAL)
+			end
+		end)
+		paintGates()
+	end
+	task.spawn(function()
+		for zone = 1, CoreLadder.ZoneCount() do
+			local folder = Workspace:WaitForChild(CoreLadder.ZoneFolder(zone), 30)
+			if not folder then
+				continue
+			end
+			for _, name in { "GateNext", "GateBack" } do
+				local gate = folder:WaitForChild(name, if (name == "GateNext" and zone < CoreLadder.ZoneCount()) or (name == "GateBack" and zone > 1) then 30 else 0.01)
+				local gatePrompt = gate and gate:FindFirstChild("GatePrompt", true)
+				if gatePrompt and gatePrompt:IsA("ProximityPrompt") then
+					hookPrompt(gatePrompt)
+				end
+			end
+		end
+	end)
+	for _, key in { "CoreZonesOpen", "Coins", "Rebirths" } do
+		player:GetAttributeChangedSignal(key):Connect(paintGates)
+	end
 
 	gui.Parent = playerGui
 end

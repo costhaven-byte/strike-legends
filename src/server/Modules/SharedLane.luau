@@ -5,6 +5,7 @@
 -- per-lane code (LaneUtil, LaneService, ThrowService, lane skins, the throw camera) keeps working per player.
 -- Pins are drawn on each player's own screen only (LaneVisuals); collision groups keep pins, balls and players apart.
 -- The old 6 lanes and the 6-lane floor decor move to ServerStorage.A5OldLanes (never deleted).
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local PhysicsService = game:GetService("PhysicsService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,6 +13,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local CoreLadder = require(ReplicatedStorage.Shared:WaitForChild("Modules"):WaitForChild("CoreLadder"))
 
 local CORE = Config.CoreLoop
 local LANE = CORE.SharedLane
@@ -165,12 +167,13 @@ end
 SharedLane.HandOutOrder = handOutOrder
 
 -- ===== one spot =====
-local function buildSpot(n: number, spots: Instance, visuals: Instance)
+local function buildSpot(n: number, spots: Instance, visuals: Instance, zone: number)
 	local x, back = spotPlace(n)
 	local front = n <= LANE.Spots
 	local spot = Instance.new("Model")
 	spot.Name = "Lane" .. n -- (LaneUtil sorts lanes by their number)
 	spot:SetAttribute("Spot", n)
+	spot:SetAttribute("Zone", zone) -- (Addendum 6 Stage 3: the zone this spot's lane is in)
 	if not front then
 		spot:SetAttribute("NoSkin", true) -- (extra spots overlap the front ones: no lane skin plates)
 	end
@@ -296,7 +299,7 @@ local function buildSpot(n: number, spots: Instance, visuals: Instance)
 end
 
 -- ===== the lane itself =====
-local function buildLane(folder: Instance): Model
+local function buildLane(folder: Instance, zone: number): Model
 	local model = Instance.new("Model")
 	model.Name = "SharedLane"
 	local visuals = Instance.new("Folder")
@@ -306,7 +309,7 @@ local function buildLane(folder: Instance): Model
 	spots.Name = "Spots"
 
 	for n = 1, LANE.MaxSpots do
-		buildSpot(n, spots, visuals)
+		buildSpot(n, spots, visuals, zone)
 	end
 
 	-- Thin gold lines between the wood strips (one lane, many throw lines)
@@ -431,6 +434,78 @@ local function buildLane(folder: Instance): Model
 
 	spots.Parent = model
 	model:SetAttribute("SpotCount", LANE.MaxSpots)
+	model:SetAttribute("Zone", zone)
+	return model
+end
+
+-- Addendum 6 Stage 3: moves every part (and so every attachment and light) of a model built in zone 1's layout
+local function shift(root: Instance, offset: Vector3)
+	if offset.Magnitude < 0.01 then
+		return
+	end
+	for _, d in root:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.CFrame += offset
+		end
+	end
+end
+SharedLane.Shift = shift
+
+-- Addendum 6 Stage 3 PLACEHOLDER world for a zone with no map yet (Config.CoreLoop.Zones Placeholder): a flat ground
+-- in the zone's palette with the lane's gutters, a pit, a low rim and a few props. Every part is tagged "Placeholder"
+-- (CollectionService) so Stages 4-6 can find and replace them.
+local function buildPlaceholder(zone: number, info: any): Model
+	local model = Instance.new("Model")
+	model.Name = "Placeholder"
+	model:SetAttribute("Placeholder", true)
+	local zones = CORE.Zones
+	local palette = info.Palette
+	local ground = zones.Ground
+	local top = ground.Centre.Y
+	local function add(name: string, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material?): Part
+		local p = part(name, size, cframe, color, material or Enum.Material.SmoothPlastic)
+		CollectionService:AddTag(p, "Placeholder")
+		p.Parent = model
+		return p
+	end
+	add("Ground", ground.Size, CFrame.new(ground.Centre - Vector3.new(0, ground.Size.Y / 2, 0)), palette.Ground, Enum.Material.Sand)
+	-- a bright rim round the edge so nobody walks off
+	local half = ground.Size / 2
+	for _, side in { -1, 1 } do
+		add("Rim", Vector3.new(2, 3, ground.Size.Z), CFrame.new(ground.Centre + Vector3.new(side * (half.X - 1), 1.5, 0)), palette.Edge)
+		add("Rim", Vector3.new(ground.Size.X, 3, 2), CFrame.new(ground.Centre + Vector3.new(0, 1.5, side * (half.Z - 1))), palette.Edge)
+	end
+	-- gutters down both sides of the lane and a dark pit at its end
+	local length = LANE.FoulZ - LANE.EndZ
+	local midZ = (LANE.FoulZ + LANE.EndZ) / 2
+	for _, side in { -1, 1 } do
+		add("Gutter", Vector3.new(2.4, 0.3, length), CFrame.new(LANE.Centre + side * (LANE.Width / 2 + 1.2), top - 0.1, midZ), palette.Edge)
+		add("GutterWall", Vector3.new(0.8, 1.6, length), CFrame.new(LANE.Centre + side * (LANE.Width / 2 + 2.8), top + 0.8, midZ), palette.Accent)
+	end
+	add("Pit", Vector3.new(LANE.Width + 6, 0.3, 8), CFrame.new(LANE.Centre, top - 0.1, LANE.EndZ - 4), Color3.fromRGB(70, 76, 90))
+	add("BackWall", Vector3.new(LANE.Width + 6, 8, 1.2), CFrame.new(LANE.Centre, top + 4, LANE.EndZ - 8.6), palette.Accent)
+	-- a few props in the palette on the open side (umbrella-like posts with discs)
+	for i = 1, 6 do
+		local at = Vector3.new(30 + (i % 3) * 30, top, -3500 - (i // 3) * 50)
+		add("PropPost", Vector3.new(0.6, 9, 0.6), CFrame.new(at + Vector3.new(0, 4.5, 0)), Color3.fromRGB(250, 248, 240))
+		local disc = add(
+			"PropTop",
+			Vector3.new(0.6, 10, 10),
+			CFrame.new(at + Vector3.new(0, 9, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+			if i % 2 == 0 then palette.Accent else palette.Edge
+		)
+		disc.Shape = Enum.PartType.Cylinder
+	end
+	-- the zone's name on a big board behind the pit
+	local board = add("NameBoard", Vector3.new(44, 9, 0.6), CFrame.new(LANE.Centre, top + 13, LANE.EndZ - 9.4), Color3.fromRGB(255, 248, 232))
+	board.CanCollide = false
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Back -- (faces the bowlers, +Z)
+	gui.PixelsPerStud = 24
+	gui.LightInfluence = 0
+	gui.Parent = board
+	label(gui, string.upper(info.Name), UDim2.fromScale(0.92, 0.6), UDim2.fromScale(0.5, 0.4), palette.Accent)
+	label(gui, ("ZONE %d"):format(zone), UDim2.fromScale(0.5, 0.28), UDim2.fromScale(0.5, 0.82), palette.Edge)
 	return model
 end
 
@@ -445,7 +520,29 @@ function SharedLane.Build()
 	end
 	setupGroups()
 	hideOld(folder)
-	local model = buildLane(folder)
+	-- Addendum 6 Stage 3: zones 2-4 first (their folders made here, placeholder ground if they have no map), zone 1
+	-- last: clients wait for zone 1's Ready, so every lane exists by then
+	for zone = 2, CoreLadder.ZoneCount() do
+		local info = CoreLadder.ZoneInfo(zone)
+		local zoneFolder = Workspace:FindFirstChild(info.Folder)
+		if not zoneFolder then
+			zoneFolder = Instance.new("Model")
+			zoneFolder.Name = info.Folder
+			zoneFolder:SetAttribute("Zone", zone)
+			zoneFolder.Parent = Workspace
+		end
+		if info.Placeholder and not zoneFolder:FindFirstChild("Placeholder") then
+			local ground = buildPlaceholder(zone, info)
+			shift(ground, info.Offset)
+			ground.Parent = zoneFolder
+		end
+		local lane = buildLane(zoneFolder, zone)
+		shift(lane, info.Offset)
+		lane.Parent = zoneFolder
+		lane:SetAttribute("Ready", true)
+		task.wait() -- (one zone a frame)
+	end
+	local model = buildLane(folder, 1)
 	model.Parent = folder
 	model:SetAttribute("Ready", true) -- (clients wait for this before they look for their spot)
 end

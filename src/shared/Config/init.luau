@@ -78,6 +78,41 @@ Config.CoreLoop = {
 		{ Ball = "Lightning", Name = "Sunbolt", Fx = "Bolt", Pins = 650, Price = 44000, Rarity = "Epic" },
 		{ Ball = "SolidGold", Name = "Tornado", Fx = "Tornado", Pins = 1400, Price = 150000, Rarity = "Legendary" },
 		{ Ball = "Daybreak", Name = "Sonic Boom", Fx = "BlackHole", Pins = 3200, Price = 590000, Rarity = "Mythic" },
+		-- Addendum 6 Stage 3: zones 2-4, 10 balls each (Zone = the zone that must be open to buy it). PLACEHOLDER: Fx re-uses
+		-- a zone 1 effect until that zone's stage builds its own; zone 3/4 Ball = existing models (no new designs yet).
+		-- Numbers: pins x1.7 a ball from ball 10 of the zone before; price = income with the ball before (pins x the
+		-- zone's PinValue x 84 throws a minute, zone 1's late pace with pets) x Zone 1's gaps (3, 2, 2, 2, 2, 5, 5, 5, 5, 5
+		-- min). Stage 9 tunes them from the pacing sim.
+		{ Ball = "Ocean", Name = "Seashell Spinner", Fx = "Burn", Pins = 5400, Price = 4800000, Rarity = "Uncommon", Zone = 2, Placeholder = true },
+		{ Ball = "Sunset", Name = "Beach Ball", Fx = "Frost", Pins = 9200, Price = 5400000, Rarity = "Uncommon", Zone = 2, Placeholder = true },
+		{ Ball = "Electric", Name = "Kite Flyer", Fx = "Arms", Pins = 16000, Price = 9300000, Rarity = "Uncommon", Zone = 2, Placeholder = true },
+		{ Ball = "Toxic", Name = "Tide Turner", Fx = "Prism", Pins = 27000, Price = 16000000, Rarity = "Rare", Zone = 2, Placeholder = true },
+		{ Ball = "Magma", Name = "Coral Crusher", Fx = "Bolt", Pins = 45000, Price = 27000000, Rarity = "Rare", Zone = 2, Placeholder = true },
+		{ Ball = "Galaxy", Name = "Surf Rider", Fx = "Tornado", Pins = 77000, Price = 110000000, Rarity = "Rare", Zone = 2, Placeholder = true },
+		{ Ball = "Thunder", Name = "Sunset Splash", Fx = "BlackHole", Pins = 130000, Price = 190000000, Rarity = "Epic", Zone = 2, Placeholder = true },
+		{ Ball = "Plasma", Name = "Pier Pounder", Fx = "Sand", Pins = 220000, Price = 330000000, Rarity = "Epic", Zone = 2, Placeholder = true },
+		{ Ball = "Nebula", Name = "Tsunami", Fx = "Bounce", Pins = 380000, Price = 550000000, Rarity = "Epic", Zone = 2, Placeholder = true },
+		{ Ball = "Golden", Name = "Lighthouse Beam", Fx = "Confetti", Pins = 650000, Price = 960000000, Rarity = "Legendary", Zone = 2, Placeholder = true },
+		{ Ball = "LeagueBlack", Name = "Vine Swinger", Fx = "Prism", Pins = 1100000, Price = 5900000000, Rarity = "Rare", Zone = 3, Placeholder = true },
+		{ Ball = "CherrySwirl", Name = "Coconut", Fx = "Bolt", Pins = 1900000, Price = 6700000000, Rarity = "Rare", Zone = 3, Placeholder = true },
+		{ Ball = "BlueMarble", Name = "Toucan Roll", Fx = "Tornado", Pins = 3200000, Price = 11000000000, Rarity = "Rare", Zone = 3, Placeholder = true },
+		{ Ball = "Phantom", Name = "Leaf Storm", Fx = "BlackHole", Pins = 5400000, Price = 19000000000, Rarity = "Epic", Zone = 3, Placeholder = true },
+		{ Ball = "PearlPro", Name = "Waterfall", Fx = "Sand", Pins = 9200000, Price = 33000000000, Rarity = "Epic", Zone = 3, Placeholder = true },
+		{ Ball = "TigerSwirl", Name = "Jaguar", Fx = "Bounce", Pins = 16000000, Price = 140000000000, Rarity = "Epic", Zone = 3, Placeholder = true },
+		{ Ball = "Inferno", Name = "Rope Bridge", Fx = "Confetti", Pins = 27000000, Price = 240000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
+		{ Ball = "Championship", Name = "Temple Stone", Fx = "Burn", Pins = 45000000, Price = 410000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
+		{ Ball = "Dragon", Name = "Monsoon", Fx = "Frost", Pins = 77000000, Price = 680000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
+		{ Ball = "Void", Name = "Jungle King", Fx = "Arms", Pins = 130000000, Price = 1200000000000, Rarity = "Mythic", Zone = 3, Placeholder = true },
+		{ Ball = "Hubcap", Name = "Dust Devil", Fx = "BlackHole", Pins = 220000000, Price = 7100000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
+		{ Ball = "DumpsterDiamond", Name = "Cactus Roller", Fx = "Sand", Pins = 380000000, Price = 8000000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
+		{ Ball = "DuctTape", Name = "Mesa Smash", Fx = "Bounce", Pins = 640000000, Price = 14000000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
+		{ Ball = "RustBucket", Name = "Sandstorm", Fx = "Confetti", Pins = 1100000000, Price = 23000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
+		{ Ball = "Rookie", Name = "Oasis Spring", Fx = "Burn", Pins = 1800000000, Price = 40000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
+		{ Ball = "Crystal", Name = "Scorpion", Fx = "Frost", Pins = 3100000000, Price = 160000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
+		{ Ball = "Perfect300", Name = "Sun Disc", Fx = "Arms", Pins = 5300000000, Price = 280000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
+		{ Ball = "Lightning", Name = "Canyon Echo", Fx = "Prism", Pins = 9100000000, Price = 480000000000000, Rarity = "Mythic", Zone = 4, Placeholder = true },
+		{ Ball = "SolidGold", Name = "Mirage", Fx = "Bolt", Pins = 15000000000, Price = 830000000000000, Rarity = "Mythic", Zone = 4, Placeholder = true },
+		{ Ball = "Supernova", Name = "Golden Sphinx", Fx = "Tornado", Pins = 26000000000, Price = 1400000000000000, Rarity = "Mythic", Zone = 4, Placeholder = true },
 	},
 	-- Addendum 5 D: each ladder ball's own signature effect (Fx on its row above; client Modules/BallSignature).
 	-- Visual and feel only, never a number. Strength 0..1 grows with the REAL pin count of the throw on a log scale:
@@ -115,10 +150,14 @@ Config.CoreLoop = {
 	-- to ~40 throws (bag 10) with ball n. Bag pacing (A2): its own ladder, each bag lands about 40% of the way
 	-- between two balls (bag 2 ~1 min, bags 3-4 ~2 min apart, then ~5 min apart, bag 10 ~3 min after ball 10).
 	-- A small bag caps your income (a throw that doesn't fit pays only what fits), so bags matter as much as balls.
-	BagSizes = { 60, 140, 300, 700, 1600, 3700, 8700, 21000, 50000, 130000 },
+	-- Addendum 6 Stage 3: bags 11-40 = zones 2-4 (Ladders.BagZones); each holds ~40 throws of its zone's ball, its price
+	-- lands ~40% of the way to the next ball. PLACEHOLDER numbers until the Stage 9 pacing pass.
+	BagSizes = { 60, 140, 300, 700, 1600, 3700, 8700, 21000, 50000, 130000,
+		220000, 370000, 640000, 1100000, 1800000, 3100000, 5200000, 8800000, 15000000, 26000000, 44000000, 76000000, 130000000, 220000000, 370000000, 640000000, 1100000000, 1800000000, 3100000000, 5200000000, 8800000000, 15000000000, 26000000000, 44000000000, 72000000000, 120000000000, 210000000000, 360000000000, 600000000000, 1000000000000 },
 	-- Addendum 5 E: bags 6-10 re-priced with balls 6-10 (still ~40% of the way between two balls). Was 11K, 24K,
 	-- 54K, 120K, 420K.
-	BagPrices = { 0, 240, 600, 990, 5200, 7400, 29000, 75000, 200000, 690000 },
+	BagPrices = { 0, 240, 600, 990, 5200, 7400, 29000, 75000, 200000, 690000,
+		5000000, 6700000, 12000000, 20000000, 47000000, 140000000, 240000000, 400000000, 690000000, 1300000000, 6200000000, 8200000000, 14000000000, 24000000000, 59000000000, 170000000000, 300000000000, 500000000000, 850000000000, 1600000000000, 7400000000000, 10000000000000, 17000000000000, 29000000000000, 70000000000000, 200000000000000, 350000000000000, 600000000000000, 1000000000000000, 1900000000000000 },
 	Ladders = {
 		Independent = true, -- Addendum 5 A2: two ladders (false = Addendum 4's ball, bag, ball, bag order)
 		-- Addendum 6 2.2: buy ANY ball or bag above your best one that you can pay for, in an open zone (no need to
@@ -129,7 +168,7 @@ Config.CoreLoop = {
 		BuyAny = true,
 		-- The zone a ball / bag belongs to: a Balls row's Zone (no Zone = 1), bags BagZones[level] (none = 1). Rows
 		-- of zones you haven't opened show in the shop greyed out with a lock. Today only zone 1 exists (Stage 3+).
-		BagZones = {},
+		BagZones = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 },
 	},
 	-- Gifts in the core loop (owner 2026-11-01: scale to income): daily, playtime and level rewards pay CoreMinutes
 	-- (on each reward row; RewardMinutes when a row has none) of the income your ball + bag make now (ladder income,
@@ -198,49 +237,65 @@ Config.CoreLoop = {
 	-- Pets: Config.Mascots rows (Stats there). Each egg needs one pet per rarity it has odds for.
 	Eggs = {
 		Enabled = true, -- false = the old zone eggs (and their zone gates) back
+		-- Addendum 6 3.3: ONE egg per zone, bought with coins at that zone's stand (Zone = the zone it stands in; At is in
+		-- zone 1's layout and moves with the zone's Offset, Config.CoreLoop.Zones). Zone 1 = the new cheap Speckled Egg
+		-- (PLACEHOLDER: the Neon stand + Neon Egg re-tinted, 3 new pets on borrowed models); the Neon Egg moved to zone 2
+		-- (its original 6 pets, Uncommon to Epic); zone 3 = the Main Street Egg (Rare to Legendary), zone 4 = the Skyline
+		-- Egg (Epic to Mythic). The Volcano Egg is out of the list (its pets went to zones 3/4; owners keep every pet).
+		-- Prices: zone 1 ~minute 3-5 (ball 4-5 income); zones 2-4 ~4 min of income with that zone's ball 2.
 		List = {
 			{
+				Id = "Speckled", -- the Speckled Egg (zone 1 starter)
+				Zone = 1,
+				Price = 750,
+				From = { "Hub", "EggPad" },
+				At = Vector3.new(26, 848.65, -3438),
+				Turn = -90,
+				Sign = "SPECKLED EGG",
+				Tint = "Speckled",
+				Odds = { Common = 65, Uncommon = 30, Rare = 5 },
+				Pets = { "Gus", "Pebble", "Bumper", "Breezy", "Sunspot" },
+			},
+			{
 				Id = "Alley", -- the Neon Egg
-				Price = 400,
+				Zone = 2,
+				Price = 19000000,
 				From = { "Hub", "EggPad" },
 				At = Vector3.new(26, 848.65, -3438),
 				Turn = -90,
 				Sign = "NEON EGG",
-				Odds = { Common = 50, Uncommon = 45, Rare = 5 },
-				Pets = { "Gus", "Pinny", "Bumper", "LanePup", "Strikey" },
+				Odds = { Uncommon = 60, Rare = 33, Epic = 7 },
+				Pets = { "Pinny", "LanePup", "Strikey", "Splitz", "Hambone", "NeonBat" },
 			},
 			{
 				Id = "Arcade", -- the Main Street Egg
-				Price = 6500,
+				Zone = 3,
+				Price = 23000000000,
 				From = { "MainStreetLanes", "EggPad" },
-				At = Vector3.new(46, 848.65, -3438),
+				At = Vector3.new(26, 848.65, -3438),
 				Turn = 180,
-				Odds = { Rare = 85, Epic = 15 },
-				Pets = { "Splitz", "WoodPup", "Hambone", "NeonBat" },
+				Odds = { Rare = 60, Epic = 33, Legendary = 7 },
+				Pets = { "WoodPup", "ChromeBat", "Kingpin", "Blaze" },
 			},
 			{
 				Id = "Skyline", -- the Skyline Egg
-				Price = 80000,
+				Zone = 4,
+				Price = 28000000000000,
 				From = { "SkylineLanes", "EggPad" },
-				At = Vector3.new(69, 848.65, -3438),
+				At = Vector3.new(26, 848.65, -3438),
 				Turn = 90,
-				Odds = { Epic = 88, Legendary = 12 },
-				Pets = { "ChromeBat", "CloudBumper", "Kingpin", "SunnyHam" },
-			},
-			{
-				Id = "Volcano", -- the Volcano Egg: the Neon stand and Neon Egg re-tinted (Config.EggLooks Volcano Model)
-				Price = 1500000,
-				From = { "Hub", "EggPad" },
-				At = Vector3.new(90, 848.65, -3438),
-				Turn = -90,
-				Sign = "VOLCANO EGG",
-				Tint = "Volcano",
-				Odds = { Legendary = 92, Mythic = 8 },
-				Pets = { "Blaze", "TitanJr", "Cosmo", "Perfecto" },
+				Odds = { Epic = 62, Legendary = 33, Mythic = 5 },
+				Pets = { "CloudBumper", "SunnyHam", "Cosmo", "Perfecto" }, -- (Titan Jr. stays the boss pet)
 			},
 		},
 		-- Hue shifts for Tint (hue 0..1 ranges -> new hue; saturation and brightness kept, dark colours darker)
 		Tints = {
+			-- Addendum 6 3.3 PLACEHOLDER: the Speckled Egg + its stand, every colour turned warm sand / sky
+			Speckled = {
+				{ From = 0.4, To = 0.72, Hue = 0.55 }, -- cyan / blue / purple -> sky blue
+				{ From = 0.72, To = 1.0, Hue = 0.1, Dark = 1.1 }, -- magenta / pink -> sand
+				{ From = 0.0, To = 0.4, Hue = 0.1, Dark = 1.1 },
+			},
 			Volcano = {
 				{ From = 0.72, To = 1.0, Hue = 0.045 }, -- magenta / pink -> orange
 				{ From = 0.0, To = 0.04, Hue = 0.045 },
@@ -258,6 +313,55 @@ Config.CoreLoop = {
 		},
 		-- GO TO EGGS (PETS window, no pets yet): CoreGoTo "Eggs" lands you here, facing the first egg
 		GoTo = Vector3.new(26, 848.65, -3430),
+	},
+	-- Addendum 6 Stage 3: the FOUR ZONES. Each is one big shared lane with its own sell pad, ball shop, egg stand,
+	-- spawn and gates, all built from code in zone 1's layout (Sell, Shop, Spawn, SharedLane, Eggs At) moved by the
+	-- zone's Offset. Zone 1 = the rooftop (SkylineLanes). Zones 2-4 have no maps yet: Placeholder = true builds a flat
+	-- ground in the zone's palette (every part tagged "Placeholder") until Stages 4-6 build the real maps there.
+	-- PinValue = coins a pin sells for at that zone's sell pad (x6 a zone). Price = coins to open the zone at its gate
+	-- (about the zone before's ball 7, x the rebirth price growth like the ladder). A rebirth closes every zone but 1.
+	-- Pins per throw still come from your best ball (the ladder's Pins); only 40 pins are drawn per throw in every zone.
+	Zones = {
+		Enabled = true,
+		List = {
+			{ Name = "Skyline Rooftop", Folder = "SkylineLanes", Offset = Vector3.zero, PinValue = 1, Price = 0 },
+			{
+				Name = "Sunset Boardwalk",
+				Folder = "SunsetBoardwalk",
+				Offset = Vector3.new(0, -800, 8000),
+				PinValue = 6,
+				Price = 22000,
+				Placeholder = true,
+				Palette = { Ground = Color3.fromRGB(240, 214, 150), Edge = Color3.fromRGB(64, 206, 214), Accent = Color3.fromRGB(255, 120, 100) },
+			},
+			{
+				Name = "Jungle Falls",
+				Folder = "JungleFalls",
+				Offset = Vector3.new(2500, -800, 8000),
+				PinValue = 36,
+				Price = 190000000,
+				Placeholder = true,
+				Palette = { Ground = Color3.fromRGB(96, 184, 84), Edge = Color3.fromRGB(70, 210, 220), Accent = Color3.fromRGB(255, 150, 50) },
+			},
+			{
+				Name = "Canyon Oasis",
+				Folder = "CanyonOasis",
+				Offset = Vector3.new(5000, -800, 8000),
+				PinValue = 216,
+				Price = 240000000000,
+				Placeholder = true,
+				Palette = { Ground = Color3.fromRGB(214, 124, 84), Edge = Color3.fromRGB(56, 200, 200), Accent = Color3.fromRGB(255, 200, 70) },
+			},
+		},
+		-- The gates, in zone 1's layout (moved by each zone's Offset): Next = the gate to the next zone (pay once to open,
+		-- then free), Back = the free gate to the zone before. Hold the prompt to use one; Radius = the server's distance check.
+		Gates = {
+			Next = Vector3.new(-96, 848, -3398), -- (the roof's west edge, behind the spawn)
+			Back = Vector3.new(-96, 848, -3421),
+			Radius = 12,
+		},
+		-- Placeholder ground for zones 2-4: this big a slab around the layout (centre in zone 1's layout), top at its Y
+		Ground = { Centre = Vector3.new(-10, 848.65, -3480), Size = Vector3.new(260, 4, 300) },
 	},
 	-- Addendum 5 step C: REBIRTH, bought with coins only at the ball shop (server distance check, like every buy),
 	-- whenever you can pay; never forced. It resets coins, the bag (its coins and its level), the ball ladder and the
@@ -701,6 +805,8 @@ Config.StartingData = {
 	CoreBallsOwned = 1,
 	CoreBagsOwned = 1,
 	CoreLook = 0,
+	CoreZonesOpen = 1, -- Addendum 6 Stage 3: zones opened at the gates (1 = only zone 1; a rebirth sets it back to 1; v38)
+	CoreZone = 1, -- the zone you were in last (you come back there; v38)
 	PetSlotsBought = 0, -- pet equip slots bought with coins at the shop (Config.PetStats.SlotPrices; v35)
 	ThrowSpeedLevel = 0, -- throw speed upgrades: each takes CooldownStep off the hold-to-throw cooldown
 	CoreThrows = 0, -- core loop throws ever (first and 10th throw are logged once per player)
@@ -713,7 +819,7 @@ Config.Data = {
 	-- "PlayerData_A4": every account starts from zero for the Addendum 4 loop (owner 2026-11-01). The old saves are
 	-- still in "PlayerData" (set it back to bring them back).
 	StoreName = "PlayerData_A4",
-	SchemaVersion = 37, -- v37 CoreBallsOwned + CoreBagsOwned + CoreLook (Addendum 6 2.2 buy any ball / bag; old saves own every step up to their best, look = best). v36 Pacing (Addendum 5 E pacing record; starts empty, nothing to upgrade). v35 PetSlotsBought (Addendum 5 B1 coin pet slots; starts at 0, nothing to upgrade). v34 BallStep (Addendum 4 Stage 2 ball ladder; starts at 1, nothing to upgrade). v33 Bag, BagLevel, ThrowSpeedLevel, CoreThrows, CoreSells (Addendum 4 core loop; start at 0/1, every old field kept, nothing to upgrade). v32 BestLevel + BestRank (batch D1 rebirth resets levels; old saves start at their RankLevel / Rank). v31 AutoDelete (batch C3 X'd pets on the egg odds boards; starts empty, nothing to upgrade or delete). v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 38, -- v38 CoreZonesOpen + CoreZone (Addendum 6 Stage 3 zones; start at 1, nothing to upgrade). v37 CoreBallsOwned + CoreBagsOwned + CoreLook (Addendum 6 2.2 buy any ball / bag; old saves own every step up to their best, look = best). v36 Pacing (Addendum 5 E pacing record; starts empty, nothing to upgrade). v35 PetSlotsBought (Addendum 5 B1 coin pet slots; starts at 0, nothing to upgrade). v34 BallStep (Addendum 4 Stage 2 ball ladder; starts at 1, nothing to upgrade). v33 Bag, BagLevel, ThrowSpeedLevel, CoreThrows, CoreSells (Addendum 4 core loop; start at 0/1, every old field kept, nothing to upgrade). v32 BestLevel + BestRank (batch D1 rebirth resets levels; old saves start at their RankLevel / Rank). v31 AutoDelete (batch C3 X'd pets on the egg odds boards; starts empty, nothing to upgrade or delete). v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -3794,6 +3900,47 @@ Config.Mascots = {
 		Accent = Color3.fromRGB(255, 50, 80),
 		Reaction = "Flip", -- own model since 2026-10-29 (owner's titan_jr.glb)
 	},
+	-- Addendum 6 3.3: zone 1's Speckled Egg pets. PLACEHOLDER: no models of their own yet, they borrow another pet's
+	-- model (Model) repainted (Tint) until real designs exist. Weakest pets in the game (zone 1, Common to Rare).
+	{
+		Id = "Pebble",
+		Stats = { Pins = 0.1 },
+		Name = "Pebble",
+		Egg = "Speckled",
+		Rarity = "Common",
+		Model = "Gus",
+		Tint = Color3.fromRGB(214, 190, 150),
+		Placeholder = true,
+		Color = Color3.fromRGB(214, 190, 150),
+		Accent = Color3.fromRGB(120, 200, 240),
+		Reaction = "Wiggle",
+	},
+	{
+		Id = "Breezy",
+		Stats = { Coins = 0.12, Speed = 0.06 },
+		Name = "Breezy",
+		Egg = "Speckled",
+		Rarity = "Uncommon",
+		Model = "LanePup",
+		Tint = Color3.fromRGB(150, 210, 250),
+		Placeholder = true,
+		Color = Color3.fromRGB(150, 210, 250),
+		Accent = Color3.fromRGB(255, 255, 255),
+		Reaction = "Hop",
+	},
+	{
+		Id = "Sunspot",
+		Stats = { Coins = 0.25, Pins = 0.15 },
+		Name = "Sunspot",
+		Egg = "Speckled",
+		Rarity = "Rare",
+		Model = "Strikey",
+		Tint = Color3.fromRGB(255, 196, 70),
+		Placeholder = true,
+		Color = Color3.fromRGB(255, 196, 70),
+		Accent = Color3.fromRGB(255, 120, 60),
+		Reaction = "Flip",
+	},
 }
 
 -- Auto Bowl (master plan step 14.8, the plan's AUTO_BOWL_ENABLED): the game throws for you, slower than manual and
@@ -3821,6 +3968,8 @@ Config.EggLooks = {
 	Skyline = { Name = "Skyline Egg", Color = Color3.fromRGB(255, 79, 139), Spots = Color3.fromRGB(245, 184, 46) }, -- zone 4's egg
 	-- Addendum 5 B2: the 4th roof egg. No model of its own: the server copies PetModels.Egg_<Copy> as Egg_Volcano in
 	-- Config.CoreLoop.Eggs.Tints[Tint] colours at start
+	-- Addendum 6 3.3 PLACEHOLDER: zone 1's starter egg, the Neon Egg model re-tinted at start (no model of its own yet)
+	Speckled = { Name = "Speckled Egg", Color = Color3.fromRGB(240, 214, 160), Spots = Color3.fromRGB(110, 190, 240), Copy = "Alley", Tint = "Speckled" },
 	Volcano = { Name = "Volcano Egg", Color = Color3.fromRGB(255, 100, 40), Spots = Color3.fromRGB(60, 20, 20), Copy = "Alley", Tint = "Volcano" },
 }
 
@@ -3837,7 +3986,10 @@ Config.EggStands = {
 if Config.CoreLoop.Enabled and Config.CoreLoop.Eggs.Enabled then
 	Config.EggStands = {}
 	for _, row in Config.CoreLoop.Eggs.List do
-		table.insert(Config.EggStands, { Egg = row.Id, Path = { Config.CoreLoop.Folder, "EggRow", row.Id } })
+		local zones = Config.CoreLoop.Zones
+		local zone = zones and zones.Enabled and zones.List[row.Zone or 1]
+		local folder = if zone then zone.Folder else Config.CoreLoop.Folder
+		table.insert(Config.EggStands, { Egg = row.Id, Path = { folder, "EggRow", row.Id } })
 	end
 end
 

@@ -17,6 +17,7 @@ local Pacing = require(script.Parent.Parent.Modules.Pacing)
 local StudioTestMode = require(script.Parent.Parent.Modules.StudioTestMode)
 local BallService = require(script.Parent.BallService)
 local BossService = require(script.Parent.BossService)
+local CoreLoopService = require(script.Parent.CoreLoopService)
 local FeverService = require(script.Parent.FeverService)
 local LaneEventService = require(script.Parent.LaneEventService)
 local MascotService = require(script.Parent.MascotService)
@@ -52,6 +53,13 @@ end
 
 -- Rebirths, level and open zones of a player who just reached this zone (first 3 minutes done)
 local function jumpToZone(player: Player, zone: number)
+	-- Addendum 6 Stage 3: the core loop's zones: open every zone up to this one (no coins) and go there
+	local coreZones = Config.CoreLoop.Enabled and Config.CoreLoop.Zones
+	if coreZones and coreZones.Enabled then
+		PlayerDataService.Set(player, "CoreZonesOpen", math.max(PlayerDataService.Get(player, "CoreZonesOpen") or 1, zone))
+		CoreLoopService.Travel(player, zone)
+		return reply(true, ("%s open, you're there"):format(coreZones.List[zone].Name))
+	end
 	if zone > Config.Zones.BuiltZones then
 		return reply(false, Zones.Name(zone) .. " isn't built")
 	end

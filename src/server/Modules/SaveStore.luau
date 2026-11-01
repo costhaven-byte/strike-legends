@@ -222,6 +222,14 @@ local function migrate(saved: any): { [string]: any }
 		CoreLadder.WithStep(tonumber(data.CoreBagsOwned) or 1, 1),
 		CoreLadder.BagLevel(data.BagLevel)
 	)
+	-- Addendum 6 Stage 3 (v38 CoreZonesOpen + CoreZone, both start at 1, nothing to upgrade): the zones open always
+	-- cover the zones of your best ball and bag, and the zone you come back to is an open one (also any later save)
+	data.CoreZonesOpen = math.max(
+		CoreLadder.ZonesOpen(data.CoreZonesOpen),
+		CoreLadder.Zone("Ball", CoreLadder.BallStep(data.BallStep)),
+		CoreLadder.Zone("Bag", CoreLadder.BagLevel(data.BagLevel))
+	)
+	data.CoreZone = math.min(CoreLadder.ZonesOpen(data.CoreZone), data.CoreZonesOpen)
 	-- Money comes back through Currency, so a future number format can read old plain-number saves here
 	for _, key in Config.Numbers.Currencies do
 		data[key] = Currency.Decode(data[key])

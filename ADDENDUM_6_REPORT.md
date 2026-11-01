@@ -86,3 +86,49 @@
 **Not verified:** I can't press and hold from here, so the hold-to-rebirth button was checked by reading the code. The rebirth itself was tested straight through the server. The full-screen REBIRTH! moment after a hold wasn't seen. Please hold the button in your playtest.
 
 **Save change:** save version 37 adds which balls and bags you own, and the ball look you've equipped. Old saves count every ball and bag up to their best as owned, so nobody loses anything.
+
+## Stage 3: Zone framework and eggs (2026-11-01, code tag `restore-a6-s3-before`)
+
+### What changed
+- **Four zones now exist.** Zone 1 is the rooftop. Zones 2 (Sunset Boardwalk), 3 (Jungle Falls) and 4 (Canyon Oasis) are each a big shared lane with their own sell pad, shop, egg stand, gates and throw spots. All the zone settings (name, where it sits, pin value, gate price, colours) are in one table in the config.
+- **Zones 2 to 4 are placeholders for now.** Each is a flat, bright ground in its zone's colours (sand and turquoise, green and aqua, terracotta and turquoise) with gutters, a back wall, a few umbrella-style props and a big board with the zone's name. Every placeholder part is tagged "Placeholder" so Stages 4 to 6 can find and replace them with the real maps in the same spot.
+- **Gates.** On the roof's west edge, behind the spawn, there's a gate to Zone 2. Every zone has a gate to the next one, and zones 2 to 4 also have a free gate back. Hold E (or tap) at a gate. A closed zone shows its price on the sign (green when you can pay, coral when you can't) and opens for that price, once. After that the gate is free. Zones open in order. You arrive on your own throw spot in the new zone.
+- **Gate prices** (about the zone before's ball 7, as the addendum asks): Zone 2 = 22K, Zone 3 = 190M, Zone 4 = 240B. They rise after rebirths the same way ball prices do.
+- **Pins sell for more in later zones:** ×1, ×6, ×36, ×216. A pin is worth what the sell pad you stand on pays, so you sell in the zone you're in.
+- **40 balls and 40 bags.** Each zone has 10 balls and 10 bags. You can only buy a zone's balls and bags once that zone is open. In the shop they show greyed out with a lock until then, as Stage 2 built.
+- **Zone 2 balls** use 10 of the original 20 designs (Ocean, Sunset, Electric, Toxic, Magma, Galaxy, Thunder, Plasma, Nebula, Golden). **Zone 3 and 4 balls** use other existing ball models for now. All 30 new balls borrow a Zone 1 effect until their zone's stage gives them their own. They're marked as placeholders in the config.
+- **Ball and bag prices for zones 2 to 4** copy Zone 1's shape: about 3 minutes to the zone's first ball, then 2, 2, 2, 2, 5, 5, 5, 5, 5 minutes. Pins go up about ×1.7 a ball. Zone 4's last ball costs about 1.4 Qa (quadrillion). These are starting numbers. Stage 9 tunes them with the pacing sim.
+- **You come back where you left.** If you leave in Zone 3, you rejoin in Zone 3. If you reset your character, you respawn in the zone you're in.
+- **A rebirth closes zones 2 to 4 again** and takes you back to the roof (the Stage 2 rebirth tab already said zones reset).
+- **TEST panel:** JUMP TO ZONE 2 / 3 / 4 now opens every zone up to that one for free and takes you there (Studio tests only).
+
+### Eggs (3.3)
+- The roof's row of 4 eggs is gone. **Each zone has one egg:**
+  - Zone 1: **Speckled Egg**, 750 coins (about minute 3 to 5): Gutter Gus and Pebble (Common), Bumper and Breezy (Uncommon), Sunspot (Rare).
+  - Zone 2: **Neon Egg**, 19M: its original 6 pets, Pinny, Lane Pup (Uncommon), Strikey, Splitz (Rare), Hambone, Neon Bat (Epic).
+  - Zone 3: **Main Street Egg**, 23B: Wood Pup (Rare), Chrome Bat (Epic), Kingpin, Blaze (Legendary).
+  - Zone 4: **Skyline Egg**, 28T: Cloud Bumper (Epic), Sunny Ham (Legendary), Cosmo, Perfecto (Mythic).
+- Each later egg's pets are clearly stronger. The pet fusion machine (3 copies make a Shiny) stays on the roof.
+- **Placeholders:** the Speckled Egg and its stand are the Neon ones repainted sand and sky blue. Pebble, Breezy and Sunspot borrow the Gus, Lane Pup and Strikey models in new colours. Titan Jr. stays the boss's pet. The Volcano Egg is out of the list. Everyone keeps every pet they already own.
+
+### Where the addendum didn't match the game
+- **"Pins per lane 100 / 250 / 600 / 1500":** the game has no pins-per-lane number. Since Addendum 5, the pins a throw knocks come from your ball (6 up to 3,200 in Zone 1), and only 40 pins are drawn on screen. So the zones' "more pins" is in the ball ladder: Zone 2 balls knock about 5K to 650K a throw, Zone 3 1M to 130M, Zone 4 220M to 26B. The rack you see stays at 40 pins in every zone, to keep phones smooth.
+- **Gate 2 at 22K** is very cheap next to Zone 2's first ball (4.8M). A player can open Zone 2 around minute 15 and finish Zone 1's last three balls faster there, because pins sell for ×6. That speeds the end of Zone 1 up; it never slows it. I kept the addendum's rule. Stage 9 can raise the gate price if you want Zone 1 to stay as it is.
+- **Very big numbers:** coins in Zone 4 with big boosts can pass 9 Qa, where the game's number type starts losing exact precision (it still works, the last digits just round). I left a note for Stage 9.
+
+### Tested (Studio Play test, by numbers)
+- All four zones built: lane, sell pad, shop, egg stand, gates and placeholder ground in each. No errors in Output.
+- Gate from far away: refused ("Walk to the gate"). At the gate with 100K coins: Zone 2 opened for 22K and I landed on a throw spot in Zone 2.
+- Zone 3 gate with too few coins: "Not enough coins". The prompt said "Open for 190M".
+- Back gate took me to the roof. The Shop button took me to the roof's shop.
+- Throws in Zone 2 filled the bag. Selling 100 pins on Zone 2's pad paid 1,500 (100 × 6 × the 2.5 boost I had).
+- Zone 3's ball 21 couldn't be bought ("Open zone 3 first"). Zone 1's ball 7 bought normally.
+- Resetting my character in Zone 2 respawned me in Zone 2.
+- A rebirth closed the zones, put me back on the roof's lane and reset my ball.
+- TEST panel jumps to Zones 4 and 3 worked.
+
+### Not verified
+- **No screenshots.** Studio's 3D view was frozen the whole session (the Studio window was hidden or minimized, 0 frames drawn), so I couldn't look at the placeholder zones, the gates or the new egg. Please look at them in your playtest: the gate is on the roof's west edge, behind the spawn.
+- I didn't hatch a Speckled Egg or press the gate prompt by hand. The gate was tested through the same request the prompt sends.
+
+**Save change:** save version 38 adds which zones you've opened and the zone you were last in. Both start at 1, so old saves need nothing.

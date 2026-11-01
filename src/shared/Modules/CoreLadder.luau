@@ -19,7 +19,7 @@ end
 -- Addendum 5 A1: the throw animation level (Config.Throw pose levels) for a ball step, so the throw gets cleaner as
 -- you buy balls (levels are gone)
 function CoreLadder.Pose(ballStep: any): number
-	return CORE.Poses[CoreLadder.BallStep(ballStep)] or 1
+	return CORE.Poses[math.min(CoreLadder.BallStep(ballStep), #CORE.Poses)] or 1 -- (Addendum 6 Stage 3: zones 2-4 keep the cleanest pose)
 end
 
 -- Addendum 5 step C: ball and bag prices x (rebirth multiplier) ^ LadderPower after rebirths (Config.CoreLoop.Rebirth),
@@ -115,7 +115,8 @@ function CoreLadder.IncomePerMinute(ballStep: any, bagLevel: any): number
 		local wanted = pins * (1 + ((i - 0.5) / n * 2 - 1) * CORE.PinsSpread)
 		total += math.max(math.floor(wanted + 0.5), 1) -- (Addendum 5 A1: no 40 cap, no full-clear x2)
 	end
-	local rate = total / n * CORE.PinValue / CORE.Cooldown
+	-- (Addendum 6 Stage 3: pins sell for the PinValue of the ball's zone, where a player with that ball throws)
+	local rate = total / n * CoreLadder.ZoneValue(CoreLadder.Zone("Ball", CoreLadder.BallStep(ballStep))) / CORE.Cooldown
 	local size = CORE.BagSizes[CoreLadder.BagLevel(bagLevel)]
 	return 60 * size / (size / rate + CORE.Gifts.TripSeconds)
 end
@@ -203,7 +204,7 @@ function CoreLadder.Zone(kind: string, step: number): number
 	return CORE.Ladders.BagZones and CORE.Ladders.BagZones[step] or 1
 end
 
--- Is that step's zone open? zonesOpen = how many zones the player has opened (nil = 1, until Stage 3 adds zones)
+-- Is that step's zone open? zonesOpen = how many zones the player has opened (CoreZonesOpen; nil = 1)
 function CoreLadder.ZoneOpen(kind: string, step: number, zonesOpen: any): boolean
 	return CoreLadder.Zone(kind, step) <= math.max(1, math.floor(tonumber(zonesOpen) or 1))
 end
@@ -244,6 +245,64 @@ function CoreLadder.State(kind: string, step: number, best: any, mask: any, zone
 		return "Locked"
 	end
 	return if step == have + 1 then "Next" else "Ahead"
+end
+
+-- ===== Addendum 6 Stage 3: the zones (Config.CoreLoop.Zones) =====
+local ZONES = CORE.Zones
+local ZONES_ON = ZONES ~= nil and ZONES.Enabled == true
+
+-- How many zones exist (1 when zones are off)
+function CoreLadder.ZoneCount(): number
+	return if ZONES_ON then #ZONES.List else 1
+end
+
+-- A zone's Config row (nil = not a zone)
+function CoreLadder.ZoneInfo(zone: number): any
+	return if ZONES_ON then ZONES.List[zone] else nil
+end
+
+-- The Workspace model a zone lives in
+function CoreLadder.ZoneFolder(zone: number): string
+	local info = CoreLadder.ZoneInfo(zone)
+	return if info then info.Folder else CORE.Folder
+end
+
+-- How far a zone sits from zone 1's layout (every station position in Config is zone 1's, + this)
+function CoreLadder.ZoneOffset(zone: number): Vector3
+	local info = CoreLadder.ZoneInfo(zone)
+	return if info then info.Offset else Vector3.zero
+end
+
+-- Coins a pin sells for at that zone's sell pad
+function CoreLadder.ZoneValue(zone: number): number
+	local info = CoreLadder.ZoneInfo(zone)
+	return if info then info.PinValue else CORE.PinValue
+end
+
+-- The coins to open a zone at its gate (rebirth-scaled like the ladder); 0 = zone 1
+function CoreLadder.GatePrice(zone: number, rebirths: any): number
+	local info = CoreLadder.ZoneInfo(zone)
+	return if info and info.Price > 0 then CoreLadder.Price(info.Price, rebirths) else 0
+end
+
+-- Zones opened, clamped (CoreZonesOpen)
+function CoreLadder.ZonesOpen(value: any): number
+	return math.clamp(math.floor(tonumber(value) or 1), 1, CoreLadder.ZoneCount())
+end
+
+-- Which zone a world position is in (the zone whose ground middle is nearest; 1 when zones are off)
+function CoreLadder.ZoneAt(position: Vector3): number
+	if not ZONES_ON then
+		return 1
+	end
+	local best, bestDistance = 1, math.huge
+	for zone, info in ZONES.List do
+		local distance = (position - (ZONES.Ground.Centre + info.Offset)).Magnitude
+		if distance < bestDistance then
+			best, bestDistance = zone, distance
+		end
+	end
+	return best
 end
 
 return CoreLadder

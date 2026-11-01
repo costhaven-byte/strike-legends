@@ -43,15 +43,18 @@ local function placeOnLane(character: Model, lane: Model)
 	character:PivotTo(approach.CFrame * CFrame.new(0, approach.Size.Y / 2 + height, 0))
 end
 
--- Addendum 5 A3: the shared lane's spots in hand-out order (the front row middle first, then outwards)
-local spotOrder: { Model }? = nil
-local function sharedOrder(): { Model }
-	if spotOrder then
-		return spotOrder
+-- Addendum 5 A3: the shared lane's spots in hand-out order (the front row middle first, then outwards).
+-- Addendum 6 Stage 3: one list per zone.
+local spotOrder: { [number]: { Model } } = {}
+local function sharedOrder(zone: number): { Model }
+	if spotOrder[zone] then
+		return spotOrder[zone]
 	end
 	local byNumber = {}
 	for _, lane in LaneUtil.GetLanes() do
-		byNumber[lane:GetAttribute("Spot") or 0] = lane
+		if (lane:GetAttribute("Zone") or 1) == zone then
+			byNumber[lane:GetAttribute("Spot") or 0] = lane
+		end
 	end
 	local order = {}
 	for _, n in SharedLane.HandOutOrder() do
@@ -59,14 +62,14 @@ local function sharedOrder(): { Model }
 			table.insert(order, byNumber[n])
 		end
 	end
-	spotOrder = order
+	spotOrder[zone] = order
 	return order
 end
 
--- (Addendum 4 core loop: lanes are handed out on the rooftop, Config.CoreLoop.Folder)
-local function assignLane(player: Player): Model?
+-- (Addendum 4 core loop: lanes are handed out on the rooftop, Config.CoreLoop.Folder; Addendum 6 Stage 3: in `zone`)
+local function assignLane(player: Player, zone: number?): Model?
 	if LaneUtil.Shared() then
-		for _, lane in sharedOrder() do
+		for _, lane in sharedOrder(zone or 1) do
 			if lane:GetAttribute("OwnerId") == nil then
 				lane:SetAttribute("OwnerId", player.UserId)
 				lane:SetAttribute("ReadyAt", 0) -- (the cooldown is this player's alone)
@@ -88,9 +91,11 @@ local function assignLane(player: Player): Model?
 end
 
 local function onPlayerAdded(player: Player)
-	local lane = assignLane(player)
+	assignLane(player)
 
 	local function onCharacter(character: Model)
+		-- (Addendum 6 Stage 3: the spot you own now, which follows you from zone to zone)
+		local lane = LaneUtil.GetOwnedLane(player.UserId)
 		if lane then
 			-- Wait a moment so Roblox finishes spawning before we move the character
 			task.spawn(function()
@@ -118,6 +123,29 @@ local function onPlayerRemoving(player: Player)
 			release(lane)
 		end
 	end
+end
+
+-- Addendum 6 Stage 3: moves a player's throw spot to a zone's shared lane (frees the old one) and stands them on it.
+-- Returns the new spot (nil = that zone's lane is full; the old spot is kept then).
+function LaneService.MoveToZone(player: Player, zone: number): Model?
+	local old = LaneUtil.GetOwnedLane(player.UserId)
+	if old and (old:GetAttribute("Zone") or 1) == zone then
+		if player.Character then
+			placeOnLane(player.Character, old)
+		end
+		return old
+	end
+	local lane = assignLane(player, zone)
+	if not lane then
+		return nil
+	end
+	if old then
+		release(old)
+	end
+	if player.Character then
+		placeOnLane(player.Character, lane)
+	end
+	return lane
 end
 
 -- The lane this player claimed inside a gated zone, if any

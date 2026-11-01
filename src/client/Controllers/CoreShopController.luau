@@ -1624,7 +1624,8 @@ function CoreShopController:Start()
 			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 			local here = false
 			if root then
-				local offset = root.Position - SHOP.Position
+				-- (Addendum 6 Stage 3: the shop of the zone you're in)
+				local offset = root.Position - (SHOP.Position + CoreLadder.ZoneOffset(CoreLadder.ZoneAt(root.Position)))
 				here = Vector2.new(offset.X, offset.Z).Magnitude <= SHOP.Radius and offset.Y > -2 and offset.Y < 8
 			end
 			if here ~= atShop then

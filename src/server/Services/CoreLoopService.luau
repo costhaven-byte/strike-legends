@@ -20,6 +20,7 @@ local Currency = require(Shared.Modules.Currency)
 local Mascots = require(Shared.Modules.Mascots)
 local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
+local LaneService = require(script.Parent.LaneService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
 local MultiplierService = require(script.Parent.MultiplierService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
@@ -30,6 +31,7 @@ local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 local CORE = Config.CoreLoop
 local SELL = CORE.Sell
 local SHOP = CORE.Shop
+local ZONES = CORE.Zones -- (Addendum 6 Stage 3: the four zones; every station is zone 1's layout + the zone's Offset)
 
 local CoreLoopService = {}
 
@@ -84,10 +86,26 @@ function CoreLoopService.AtShop(player: Player): boolean
 	if not root then
 		return false
 	end
-	local offset = root.Position - SHOP.Position
-	return Vector2.new(offset.X, offset.Z).Magnitude <= SHOP.Radius + (SHOP.BuySlack or 0)
-		and offset.Y > -4
-		and offset.Y < 10
+	for zone = 1, CoreLadder.ZoneCount() do -- (Addendum 6 Stage 3: every zone has a shop, each sells the whole ladder)
+		local offset = root.Position - (SHOP.Position + CoreLadder.ZoneOffset(zone))
+		if
+			Vector2.new(offset.X, offset.Z).Magnitude <= SHOP.Radius + (SHOP.BuySlack or 0)
+			and offset.Y > -4
+			and offset.Y < 10
+		then
+			return true
+		end
+	end
+	return false
+end
+
+-- Addendum 6 Stage 3: the zone the player is in now (where their character stands; the saved CoreZone without one)
+function CoreLoopService.ZoneOf(player: Player): number
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if root then
+		return CoreLadder.ZoneAt(root.Position)
+	end
+	return CoreLadder.ZonesOpen(PlayerDataService.Get(player, "CoreZone"))
 end
 
 -- Addendum 6 2.2: the owned-steps mask of a ladder ("Ball" / "Bag"; CoreLadder.Owns reads it)
@@ -303,19 +321,26 @@ function CoreLoopService.ResetForRebirth(player: Player)
 	PlayerDataService.Set(player, "CoreBagsOwned", 1)
 	PlayerDataService.Set(player, "CoreLook", 0)
 	PlayerDataService.Set(player, "ThrowSpeedLevel", 0)
+	-- Addendum 6 Stage 3: every zone but 1 closes again; anyone outside zone 1 goes back to its lane
+	PlayerDataService.Set(player, "CoreZonesOpen", 1)
+	PlayerDataService.Set(player, "CoreZone", 1)
+	if CoreLoopService.ZoneOf(player) ~= 1 then
+		LaneService.MoveToZone(player, 1)
+	end
 	equipLadderBall(player)
 end
 
 -- Sells the whole bag for Coins (only ever called while the player stands on the sell pad). Addendum 6 1.1: it
 -- pays the bag's pins x PinValue x the coin multiplier (MultiplierService.GetCoinMultiplier: pets, rebirth, friends,
 -- potion, passes, COIN BOOST), so every boost shows on every sell.
-local function sell(player: Player)
+-- Addendum 6 Stage 3: a pin sells for the PinValue of the zone whose pad you stand on (x6 a zone)
+local function sell(player: Player, zone: number)
 	local bag = PlayerDataService.Get(player, "Bag") or 0
 	if bag <= 0 then
 		return
 	end
 	local multiplier, sources = MultiplierService.GetCoinMultiplier(player)
-	local paid = Currency.Round(Currency.Scale(bag, CORE.PinValue * multiplier))
+	local paid = Currency.Round(Currency.Scale(bag, CoreLadder.ZoneValue(zone) * multiplier))
 	PlayerDataService.Set(player, "Bag", Currency.Zero())
 	PlayerDataService.Add(player, "Coins", paid)
 	PlayerDataService.Add(player, "CoreSells", 1)
@@ -323,12 +348,18 @@ local function sell(player: Player)
 	Analytics.Currency(player, "Coins", paid, "Gameplay", "Sell")
 	SessionLog.Sell(player, paid, PlayerDataService.Get(player, "CoreSells") or 1)
 	Pacing.Sold(player, paid)
-	soldRemote:FireClient(player, paid, multiplier, CoreLadder.EncodeBoosts("Coins", sources))
+	soldRemote:FireClient(player, paid, multiplier, CoreLadder.EncodeBoosts("Coins", sources), CoreLadder.ZoneValue(zone))
 end
 
-local function onPad(position: Vector3): boolean
-	local offset = position - SELL.Position
-	return Vector2.new(offset.X, offset.Z).Magnitude <= SELL.Radius and offset.Y > -2 and offset.Y < 8
+-- The zone whose sell pad this position stands on (nil = none)
+local function onPad(position: Vector3): number?
+	for zone = 1, CoreLadder.ZoneCount() do
+		local offset = position - (SELL.Position + CoreLadder.ZoneOffset(zone))
+		if Vector2.new(offset.X, offset.Z).Magnitude <= SELL.Radius and offset.Y > -2 and offset.Y < 8 then
+			return zone
+		end
+	end
+	return nil
 end
 
 -- ===== The sell station (built from parts at server start, nothing new to upload) =====
@@ -366,8 +397,8 @@ local function label(parent: Instance, text: string, size: UDim2, position: UDim
 	return t
 end
 
-local function buildStation(): Model?
-	local roof = Workspace:FindFirstChild(CORE.Folder)
+local function buildStation(zone: number): Model?
+	local roof = Workspace:FindFirstChild(CoreLadder.ZoneFolder(zone))
 	if not roof then
 		return nil
 	end
@@ -464,14 +495,15 @@ local function buildStation(): Model?
 	beacon.Name = "Beacon"
 	beacon.Parent = pad
 	model.PrimaryPart = pad
+	model:PivotTo(model:GetPivot() + CoreLadder.ZoneOffset(zone))
 	model.Parent = roof
 	return model
 end
 
 -- The ball shop booth: a sky-blue circle with a counter and a sign behind it (standing on the circle opens the shop
 -- on that player's screen, CoreShopController)
-local function buildShop()
-	local roof = Workspace:FindFirstChild(CORE.Folder)
+local function buildShop(zone: number)
+	local roof = Workspace:FindFirstChild(CoreLadder.ZoneFolder(zone))
 	if not roof then
 		return
 	end
@@ -520,8 +552,9 @@ local function buildShop()
 			Color = Color3.fromRGB(250, 248, 240),
 		}, model)
 	end
-	-- Balls 1, 5 and 10 of the ladder on the counter, in their colours
+	-- Balls 1, 5 and 10 of the zone's part of the ladder on the counter, in their colours
 	for i, step in { 1, 5, 10 } do
+		step += (zone - 1) * 10
 		local ball = Balls.Get(CORE.Balls[step].Ball)
 		part({
 			Name = "Ball",
@@ -565,6 +598,7 @@ local function buildShop()
 	beacon.Name = "Beacon"
 	beacon.Parent = pad
 	model.PrimaryPart = pad
+	model:PivotTo(model:GetPivot() + CoreLadder.ZoneOffset(zone))
 	model.Parent = roof
 end
 
@@ -639,6 +673,9 @@ local function buildPlaza()
 		return
 	end
 	for i = 1, #CORE.Balls do
+		if CoreLadder.Zone("Ball", i) ~= 1 then
+			continue -- (Addendum 6 Stage 3: the roof's cases show zone 1's balls only)
+		end
 		local slot = list[i] or template:Clone()
 		slot.Name = "Slot" .. i
 		slot:SetAttribute("Order", i)
@@ -776,15 +813,28 @@ local function buildEggRow()
 			old:Destroy()
 		end
 	end
-	local row = Instance.new("Model")
-	row.Name = "EggRow"
-	local skip: { Instance } = { row }
+	-- Addendum 6 Stage 3: each egg stands in its own zone (EggRow model in that zone's folder, At + the zone's Offset)
+	local rows: { [number]: Model } = {}
+	local skip: { Instance } = {}
 	for _, player in Players:GetPlayers() do
 		if player.Character then
 			table.insert(skip, player.Character)
 		end
 	end
+	for zone = 1, CoreLadder.ZoneCount() do
+		local folder = Workspace:FindFirstChild(CoreLadder.ZoneFolder(zone))
+		local old = folder and folder:FindFirstChild("EggRow")
+		if old then
+			old:Destroy()
+		end
+		local zoneRow = Instance.new("Model")
+		zoneRow.Name = "EggRow"
+		rows[zone] = zoneRow
+		table.insert(skip, zoneRow)
+	end
 	for _, egg in EGGS.List do
+		local zone = math.clamp(egg.Zone or 1, 1, CoreLadder.ZoneCount())
+		local row = rows[zone]
 		local node = source(egg.From)
 		local copy = node and copyOf(node)
 		if not copy then
@@ -793,7 +843,7 @@ local function buildEggRow()
 		end
 		copy.Name = egg.Id
 		copy:SetAttribute("Egg", egg.Id)
-		placeOnFloor(copy, egg.At, egg.Turn, skip)
+		placeOnFloor(copy, egg.At + CoreLadder.ZoneOffset(zone), egg.Turn, skip)
 		if egg.Tint then
 			tint(copy, egg.Tint)
 		end
@@ -807,7 +857,9 @@ local function buildEggRow()
 		end
 		copy.Parent = row
 	end
-	row.Parent = roof
+	for zone, row in rows do
+		row.Parent = Workspace:FindFirstChild(CoreLadder.ZoneFolder(zone))
+	end
 
 	local fusion = source(EGGS.Fusion.From)
 	local machine = fusion and copyOf(fusion)
@@ -818,6 +870,176 @@ local function buildEggRow()
 	else
 		warn("[CoreLoopService] egg row: no fusion machine to copy (" .. table.concat(EGGS.Fusion.From, ".") .. ")")
 	end
+end
+
+-- ===== Addendum 6 Stage 3: the zone gates (Config.CoreLoop.Zones.Gates) =====
+-- Each zone gets a NEXT gate (to the zone after it: pay its price once, then free) and, from zone 2 on, a BACK gate
+-- (free, to the zone before). A gate = an arch over a coloured pad with a sign and a ProximityPrompt; the client
+-- (CoreHudController) words the prompt for you and asks the server through CoreGate.
+local function buildGate(zone: number, target: number, at: Vector3)
+	local folder = Workspace:FindFirstChild(CoreLadder.ZoneFolder(zone))
+	local info = CoreLadder.ZoneInfo(target)
+	if not folder or not info then
+		return
+	end
+	local name = if target > zone then "GateNext" else "GateBack"
+	local old = folder:FindFirstChild(name)
+	if old then
+		old:Destroy()
+	end
+	local palette = info.Palette or { Edge = Color3.fromRGB(64, 160, 236), Accent = Color3.fromRGB(255, 196, 64) }
+	local model = Instance.new("Model")
+	model.Name = name
+	model:SetAttribute("Target", target)
+	local base = at + CoreLadder.ZoneOffset(zone)
+	local hit = Workspace:Raycast(base + Vector3.new(0, 20, 0), Vector3.new(0, -40, 0))
+	if hit and math.abs(hit.Position.Y - base.Y) < 6 then
+		base = Vector3.new(base.X, hit.Position.Y, base.Z)
+	end
+	-- the arch faces +X (into the plaza); its opening runs along Z
+	local pad = part({
+		Name = "Pad",
+		Size = Vector3.new(8, 0.3, 10),
+		CFrame = CFrame.new(base + Vector3.new(0, 0.15, 0)),
+		Color = palette.Edge,
+		CanCollide = false,
+	}, model)
+	for _, side in { -1, 1 } do
+		part({
+			Name = "Pillar",
+			Size = Vector3.new(1.6, 12, 1.6),
+			CFrame = CFrame.new(base + Vector3.new(0, 6, side * 5.6)),
+			Color = Color3.fromRGB(250, 248, 240),
+		}, model)
+	end
+	part({
+		Name = "Top",
+		Size = Vector3.new(2, 1.6, 13),
+		CFrame = CFrame.new(base + Vector3.new(0, 12.8, 0)),
+		Color = palette.Accent,
+	}, model)
+	-- the glowing doorway (walk-through, no collisions)
+	local door = part({
+		Name = "Door",
+		Size = Vector3.new(0.4, 11.2, 9.6),
+		CFrame = CFrame.new(base + Vector3.new(0, 5.8, 0)),
+		Color = palette.Edge,
+		Material = Enum.Material.Neon,
+		Transparency = 0.55,
+		CanCollide = false,
+	}, model)
+	local sign = part({
+		Name = "Sign",
+		Size = Vector3.new(0.4, 3.6, 12),
+		CFrame = CFrame.new(base + Vector3.new(0.9, 15.4, 0)),
+		Color = Color3.fromRGB(255, 248, 232),
+	}, model)
+	local surface = Instance.new("SurfaceGui")
+	surface.Name = "Words"
+	surface.Face = Enum.NormalId.Right -- (+X, the plaza side)
+	surface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	surface.PixelsPerStud = 40
+	surface.LightInfluence = 0
+	surface.Parent = sign
+	local title = label(
+		surface,
+		(if target > zone then "To %s" else "Back to %s"):format(info.Name),
+		UDim2.fromScale(0.94, 0.56),
+		UDim2.fromScale(0.03, 0.04),
+		Color3.new(1, 1, 1),
+		4
+	)
+	title.Name = "Title"
+	local gradient = Instance.new("UIGradient")
+	gradient.Color = ColorSequence.new(palette.Accent, palette.Edge)
+	gradient.Rotation = 90
+	gradient.Parent = title
+	local sub = label(surface, ("Zone %d"):format(target), UDim2.fromScale(0.9, 0.32), UDim2.fromScale(0.05, 0.64), palette.Edge, 3)
+	sub.Name = "Sub" -- (the client writes the price here while the zone is shut)
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "GatePrompt"
+	prompt.ObjectText = info.Name
+	prompt.ActionText = "Go"
+	prompt.HoldDuration = 0.4
+	prompt.MaxActivationDistance = ZONES.Gates.Radius - 2
+	prompt.RequiresLineOfSight = false
+	prompt:SetAttribute("Target", target)
+	prompt.Parent = door
+	local beacon = Instance.new("Attachment")
+	beacon.Name = "Beacon"
+	beacon.Parent = pad
+	model.PrimaryPart = pad
+	model.Parent = folder
+end
+
+local function buildGates()
+	if not ZONES or not ZONES.Enabled then
+		return
+	end
+	for zone = 1, CoreLadder.ZoneCount() do
+		if zone < CoreLadder.ZoneCount() then
+			buildGate(zone, zone + 1, ZONES.Gates.Next)
+		end
+		if zone > 1 then
+			buildGate(zone, zone - 1, ZONES.Gates.Back)
+		end
+	end
+end
+
+-- Takes the player to a zone's lane (their throw spot there) and remembers it
+local function travel(player: Player, zone: number): boolean
+	if not LaneService.MoveToZone(player, zone) then
+		return false
+	end
+	PlayerDataService.Set(player, "CoreZone", zone)
+	SessionLog.Moment(player, "Went to zone " .. zone)
+	return true
+end
+CoreLoopService.Travel = travel
+
+-- CoreGate: use a gate to `target`. Must stand at that gate in the zone next to it. A shut zone opens for its price
+-- (only the next one: zones open in order), then the player travels; an open zone is free.
+local function useGate(player: Player, target: any)
+	if not PlayerDataService.IsLoaded(player) then
+		return { Ok = false, Error = "Hang on, still loading" }
+	end
+	if not RateLimit.Allow(player, "CoreGate", 1) then
+		return { Ok = false, Error = "Too fast, wait a sec" }
+	end
+	target = math.floor(tonumber(target) or 0)
+	if target < 1 or target > CoreLadder.ZoneCount() then
+		return { Ok = false, Error = "That didn't work. Try again" }
+	end
+	local here = CoreLoopService.ZoneOf(player)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local gate = if target == here + 1 then ZONES.Gates.Next elseif target == here - 1 then ZONES.Gates.Back else nil
+	if not root or not gate then
+		return { Ok = false, Error = "Walk to the gate" }
+	end
+	local offset = root.Position - (gate + CoreLadder.ZoneOffset(here))
+	if Vector2.new(offset.X, offset.Z).Magnitude > ZONES.Gates.Radius or math.abs(offset.Y) > 12 then
+		return { Ok = false, Error = "Walk to the gate" }
+	end
+	local open = CoreLadder.ZonesOpen(PlayerDataService.Get(player, "CoreZonesOpen"))
+	local opened = false
+	if target > open then
+		if target ~= open + 1 then
+			return { Ok = false, Error = ("Open zone %d first"):format(open + 1) }
+		end
+		local price = CoreLadder.GatePrice(target, PlayerDataService.Get(player, "Rebirths"))
+		if not PlayerDataService.Spend(player, "Coins", price) then
+			return { Ok = false, Error = "Not enough coins", Price = price }
+		end
+		PlayerDataService.Set(player, "CoreZonesOpen", target)
+		Analytics.Currency(player, "Coins", -price, "Shop", "Zone" .. target)
+		Analytics.Purchase(player, "Zone", tostring(target))
+		SessionLog.Moment(player, ("Zone %d opened"):format(target))
+		opened = true
+	end
+	if not travel(player, target) then
+		return { Ok = false, Error = "That zone is full right now", Opened = opened }
+	end
+	return { Ok = true, Zone = target, Opened = opened }
 end
 
 -- The rooftop spawn (the lobby spawn is switched off, not removed)
@@ -890,6 +1112,9 @@ function CoreLoopService:Start()
 			elseif where == "Shop" then SHOP
 			elseif where == "Eggs" and CORE.Eggs and CORE.Eggs.Enabled then { Position = CORE.Eggs.GoTo } -- (B2)
 			else nil
+		if target then -- (Addendum 6 Stage 3: the pad in the zone you're in)
+			target = { Position = target.Position + CoreLadder.ZoneOffset(CoreLoopService.ZoneOf(player)) }
+		end
 		if not target or not PlayerDataService.IsLoaded(player) then
 			return
 		end
@@ -911,12 +1136,27 @@ function CoreLoopService:Start()
 	end)
 	goRemote.Parent = soldRemote.Parent
 
+	local gateRemote = Instance.new("RemoteFunction")
+	gateRemote.Name = "CoreGate"
+	gateRemote.OnServerInvoke = function(player, target)
+		local ok, result = pcall(useGate, player, target)
+		if not ok then
+			warn("[CoreLoopService] Gate failed: " .. tostring(result))
+			return { Ok = false, Error = "That didn't work. Try again" }
+		end
+		return result
+	end
+	gateRemote.Parent = soldRemote.Parent
+
 	buildSpawn()
-	buildStation()
-	buildShop()
+	for zone = 1, CoreLadder.ZoneCount() do -- (Addendum 6 Stage 3: a sell pad and a shop in every zone)
+		buildStation(zone)
+		buildShop(zone)
+	end
 	buildPlaza()
 	hideCrateShop()
 	buildEggRow() -- (after hideCrateShop: the roof's own Skyline stand is copied from its hiding place)
+	buildGates()
 
 	-- The bag size and throw cooldown the HUD shows (Addendum 6: the multipliers come from MultiplierService)
 	local function publish(player: Player)
@@ -926,6 +1166,17 @@ function CoreLoopService:Start()
 	PlayerDataService.OnLoaded(function(player)
 		equipLadderBall(player)
 		publish(player)
+		-- Addendum 6 Stage 3: back to the zone you were in last (if it's still open)
+		local last = CoreLadder.ZonesOpen(PlayerDataService.Get(player, "CoreZone"))
+		if last > 1 and last <= CoreLadder.ZonesOpen(PlayerDataService.Get(player, "CoreZonesOpen")) then
+			task.spawn(function()
+				if not player.Character then
+					player.CharacterAdded:Wait()
+				end
+				task.wait(0.5)
+				travel(player, last)
+			end)
+		end
 		for _, key in { "BagLevel", "ThrowSpeedLevel", "EquippedMascots", "Rebirths" } do -- (B1: pets change bag + speed; C: rebirths)
 			player:GetAttributeChangedSignal(key):Connect(function()
 				publish(player)
@@ -943,8 +1194,9 @@ function CoreLoopService:Start()
 			task.wait(0.2)
 			for _, player in Players:GetPlayers() do
 				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-				if root and PlayerDataService.IsLoaded(player) and onPad(root.Position) then
-					sell(player)
+				local zone = root and PlayerDataService.IsLoaded(player) and onPad(root.Position)
+				if zone then
+					sell(player, zone)
 				end
 			end
 		end

@@ -17,6 +17,7 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local CoreLadder = require(Shared.Modules.CoreLadder)
 local Currency = require(Shared.Modules.Currency)
 local Rebirth = require(Shared.Modules.Rebirth)
 local Zones = require(Shared.Modules.Zones)
@@ -480,7 +481,7 @@ local function startCore()
 		if not root then
 			return false
 		end
-		local offset = root.Position - CORE.Shop.Position
+		local offset = root.Position - (CORE.Shop.Position + CoreLadder.ZoneOffset(CoreLadder.ZoneAt(root.Position))) -- (A6 Stage 3)
 		return Vector2.new(offset.X, offset.Z).Magnitude <= CORE.Shop.Radius + (CORE.Shop.BuySlack or 0) - 0.5
 			and offset.Y > -4
 			and offset.Y < 10

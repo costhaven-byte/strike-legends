@@ -123,12 +123,14 @@ function MultiplierService.Report(player: Player): string
 		)
 	end
 	local bag = PlayerDataService.Get(player, "Bag") or 0
+	local ownLane = LaneUtil.GetOwnedLane(player.UserId)
+	local pinValue = CoreLadder.ZoneValue(if ownLane then LaneUtil.ZoneOf(ownLane) else 1) -- (Addendum 6 Stage 3)
 	table.insert(
 		lines,
 		("  Bag now: %s pins -> a sell pays %s coins"):format(
 			tostring(bag),
 			tostring(
-				math.floor(tonumber(bag) or 0) * Config.CoreLoop.PinValue * MultiplierService.GetCoinMultiplier(player)
+				math.floor(tonumber(bag) or 0) * pinValue * MultiplierService.GetCoinMultiplier(player)
 			)
 		)
 	)

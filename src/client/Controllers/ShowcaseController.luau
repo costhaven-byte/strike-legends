@@ -914,7 +914,7 @@ local function buildSet(set, diamondTemplate: BasePart?): ((number) -> ())?
 	if ladder then
 		for i, step in Config.CoreLoop.Balls do
 			local ball = Balls.Get(step.Ball)
-			if ball then
+			if ball and (step.Zone or 1) == 1 then -- (Addendum 6 Stage 3: the roof's cases show zone 1's balls)
 				table.insert(
 					shown,
 					setmetatable({
