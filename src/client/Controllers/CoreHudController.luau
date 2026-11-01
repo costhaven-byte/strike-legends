@@ -195,58 +195,132 @@ function CoreHudController:Start()
 		TextColor3 = Color3.fromRGB(255, 236, 200),
 	})
 
-	-- ===== The way to the sell station: a beam from you to the pad and a bobbing marker over it =====
-	local station = Workspace:WaitForChild(CORE.Folder):WaitForChild("SellStation", 30)
-	local pad = station and station:WaitForChild("Pad", 10) :: BasePart?
-	local beacon = pad and pad:WaitForChild("Beacon", 10) :: Attachment?
-	local beam: Beam? = nil
-	local from: Attachment? = nil
-	local marker = new("BillboardGui", {
-		Name = "SellMarker",
-		Size = UDim2.fromOffset(150, 70),
-		StudsOffset = Vector3.new(0, 14, 0),
-		AlwaysOnTop = true,
-		LightInfluence = 0,
-		Enabled = false,
-		Adornee = pad,
-	}, gui)
-	local markerPlate, markerFace = plate(marker, "Plate", GREEN, 10)
-	markerPlate.Size = UDim2.new(1, -8, 0, 44)
-	markerPlate.Position = UDim2.fromOffset(4, 0)
-	text(markerFace, "Sell here", { Size = UDim2.new(1, -12, 0.8, 0), Position = UDim2.new(0, 6, 0.1, 0) })
-	text(marker, "▼", {
-		Size = UDim2.fromOffset(30, 22),
-		Position = UDim2.new(0.5, -15, 0, 46),
-		TextColor3 = GREEN,
-	})
-	local guideUntil = 0 -- the SELL button turns the guide on for a while
+	-- ===== Pointers: a beam from you to a pad and a bobbing marker over it (sell station, and the shop for the guide) =====
+	local roof = Workspace:WaitForChild(CORE.Folder)
+	local function pointer(name: string, model: string, color: Color3, words: string): (boolean) -> ()
+		local station = roof:WaitForChild(model, 30)
+		local pad = station and station:WaitForChild("Pad", 10) :: BasePart?
+		local beacon = pad and pad:WaitForChild("Beacon", 10) :: Attachment?
+		local beam: Beam? = nil
+		local from: Attachment? = nil
+		local marker = new("BillboardGui", {
+			Name = name .. "Marker",
+			Size = UDim2.fromOffset(150, 70),
+			StudsOffset = Vector3.new(0, 14, 0),
+			AlwaysOnTop = true,
+			LightInfluence = 0,
+			Enabled = false,
+			Adornee = pad,
+		}, gui)
+		local markerPlate, markerFace = plate(marker, "Plate", color, 10)
+		markerPlate.Size = UDim2.new(1, -8, 0, 44)
+		markerPlate.Position = UDim2.fromOffset(4, 0)
+		text(markerFace, words, { Size = UDim2.new(1, -12, 0.8, 0), Position = UDim2.new(0, 6, 0.1, 0) })
+		text(marker, "▼", {
+			Size = UDim2.fromOffset(30, 22),
+			Position = UDim2.new(0.5, -15, 0, 46),
+			TextColor3 = color,
+		})
+		return function(on: boolean)
+			marker.Enabled = on
+			marker.StudsOffset = Vector3.new(0, 14 + math.sin(os.clock() * 3) * 0.8, 0)
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if on and root and beacon then
+				if not from or from.Parent ~= root then
+					from = new("Attachment", { Name = name, Position = Vector3.new(0, -2.4, 0) }, root)
+				end
+				if not beam then
+					beam = new("Beam", {
+						Name = name,
+						Color = ColorSequence.new(color),
+						Width0 = 0.9,
+						Width1 = 0.9,
+						FaceCamera = true,
+						LightEmission = 0.2,
+						Transparency = NumberSequence.new(0.15),
+						Segments = 1,
+					}, gui)
+				end
+				local b = beam :: Beam
+				b.Attachment0 = from
+				b.Attachment1 = beacon
+				b.Parent = Workspace
+				b.Enabled = true
+			elseif beam then
+				beam.Enabled = false
+			end
+		end
+	end
+	local sellGuide = pointer("SellGuide", "SellStation", GREEN, "Sell here")
+	local shopGuide = pointer("ShopGuide", "BallShop", CORE.Shop.Color, "Shop")
+	local guideUntil = 0 -- the SELL button turns the sell pointer on for a while
 
-	local function guide(on: boolean)
-		marker.Enabled = on
-		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if on and root and beacon then
-			if not from or from.Parent ~= root then
-				from = new("Attachment", { Name = "SellGuide", Position = Vector3.new(0, -2.4, 0) }, root)
-			end
-			if not beam then
-				beam = new("Beam", {
-					Name = "SellGuide",
-					Color = ColorSequence.new(GREEN),
-					Width0 = 0.9,
-					Width1 = 0.9,
-					FaceCamera = true,
-					LightEmission = 0.2,
-					Transparency = NumberSequence.new(0.15),
-					Segments = 1,
-				}, gui)
-			end
-			local b = beam :: Beam
-			b.Attachment0 = from
-			b.Attachment1 = beacon
-			b.Parent = Workspace
-			b.Enabled = true
-		elseif beam then
-			beam.Enabled = false
+	-- ===== First 30 seconds (Stage 3): Throw > Sell > Buy until ball 2 is bought =====
+	-- One card under the pin counter (in the BAG FULL spot; that card waits while this one is up). The step comes from
+	-- what you have: not enough in the bag yet = throw, enough to buy once sold = sell, enough coins = buy.
+	local GUIDE = CORE.Guide
+	local firstBall = CORE.Balls[2]
+	local tutor, tutorFace = plate(gui, "Guide", Color3.fromRGB(255, 248, 228), 6)
+	place(tutor, "BagFull")
+	tutor.Visible = false
+	local stepLabels = {}
+	for i, word in { "Throw", "Sell", "Buy" } do
+		stepLabels[i] = text(tutorFace, word, {
+			Size = UDim2.new(0.28, 0, 0.5, 0),
+			Position = UDim2.new(0.04 + (i - 1) * 0.32, 0, 0.05, 0),
+		})
+		if i < 3 then
+			text(tutorFace, "›", {
+				Size = UDim2.new(0.04, 0, 0.5, 0),
+				Position = UDim2.new(0.32 + (i - 1) * 0.32, 0, 0.05, 0),
+				TextColor3 = Color3.fromRGB(150, 140, 120),
+			})
+		end
+	end
+	local tutorLine = text(tutorFace, "", {
+		Size = UDim2.new(1, -20, 0.32, 0),
+		Position = UDim2.new(0, 10, 0.6, 0),
+		TextColor3 = INK,
+	})
+	tutorLine:FindFirstChildOfClass("UIStroke"):Destroy()
+	local ballsButton: GuiObject? = nil
+	task.spawn(function()
+		local ballsUi = playerGui:WaitForChild("BallsUI", 30)
+		ballsButton = ballsUi and ballsUi:WaitForChild("Menu", 10):WaitForChild("BallsButton", 10) :: GuiObject?
+	end)
+	local ballsScale: UIScale? = nil
+	local tutorStep = 0
+	local tutorDoneAt: number? = nil
+	local tutorWasOn = false
+	local function guideStep(): number
+		if not GUIDE.Enabled or (tonumber(player:GetAttribute("BallStep")) or 1) >= 2 then
+			return 0
+		end
+		local coins = player:GetAttribute("Coins") or 0
+		local amount = player:GetAttribute("Bag") or 0
+		local size = player:GetAttribute("BagSize") or CORE.BagSizes[1]
+		if coins >= firstBall.Price then
+			return 3
+		elseif amount > 0 and (amount >= size or coins + amount >= firstBall.Price) then
+			return 2
+		end
+		return 1
+	end
+	local function showTutor(step: number)
+		if step == tutorStep then
+			return
+		end
+		tutorStep = step
+		for i, label in stepLabels do
+			label.TextColor3 = if i == step then CORAL elseif i < step then GREEN else Color3.fromRGB(190, 182, 166)
+		end
+		tutorLine.Text = if step == 1
+			then "Hold the HOLD! button to throw"
+			elseif step == 2 then "Bag's got enough. Walk to the green circle"
+			else ("You've got %d coins. Get the %s"):format(firstBall.Price, firstBall.Name)
+		if step > 1 then
+			Sfx.Play("Click")
+			UiFx.Pop(tutor, 1.1, 0.18)
 		end
 	end
 
@@ -311,22 +385,51 @@ function CoreHudController:Start()
 		end)
 	end)
 
-	-- Every frame: the prompt and the guide
+	-- Every frame: the prompt and the guides
+	local wasFull = false
 	RunService.RenderStepped:Connect(function()
 		local amount = player:GetAttribute("Bag") or 0
 		local size = player:GetAttribute("BagSize") or CORE.BagSizes[1]
 		local full = amount >= size
-		if full and not prompt.Visible then
+		if full and not wasFull then
 			Sfx.Play("Error", 1, 0.6)
 			UiFx.Pop(prompt, 1.15, 0.2)
 		end
-		prompt.Visible = full
+		wasFull = full
+		local step = guideStep()
+		if step > 0 then
+			tutorWasOn = true
+			tutorDoneAt = nil
+			showTutor(step)
+		elseif tutorWasOn and not tutorDoneAt then
+			-- ball 2 bought: the card says so for a moment, then goes for good
+			tutorDoneAt = os.clock()
+			tutorStep = 4
+			for _, label in stepLabels do
+				label.TextColor3 = GREEN
+			end
+			tutorLine.Text = "Done. Keep throwing for the next one"
+			UiFx.Pop(tutor, 1.12, 0.2)
+		end
+		tutor.Visible = step > 0 or (tutorDoneAt ~= nil and os.clock() - tutorDoneAt < GUIDE.DoneSeconds)
+		if tutor.Visible then
+			tutor.Rotation = -1.5
+		end
+		prompt.Visible = full and not tutor.Visible
 		if full then
 			prompt.Rotation = -2 + math.sin(os.clock() * 4) * 1.2
 		end
-		sellScale.Scale = if full then 1 + math.abs(math.sin(os.clock() * 5)) * 0.06 else sellScale.Scale
-		guide((full or os.clock() < guideUntil) and amount > 0)
-		marker.StudsOffset = Vector3.new(0, 14 + math.sin(os.clock() * 3) * 0.8, 0)
+		sellScale.Scale = if full or step == 2 then 1 + math.abs(math.sin(os.clock() * 5)) * 0.06 else sellScale.Scale
+		sellGuide((full or step == 2 or os.clock() < guideUntil) and amount > 0)
+		shopGuide(step == 3)
+		-- the BALLS button (opens the shop anywhere) bounces while it's time to buy
+		if ballsButton and not ballsScale then
+			ballsScale = (ballsButton :: GuiObject):FindFirstChild("GuideScale") :: UIScale?
+				or new("UIScale", { Name = "GuideScale" }, ballsButton)
+		end
+		if ballsScale then
+			ballsScale.Scale = if step == 3 then 1 + math.abs(math.sin(os.clock() * 5)) * 0.12 else 1
+		end
 	end)
 
 	gui.Parent = playerGui

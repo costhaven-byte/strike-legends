@@ -376,6 +376,10 @@ local function buildShop()
 		Color3.fromRGB(220, 240, 255),
 		3
 	)
+	-- The point the first-30-seconds guide leads to (CoreHudController)
+	local beacon = Instance.new("Attachment")
+	beacon.Name = "Beacon"
+	beacon.Parent = pad
 	model.PrimaryPart = pad
 	model.Parent = roof
 end

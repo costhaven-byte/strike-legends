@@ -53,7 +53,7 @@ Config.CoreLoop = {
 	-- require(game.ServerStorage.Tools.EconomySim).CoreLadder(). Full ladder ~53 min of play.
 	Balls = {
 		{ Ball = "Tangerine", Name = "Beach Roller", Pins = 6, Price = 0 },
-		{ Ball = "Bubblegum", Name = "Rubber Bouncer", Pins = 9, Price = 450 },
+		{ Ball = "Bubblegum", Name = "Rubber Bouncer", Pins = 9, Price = 50 }, -- one bag: bought in the first 30 s (Stage 3)
 		{ Ball = "Lime", Name = "Confetti Popper", Pins = 12, Price = 530 },
 		{ Ball = "Sunburst", Name = "Sunspike", Pins = 15, Price = 1900 },
 		{ Ball = "Frostbite", Name = "Gust", Pins = 19, Price = 2400 },
@@ -81,6 +81,12 @@ Config.CoreLoop = {
 		Position = Vector3.new(-17, 848.65, -3415),
 		Radius = 4.5,
 		Color = Color3.fromRGB(64, 160, 236), -- sky blue
+	},
+	-- Stage 3 first 30 seconds: until ball 2 is bought a card under the pin counter says Throw > Sell > Buy and beams
+	-- lead to the sell pad, then to the shop. The join daily window waits until then too.
+	Guide = {
+		Enabled = true,
+		DoneSeconds = 3, -- the "done" card stays this long after ball 2
 	},
 	FullClearMultiplier = 2, -- every pin down pays double
 	-- Coins: each pin = PinValue coins x these multipliers (MultiplierService.Coins names; zone, power, rank, streak
