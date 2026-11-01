@@ -17,6 +17,7 @@ export type Progress = {
 	AwayRate: number?,
 	BallStep: number?, -- (Addendum 4 core loop: gifts follow the ball + bag ladder)
 	BagLevel: number?,
+	Rebirths: number?, -- (Addendum 5 F: gift coins grow with the rebirth prices)
 }
 
 -- 4,134,000 -> 4,100,000
@@ -30,7 +31,7 @@ end
 function DailyRewards.Coins(reward, incomeMinutes: number?, progress: Progress): number
 	if Config.CoreLoop.Enabled then
 		local minutes = reward.CoreMinutes or Config.CoreLoop.Gifts.RewardMinutes
-		return CoreLadder.GiftCoins(minutes, progress.BallStep, progress.BagLevel)
+		return CoreLadder.GiftCoins(minutes, progress.BallStep, progress.BagLevel, progress.Rebirths)
 	end
 	local zone = Zones.Highest(progress.ZonesOpen)
 	local coins = math.max(
@@ -63,14 +64,14 @@ function DailyRewards.Resolve(day: number, progress: Progress)
 	if reward.Egg and Config.CoreLoop.Enabled then
 		-- (core loop: no egg stand until Stage 5, so an egg day pays coins)
 		out.Coins = (out.Coins or 0)
-			+ CoreLadder.GiftCoins(Config.CoreLoop.Gifts.CrateMinutes, progress.BallStep, progress.BagLevel)
+			+ CoreLadder.GiftCoins(Config.CoreLoop.Gifts.CrateMinutes, progress.BallStep, progress.BagLevel, progress.Rebirths)
 	elseif reward.Egg then
 		out.Egg = if reward.Egg == "Zone" then row.Egg else reward.Egg
 	end
 	if reward.Crate and Config.CoreLoop.Enabled then
 		-- (core loop: crates no longer give balls, so a crate day pays coins)
 		out.Coins = (out.Coins or 0)
-			+ CoreLadder.GiftCoins(Config.CoreLoop.Gifts.CrateMinutes, progress.BallStep, progress.BagLevel)
+			+ CoreLadder.GiftCoins(Config.CoreLoop.Gifts.CrateMinutes, progress.BallStep, progress.BagLevel, progress.Rebirths)
 	elseif reward.Crate then
 		-- a crate from a zone you haven't unlocked yet comes as your zone's crate
 		out.Crate = Zones.RewardCrateId(if reward.Crate == "Zone" then row.Crate else reward.Crate, progress.ZonesOpen)

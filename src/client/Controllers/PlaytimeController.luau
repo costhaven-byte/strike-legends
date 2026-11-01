@@ -60,6 +60,7 @@ local function resolve(index: number)
 		AwayRate = player:GetAttribute("AwayRate"),
 		BallStep = player:GetAttribute("BallStep"),
 		BagLevel = player:GetAttribute("BagLevel"),
+		Rebirths = player:GetAttribute("Rebirths"),
 	}) or {}
 end
 

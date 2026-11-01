@@ -1808,7 +1808,11 @@ function MascotController:Start()
 		end
 		-- would EQUIP BEST raise your pet bonus? (a swap between two equally good pets doesn't count)
 		local slots = player:GetAttribute("MascotSlots") or ECONOMY.StartSlots
+		local ctx = Mascots.BestContext(player) -- (A5 F: EQUIP BEST ranks by real income)
 		local function total(list: { string }): number
+			if ctx then
+				return Mascots.Income(Mascots.TotalStats(list), ctx)
+			end
 			local sum = 0
 			for _, id in list do
 				local mascot = Mascots.Get(id)
@@ -1816,9 +1820,9 @@ function MascotController:Start()
 			end
 			return sum
 		end
-		hintWanted = total(Mascots.Best(owned(), slots)) > total(equipped()) + 1e-6
+		hintWanted = total(Mascots.Best(owned(), slots, ctx)) > total(equipped()) * (1 + 1e-6) + 1e-6
 	end
-	for _, key in { "Mascots", "EquippedMascots", "MascotSlots", "EquipBestHinted" } do
+	for _, key in { "Mascots", "EquippedMascots", "MascotSlots", "EquipBestHinted", "BagLevel", "BallStep", "Rebirths" } do
 		player:GetAttributeChangedSignal(key):Connect(refreshHint)
 	end
 	refreshHint()

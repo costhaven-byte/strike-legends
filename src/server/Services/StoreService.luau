@@ -111,7 +111,8 @@ local function grantProduct(player: Player, product)
 		local coins = CoreLadder.GiftCoins(
 			product.CoreCoinMinutes,
 			PlayerDataService.Get(player, "BallStep"),
-			PlayerDataService.Get(player, "BagLevel")
+			PlayerDataService.Get(player, "BagLevel"),
+			PlayerDataService.Get(player, "Rebirths")
 		)
 		PlayerDataService.Add(player, "Coins", coins)
 		Analytics.Currency(player, "Coins", coins, "IAP", product.Id)

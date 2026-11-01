@@ -14,6 +14,8 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local AssetSlots = require(Shared.AssetSlots)
 local Currency = require(Shared.Modules.Currency)
+local CoreLadder = require(Shared.Modules.CoreLadder)
+local Mascots = require(Shared.Modules.Mascots)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local HudKit = require(Modules.HudKit)
 local Sfx = require(Modules.Sfx)
@@ -363,12 +365,58 @@ function CoreHudController:Start()
 	end
 	refreshBag()
 
+	-- Addendum 5 F: what a throw put in the bag flies as a gold "+25" from the pin counter down into the bag icon,
+	-- and the bag pops when it lands (simulator gains). At most Config.CoreLoop.Gains.Max in the air at once.
+	local GAINS = CORE.Gains
+	local bagIcon = bagFace:FindFirstChild("Icon") :: ImageLabel
+	local flying = 0
+	local function flyGain(paid: number, isLucky: boolean)
+		if not GAINS or not GAINS.Enabled or paid <= 0 or flying >= GAINS.Max then
+			return
+		end
+		flying += 1
+		local phone = HudKit.Phone()
+		local base = gui.AbsolutePosition
+		local from = counter.AbsolutePosition + Vector2.new(counter.AbsoluteSize.X / 2, counter.AbsoluteSize.Y + 6) - base
+		local to = bagIcon.AbsolutePosition + bagIcon.AbsoluteSize / 2 - base
+		local tag = text(gui, "+" .. Currency.Format(paid), {
+			Name = "Gain",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Size = if phone then UDim2.fromOffset(70, 22) else UDim2.fromOffset(120, 36),
+			Position = UDim2.fromOffset(from.X + math.random(-14, 14), from.Y),
+			TextColor3 = if isLucky then GOLD else WHITE,
+			Stroke = if phone then 2 else 3,
+			ZIndex = 8,
+		})
+		local scale = new("UIScale", { Scale = 0 }, tag)
+		TweenService:Create(scale, TweenInfo.new(0.16, Enum.EasingStyle.Back), { Scale = if isLucky then 1.25 else 1 })
+			:Play()
+		task.delay(0.22, function()
+			local home = TweenService:Create(tag, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+				Position = UDim2.fromOffset(to.X, to.Y),
+				Rotation = math.random(-12, 12),
+			})
+			TweenService:Create(scale, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+				Scale = 0.45,
+			}):Play()
+			home:Play()
+			home.Completed:Wait()
+			flying -= 1
+			tag:Destroy()
+			UiFx.Pop(bag, 1.08, 0.12)
+			UiFx.Pop(bagIcon, 1.3, 0.16)
+		end)
+	end
+
 	-- Your own throws: the counter
 	remotes:WaitForChild("ThrowResult").OnClientEvent:Connect(function(data)
 		if type(data) ~= "table" or not data.Core or data.UserId ~= player.UserId then
 			return
 		end
-		task.delay(data.RollTime or 0, showCount, data.Count or 0, data.Lucky == true, data.BagFull == true)
+		task.delay(data.RollTime or 0, function()
+			showCount(data.Count or 0, data.Lucky == true, data.BagFull == true)
+			flyGain(tonumber(data.Paid) or 0, data.Lucky == true)
+		end)
 	end)
 
 	-- Sold at the station: coins fly up from the bag
@@ -467,6 +515,8 @@ function CoreHudController:Start()
 		if full then
 			prompt.Rotation = -2 + math.sin(os.clock() * 4) * 1.2
 		end
+		-- Addendum 5 F: a full bag shakes (red fill, SELL bouncing below) until you sell
+		bag.Rotation = if full then math.sin(os.clock() * 28) * 2.2 else 0
 		sellScale.Scale = if full or step == 2 then 1 + math.abs(math.sin(os.clock() * 5)) * 0.06 else sellScale.Scale
 		sellGuide((full or step == 2 or os.clock() < guideUntil) and amount > 0)
 		shopGuide(step == 3)
@@ -479,6 +529,37 @@ function CoreHudController:Start()
 			ballsScale.Scale = if step == 3 then 1 + math.abs(math.sin(os.clock() * 5)) * 0.12 else 1
 		end
 	end)
+
+	-- Addendum 5 F: a red dot on the BALLS button while the shop has something you can pay for (next ball, next bag
+	-- or the next pet slot), like the PETS and REBIRTH dots
+	local function canBuySomething(): boolean
+		local coins = player:GetAttribute("Coins") or 0
+		local rebirths = player:GetAttribute("Rebirths") or 0
+		local _, ballPrice = CoreLadder.NextBall(player:GetAttribute("BallStep"), rebirths)
+		local bagLevel, bagPrice = CoreLadder.NextBag(player:GetAttribute("BagLevel"), rebirths)
+		local slotPrice = Mascots.StatsOn() and Mascots.NextSlotPrice(player:GetAttribute("PetSlotsBought"))
+		return (ballPrice > 0 and Currency.CanAfford(coins, ballPrice))
+			or (bagLevel ~= nil and Currency.CanAfford(coins, bagPrice))
+			or (slotPrice ~= nil and slotPrice ~= false and Currency.CanAfford(coins, slotPrice))
+	end
+	local function refreshDot()
+		local holder = ballsButton and (ballsButton :: GuiObject):FindFirstChild("Kit")
+		local dot = holder and holder:FindFirstChild("Dot") :: GuiObject?
+		if not dot then
+			return
+		end
+		local on = canBuySomething() and guideStep() == 0 -- (the guide card bounces the button itself)
+		if on and not dot.Visible then
+			local scale = dot:FindFirstChildOfClass("UIScale") or new("UIScale", {}, dot)
+			scale.Scale = 0
+			TweenService:Create(scale, TweenInfo.new(0.2, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+		end
+		dot.Visible = on
+	end
+	for _, key in { "Coins", "BallStep", "BagLevel", "PetSlotsBought", "Rebirths" } do
+		player:GetAttributeChangedSignal(key):Connect(refreshDot)
+	end
+	task.delay(3, refreshDot) -- (the BALLS button is found a moment after start)
 
 	gui.Parent = playerGui
 end

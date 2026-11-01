@@ -10,6 +10,7 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
+local CoreLadder = require(Shared.Modules.CoreLadder)
 local Currency = require(Shared.Modules.Currency)
 local Mascots = require(Shared.Modules.Mascots)
 local PowerLevels = require(Shared.Modules.PowerLevels)
@@ -30,11 +31,58 @@ local K = HudKit.C
 local AffordController = {}
 
 -- Everything there is to afford right now: { Key, Name, Price, Icon (HudKit icon), Color, Ok (extra rule) }
+-- Addendum 5 F: the core loop has no crates or Power Levels; its things are the next ball, the next bag and the
+-- next pet slot (all bought at the shop), the roof eggs and the rebirth
+local CORE_THINGS = Config.CoreLoop.Enabled and Config.CoreLoop.NoLevels
+local function coreThings(list: { { [string]: any } })
+	local rebirths = player:GetAttribute("Rebirths") or 0
+	local done = rebirths .. "_"
+	local step, price = CoreLadder.NextBall(player:GetAttribute("BallStep"), rebirths)
+	if step and step > 2 then -- (ball 2 has the guide card)
+		table.insert(list, {
+			Key = "Ball" .. done .. step,
+			Name = Config.CoreLoop.Balls[step].Name:upper() .. " AT THE SHOP",
+			Price = price,
+			Icon = "Ball",
+			Color = K.Cyan,
+			Ok = true,
+		})
+	end
+	local level, bagPrice = CoreLadder.NextBag(player:GetAttribute("BagLevel"), rebirths)
+	if level then
+		table.insert(list, {
+			Key = "Bag" .. done .. level,
+			Name = ("BAG %d AT THE SHOP"):format(level),
+			Price = bagPrice,
+			Icon = "Coins",
+			Color = K.Lime,
+			Ok = true,
+		})
+	end
+	if Mascots.StatsOn() then
+		local bought = player:GetAttribute("PetSlotsBought") or 0
+		local slotPrice = Mascots.NextSlotPrice(bought)
+		if slotPrice then
+			table.insert(list, {
+				Key = "Slot" .. bought,
+				Name = "+1 PET SLOT AT THE SHOP",
+				Price = slotPrice,
+				Icon = "Paw",
+				Color = K.Pink,
+				Ok = true,
+			})
+		end
+	end
+end
+
 local function things(): { { [string]: any } }
 	local list = {}
+	if CORE_THINGS then
+		coreThings(list)
+	end
 	local zonesOpen = player:GetAttribute("ZonesOpen") or 1
 	local cratesBought = player:GetAttribute("CratesBought") or 0
-	for _, row in Config.Crates do
+	for _, row in if CORE_THINGS then {} else Config.Crates do
 		local crate = Balls.GetCrate(row.Id)
 		if crate and crate.Price and Zones.CrateUnlocked(crate, zonesOpen) then
 			-- the first crate on sale has Rizzo's own callout
@@ -67,7 +115,7 @@ local function things(): { { [string]: any } }
 			})
 		end
 	end
-	local nextLevel = PowerLevels.Next(player:GetAttribute("PowerLevel") or 1)
+	local nextLevel = not CORE_THINGS and PowerLevels.Next(player:GetAttribute("PowerLevel") or 1)
 	if nextLevel then
 		table.insert(list, {
 			Key = "Power" .. nextLevel.Level,
@@ -247,7 +295,7 @@ function AffordController:Start()
 			end)
 		end
 	end
-	for _, key in { "Coins", "ZonesOpen", "PowerLevel", "Rebirths", "RankLevel", "CratesBought" } do
+	for _, key in { "Coins", "ZonesOpen", "PowerLevel", "Rebirths", "RankLevel", "CratesBought", "BallStep", "BagLevel", "PetSlotsBought" } do
 		player:GetAttributeChangedSignal(key):Connect(soon)
 	end
 end

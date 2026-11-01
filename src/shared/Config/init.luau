@@ -126,6 +126,8 @@ Config.CoreLoop = {
 	-- (on each reward row; RewardMinutes when a row has none) of the income your ball + bag make now (ladder income,
 	-- sell trips of TripSeconds counted, no multipliers). A crate in a reward pays CrateMinutes of it instead, since
 	-- crates no longer give balls. Away coins measure your real throws.
+	-- Addendum 5 F: each throw's coins fly as a "+25" from the pin counter into the bag (CoreHudController)
+	Gains = { Enabled = true, Max = 6 }, -- Max = at most this many in the air at once
 	Gifts = {
 		TripSeconds = 6,
 		RewardMinutes = 2,
@@ -930,6 +932,7 @@ Config.Juice = {
 	CoinIconsMin = 3, -- coins that fly to the counter after a throw...
 	CoinIconsMax = 14,
 	CoinsPerIcon = 30, -- ...one icon per this many coins earned, between Min and Max
+	SellIconsPerTen = 2, -- (Addendum 5 F) a core-loop sell flies Min + this many icons per x10 coins (100 = 7, 1M = 15 -> Max)
 	CoinPitchStep = 0.05, -- each coin's "ding" is this much higher than the last
 
 	StreakSparkleRate = 4, -- sparkles per second on your alley's light strips, per streak tier from Turkey up
@@ -3847,6 +3850,27 @@ if Config.CoreLoop.Enabled and Config.CoreLoop.Eggs.Enabled then
 	table.insert(Config.AreaSigns.Signs, { Text = "PET EGGS", Paint = "Pink", Icon = "Paw", Path = { roof, "EggRow" }, Lift = 4 })
 	table.insert(Config.AreaSigns.Signs, { Text = "FUSION", Paint = "Purple", Icon = "Paw", Path = { roof, Config.CoreLoop.Eggs.Fusion.Name } })
 end
+-- Addendum 5 F: the roof's own crate kiosk and egg pad are moved away in the core loop (CoreLoop.HiddenStations), so
+-- their sign and crate-counter rows go too (they only printed "not found" warnings)
+if Config.CoreLoop.Enabled then
+	local hidden = {}
+	for _, name in Config.CoreLoop.HiddenStations do
+		hidden[name] = true
+	end
+	local function onRoof(path)
+		return path[1] == Config.CoreLoop.Folder and hidden[path[2]] == true
+	end
+	for i = #Config.AreaSigns.Signs, 1, -1 do
+		if onRoof(Config.AreaSigns.Signs[i].Path) then
+			table.remove(Config.AreaSigns.Signs, i)
+		end
+	end
+	for i = #Config.ZoneShops, 1, -1 do
+		if onRoof(Config.ZoneShops[i].Path) then
+			table.remove(Config.ZoneShops, i)
+		end
+	end
+end
 -- Batch B3 (2026-10-29, teach the first minutes): what the game points out the first times
 -- Ball Book: a gold bubble points at the POLISH button of the ball you throw, every time the book opens, until you buy
 -- a POLISH once (save PolishHinted). Tapping the bubble hides it until the next session.
@@ -5439,6 +5463,10 @@ Config.PetStats = {
 	-- (PetSlotsKept). Bought slots are saved (PetSlotsBought, v35).
 	SlotPrices = { 2500, 25000, 150000, 600000, 2500000 },
 	KeepPetSlots = true, -- rebirth keeps the bought slots (false = back to StartSlots on rebirth)
+	-- Addendum 5 F: EQUIP BEST ranks pets by the coins a minute they really earn you (Mascots.Income: throws until the
+	-- bag is full + one sell trip), so bag pets win exactly when the bag holds you back. false = the Best weights above.
+	BestByIncome = true,
+	SellTrip = 8, -- seconds a sell trip takes (SELL teleport, walk back to your spot)
 }
 
 -- Ranks: XP to go from rank r to r+1 = Base * Growth^(r-1) up to rank LateFrom, then it grows by LateGrowth per

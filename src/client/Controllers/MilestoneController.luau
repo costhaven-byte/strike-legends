@@ -50,9 +50,10 @@ local function rewardItems(reward, coins: number?): { { Kind: string, Value: any
 	if core and not coins then
 		-- (Addendum 4 core loop: rewards pay minutes of ladder income, a crate pays coins; same rule as the server)
 		local ballStep, bagLevel = player:GetAttribute("BallStep"), player:GetAttribute("BagLevel")
+		local rebirths = player:GetAttribute("Rebirths")
 		local gifts = Config.CoreLoop.Gifts
-		shownCoins = (if reward.Coins then CoreLadder.GiftCoins(reward.CoreMinutes or gifts.RewardMinutes, ballStep, bagLevel) else 0)
-			+ (if reward.Crate then CoreLadder.GiftCoins(gifts.CrateMinutes, ballStep, bagLevel) else 0)
+		shownCoins = (if reward.Coins then CoreLadder.GiftCoins(reward.CoreMinutes or gifts.RewardMinutes, ballStep, bagLevel, rebirths) else 0)
+			+ (if reward.Crate then CoreLadder.GiftCoins(gifts.CrateMinutes, ballStep, bagLevel, rebirths) else 0)
 	end
 	if shownCoins and shownCoins > 0 then
 		table.insert(items, { Kind = "Coins", Text = ("+%s COINS"):format(Currency.Format(shownCoins)) })

@@ -737,6 +737,28 @@ function HudController:Start()
 			end)
 		end
 	end)
+
+	-- Addendum 5 F: a sell at the station (core loop) sends coins flying from the sold pop (bottom middle, where
+	-- CoreHudController shows it) into the coin counter; more coins for bigger sells (log scale, Config.Juice)
+	if Config.CoreLoop.Enabled then
+		local sold = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CoreSold", 30) :: RemoteEvent?
+		if sold then
+			sold.OnClientEvent:Connect(function(amount)
+				if type(amount) ~= "number" or amount <= 0 then
+					return
+				end
+				local phone = HudKit.Phone()
+				local screen = UiFx.Layer().AbsoluteSize
+				local from = Vector2.new(screen.X / 2, screen.Y - (if phone then 130 else 200))
+				local icons = math.clamp(
+					math.floor(JUICE.CoinIconsMin + math.log10(math.max(amount, 1)) * JUICE.SellIconsPerTen),
+					JUICE.CoinIconsMin,
+					JUICE.CoinIconsMax
+				)
+				flyIcons(bar.Coins, icons, from, if phone then 28 else 40, if phone then 20 else 28)
+			end)
+		end
+	end
 end
 
 return HudController

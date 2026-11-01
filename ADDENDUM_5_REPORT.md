@@ -1,7 +1,95 @@
 # Addendum 5 overnight report (2026-11-01/02, owner asleep)
 
 One section per step (plan: ADDENDUM_5_PLAN.md). Each: what changed, restore tag, commit, 2-minute test, choices made for you.
-At the end: one combined morning playtest.
+The combined morning playtest, the choices made for you and the "not checked by eye" list are right below.
+
+## MORNING PLAYTEST (about 5 minutes, do this first)
+
+**Before you start (1 minute)**
+- Studio's 3D view was frozen most of the night (it drew nothing, so Claude could not take screenshots). All the new
+  scripts are already inside your open Studio. First do **File > Save to Roblox** so nothing is lost, then close and
+  reopen Studio (that fixes the frozen view).
+- If you ever want the place from before tonight: the git tags `restore-a5-A1-before` ... `restore-a5-F-before`, or
+  your last Roblox version (File > Save to Roblox As / version history).
+- TEST panel (purple tab, left): make sure **START FROM ZERO** is picked, then Stop and Play.
+
+**1. The lane (1 min)**
+- Play. Expected: you stand on a coloured numbered ring in the middle of ONE wide wooden lane, "MEGA LANE" sign above,
+  your name painted on the floor in front of you.
+- Hold THROW. Expected: your 40 pins fall, a sand puff on each hit, the counter says about "6" (no "/40"), a small
+  white "+6" (or so) flies from the counter down into the bag. About 1 throw in 4 a gold LUCKY! tag pops.
+- Keep holding until the bag is full. Expected: the bag bar turns red and shakes, "Your bag is full" card, SELL bounces.
+
+**2. Sell and shop (1 min)**
+- Tap SELL. Expected: you jump onto the green pad, the bag empties, a green "+60" pop, coins fly into the coin counter
+  and it counts up.
+- Tap BALLS. Expected: a price list (no buy buttons) with GO TO SHOP. Tap it. Expected: you land on the blue circle, the
+  shop opens, Rubber Bouncer has a green 50 button. Buy it (confetti). The guide card says "That's it".
+- TEST > COINS x3. Expected: a red dot on BALLS, and "YOU CAN NOW AFFORD ..." notes at the top (a ball, a bag, a pet
+  slot). Buy two bags and a ball in any order, and the PET SLOTS row at the bottom of the shop.
+
+**3. Pets (1.5 min)**
+- Open PETS (pink). Expected: no pets yet, a pink GO TO EGGS button. Tap it. Expected: you land at the Neon Egg on the
+  egg row east of the lanes; odds bubbles over the egg, "400 COINS".
+- Hold E. Expected: egg shakes, cracks, the pet card counts its stats up ("+20% COINS" etc.), the pet follows you.
+- Hatch a few more (TEST > COINS if needed). Open PETS > EQUIP BEST. Expected: the best ones go out and the HUD bag size
+  / throw speed change by the stated %.
+- When a pet shows a gold FUSE! badge: walk to the FUSION machine at the end of the egg row and fuse 3 into a Shiny
+  (double stats, turning gold frame).
+- Try the other three eggs (TEST > COINS): 6.5K, 80K, 1.5M; the last one is the orange Volcano Egg.
+
+**4. Rebirth (1 min)**
+- TEST > READY TO REBIRTH. Expected: the big gold REBIRTH button on the left glows with a red dot, "x1 › x2".
+- Tap it, then GO TO SHOP, then REBIRTH! twice. Expected: full-screen REBIRTH! moment, coins 0, ball 1, bag 1, your pets
+  still out, "★ REBIRTH 1" in bronze over your head, your ring and pin bands bronze.
+- Throw 5 times. Expected: about twice the pins; a sell pays double with a gold "x2 REBIRTH" tag; ball 2 now costs 150.
+
+**5. Ball effects (30 s, optional)**
+- TEST > COINS many times, buy up to ball 10 at the shop, throw with a few. Expected: bounce, confetti, fire, frost
+  gust, cloud arms, rainbow, lightning, tornado, black hole + white boom on ball 10.
+
+**Silent failures to watch for (tell Claude any you see)**
+- Nothing happens on SELL / GO TO SHOP / GO TO EGGS (no jump).
+- Other players' pins on your screen, or your character knocked around by pins.
+- Anything that still says LEVEL, XP, CRATE, ZONE or POWER LV on the roof.
+- The "+15" gains or the flying coins stuck in the middle of the screen, or not showing at all.
+- The BALLS red dot staying on after you bought everything you can pay for.
+- Effects floating away from the pins, under the floor, or the screen flash too strong.
+- Lag while holding THROW with ball 10 (Studio unfocused runs at 15 fps; click into the game window first).
+- On a phone-sized window: buttons overlapping the bag bar / SELL, or the shop rows cut off.
+- TEST > PACING prints a block in Output with your times (step E); no red errors in Output.
+
+## Choices made for you (all steps, all in Config; change any)
+- Rebirth keeps bought pet slots (`Config.PetStats.KeepPetSlots`); all 4 pet stats (Coins, Pins, Bag, Speed); 4 eggs
+  (Neon 400, Main Street 6.5K, Skyline 80K, Volcano 1.5M re-coloured from the Neon Egg, no new art).
+- LUCKY = the best 25% of luck rolls. Pins curve 6 -> 3.2K over the 10 balls. Throw pose follows your ball, not a level.
+- Balls and bags are two separate ladders (ball 10 at ~30 min). Everything is bought only at the shop booth; SELL, GO TO
+  SHOP and GO TO EGGS teleport you.
+- One shared MEGA LANE, 12 front spots (up to 60), only your own pins drawn, others' balls plain and capped at 8.
+- Pets: stat sizes grow with each egg; Shiny = x2 stats; merge at a copy of the PET FUSION machine on the roof.
+- Rebirth: coins only, at the shop, tap twice; 10M, 25M, 60M, 120M, 220M, 380M then x1.5 each (step E eased it from x3,
+  which made later rebirths take many hours); x(1 + rebirths) on pins and on every sell; shop prices x(multiplier)^1.6;
+  tier colours Bronze/Silver/Gold/Emerald/Diamond/Ruby/Cosmic on your head tag, ring and pin bands; MOST REBIRTHS board
+  took the old BEST STREAK slot.
+- Ball effects: one per ball from existing particles and sounds, stronger with the real pin count (log scale 6 -> 1M).
+- Pacing record per run in the save (v36), printed on leave and by TEST > PACING (see PACING_REPORT.md).
+- (F) EQUIP BEST picks the pets that earn the most coins a minute for you right now (bag pets win when the bag is what
+  holds you back). Gift coins grow after a rebirth as fast as shop prices. Gift eggs still pay coins (not a free hatch).
+- (F) I did NOT add gradients to every button: the owner-approved sunny look is flat colour + hard lip, so I kept it and
+  added motion juice instead (flying gains, coins into the counter, shaking full bag, red dots).
+- Left for you (code or your call, details in PACING_REPORT.md): eggs get cheap after rebirth 2 (no 5th egg); from
+  rebirth 1 the bag is the real income cap; the Studio TEST panel still has old +1 LEVEL / PASS TRIAL buttons.
+
+## Not checked by eye (Studio drew no 3D or no frames for most of the night)
+- The MEGA LANE itself: colours, sign, arrows, which way the floor names/numbers read, rings, YOUR SPOT tag (A3).
+- All 10 ball effects: sizes, colours, directions, the screen flash and shake strength (D).
+- The rebirth tier colours on the head tag, ring and pin bands (C, checked by colour numbers only).
+- The new HUD juice from F: the "+coins" flight into the bag, coins flying into the counter on SELL, the shaking bag,
+  the BALLS red dot position (all checked by numbers only; the flights never ran because Studio drew no frames).
+- Guide card colours, button bounces and the shop window open animation (A2).
+- Phone layout of the new bits (the pet boosts strip, the rebirth button and the shop were checked by numbers in B1/C).
+- What WAS seen on screen (B2, when Studio drew): the egg row, odds boards, PETS window, hatch scene; and (C) the rebirth
+  button, window and moment.
 
 ## Step 0: audit (2026-11-01)
 - No game changes. Wrote `AUDIT_ADDENDUM_5.md`: the ball and bag ladders, how buying, selling, pins, pets, levels and rebirth work today, the save fields (v34), and a plan for the one shared lane.
@@ -341,3 +429,38 @@ test (a run with no sells no longer counts as "got back to its income"). The Lua
 the repo file); all changed scripts pushed into Studio. Save the place or reconnect Rojo to keep them.
 
 **Placeholders:** none.
+
+## Step 9 (F): integration check + simulator polish (2026-11-01)
+**Integration check** (one full loop from zero in Studio Play, by numbers: `screenshots/addendum5/F/PLAYTEST_LOG.md`):
+throw on the shared lane, bag fills, SELL teleports and sells, buys refused away from the shop, ball + bag + pet slot
+bought at the shop, GO TO EGGS, hatch, EQUIP BEST, Shiny merge at the roof machine (refused at the eggs), rebirth at
+the shop, pets and slots kept, x2 pins after. No errors. Fixed where the steps clashed:
+- **EQUIP BEST** put out 4 bag-only pets and left the pins/coins pets in the box (step E's stopgap weight). It now picks,
+  slot by slot, the pet that raises your real coins a minute most (`Mascots.Income`: throws until the bag is full + one
+  sell trip, `Config.PetStats.BestByIncome`, `SellTrip = 8` s). The PETS "EQUIP BEST" hand uses the same rule.
+- **Gift coins** (daily calendar, playtime gifts, milestones, the 10-minute coin pack) now grow with each rebirth by the
+  same factor as the shop prices (`CoreLadder.GiftCoins(..., rebirths)`), so they stay worth having.
+- **"YOU CAN NOW AFFORD" notes** on the roof: next ball / next bag / next pet slot "AT THE SHOP", the eggs and the
+  rebirth (they talked about crates and Power Levels before).
+- **PROFILE > BOOSTS** shows only what pays on the roof (pets, coin potion, rebirths with the real sell bonus, friends,
+  passes, coin boost); the old zone/power/rank card button is hidden there.
+- The two old "not found" warnings at start are gone (roof crate kiosk/egg pad sign rows dropped in the core loop).
+
+**Polish** (sunny look kept: SunKit/HudKit fonts and colours):
+- Each throw's coins fly as a "+25" from the pin counter into the bag; the bag and its icon pop when it lands (gold on
+  LUCKY throws). `Config.CoreLoop.Gains`.
+- SELL: coin icons fly from the sold pop into the coin counter (more for bigger sells, `Config.Juice.SellIconsPerTen`);
+  the counter already counts up.
+- A full bag shakes (with the red fill, the BAG FULL card and the bouncing SELL that were there).
+- Red dot on BALLS while you can pay for something at the shop (like PETS and REBIRTH).
+- Already there from the steps and kept: shop window with rarity stripes and press bounce, rebirth button/window/moment,
+  pet cards with rarity frames + Shiny/Mythic turning frames, LUCKY! pop, egg odds boards and hatch scene.
+
+**Screenshots:** tried again (Play and Edit, with and without a camera position): `screen_capture` timed out; Studio's
+view is 1x1 and draws no frames. Not restarted (it may hold unsaved work). So nothing new was looked at by eye.
+
+**Restore tag:** `restore-a5-F-before`. **Commit:** see git log ("Addendum 5 F"). **Save:** no new fields.
+
+**Studio-only edits:** none (the 18 changed scripts were pushed into the open Studio; save the place or reconnect Rojo).
+
+**Placeholders:** none new.

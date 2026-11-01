@@ -51,6 +51,7 @@ local function resolve(day: number)
 		AwayRate = player:GetAttribute("AwayRate"),
 		BallStep = player:GetAttribute("BallStep"),
 		BagLevel = player:GetAttribute("BagLevel"),
+		Rebirths = player:GetAttribute("Rebirths"),
 	})
 end
 

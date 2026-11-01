@@ -535,7 +535,7 @@ local function onEquipBest(player: Player)
 	if not PlayerDataService.IsLoaded(player) or not RateLimit.Allow(player, "EquipMascot") then
 		return
 	end
-	local best = Mascots.Best(getOwned(player), slots(player))
+	local best = Mascots.Best(getOwned(player), slots(player), Mascots.BestContext(player)) -- (A5 F: by real income)
 	local equipped = getEquipped(player)
 	table.clear(equipped)
 	for _, id in best do

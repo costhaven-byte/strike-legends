@@ -456,7 +456,73 @@ function Mascots.TotalBonus(list: { string }): number
 end
 
 -- The best mascots to equip from what's owned (biggest bonus first, by Id on a tie), up to slots
-function Mascots.Best(owned: { [string]: number }, slots: number): { string }
+-- Addendum 5 F: what EQUIP BEST needs to know about a player to rank pets by real income (Mascots.Income), read from
+-- the attributes the server publishes (works on the server and the client). nil = not in the core loop.
+function Mascots.BestContext(player: Player): { [string]: number }?
+	local core = Config.CoreLoop
+	if not Mascots.StatsOn() or not STATS.BestByIncome then
+		return nil
+	end
+	local bagLevel = math.clamp(math.floor(tonumber(player:GetAttribute("BagLevel")) or 1), 1, #core.BagSizes)
+	local step = math.clamp(math.floor(tonumber(player:GetAttribute("BallStep")) or 1), 1, #core.Balls)
+	local rebirths = math.max(0, math.floor(tonumber(player:GetAttribute("Rebirths")) or 0))
+	local rebirth = if core.Rebirth and core.Rebirth.Enabled then 1 + core.Rebirth.Bonus * rebirths else 1
+	-- coins a pin from everything but the pets (passes, potions, friends...: Config.CoreLoop.Multipliers)
+	local perPin = core.PinValue
+	local parts = tostring(player:GetAttribute("CoinMultipliers") or "")
+	for _, name in core.Multipliers do
+		if name ~= "Mascots" then
+			perPin *= tonumber(string.match(parts, name .. "=([%d%.e%+%-]+)")) or 1
+		end
+	end
+	local level = math.max(0, tonumber(player:GetAttribute("ThrowSpeedLevel")) or 0)
+	return {
+		Bag = core.BagSizes[bagLevel],
+		Coins = core.Balls[step].Pins * rebirth * perPin, -- coins a throw before pets
+		Cooldown = core.Cooldown - level * core.CooldownStep,
+		Floor = core.CooldownFloor,
+		Trip = STATS.SellTrip,
+	}
+end
+
+-- Coins a second a set of pet stats earns for this player (Mascots.BestContext): throw until the bag is full, then
+-- the sell trip (SELL teleport + walk back) earns nothing. The rebirth sell bonus multiplies every set the same.
+function Mascots.Income(stats: { [string]: number }, ctx: { [string]: number }): number
+	local bag = ctx.Bag * (1 + (stats.Bag or 0))
+	local cooldown = math.max(ctx.Floor, ctx.Cooldown / (1 + (stats.Speed or 0)))
+	local rate = ctx.Coins * (1 + (stats.Coins or 0)) * (1 + (stats.Pins or 0)) / cooldown
+	if rate <= 0 then
+		return 0
+	end
+	return bag / (bag / rate + ctx.Trip)
+end
+
+-- The pets EQUIP BEST puts out. With a context (Mascots.BestContext): one slot at a time, the pet that raises real
+-- income most (so bag pets come out exactly when the bag is what holds you back). Without: by Mascots.Score.
+function Mascots.Best(owned: { [string]: number }, slots: number, ctx: { [string]: number }?): { string }
+	if ctx then
+		local left = table.clone(owned)
+		local list = {}
+		for _ = 1, slots do
+			local pick, best = nil, -1
+			for id, count in left do
+				if count > 0 and byId[id] then
+					table.insert(list, id)
+					local income = Mascots.Income(Mascots.TotalStats(list), ctx)
+					table.remove(list)
+					if income > best + 1e-9 or (math.abs(income - best) <= 1e-9 and pick and id < pick) then
+						pick, best = id, income
+					end
+				end
+			end
+			if not pick then
+				break
+			end
+			table.insert(list, pick)
+			left[pick] -= 1
+		end
+		return list
+	end
 	local pool = {}
 	for id, count in owned do
 		local mascot = byId[id]

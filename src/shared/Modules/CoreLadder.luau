@@ -120,9 +120,10 @@ function CoreLadder.IncomePerMinute(ballStep: any, bagLevel: any): number
 	return 60 * size / (size / rate + CORE.Gifts.TripSeconds)
 end
 
--- A gift worth `minutes` of that income, rounded to 2 figures (at least 10)
-function CoreLadder.GiftCoins(minutes: number, ballStep: any, bagLevel: any): number
-	local coins = math.max(minutes * CoreLadder.IncomePerMinute(ballStep, bagLevel), 10)
+-- A gift worth `minutes` of that income, rounded to 2 figures (at least 10). Addendum 5 F: x the rebirth price
+-- growth (CoreLadder.Price), so a gift stays the same share of what the shop asks after a rebirth.
+function CoreLadder.GiftCoins(minutes: number, ballStep: any, bagLevel: any, rebirths: any): number
+	local coins = math.max(CoreLadder.Price(minutes * CoreLadder.IncomePerMinute(ballStep, bagLevel), rebirths), 10)
 	local unit = 10 ^ math.max(math.floor(math.log10(coins)) - 1, 0)
 	return math.floor(coins / unit + 0.5) * unit
 end

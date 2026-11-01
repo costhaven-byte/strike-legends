@@ -59,6 +59,23 @@ local XP_SOURCES = {
 	{ Key = "Streak", Name = "STREAK", Icon = "Flame" },
 }
 
+-- Addendum 5 F: on the roof only the core loop's coin multipliers pay (Config.CoreLoop.Multipliers) + the rebirth
+-- bonus the sell pays (RebirthMultiplier); zone, power, ball, rank and streak rows would show numbers that pay nothing
+local CORE_COINS = Config.CoreLoop.Enabled and Config.CoreLoop.NoLevels
+local COIN_SOURCES = MultiplierController.Sources
+if CORE_COINS then
+	local wanted = { Rebirth = true }
+	for _, key in Config.CoreLoop.Multipliers do
+		wanted[key] = true
+	end
+	COIN_SOURCES = {}
+	for _, source in MultiplierController.Sources do
+		if wanted[source.Key] then
+			table.insert(COIN_SOURCES, source)
+		end
+	end
+end
+
 local ROMAN = { "I", "II", "III", "IV", "V", "VI", "VII", "VIII" }
 
 local W, H = 860, 548
@@ -216,6 +233,13 @@ function ProfileController:Start()
 	note.TextYAlignment = Enum.TextYAlignment.Top
 	local cardButton = RewardKit.Button(boosts, "COIN BOOSTS", "Gold", 260, 52, 22)
 	cardButton.Holder.Position = UDim2.fromOffset(412 + 70, BODY_H - 58)
+	if CORE_COINS then
+		-- (A5 F: the COIN MULTIPLIER card lists the old zone/power/rank rows; the note moves up into the XP box's spot)
+		cardButton.Holder.Visible = false
+		note.Position = UDim2.fromOffset(420, 54)
+		note.Text = "Every boost multiplies the others. Grey ones are still x1: pets, potions, rebirths and the STORE raise them. Your pets' PINS, BAG and SPEED boosts are in the PETS window."
+		note.Size = UDim2.fromOffset(384, 110)
+	end
 	cardButton.Activated:Connect(function()
 		if MultiplierController.SetOpen then
 			win:Close()
@@ -247,7 +271,7 @@ function ProfileController:Start()
 		return { Icon = icon, Name = name, Value = value }
 	end
 	local coinRowsByKey = {}
-	for i, source in MultiplierController.Sources do
+	for i, source in COIN_SOURCES do
 		coinRowsByKey[source.Key] = row(coinRows, source, i)
 	end
 	local xpRowsByKey = {}
@@ -270,9 +294,13 @@ function ProfileController:Start()
 		total.Text = Currency.FormatMultiplier(product)
 	end
 	local function refreshBoosts()
+		local coins = MultiplierController.Decode(player:GetAttribute("CoinMultipliers"))
+		if CORE_COINS then
+			coins.Rebirth = tonumber(player:GetAttribute("RebirthMultiplier")) or 1 -- (paid on the sell, step C)
+		end
 		fillRows(
-			MultiplierController.Decode(player:GetAttribute("CoinMultipliers")),
-			MultiplierController.Sources,
+			coins,
+			COIN_SOURCES,
 			coinRowsByKey,
 			coinTotal
 		)
@@ -600,7 +628,7 @@ function ProfileController:Start()
 			refreshAchievements()
 		end
 	end
-	for _, attribute in { "CoinMultipliers", "XpMultipliers", "ProfileStats", "AchievementTiers" } do
+	for _, attribute in { "CoinMultipliers", "XpMultipliers", "ProfileStats", "AchievementTiers", "RebirthMultiplier" } do
 		player:GetAttributeChangedSignal(attribute):Connect(onChange)
 	end
 	player:GetAttributeChangedSignal("AchievementsReady"):Connect(function()

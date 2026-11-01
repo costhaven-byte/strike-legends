@@ -34,14 +34,15 @@ local function give(player: Player, reward, source: string)
 	-- away coins (source "Away") come already measured from real throws
 	local core = Config.CoreLoop.Enabled
 	local ballStep, bagLevel = PlayerDataService.Get(player, "BallStep"), PlayerDataService.Get(player, "BagLevel")
+	local rebirths = PlayerDataService.Get(player, "Rebirths")
 	local crateCoins = if core and reward.Crate
-		then CoreLadder.GiftCoins(Config.CoreLoop.Gifts.CrateMinutes, ballStep, bagLevel)
+		then CoreLadder.GiftCoins(Config.CoreLoop.Gifts.CrateMinutes, ballStep, bagLevel, rebirths)
 		else 0
 	if reward.Coins or crateCoins > 0 then
 		local coins = if not core or source == "Away"
 			then PowerLevels.DailyCoins(reward, PlayerDataService.Get(player, "PowerLevel"))
 			elseif reward.Coins
-			then CoreLadder.GiftCoins(reward.CoreMinutes or Config.CoreLoop.Gifts.RewardMinutes, ballStep, bagLevel)
+			then CoreLadder.GiftCoins(reward.CoreMinutes or Config.CoreLoop.Gifts.RewardMinutes, ballStep, bagLevel, rebirths)
 			else 0
 		coins += crateCoins
 		PlayerDataService.Add(player, "Coins", coins)

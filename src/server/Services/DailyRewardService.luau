@@ -64,6 +64,7 @@ local function claim(player: Player)
 		AwayRate = PlayerDataService.Get(player, "AwayRate"),
 		BallStep = PlayerDataService.Get(player, "BallStep"),
 		BagLevel = PlayerDataService.Get(player, "BagLevel"),
+		Rebirths = PlayerDataService.Get(player, "Rebirths"),
 	})
 
 	PlayerDataService.Set(player, "DailyDay", day)
