@@ -311,7 +311,7 @@ Shiny = every stat x2.
   15-40% of the first run's time and passes it; a never-rebirther stays at 1.3-3.2M a minute while a rebirther is at
   6.6M after an hour and 23M after three.
 
-**Restore tag:** `restore-a5-E-before`. **Commit:** see below. **Save:** v36 adds `Pacing` (starts empty).
+**Restore tag:** `restore-a5-E-before`. **Commit:** 588d568. **Save:** v36 adds `Pacing` (starts empty).
 
 **2-minute test**
 1. Play (TEST: START FROM ZERO). Throw, sell, buy ball 2 at the shop. Expected in Output: `[Pacing] <you>: Ball2 at 0:xx into run 0`.
