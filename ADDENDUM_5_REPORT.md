@@ -85,7 +85,7 @@ At the end: one combined morning playtest.
 - Lane skins still work: each player's skin paints their own strip of the lane and approach.
 - The old lanes, their approach lines and the 6-lane floor decor are moved to ServerStorage while the game runs (nothing deleted; the Studio place still has them). `Config.CoreLoop.SharedLane.Enabled = false` brings the 6 lanes back.
 
-**Restore tag:** `restore-a5-A3-before`. **Commit:** see the commit "Addendum 5 A3".
+**Restore tag:** `restore-a5-A3-before`. **Commit:** 5bae379.
 
 **Footprint:** x -86.2 .. 13.2 (between the old outer gutter walls), foul line z -3451, pin decks z -3562 .. -3581, floor top y 848.655 (where the pins stood before). Throw rings at z -3444. Nothing in the plaza moved (sell pad, shop, spawn, cases, lounges). Drawing: `screenshots/addendum5/A3/footprint.svg`.
 
