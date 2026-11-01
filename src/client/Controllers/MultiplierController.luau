@@ -9,6 +9,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local SunKit = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("SunKit"))
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -22,10 +23,11 @@ local K = HudKit.C
 
 local player = Players.LocalPlayer
 
-local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
-local CARD = Color3.fromRGB(30, 20, 60)
-local INK = Color3.fromHex("06060F")
-local LIME = Color3.fromRGB(125, 255, 60)
+local FONT = SunKit.Swap(Font.new("rbxasset://fonts/families/LuckiestGuy.json"))
+local SUNNY = HudKit.Sunny -- sunny look: a sky-blue AUTO button with white text (green while on)
+local CARD = if SUNNY then K.Cyan else Color3.fromRGB(30, 20, 60)
+local INK = if SUNNY then K.Ink else Color3.fromHex("06060F")
+local LIME = if SUNNY then K.White else Color3.fromRGB(125, 255, 60)
 local GOLD_TAG = Color3.fromRGB(255, 201, 58) -- the AUTO button's FREE! tag after the first rebirth
 local AUTO_TAG_SECONDS = 60
 
@@ -611,7 +613,7 @@ function MultiplierController:Start()
 			auto.BackgroundColor3 = CARD
 			auto.Parent = hud
 			corner(auto, 10)
-			stroke(auto, LIME, 2, true)
+			stroke(auto, if SUNNY then INK else LIME, if SUNNY then 3 else 2, true)
 			local label = text(auto, "Label", FONT, LIME)
 			label.Position = UDim2.fromScale(0.08, 0.15)
 			label.Size = UDim2.fromScale(0.84, 0.7)
@@ -632,7 +634,7 @@ function MultiplierController:Start()
 				auto.Visible = allowed()
 				local on = player:GetAttribute("AutoBowl") == true
 				label.Text = if on then "AUTO ON" else "AUTO"
-				auto.BackgroundColor3 = if on then Color3.fromRGB(40, 90, 30) else CARD
+				auto.BackgroundColor3 = if on then (if SUNNY then K.Lime else Color3.fromRGB(40, 90, 30)) else CARD
 			end
 			-- Opened by a rebirth this session: the button pops in with a gold FREE! tag for a while
 			local wasAllowed = allowed()

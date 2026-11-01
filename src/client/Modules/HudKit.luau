@@ -66,6 +66,36 @@ HudKit.Head = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
 HudKit.Num = Font.new("rbxasset://fonts/families/FredokaOne.json")
 HudKit.Body = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
 
+-- Addendum 4 Stage 3d (Config.Ui.Sunny): the sunny palette and two fonts replace the night kit. Same names, so every
+-- screen built with the kit follows. Buttons: sky / coral / green / yellow; dark panels turn a neutral slate (windows
+-- keep white text readable until their own restyle); no white shine band.
+local SUNNY = Config.Ui.Sunny == true
+HudKit.Sunny = SUNNY
+if SUNNY then
+	local SunKit = require(script.Parent:WaitForChild("SunKit"))
+	local S = SunKit.C
+	C.Panel = hex("2E3442")
+	C.Card = hex("3A4152")
+	C.CardLip = hex("242936")
+	C.Ink = S.Ink
+	C.Divider = hex("4A5266")
+	C.Gold, C.GoldLip = S.Sun, S.SunLip
+	C.Cyan, C.CyanLip = S.Sky, S.SkyLip
+	C.Pink, C.PinkLip = S.Coral, S.CoralLip
+	C.Lime, C.LimeLip = S.Green, S.GreenLip
+	C.Red, C.RedLip = S.Red, S.RedLip
+	C.Grey, C.GreyLip = S.Grey, S.GreyLip
+	C.Purple, C.PurpleLip = S.Purple, S.PurpleLip
+	C.Cream, C.CreamLip = S.Cream, S.CreamLip
+	for name, pair in HudKit.Paints do
+		pair[1], pair[2] = C[name], C[if name == "Card" then "CardLip" else name .. "Lip"]
+	end
+	HudKit.Paints.Cream = { C.Cream, C.CreamLip }
+	HudKit.Head = SunKit.Display
+	HudKit.Num = SunKit.Display
+	HudKit.Body = SunKit.Body
+end
+
 -- "Coin" -> the HudCoin image (AssetSlots.Images)
 function HudKit.Icon(name: string): string
 	return AssetSlots.Image("Hud" .. name)
@@ -668,6 +698,11 @@ function HudKit.Block(parent: Instance?, opts: { [string]: any }): Block
 	local glowCorner = HudKit.Corner(glow, radius)
 	local glowRing = HudKit.Outline(glow, C.Lime, 9)
 	glowRing.Transparency = 0.45
+	if SUNNY then
+		-- no soft glow (Addendum 4 UI rules): a solid second outline instead
+		glowRing.Thickness = 4
+		glowRing.Transparency = 0
+	end
 
 	local block = {
 		Holder = holder,
@@ -683,6 +718,10 @@ function HudKit.Block(parent: Instance?, opts: { [string]: any }): Block
 	} :: any
 
 	local shinePx, shineAlpha = opts.Shine or 3, opts.ShineAlpha or 0.55
+	if SUNNY then
+		shinePx = 0 -- flat fills (Addendum 4 UI rules)
+		shine.Visible = false
+	end
 	local function layoutFace()
 		local drop = if block.Pressed then block.LipHeight - 2 else 0
 		faceFrame.Position = UDim2.fromOffset(0, drop)

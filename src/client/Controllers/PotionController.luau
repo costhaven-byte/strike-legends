@@ -14,13 +14,14 @@ local HudKit = require(Modules:WaitForChild("HudKit"))
 local UiKit = require(Modules:WaitForChild("UiKit"))
 local RewardKit = require(Modules:WaitForChild("RewardKit"))
 local TweenService = game:GetService("TweenService")
+local SunKit = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("SunKit"))
 local K = HudKit.C
 
 local player = Players.LocalPlayer
 
 local POTIONS = Config.Potions
 
-local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
+local FONT = SunKit.Swap(Font.new("rbxasset://fonts/families/LuckiestGuy.json"))
 local INK = Color3.fromHex("06060F")
 local GREY = Color3.fromRGB(120, 110, 150)
 

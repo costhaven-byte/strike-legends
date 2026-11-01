@@ -9,6 +9,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local SunKit = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("SunKit"))
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -25,7 +26,7 @@ local HudKit = require(Modules.HudKit)
 local RewardKit = require(Modules.RewardKit)
 local ThrowController = require(script.Parent.ThrowController)
 
-local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
+local FONT = SunKit.Swap(Font.new("rbxasset://fonts/families/LuckiestGuy.json"))
 local INK = Color3.fromHex("06060F")
 
 local player = Players.LocalPlayer

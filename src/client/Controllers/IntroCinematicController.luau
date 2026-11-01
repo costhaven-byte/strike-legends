@@ -10,6 +10,7 @@ local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
+local SunKit = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("SunKit"))
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared").Config)
 local LaneVisuals = require(script.Parent.LaneVisuals)
@@ -37,7 +38,7 @@ local function buildCaption()
 	label.Position = UDim2.fromScale(0.5, 0.3)
 	label.Size = UDim2.fromScale(0.9, 0.16)
 	label.BackgroundTransparency = 1
-	label.FontFace = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
+	label.FontFace = SunKit.Swap(Font.new("rbxasset://fonts/families/LuckiestGuy.json"))
 	label.TextColor3 = Color3.new(1, 1, 1)
 	label.TextScaled = true
 	label.TextWrapped = true

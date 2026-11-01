@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+local SunKit = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("SunKit"))
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -29,7 +30,7 @@ local R = SPIN.Radius
 local COUNT = #SPIN.Slices
 local STEP = 2 * math.pi / COUNT
 
-local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
+local FONT = SunKit.Swap(Font.new("rbxasset://fonts/families/LuckiestGuy.json"))
 local INK = Color3.fromHex("06060F")
 local NAVY = Color3.fromRGB(14, 10, 34)
 local PINK = Color3.fromRGB(255, 60, 210)

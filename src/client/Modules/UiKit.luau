@@ -6,6 +6,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local SunKit = require(script.Parent:WaitForChild("SunKit"))
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -49,6 +50,29 @@ UiKit.C = {
 }
 local C = UiKit.C
 
+-- Addendum 4 Stage 3d (Config.Ui.Sunny): the night navy turns a neutral slate and the neon buttons take the sunny
+-- colours (Modules/SunKit), same names, so every screen built with the kit follows
+if Config.Ui.Sunny == true then
+	local S = SunKit.C
+	C.Ink = S.Ink
+	C.Cover = hex("2E3442")
+	C.Page = hex("242936")
+	C.Card = hex("3A4152")
+	C.Missing = hex("2A2F3C")
+	C.Chip = hex("4A5266")
+	C.Slot = hex("232733")
+	C.Dash = hex("5A6278")
+	C.Label = hex("DCE1EA")
+	C.Muted = hex("A9B0BE")
+	C.Faded = hex("7A8193")
+	C.Gold, C.GoldLip = S.Sun, S.SunLip
+	C.Cyan, C.CyanLip = S.Sky, S.SkyLip
+	C.Pink, C.PinkLip = S.Coral, S.CoralLip
+	C.Lime, C.LimeLip = S.Green, S.GreenLip
+	C.Red = S.Red
+	C.Grey, C.GreyLip = S.Grey, S.GreyLip
+end
+
 -- Rarity tab colours (fill, lip), by Config.Rarities name
 UiKit.Rarity = {
 	Common = { hex("B8C0D4"), hex("7A839C") },
@@ -59,9 +83,9 @@ UiKit.Rarity = {
 	Mythic = { hex("FF3D7F"), hex("B81D52") },
 }
 
-UiKit.Head = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
+UiKit.Head = SunKit.Swap(Font.new("rbxasset://fonts/families/LuckiestGuy.json"))
 UiKit.Num = Font.new("rbxasset://fonts/families/FredokaOne.json")
-UiKit.Body = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
+UiKit.Body = SunKit.Swap(Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy))
 
 -- Phones held sideways (short screens) get the phone layout
 function UiKit.Phone(gui: ScreenGui): boolean

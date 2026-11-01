@@ -7,6 +7,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+local SunKit = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("SunKit"))
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -19,7 +20,7 @@ local player = Players.LocalPlayer
 
 local ELEVATORS = Config.Elevators
 
-local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
+local FONT = SunKit.Swap(Font.new("rbxasset://fonts/families/LuckiestGuy.json"))
 local INK = Color3.fromHex("06060F")
 local DARK = Color3.fromRGB(46, 42, 74) -- the roof design's helipad_dark
 local STEEL = Color3.fromRGB(150, 156, 172)

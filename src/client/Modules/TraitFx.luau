@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+local SunKit = require(script.Parent:WaitForChild("SunKit"))
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -19,7 +20,7 @@ local UiFx = require(script.Parent.UiFx)
 local FX = Config.TraitFx
 local LANE = Config.Lane
 local IMAGES = Config.BallVfx.Images
-local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
+local FONT = SunKit.Swap(Font.new("rbxasset://fonts/families/LuckiestGuy.json"))
 local WHITE = Color3.new(1, 1, 1)
 
 local player = Players.LocalPlayer

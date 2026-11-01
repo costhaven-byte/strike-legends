@@ -1,7 +1,7 @@
 -- Addendum 4 Stage 2: the ball and bag shop (Config.CoreLoop Balls / BagSizes / BagPrices, Shared.Modules.CoreLadder).
 -- Balls and bags are bought in a fixed order, alternating ball, bag, ball, bag. Opens from the BALLS button or by
 -- standing on the blue circle at the plaza's shop booth. Same look as CoreHudController (the owner's simulator refs):
--- flat fills, thick dark outlines, one hard shadow, rounded Fredoka text with a thin outline.
+-- sunny look (Modules/SunKit): light window, dark text, colour buttons, thick outlines, one hard shadow.
 -- The server (CoreLoopService, CoreBuy remote) checks the order and the coins; this only shows them.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -24,65 +24,28 @@ local player = Players.LocalPlayer
 
 local CoreShopController = {}
 
-local FONT = Font.new("rbxasset://fonts/families/FredokaOne.json", Enum.FontWeight.Bold)
-local INK = Color3.fromRGB(24, 28, 36)
-local PANEL = Color3.fromRGB(46, 51, 60)
-local CARD = Color3.fromRGB(62, 68, 80)
-local GREEN = Color3.fromRGB(76, 209, 55)
-local GREY = Color3.fromRGB(110, 116, 128)
-local GOLD = Color3.fromRGB(255, 205, 60)
-local CORAL = Color3.fromRGB(255, 99, 72)
-local SOFT = Color3.fromRGB(196, 204, 214)
-local WHITE = Color3.new(1, 1, 1)
+-- The sunny look (Modules/SunKit, Addendum 4 Stage 3d): light window and cards with dark text, colour buttons
+local SunKit = require(Modules.SunKit)
+local K = SunKit.C
+local INK = K.Ink
+local PANEL = K.Cream
+local CARD = K.Sand
+local GREEN = K.Green
+local GREY = K.Grey
+local GOLD = K.Sun
+local CORAL = K.Red
+local SOFT = K.Muted
+local WHITE = K.White
 
 local W, H = 720, 430 -- window size at 1080p (UIScale shrinks it on small screens)
 
-local function new(class: string, props: { [string]: any }, parent: Instance?): any
-	local object = Instance.new(class)
-	for key, value in props do
-		(object :: any)[key] = value
-	end
-	object.Parent = parent
-	return object
-end
+local new = SunKit.New
+local text = SunKit.Text
 
-local function text(parent: Instance, value: string, props: { [string]: any }?): TextLabel
-	local label = new("TextLabel", {
-		BackgroundTransparency = 1,
-		FontFace = FONT,
-		Text = value,
-		TextColor3 = WHITE,
-		TextScaled = true,
-		Size = UDim2.fromScale(1, 1),
-	}, parent)
-	new("UIStroke", { Color = INK, Thickness = 2, LineJoinMode = Enum.LineJoinMode.Round }, label)
-	for key, v in props or {} do
-		(label :: any)[key] = v
-	end
-	return label
-end
-
--- A flat plate with a thick dark outline and one hard shadow straight below. Returns (holder, face).
+-- A plate whose hard shadow is its own darker colour (the light panels' is a darker sand)
 local function plate(parent: Instance, name: string, color: Color3, radius: number, shadow: number?): (Frame, Frame)
-	local holder = new("Frame", { Name = name, BackgroundTransparency = 1 }, parent)
-	local under = new("Frame", {
-		Name = "Shadow",
-		BackgroundColor3 = INK,
-		BackgroundTransparency = 0.25,
-		Position = UDim2.fromOffset(0, shadow or 4),
-		Size = UDim2.fromScale(1, 1),
-		BorderSizePixel = 0,
-	}, holder)
-	new("UICorner", { CornerRadius = UDim.new(0, radius) }, under)
-	local face = new("Frame", {
-		Name = "Face",
-		BackgroundColor3 = color,
-		Size = UDim2.fromScale(1, 1),
-		BorderSizePixel = 0,
-	}, holder)
-	new("UICorner", { CornerRadius = UDim.new(0, radius) }, face)
-	new("UIStroke", { Color = INK, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, face)
-	return holder, face
+	local lip = if color == PANEL or color == CARD then K.CreamLip else SunKit.Lip(color)
+	return SunKit.Plate(parent, name, color, radius, shadow, lip)
 end
 
 -- A ball drawn as a flat circle in its colour with a small shine
@@ -187,6 +150,7 @@ function CoreShopController:Start()
 		holder.Position = UDim2.new(x, if x == 0 then 24 else 12, 0, 108)
 		local header = text(cardFace, "", {
 			Name = "Header",
+			Body = true,
 			Size = UDim2.new(1, -24, 0, 30),
 			Position = UDim2.fromOffset(12, 10),
 			TextColor3 = SOFT,
@@ -194,6 +158,7 @@ function CoreShopController:Start()
 		})
 		local title = text(cardFace, "", {
 			Name = "Name",
+			TextColor3 = INK,
 			Size = UDim2.new(1, -24, 0, 40),
 			Position = UDim2.fromOffset(12, 40),
 			TextXAlignment = Enum.TextXAlignment.Left,
@@ -206,6 +171,7 @@ function CoreShopController:Start()
 		}, cardFace)
 		local line = text(cardFace, "", {
 			Name = "Line",
+			Body = true,
 			Size = UDim2.new(1, -24, 0, 26),
 			Position = UDim2.fromOffset(12, 176),
 			TextColor3 = SOFT,
@@ -223,8 +189,8 @@ function CoreShopController:Start()
 			Position = UDim2.new(0, 12, 0.5, -17),
 		}, buttonFace)
 		local buttonText = text(buttonFace, "", {
-			Size = UDim2.new(1, -64, 0.62, 0),
-			Position = UDim2.new(0, 52, 0.19, 0),
+			Size = UDim2.new(1, -64, 0.5, 0),
+			Position = UDim2.new(0, 52, 0.25, 0),
 			TextXAlignment = Enum.TextXAlignment.Left,
 		})
 		local button = new("TextButton", { Text = "", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1) }, buttonFace)
@@ -264,7 +230,7 @@ function CoreShopController:Start()
 			entry.Dot.BackgroundTransparency = if owned then 0 else 0.35
 			entry.Step.Visible = not owned
 			local ring = entry.Dot:FindFirstChildOfClass("UIStroke") :: UIStroke
-			ring.Color = if step == ballStep + 1 then GOLD elseif step == ballStep then WHITE else INK
+			ring.Color = if step == ballStep + 1 then K.Coral elseif step == ballStep then K.Green else INK
 			ring.Thickness = if step == ballStep + 1 or step == ballStep then 4 else 3
 		end
 
@@ -304,18 +270,18 @@ function CoreShopController:Start()
 		for _, pair in { { ballCard, "Ball", nextBall <= #CORE.Balls }, { bagCard, "Bag", nextBag <= #CORE.BagSizes } } do
 			local c, cardKind, left = pair[1], pair[2], pair[3]
 			if not left then
-				c.ButtonFace.BackgroundColor3 = GREY
+				SunKit.Paint(c.ButtonHolder, GREY, K.GreyLip)
 				c.ButtonText.Text = "You've got everything"
 				c.Coin.Visible = false
 			elseif kind == cardKind then
 				local can = coins >= price
-				c.ButtonFace.BackgroundColor3 = if can then GREEN else GREY
+				SunKit.Paint(c.ButtonHolder, if can then GREEN else GREY, if can then K.GreenLip else K.GreyLip)
 				c.ButtonText.Text = if can
 					then ("Buy  %s"):format(Currency.Format(price))
 					else ("%s / %s"):format(Currency.Format(coins), Currency.Format(price))
 				c.Coin.Visible = true
 			else
-				c.ButtonFace.BackgroundColor3 = GREY
+				SunKit.Paint(c.ButtonHolder, GREY, K.GreyLip)
 				c.ButtonText.Text = if cardKind == "Ball" then "Get the bag first" else "Get the ball first"
 				c.Coin.Visible = false
 			end

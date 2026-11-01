@@ -24,62 +24,24 @@ local player = Players.LocalPlayer
 
 local CoreHudController = {}
 
--- The refs' look
-local FONT = Font.new("rbxasset://fonts/families/FredokaOne.json", Enum.FontWeight.Bold)
-local INK = Color3.fromRGB(24, 28, 36) -- outlines and the hard shadow
-local PANEL = Color3.fromRGB(46, 51, 60) -- flat dark panel (refs 4, 5)
-local TRACK = Color3.fromRGB(28, 31, 38)
-local GREEN = Color3.fromRGB(76, 209, 55) -- coin green bar
-local GOLD = Color3.fromRGB(255, 205, 60)
-local CORAL = Color3.fromRGB(255, 99, 72) -- action buttons
-local WHITE = Color3.new(1, 1, 1)
+-- The sunny look (Modules/SunKit, Addendum 4 Stage 3d): light panels with dark text, colour buttons with white text
+local SunKit = require(Modules.SunKit)
+local K = SunKit.C
+local INK = K.Ink
+local PANEL = K.Cream -- light panels
+local TRACK = K.Track
+local GREEN = K.Green
+local GOLD = K.Sun
+local CORAL = K.Coral
+local WHITE = K.White
+local MUTED = K.Muted
 
-local function new(class: string, props: { [string]: any }, parent: Instance?): any
-	local object = Instance.new(class)
-	for key, value in props do
-		(object :: any)[key] = value
-	end
-	object.Parent = parent
-	return object
-end
+local new = SunKit.New
+local text = SunKit.Text
 
-local function text(parent: Instance, value: string, props: { [string]: any }?): TextLabel
-	local label = new("TextLabel", {
-		BackgroundTransparency = 1,
-		FontFace = FONT,
-		Text = value,
-		TextColor3 = WHITE,
-		TextScaled = true,
-		Size = UDim2.fromScale(1, 1),
-	}, parent)
-	new("UIStroke", { Color = INK, Thickness = 2, LineJoinMode = Enum.LineJoinMode.Round }, label)
-	for key, v in props or {} do
-		(label :: any)[key] = v
-	end
-	return label
-end
-
--- A flat plate with a thick dark outline and one hard shadow straight below. Returns (holder, face).
+-- A plate whose hard shadow is its own darker colour (ink for light panels)
 local function plate(parent: Instance, name: string, color: Color3, radius: number): (Frame, Frame)
-	local holder = new("Frame", { Name = name, BackgroundTransparency = 1 }, parent)
-	local shadow = new("Frame", {
-		Name = "Shadow",
-		BackgroundColor3 = INK,
-		BackgroundTransparency = 0.25,
-		Position = UDim2.fromOffset(0, 4),
-		Size = UDim2.fromScale(1, 1),
-		BorderSizePixel = 0,
-	}, holder)
-	new("UICorner", { CornerRadius = UDim.new(0, radius) }, shadow)
-	local face = new("Frame", {
-		Name = "Face",
-		BackgroundColor3 = color,
-		Size = UDim2.fromScale(1, 1),
-		BorderSizePixel = 0,
-	}, holder)
-	new("UICorner", { CornerRadius = UDim.new(0, radius) }, face)
-	new("UIStroke", { Color = INK, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, face)
-	return holder, face
+	return SunKit.Plate(parent, name, color, radius, 4, if color == PANEL then K.CreamLip else SunKit.Lip(color))
 end
 
 local function place(object: GuiObject, key: string)
@@ -110,13 +72,15 @@ function CoreHudController:Start()
 	local counter, counterFace = plate(gui, "PinCounter", PANEL, 8)
 	place(counter, "PinCounter")
 	local counterText = text(counterFace, "0/" .. PinRack.Count(), {
-		Size = UDim2.new(1, -16, 0.72, 0),
+		Size = UDim2.new(1, -16, 0.68, 0),
 		Position = UDim2.new(0, 8, 0.06, 0),
+		TextColor3 = INK,
 	})
 	local counterNote = text(counterFace, "Pins down", {
+		Body = true,
 		Size = UDim2.new(1, -16, 0.26, 0),
-		Position = UDim2.new(0, 8, 0.72, 0),
-		TextColor3 = Color3.fromRGB(196, 204, 214),
+		Position = UDim2.new(0, 8, 0.7, 0),
+		TextColor3 = MUTED,
 	})
 	local counterScale = new("UIScale", {}, counter)
 	local counterRun = 0
@@ -124,9 +88,9 @@ function CoreHudController:Start()
 		counterRun += 1
 		local run = counterRun
 		local total = PinRack.Count()
-		counterText.TextColor3 = if clear then GOLD else WHITE
+		SunKit.Recolor(counterText, if clear then GOLD else INK)
 		counterNote.Text = if clear then "Cleared it! x2" elseif full then "Bag full, sell" else "Pins down"
-		counterNote.TextColor3 = if clear then GOLD elseif full then CORAL else Color3.fromRGB(196, 204, 214)
+		counterNote.TextColor3 = if clear then K.SunLip elseif full then K.CoralLip else MUTED
 		counterScale.Scale = if clear then 1.2 else 1.08
 		TweenService:Create(counterScale, TweenInfo.new(0.18, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 		local began = os.clock()
@@ -163,6 +127,7 @@ function CoreHudController:Start()
 		ClipsDescendants = true,
 	}, bagFace)
 	new("UICorner", { CornerRadius = UDim.new(0, 4) }, track)
+	new("UIStroke", { Color = INK, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, track)
 	local fill = new("Frame", {
 		Name = "Fill",
 		BackgroundColor3 = GREEN,
@@ -180,7 +145,7 @@ function CoreHudController:Start()
 		Text = "",
 		Size = UDim2.fromScale(1, 1),
 	}, sellFace)
-	text(sellFace, "Sell", { Size = UDim2.new(0.8, 0, 0.62, 0), Position = UDim2.new(0.1, 0, 0.19, 0) })
+	text(sellFace, "Sell", { Size = UDim2.new(0.8, 0, 0.52, 0), Position = UDim2.new(0.1, 0, 0.24, 0) })
 	local sellScale = new("UIScale", {}, sell)
 
 	-- ===== BAG FULL, SELL prompt: a slightly tilted coral card =====
@@ -192,7 +157,8 @@ function CoreHudController:Start()
 	text(promptFace, "Go sell at the green circle", {
 		Size = UDim2.new(1, -20, 0.26, 0),
 		Position = UDim2.new(0, 10, 0.68, 0),
-		TextColor3 = Color3.fromRGB(255, 236, 200),
+		Body = true,
+		TextColor3 = Color3.fromRGB(255, 240, 214),
 	})
 
 	-- ===== Pointers: a beam from you to a pad and a bobbing marker over it (sell station, and the shop for the guide) =====
@@ -260,7 +226,7 @@ function CoreHudController:Start()
 	-- what you have: not enough in the bag yet = throw, enough to buy once sold = sell, enough coins = buy.
 	local GUIDE = CORE.Guide
 	local firstBall = CORE.Balls[2]
-	local tutor, tutorFace = plate(gui, "Guide", Color3.fromRGB(255, 248, 228), 6)
+	local tutor, tutorFace = plate(gui, "Guide", PANEL, 6)
 	place(tutor, "BagFull")
 	tutor.Visible = false
 	local stepLabels = {}
@@ -273,16 +239,16 @@ function CoreHudController:Start()
 			text(tutorFace, "›", {
 				Size = UDim2.new(0.04, 0, 0.5, 0),
 				Position = UDim2.new(0.32 + (i - 1) * 0.32, 0, 0.05, 0),
-				TextColor3 = Color3.fromRGB(150, 140, 120),
+				TextColor3 = MUTED,
 			})
 		end
 	end
 	local tutorLine = text(tutorFace, "", {
+		Body = true,
 		Size = UDim2.new(1, -20, 0.32, 0),
 		Position = UDim2.new(0, 10, 0.6, 0),
 		TextColor3 = INK,
 	})
-	tutorLine:FindFirstChildOfClass("UIStroke"):Destroy()
 	local ballsButton: GuiObject? = nil
 	task.spawn(function()
 		local ballsUi = playerGui:WaitForChild("BallsUI", 30)
@@ -312,7 +278,7 @@ function CoreHudController:Start()
 		end
 		tutorStep = step
 		for i, label in stepLabels do
-			label.TextColor3 = if i == step then CORAL elseif i < step then GREEN else Color3.fromRGB(190, 182, 166)
+			SunKit.Recolor(label, if i == step then CORAL elseif i < step then GREEN else K.CreamLip)
 		end
 		tutorLine.Text = if step == 1
 			then "Hold Throw to bowl"
@@ -345,7 +311,7 @@ function CoreHudController:Start()
 		end
 		if share < 1 and counterNote.Text == "Bag full, sell" then
 			counterNote.Text = "Pins down"
-			counterNote.TextColor3 = Color3.fromRGB(196, 204, 214)
+			counterNote.TextColor3 = MUTED
 		end
 		lastBag = amount
 	end
@@ -368,18 +334,44 @@ function CoreHudController:Start()
 		Sfx.Play("Coin", 1, 1.4)
 		Sfx.Play("SpinWin", 1.2, 0.6)
 		UiFx.Flash(GREEN, 0.15, 0.25)
-		local pop = text(gui, "+" .. Currency.Format(amount) .. " coins", {
-			AnchorPoint = Vector2.new(0, 1),
-			Size = UDim2.fromOffset(260, 40),
-			Position = bag.Position + UDim2.fromOffset(0, -8),
-			TextColor3 = GREEN,
+		-- A green tag with the amount rises in the middle, above THROW (the left column is full of buttons)
+		local phone = HudKit.Phone()
+		local pop, popFace = plate(gui, "SoldPop", GREEN, 8)
+		pop.AnchorPoint = Vector2.new(0.5, 1)
+		pop.Size = if phone then UDim2.fromOffset(150, 40) else UDim2.fromOffset(230, 60)
+		pop.Position = UDim2.new(0.5, 0, 1, if phone then -110 else -170)
+		pop.Rotation = -3
+		pop.ZIndex = 5
+		new("ImageLabel", {
+			BackgroundTransparency = 1,
+			Image = AssetSlots.Image("HudCoin"),
+			ScaleType = Enum.ScaleType.Fit,
+			SizeConstraint = Enum.SizeConstraint.RelativeYY,
+			Size = UDim2.fromScale(0.8, 0.8),
+			Position = UDim2.fromScale(0.04, 0.1),
+		}, popFace)
+		text(popFace, "+" .. Currency.Format(amount), {
+			Size = UDim2.new(0.66, 0, 0.7, 0),
+			Position = UDim2.new(0.3, 0, 0.15, 0),
 			TextXAlignment = Enum.TextXAlignment.Left,
-			ZIndex = 5,
 		})
-		TweenService:Create(pop, TweenInfo.new(1.2, Enum.EasingStyle.Quint), {
-			Position = pop.Position + UDim2.fromOffset(0, -70),
-			TextTransparency = 1,
+		UiFx.Pop(pop, 1.2, 0.18)
+		TweenService:Create(pop, TweenInfo.new(1.1, Enum.EasingStyle.Quint), {
+			Position = pop.Position + UDim2.fromOffset(0, -60),
 		}):Play()
+		task.delay(0.8, function()
+			for _, object in pop:GetDescendants() do
+				local goal = if object:IsA("TextLabel")
+					then { TextTransparency = 1 }
+					elseif object:IsA("ImageLabel") then { ImageTransparency = 1, BackgroundTransparency = 1 }
+					elseif object:IsA("Frame") then { BackgroundTransparency = 1 }
+					elseif object:IsA("UIStroke") then { Transparency = 1 }
+					else nil
+				if goal then
+					TweenService:Create(object, TweenInfo.new(0.35), goal):Play()
+				end
+			end
+		end)
 		task.delay(1.3, function()
 			pop:Destroy()
 		end)
@@ -406,7 +398,7 @@ function CoreHudController:Start()
 			tutorDoneAt = os.clock()
 			tutorStep = 4
 			for _, label in stepLabels do
-				label.TextColor3 = GREEN
+				SunKit.Recolor(label, GREEN)
 			end
 			tutorLine.Text = "That's it. Keep throwing for the next one"
 			UiFx.Pop(tutor, 1.12, 0.2)

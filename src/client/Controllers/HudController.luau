@@ -65,14 +65,15 @@ local function buildCounter(pill: Frame, key: string)
 	end
 	pill.BackgroundTransparency = 1
 	pill.LayoutOrder = 0
-	local block = HudKit.Block(pill, { Name = "Pill", Paint = "Card", Shine = 0 })
+	-- Sunny look (Config.Ui.Sunny): a light pill with a dark number
+	local block = HudKit.Block(pill, { Name = "Pill", Paint = if HudKit.Sunny then "Cream" else "Card", Shine = 0 })
 	local icon = HudKit.Image(pill, spec.Icon, 68)
 	icon.ZIndex = 6
 	local label = pill:WaitForChild("Amount") :: TextLabel
 	label.BackgroundTransparency = 1
 	label.FontFace = HudKit.Num
 	label.TextScaled = false
-	label.TextColor3 = K.White
+	label.TextColor3 = if HudKit.Sunny then K.Ink else K.White
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.AnchorPoint = Vector2.zero
 	label.ZIndex = 6
@@ -84,6 +85,7 @@ local function buildCounter(pill: Frame, key: string)
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = K.Ink
 	stroke.LineJoinMode = Enum.LineJoinMode.Round
+	stroke.Enabled = not HudKit.Sunny
 	stroke.Parent = label
 	HudKit.OnLayout(function(phone)
 		local s = if phone then spec.Phone else spec.Pc

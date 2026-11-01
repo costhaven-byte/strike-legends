@@ -696,6 +696,9 @@ Config.Juice = {
 -- Screen layout
 Config.Ui = {
 	CompactHeight = 500, -- screens shorter than this (phones held sideways) use the compact phone layout
+	-- Addendum 4 Stage 3d: the sunny look (Modules/SunKit palette + 2 fonts, no gloss, light panels with dark text).
+	-- false = the old night HUD Kit colours and fonts come back.
+	Sunny = true,
 	-- Tuck while bowling (owner 2026-10-28: on phones the HUD hid the lane): from the moment you start a throw, these
 	-- HUD pieces slide off the nearest screen edge; IdleSeconds after your last throw they slide back (Time = slide
 	-- seconds). Coins, the level bar, POWER, the streak and the goal bar always stay, except POWER tucks too once it

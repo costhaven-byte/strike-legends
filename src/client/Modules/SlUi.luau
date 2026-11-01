@@ -2,6 +2,7 @@
 -- for the layered, thick-outlined text the designs use. Roblox has no Rubik or Lilita One, so
 -- Montserrat Heavy Italic stands in for Rubik 900 italic, Fredoka One for Lilita One, Roboto Mono for JetBrains Mono.
 local Currency = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Modules.Currency)
+local SunKit = require(script.Parent:WaitForChild("SunKit"))
 
 local SlUi = {}
 
@@ -28,9 +29,9 @@ SlUi.Colors = {
 	White = Color3.new(1, 1, 1),
 }
 
-SlUi.Heavy = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.Heavy, Enum.FontStyle.Italic)
+SlUi.Heavy = SunKit.Swap(Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.Heavy, Enum.FontStyle.Italic))
 SlUi.Round = Font.new("rbxasset://fonts/families/FredokaOne.json")
-SlUi.Mono = Font.new("rbxasset://fonts/families/RobotoMono.json", Enum.FontWeight.Medium)
+SlUi.Mono = SunKit.Swap(Font.new("rbxasset://fonts/families/RobotoMono.json", Enum.FontWeight.Medium))
 
 function SlUi.Corner(parent: GuiObject, radius: UDim?)
 	local corner = Instance.new("UICorner")

@@ -4,6 +4,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+local SunKit = require(script.Parent:WaitForChild("SunKit"))
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Sfx = require(script.Parent.Sfx)
@@ -188,7 +189,7 @@ function LaneFx.Number(position: Vector3, text: string, color: Color3)
 	label.Text = text
 	label.TextColor3 = color
 	label.TextScaled = true
-	label.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
+	label.FontFace = SunKit.Swap(Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy))
 	label.Parent = gui
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = Color3.fromRGB(40, 20, 0)

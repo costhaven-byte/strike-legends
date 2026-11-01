@@ -20,6 +20,7 @@ local TextChatService = game:GetService("TextChatService")
 local TextService = game:GetService("TextService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local SunKit = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("SunKit"))
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -39,11 +40,12 @@ local Balls = require(Shared.Modules.Balls)
 local player = Players.LocalPlayer
 
 local MONEY = Config.Monetization
+local SUNNY = HudKit.Sunny
 -- Gotham isn't in Roblox's new font list as "Gotham": GothamSSm is the same family
-local HEAD = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
+local HEAD = SunKit.Swap(Font.new("rbxasset://fonts/families/LuckiestGuy.json"))
 local NUM = Font.new("rbxasset://fonts/families/FredokaOne.json")
-local BLACK = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
-local BOLD = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
+local BLACK = SunKit.Swap(Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy))
+local BOLD = SunKit.Swap(Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold))
 
 local function hex(value: string): Color3
 	return Color3.fromHex(value)
@@ -669,17 +671,19 @@ function StoreController:Start()
 				Name = "Quick" .. ladder.Ladder,
 				Size = UDim2.fromOffset(w, h),
 				Radius = h / 2,
-				Color = C.Pink,
-				Down = C.PinkDown,
-				Lip = C.PinkLip,
+				-- sunny look: flat green like the refs' Robux buttons, no glow, dots or shine
+				Color = if SUNNY then SunKit.C.Green else C.Pink,
+				Down = if SUNNY then SunKit.C.GreenLip else C.PinkDown,
+				Lip = if SUNNY then SunKit.C.GreenLip else C.PinkLip,
 				LipHeight = 3,
 				Drop = 3,
 				Outline = if phone then 3 else 2.5,
-				Highlight = 2,
+				Highlight = if SUNNY then 0 else 2,
 				HighlightAlpha = 0.45,
 				Clip = true,
 			})
 			holder.Visible = false
+			local fancy = make("Folder", { Name = "Fancy" }) -- the night look's extras, left out when sunny
 			-- Soft white glow at the top centre
 			local glow = make("Frame", { BackgroundColor3 = C.White, Size = UDim2.fromScale(1, 1), ZIndex = 2 }, face)
 			fade(glow, { { 0, 0.72 }, { 0.7, 1 }, { 1, 1 } }, 90)
@@ -709,7 +713,17 @@ function StoreController:Start()
 				ZIndex = 3,
 			}, face)
 			corner(band, 10)
-			local top = label(face, "", HEAD, if phone then 16 else 13, ladder.Color, if phone then 5 else 4)
+			if SUNNY then
+				for _, extra in { glow, dots, band } do
+					extra.Parent = fancy
+				end
+				for _, child in face:GetChildren() do
+					if child:IsA("ImageLabel") and child.ImageTransparency >= 0.6 then
+						child.Parent = fancy
+					end
+				end
+			end
+			local top = label(face, "", HEAD, if phone then 16 else 13, if SUNNY then C.White else ladder.Color, if phone then 5 else 4)
 			top.Size = UDim2.new(1, 0, 0, if phone then 16 else 13)
 			HudKit.Fit(top, if phone then 16 else 13) -- long texts like "x1.75 COINS" must fit too
 			top.Position = UDim2.fromOffset(0, if phone then 4 else 3)
@@ -726,7 +740,9 @@ function StoreController:Start()
 			price.LayoutOrder = 2
 			price.AutomaticSize = Enum.AutomaticSize.X
 			price.Size = UDim2.fromScale(0, 1)
-			shine(face, if phone then 76 else 56, if phone then 11 else 10, ladder.Delay, paused)
+			if not SUNNY then
+				shine(face, if phone then 76 else 56, if phone then 11 else 10, ladder.Delay, paused)
+			end
 			body.Activated:Connect(function()
 				local step = Store.NextStep(player, ladder.Ladder)
 				if step then

@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+local SunKit = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("SunKit"))
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -37,7 +38,7 @@ local FX = Config.MascotFx
 local ECONOMY = Config.Economy.Mascots
 local EGG = Config.Economy.Eggs[1] -- the Neon Egg (Id "Alley"); zone 3 and 4 eggs hatch at their own stands (Phase X)
 
-local FONT = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
+local FONT = SunKit.Swap(Font.new("rbxasset://fonts/families/LuckiestGuy.json"))
 local INK = Color3.fromHex("06060F")
 local CARD = Color3.fromRGB(30, 20, 60)
 local PINK = Color3.fromRGB(255, 60, 210)

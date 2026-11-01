@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local SunKit = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("SunKit"))
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -210,7 +211,7 @@ function RizzoController:Start()
 		label.BackgroundTransparency = 1
 		label.Position = UDim2.new(0.04, 0, y, 0)
 		label.Size = UDim2.new(0.92, 0, height, 0)
-		label.FontFace = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
+		label.FontFace = SunKit.Swap(Font.new("rbxasset://fonts/families/LuckiestGuy.json"))
 		label.TextScaled = true
 		label.RichText = true
 		label.TextColor3 = color

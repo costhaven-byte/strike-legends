@@ -192,7 +192,7 @@ local function kitPieces(pill: Frame, bar: Frame)
 		ready = on
 		goalCard:Paint(if on then "Purple" else "Card")
 		goalCard:SetGlow(if on then K.Purple else nil)
-		goalCard.Shine.Visible = on
+		goalCard.Shine.Visible = on and not HudKit.Sunny
 		arrange()
 	end
 	return ring, pillIcon, goalIcon, setReady
