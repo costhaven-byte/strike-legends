@@ -74,3 +74,38 @@ At the end: one combined morning playtest.
 **Playtest note:** Studio's 3D view was still frozen (viewport 1x1, no RenderStepped, screen_capture timed out), so no screenshots again. All checks were done with numbers: `screenshots/addendum5/A2/PLAYTEST_LOG.md`. Not checked live: the guide card colours and the button bounce (they only run when Studio draws frames). Restarting Studio should fix the frozen view.
 
 **Placeholders:** none new (bag icon = the existing store bag image).
+
+## Step 3 (A3): one shared lane (2026-11-01)
+**What changed**
+- The 6 rooftop lanes are replaced by ONE big lane (99 studs wide, same place, same length). Everyone throws down it at the same time from their own throw spot: 12 coloured, numbered rings across the front of the lane, 8 studs apart. You get the middle free spot when you join (then outwards). With more than 12 players, spots 13-60 fit in between and a row further back, so nobody is ever without a spot (before, the 7th player had no lane).
+- Your pins are drawn only on your screen, at your spot (one 40-pin rack per player). Other players' throws show as a plain ball rolling down their spot (no effects, at most 8 at once); their pins are never drawn on your screen. Counting stays on the server, per player.
+- Collision groups: your pins never hit players (yours or others'), balls touch nothing.
+- Cooldown is yours alone (each spot keeps its own timer).
+- Looks (all built from code at server start): two-tone light maple wood strips (one per spot) with thin gold lines between them, a gold arrow and two coloured dots per spot, your name painted near the foul line ("6 · SELIM"), a big cream/orange MEGA LANE sign hanging from the gantry ("EVERYONE BOWLS TOGETHER!") with rainbow pennants along the beam, 5 soft lights over the lane. Your own ring glows gold, and a bouncing "YOUR SPOT" tag floats over it while you're off it.
+- Lane skins still work: each player's skin paints their own strip of the lane and approach.
+- The old lanes, their approach lines and the 6-lane floor decor are moved to ServerStorage while the game runs (nothing deleted; the Studio place still has them). `Config.CoreLoop.SharedLane.Enabled = false` brings the 6 lanes back.
+
+**Restore tag:** `restore-a5-A3-before`. **Commit:** see the commit "Addendum 5 A3".
+
+**Footprint:** x -86.2 .. 13.2 (between the old outer gutter walls), foul line z -3451, pin decks z -3562 .. -3581, floor top y 848.655 (where the pins stood before). Throw rings at z -3444. Nothing in the plaza moved (sell pad, shop, spawn, cases, lounges). Drawing: `screenshots/addendum5/A3/footprint.svg`.
+
+**2-minute test**
+1. Play. Expected: you stand on a coloured numbered ring (the middle one) on one wide wooden lane, your name on the floor in front, MEGA LANE sign above.
+2. Hold THROW. Expected: your 40 pins fall at your spot, counter as before.
+3. Walk two rings over and hold THROW. Expected: nothing throws; a gold "YOUR SPOT" tag points at your ring. Walk back: throwing works.
+4. With a friend (or Studio Test > 2 players): both throw at once. Expected: you see their plain ball roll down their spot but never their pins; each counter/bag only moves with your own throws.
+- Silent failures to watch for: standing on the old lane spot instead of a ring, pins missing at your spot, other players' pins showing on your screen, your character getting knocked by pins, the YOUR SPOT tag staying up while you're on your ring, numbers/names on the floor reading upside down.
+
+**Choices made for you**
+- 12 front spots 8 studs apart (the old proposal); up to 60 spots so a full 60-player server always fits (`MaxSpots`).
+- Your spot's throw box is your ring's strip only, so the ball always leaves from your ring (no throwing from someone else's spot).
+- Other players' balls are plain balls (shown even with "other players' effects" off; they cost almost nothing), capped at 8 (`OtherBalls`; 0 hides them).
+- Others get a light throw message (no pin list) to save network.
+- Extra spots (13+) have no lane-skin plates (they overlap the front strips).
+- The old per-lane scoreboards on the gantry left with the old lanes (they showed streak/rank, which no longer exist).
+
+**Playtest note:** Studio's 3D view was still frozen, so no screenshots again; checked by numbers with a fake second thrower (`screenshots/addendum5/A3/PLAYTEST_LOG.md`). The look of the lane (colours, sign, arrows, which way the floor numbers read) is NOT verified; please look at it first in the morning. A real 2-player test was not possible from here.
+
+**Studio-only edits:** a new ModuleScript `ServerScriptService.Server.Modules.SharedLane` was created in the Studio place (same as the repo file; Rojo would create it too). Save the place to keep it, or reconnect Rojo.
+
+**Placeholders:** none new (all parts from code, no new art).

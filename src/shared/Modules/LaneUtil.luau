@@ -5,9 +5,38 @@ local Config = require(script.Parent.Parent.Config)
 
 local LaneUtil = {}
 
+local sharedSpots: { Model }? = nil -- (the shared lane's spots never change once built: found once)
+
 -- (Addendum 4 core loop: only the rooftop's lanes exist for the game; the switched-off zones' lanes are left alone)
 function LaneUtil.GetLanes(): { Model }
 	local lanes = {}
+	-- Addendum 5 A3: one shared lane; every throw spot is a lane model in SharedLane.Spots (built at server start)
+	local shared = Config.CoreLoop.SharedLane
+	if Config.CoreLoop.Enabled and shared and shared.Enabled then
+		if sharedSpots then
+			return table.clone(sharedSpots)
+		end
+		local model = Workspace:WaitForChild(Config.CoreLoop.Folder):WaitForChild("SharedLane")
+		while model:GetAttribute("Ready") ~= true do
+			model:GetAttributeChangedSignal("Ready"):Wait()
+		end
+		local spots = model:WaitForChild("Spots")
+		local want = model:GetAttribute("SpotCount") or 0
+		while #spots:GetChildren() < want do
+			spots.ChildAdded:Wait()
+		end
+		for _, lane in spots:GetChildren() do
+			if lane:IsA("Model") and lane:FindFirstChild("PinSpot") and lane:FindFirstChild("BallStart") then
+				table.insert(lanes, lane)
+			end
+		end
+		table.sort(lanes, function(a, b)
+			return (tonumber(a.Name:match("%d+")) or 0) < (tonumber(b.Name:match("%d+")) or 0)
+		end)
+		sharedSpots = table.clone(lanes)
+		return lanes
+	end
+
 	local folders = if Config.CoreLoop.Enabled then { Config.CoreLoop.Folder } else Config.Zones.LaneFolders
 	for _, folderName in folders do
 		local alley = Workspace:WaitForChild(folderName)
@@ -24,6 +53,12 @@ function LaneUtil.GetLanes(): { Model }
 		table.move(found, 1, #found, #lanes + 1, lanes)
 	end
 	return lanes
+end
+
+-- Addendum 5 A3: true while the one shared rooftop lane is on (Config.CoreLoop.SharedLane)
+function LaneUtil.Shared(): boolean
+	local shared = Config.CoreLoop.SharedLane
+	return Config.CoreLoop.Enabled and shared ~= nil and shared.Enabled == true
 end
 
 -- The lane this player owns (set by LaneService on the server), if any. A player owns their Back Alley lane and,

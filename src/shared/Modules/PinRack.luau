@@ -441,6 +441,15 @@ function PinRack:_takePin(index: number): Model
 		pin = buildMeshPin(spot, self.Scale, false, self.Zone) or buildPin(spot, self.Scale)
 		-- how the pin's pivot sits on its spot, so a pooled pin stands the same way again
 		pin:SetAttribute("Stand", spot:ToObjectSpace(pin:GetPivot()))
+		-- Addendum 5 A3: on the shared lane your pins are yours alone: they never touch players or balls
+		local shared = Config.CoreLoop.SharedLane
+		if self.Core and shared and shared.Enabled then
+			for _, part in pin:GetDescendants() do
+				if part:IsA("BasePart") then
+					part.CollisionGroup = shared.Groups.Pins
+				end
+			end
+		end
 	end
 	pin.Name = "Pin" .. index
 	pin.PrimaryPart.Anchored = true

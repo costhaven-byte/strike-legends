@@ -178,6 +178,61 @@ Config.CoreLoop = {
 	CameraHeight = 5.5, -- ...this high
 	CameraLook = 6, -- looking this far past the head pin
 	CameraBlend = 0.35, -- seconds to glide into (and out of) the throw camera
+	-- Addendum 5 A3: ONE shared lane on the roof (built from code at server start by server/Modules/SharedLane, model
+	-- <Folder>.SharedLane). Everyone throws down it at once, each from their own throw spot across its width. Each
+	-- spot is a small invisible "lane" model (BallStart, PinSpot, Approach, LaneFloor, PinDeck, Stand) in
+	-- SharedLane.Spots, so cooldowns (ReadyAt), lane skins and the throw camera stay per player. Your pins are drawn
+	-- only on your own screen (one 40-pin rack per client); counting stays on the server. The old 6 lanes, their
+	-- approach lines and the 6-lane floor decor (Hide) move to ServerStorage.A5OldLanes at start (never deleted;
+	-- the place file keeps them). Enabled = false brings the 6 lanes back.
+	SharedLane = {
+		Enabled = true,
+		Centre = -36.54, -- x of the lane's middle (the old 6 lanes' middle)
+		Width = 99.4, -- wood between the two outer gutter walls (the old outer dividers stay)
+		FloorY = 848.655, -- top of the wood (the pins stand here)
+		FoulZ = -3451, -- the lane starts here (the gold foul line) ...
+		DeckZ = -3562, -- ... the pin deck starts here ...
+		EndZ = -3581.2, -- ... and the wood ends at the pit
+		BallStartZ = -3451.72, -- where every ball starts rolling
+		PinSpotZ = -3568.25, -- the head pin spot of every rack (same as the old lanes)
+		ApproachZ = -3441, -- middle of each spot's throw box (Approach), ApproachDepth deep
+		ApproachDepth = 19.4,
+		ApproachTop = 848.7, -- top of the approach floor
+		StandZ = -3444, -- where you stand on your spot (its ring)
+		Spots = 12, -- throw spots across the width, Spacing studs apart, handed out middle first
+		Spacing = 8,
+		-- More players than spots: spot 13+ sit halfway between two spots (Shift), then a row further back (Back)
+		MaxSpots = 60, -- (the place allows 60 players)
+		Shift = 4,
+		Back = 3,
+		OtherBalls = 8, -- most other players' balls drawn at once (one plain anchored ball, no effects); 0 = none
+		Groups = { Pins = "SL_PinView", Players = "SL_Players", Balls = "SL_Balls" }, -- collision groups
+		-- spot ring colours (rainbow, spot 1 = left)
+		Colors = {
+			Color3.fromRGB(255, 99, 99), Color3.fromRGB(255, 146, 76), Color3.fromRGB(255, 196, 60),
+			Color3.fromRGB(176, 222, 64), Color3.fromRGB(84, 206, 110), Color3.fromRGB(48, 204, 180),
+			Color3.fromRGB(64, 184, 240), Color3.fromRGB(84, 132, 240), Color3.fromRGB(140, 110, 236),
+			Color3.fromRGB(190, 100, 230), Color3.fromRGB(244, 104, 190), Color3.fromRGB(255, 120, 140),
+		},
+		Wood = { Color3.fromRGB(240, 204, 150), Color3.fromRGB(230, 188, 132) }, -- the two strip tones, alternating
+		Deck = Color3.fromRGB(248, 222, 176),
+		Lights = 5, -- soft lights over the lane (across), each SurfaceLight at Brightness
+		LightBrightness = 0.65,
+		-- moved to ServerStorage.A5OldLanes at start: paths from <Folder>
+		Hide = {
+			{ "Lane1" }, { "Lane2" }, { "Lane3" }, { "Lane4" }, { "Lane5" }, { "Lane6" }, { "LaneLines" },
+			{ "Design", "lanes", "lane_1" }, { "Design", "lanes", "lane_2" }, { "Design", "lanes", "lane_3" },
+			{ "Design", "lanes", "lane_4" }, { "Design", "lanes", "lane_5" }, { "Design", "lanes", "lane_6" },
+			{ "Design", "lanes", "divider_1_Node" }, { "Design", "lanes", "divider_2_Node" },
+			{ "Design", "lanes", "divider_3_Node" }, { "Design", "lanes", "divider_4_Node" },
+			{ "Design", "lanes", "divider_5_Node" }, { "Design", "lanes", "divider_1_gold_Node" },
+			{ "Design", "lanes", "divider_2_gold_Node" }, { "Design", "lanes", "divider_3_gold_Node" },
+			{ "Design", "lanes", "divider_4_gold_Node" }, { "Design", "lanes", "divider_5_gold_Node" },
+			{ "Design", "lanes", "ball_return_1" }, { "Design", "lanes", "ball_return_2" },
+			{ "Design", "lanes", "ball_return_3" },
+		},
+		Sign = { Title = "MEGA LANE", Sub = "EVERYONE BOWLS TOGETHER!" }, -- the big sign on the gantry
+	},
 	-- Daytime repaint of the night rooftop, on every screen (the place file keeps the night colours, so Enabled =
 	-- false brings them back): old colour hex -> new colour for SkylineLanes parts; Neon parts in DayNeon colours
 	-- (lit windows, floodlight heads) turn into plain glass/plastic; lights in DayLightsOff switch off.

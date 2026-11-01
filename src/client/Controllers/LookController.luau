@@ -239,6 +239,9 @@ local function paint(lane: Model)
 	local owner = if type(ownerId) == "number" then Players:GetPlayerByUserId(ownerId) else nil
 	local skin = owner and Cosmetics.Worn(owner, "LaneSkin")
 	local holder = lane:FindFirstChild("LaneSkin")
+	if lane:GetAttribute("NoSkin") then
+		skin = nil -- (Addendum 5 A3: an extra shared-lane spot overlapping the front row: no plates)
+	end
 	if not skin then
 		if holder then
 			holder:Destroy()

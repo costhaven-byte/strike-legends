@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="617" height="980" font-family="Arial">
+<rect width="617" height="980" fill="#bfe6ff"/>
+<rect x="53.00000000000004" y="70" width="511.0" height="210" fill="#e9d2a8"/>
+<text x="308.50000000000006" y="85" font-size="18" text-anchor="middle" fill="#2e2442">approach (players stand on the rings)</text>
+<rect x="60.0" y="280" width="48.5" height="555" fill="#f0cc96"/>
+<rect x="60.0" y="835" width="48.5" height="95.99999999999909" fill="#f8deb0"/>
+<rect x="108.50000000000001" y="280" width="40" height="555" fill="#e6bc84"/>
+<rect x="108.50000000000001" y="835" width="40" height="95.99999999999909" fill="#f8deb0"/>
+<rect x="148.5" y="280" width="40" height="555" fill="#f0cc96"/>
+<rect x="148.5" y="835" width="40" height="95.99999999999909" fill="#f8deb0"/>
+<rect x="188.5" y="280" width="40" height="555" fill="#e6bc84"/>
+<rect x="188.5" y="835" width="40" height="95.99999999999909" fill="#f8deb0"/>
+<rect x="228.5" y="280" width="40" height="555" fill="#f0cc96"/>
+<rect x="228.5" y="835" width="40" height="95.99999999999909" fill="#f8deb0"/>
+<rect x="268.5" y="280" width="40" height="555" fill="#e6bc84"/>
+<rect x="268.5" y="835" width="40" height="95.99999999999909" fill="#f8deb0"/>
+<rect x="308.5" y="280" width="40" height="555" fill="#f0cc96"/>
+<rect x="308.5" y="835" width="40" height="95.99999999999909" fill="#f8deb0"/>
+<rect x="348.5" y="280" width="40" height="555" fill="#e6bc84"/>
+<rect x="348.5" y="835" width="40" height="95.99999999999909" fill="#f8deb0"/>
+<rect x="388.5" y="280" width="40" height="555" fill="#f0cc96"/>
+<rect x="388.5" y="835" width="40" height="95.99999999999909" fill="#f8deb0"/>
+<rect x="428.5" y="280" width="40" height="555" fill="#e6bc84"/>
+<rect x="428.5" y="835" width="40" height="95.99999999999909" fill="#f8deb0"/>
+<rect x="468.5" y="280" width="40" height="555" fill="#f0cc96"/>
+<rect x="468.5" y="835" width="40" height="95.99999999999909" fill="#f8deb0"/>
+<rect x="508.5" y="280" width="48.5" height="555" fill="#e6bc84"/>
+<rect x="508.5" y="835" width="48.5" height="95.99999999999909" fill="#f8deb0"/>
+<circle cx="88.50000000000009" cy="245" r="13.0" fill="rgb(255,99,99)"/><text x="88.50000000000009" y="251" font-size="16" text-anchor="middle" fill="#fff" font-weight="bold">1</text>
+<line x1="88.50000000000009" y1="283.4999999999991" x2="88.50000000000009" y2="858.75" stroke="rgb(255,99,99)" stroke-dasharray="6,6" stroke-width="2"/>
+<circle cx="128.50000000000009" cy="245" r="13.0" fill="rgb(255,146,76)"/><text x="128.50000000000009" y="251" font-size="16" text-anchor="middle" fill="#fff" font-weight="bold">2</text>
+<line x1="128.50000000000009" y1="283.4999999999991" x2="128.50000000000009" y2="858.75" stroke="rgb(255,146,76)" stroke-dasharray="6,6" stroke-width="2"/>
+<circle cx="168.50000000000009" cy="245" r="13.0" fill="rgb(255,196,60)"/><text x="168.50000000000009" y="251" font-size="16" text-anchor="middle" fill="#fff" font-weight="bold">3</text>
+<line x1="168.50000000000009" y1="283.4999999999991" x2="168.50000000000009" y2="858.75" stroke="rgb(255,196,60)" stroke-dasharray="6,6" stroke-width="2"/>
+<circle cx="208.50000000000006" cy="245" r="13.0" fill="rgb(176,222,64)"/><text x="208.50000000000006" y="251" font-size="16" text-anchor="middle" fill="#fff" font-weight="bold">4</text>
+<line x1="208.50000000000006" y1="283.4999999999991" x2="208.50000000000006" y2="858.75" stroke="rgb(176,222,64)" stroke-dasharray="6,6" stroke-width="2"/>
+<circle cx="248.50000000000006" cy="245" r="13.0" fill="rgb(84,206,110)"/><text x="248.50000000000006" y="251" font-size="16" text-anchor="middle" fill="#fff" font-weight="bold">5</text>
+<line x1="248.50000000000006" y1="283.4999999999991" x2="248.50000000000006" y2="858.75" stroke="rgb(84,206,110)" stroke-dasharray="6,6" stroke-width="2"/>
+<circle cx="288.50000000000006" cy="245" r="13.0" fill="rgb(48,204,180)"/><text x="288.50000000000006" y="251" font-size="16" text-anchor="middle" fill="#fff" font-weight="bold">6</text>
+<line x1="288.50000000000006" y1="283.4999999999991" x2="288.50000000000006" y2="858.75" stroke="rgb(48,204,180)" stroke-dasharray="6,6" stroke-width="2"/>
+<circle cx="328.5000000000001" cy="245" r="13.0" fill="rgb(64,184,240)"/><text x="328.5000000000001" y="251" font-size="16" text-anchor="middle" fill="#fff" font-weight="bold">7</text>
+<line x1="328.5000000000001" y1="283.4999999999991" x2="328.5000000000001" y2="858.75" stroke="rgb(64,184,240)" stroke-dasharray="6,6" stroke-width="2"/>
+<circle cx="368.5000000000001" cy="245" r="13.0" fill="rgb(84,132,240)"/><text x="368.5000000000001" y="251" font-size="16" text-anchor="middle" fill="#fff" font-weight="bold">8</text>
+<line x1="368.5000000000001" y1="283.4999999999991" x2="368.5000000000001" y2="858.75" stroke="rgb(84,132,240)" stroke-dasharray="6,6" stroke-width="2"/>
+<circle cx="408.5000000000001" cy="245" r="13.0" fill="rgb(140,110,236)"/><text x="408.5000000000001" y="251" font-size="16" text-anchor="middle" fill="#fff" font-weight="bold">9</text>
+<line x1="408.5000000000001" y1="283.4999999999991" x2="408.5000000000001" y2="858.75" stroke="rgb(140,110,236)" stroke-dasharray="6,6" stroke-width="2"/>
+<circle cx="448.5000000000001" cy="245" r="13.0" fill="rgb(190,100,230)"/><text x="448.5000000000001" y="251" font-size="16" text-anchor="middle" fill="#fff" font-weight="bold">10</text>
+<line x1="448.5000000000001" y1="283.4999999999991" x2="448.5000000000001" y2="858.75" stroke="rgb(190,100,230)" stroke-dasharray="6,6" stroke-width="2"/>
+<circle cx="488.5000000000001" cy="245" r="13.0" fill="rgb(244,104,190)"/><text x="488.5000000000001" y="251" font-size="16" text-anchor="middle" fill="#fff" font-weight="bold">11</text>
+<line x1="488.5000000000001" y1="283.4999999999991" x2="488.5000000000001" y2="858.75" stroke="rgb(244,104,190)" stroke-dasharray="6,6" stroke-width="2"/>
+<circle cx="528.5000000000001" cy="245" r="13.0" fill="rgb(255,120,140)"/><text x="528.5000000000001" y="251" font-size="16" text-anchor="middle" fill="#fff" font-weight="bold">12</text>
+<line x1="528.5000000000001" y1="283.4999999999991" x2="528.5000000000001" y2="858.75" stroke="rgb(255,120,140)" stroke-dasharray="6,6" stroke-width="2"/>
+<polygon points="288.50000000000006,858.75 258.50000000000006,910.9999999999991 318.50000000000006,910.9999999999991" fill="#ffffff" stroke="#2e2442" stroke-width="2"/>
+<text x="328.50000000000006" y="885" font-size="16" fill="#2e2442">your 40-pin rack (spot 6, only on your screen)</text>
+<rect x="52.99999999999997" y="280" width="7.0" height="650.9999999999991" fill="#4678be"/><rect x="557.0" y="280" width="7.0" height="650.9999999999991" fill="#4678be"/>
+<rect x="223.50000000000006" y="315.5000000000009" width="170" height="12" fill="#ff963c"/><text x="308.50000000000006" y="311.5000000000009" font-size="16" text-anchor="middle" fill="#2e2442">MEGA LANE sign on the gantry</text>
+<text x="10" y="970" font-size="16" fill="#2e2442">Shared lane footprint: 99.4 studs wide (x -86.2 .. 13.2), foul line z -3451 to pit z -3581; 12 front spots 8 studs apart; spots 13-60 fill in between / behind</text>
+</svg>

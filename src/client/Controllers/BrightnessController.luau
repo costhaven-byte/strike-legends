@@ -68,8 +68,11 @@ function BrightnessController:Start()
 	if not BRIGHT.Enabled then
 		return
 	end
-	for _, lane in LaneUtil.GetLanes() do
-		lightLane(lane)
+	-- (Addendum 5 A3: the shared lane brings its own few wide lights, SharedLane.Visuals.PlayLight)
+	if not LaneUtil.Shared() then
+		for _, lane in LaneUtil.GetLanes() do
+			lightLane(lane)
+		end
 	end
 	if player.Character then
 		task.spawn(lightCharacter, player.Character)

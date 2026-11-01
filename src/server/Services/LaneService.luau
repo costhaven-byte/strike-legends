@@ -10,6 +10,7 @@ local LaneUtil = require(Shared.Modules.LaneUtil)
 local Zones = require(Shared.Modules.Zones)
 local Config = require(Shared.Config)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local SharedLane = require(script.Parent.Parent.Modules.SharedLane)
 
 local LaneService = {}
 
@@ -18,11 +19,15 @@ local function setSign(lane: Model, ownerName: string?)
 	local label = sign and sign:FindFirstChild("Owner", true)
 	if label then
 		local number = lane.Name:match("%d+") or "?"
-		label.Text = ("LANE %s · %s"):format(number, ownerName or "FREE")
+		if LaneUtil.Shared() then -- (Addendum 5 A3: a throw spot on the shared lane: "3 · SELIM")
+			label.Text = ("%s · %s"):format(number, string.upper(ownerName or "FREE"))
+		else
+			label.Text = ("LANE %s · %s"):format(number, ownerName or "FREE")
+		end
 	end
 end
 
--- Stand the character on the approach, facing the pins.
+-- Stand the character on the approach, facing the pins. (Addendum 5 A3: on a shared-lane spot, on its Stand ring)
 local function placeOnLane(character: Model, lane: Model)
 	local approach = lane:FindFirstChild("Approach") :: BasePart?
 	if not approach then
@@ -30,11 +35,47 @@ local function placeOnLane(character: Model, lane: Model)
 	end
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	local height = if humanoid then humanoid.HipHeight + 2 else 3
+	local stand = lane:FindFirstChild("Stand") :: BasePart?
+	if stand then
+		character:PivotTo(stand.CFrame * CFrame.new(0, height, 0))
+		return
+	end
 	character:PivotTo(approach.CFrame * CFrame.new(0, approach.Size.Y / 2 + height, 0))
+end
+
+-- Addendum 5 A3: the shared lane's spots in hand-out order (the front row middle first, then outwards)
+local spotOrder: { Model }? = nil
+local function sharedOrder(): { Model }
+	if spotOrder then
+		return spotOrder
+	end
+	local byNumber = {}
+	for _, lane in LaneUtil.GetLanes() do
+		byNumber[lane:GetAttribute("Spot") or 0] = lane
+	end
+	local order = {}
+	for _, n in SharedLane.HandOutOrder() do
+		if byNumber[n] then
+			table.insert(order, byNumber[n])
+		end
+	end
+	spotOrder = order
+	return order
 end
 
 -- (Addendum 4 core loop: lanes are handed out on the rooftop, Config.CoreLoop.Folder)
 local function assignLane(player: Player): Model?
+	if LaneUtil.Shared() then
+		for _, lane in sharedOrder() do
+			if lane:GetAttribute("OwnerId") == nil then
+				lane:SetAttribute("OwnerId", player.UserId)
+				lane:SetAttribute("ReadyAt", 0) -- (the cooldown is this player's alone)
+				setSign(lane, player.DisplayName)
+				return lane
+			end
+		end
+		return nil -- (every spot taken: Config.CoreLoop.SharedLane.MaxSpots)
+	end
 	local folder = if Config.CoreLoop.Enabled then Config.CoreLoop.Folder else Config.Zones.AssignFolder
 	for _, lane in LaneUtil.GetLanes() do
 		if lane.Parent.Name == folder and lane:GetAttribute("OwnerId") == nil then
@@ -67,6 +108,7 @@ end
 
 local function release(lane: Model)
 	lane:SetAttribute("OwnerId", nil)
+	lane:SetAttribute("ReadyAt", 0)
 	setSign(lane, nil)
 end
 

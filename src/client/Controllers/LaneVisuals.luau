@@ -520,9 +520,64 @@ local function playCoreThrow(data)
 	end)
 end
 
+-- ===== Addendum 5 A3: the one shared lane =====
+-- Someone else's throw on the shared lane: one plain anchored ball (no effects, no light, no collisions) rolls down
+-- their spot; their pins are never drawn here. At most SharedLane.OtherBalls at once (extra throws show nothing).
+local SHARED = CORE.SharedLane
+local otherBalls = 0
+local function playOtherBall(data)
+	local lane: Model = data.Lane
+	local ballStart = typeof(lane) == "Instance" and lane:FindFirstChild("BallStart") :: BasePart?
+	local pinSpot = ballStart and lane:FindFirstChild("PinSpot") :: BasePart?
+	local thrower = Players:GetPlayerByUserId(data.UserId)
+	if thrower and thrower.Character then
+		ThrowPose.Release(thrower.Character, data.Pose or 1)
+	end
+	if not ballStart or not pinSpot or otherBalls >= (SHARED.OtherBalls or 0) then
+		return
+	end
+	otherBalls += 1
+	local info = Balls.Get(data.BallId) or Config.Balls[1]
+	local ball = Instance.new("Part")
+	ball.Name = "OtherBall"
+	ball.Shape = Enum.PartType.Ball
+	ball.Size = Vector3.one * LANE.BallDiameter
+	ball.Color = info.Color
+	ball.Material = info.Material
+	ball.Anchored = true
+	ball.CanCollide = false
+	ball.CanQuery = false
+	ball.CanTouch = false
+	ball.CastShadow = false
+	ball.CollisionGroup = SHARED.Groups.Balls
+	local forward = ballStart.CFrame.LookVector
+	local start = ballStart.Position
+	local distance = (pinSpot.Position - start):Dot(forward) + 12
+	local speed = (distance - 12) / math.max(data.RollTime or 0.45, 0.1)
+	local spin = Vector3.yAxis:Cross(forward).Unit
+	local radius = ball.Size.X / 2
+	ball.CFrame = CFrame.new(start)
+	ball.Parent = lane
+	local travelled = 0
+	local connection
+	connection = RunService.Heartbeat:Connect(function(dt)
+		travelled += speed * dt
+		ball.CFrame = CFrame.new(start + forward * travelled) * CFrame.fromAxisAngle(spin, travelled / radius)
+		if travelled >= distance then
+			connection:Disconnect()
+			ball:Destroy()
+			otherBalls -= 1
+		end
+	end)
+end
+
 local function playThrow(data)
 	local lane: Model = data.Lane
 	local rack = racks[lane]
+	if data.Core and LaneUtil.Shared() and data.UserId ~= Players.LocalPlayer.UserId then
+		playOtherBall(data)
+		return
+	end
 	if not rack then
 		return
 	end
@@ -869,7 +924,76 @@ local function buildPinFence(lane: Model)
 		wall(Vector3.new(x, 40, -back / 2 + 3), Vector3.new(1, 80, back + 6))
 	end
 	wall(Vector3.new(0, 40, -back), Vector3.new(side * 2 + 1, 80, 1))
+	if LaneUtil.Shared() then
+		-- (Addendum 5 A3: the fence only stops your own pins, never a player)
+		for _, part in folder:GetChildren() do
+			(part :: BasePart).CollisionGroup = CORE.SharedLane.Groups.Pins
+		end
+	end
 	folder.Parent = lane
+	return folder
+end
+
+-- Addendum 5 A3: your own spot on the shared lane glows gold, and a bouncing YOUR SPOT tag floats over it while
+-- you're off it (on this screen only)
+local function markOwnSpot(lane: Model): Instance
+	local folder = Instance.new("Folder")
+	folder.Name = "YourSpot"
+	local stand = lane:FindFirstChild("Stand") :: BasePart?
+	local base = if stand then stand.CFrame else (lane.BallStart :: BasePart).CFrame * CFrame.new(0, 0, 8)
+	local glow = Instance.new("Part")
+	glow.Name = "Glow"
+	glow.Shape = Enum.PartType.Cylinder
+	glow.Size = Vector3.new(0.1, 6.4, 6.4)
+	glow.CFrame = base * CFrame.new(0, 0.02, 0) * CFrame.Angles(0, 0, math.rad(90))
+	glow.Color = GOLD
+	glow.Material = Enum.Material.Neon
+	glow.Anchored = true
+	glow.CanCollide = false
+	glow.CanQuery = false
+	glow.CanTouch = false
+	glow.CastShadow = false
+	glow.Parent = folder
+	local tag = Instance.new("BillboardGui")
+	tag.Name = "Tag"
+	tag.Size = UDim2.fromOffset(150, 64)
+	tag.StudsOffsetWorldSpace = Vector3.new(0, 7, 0)
+	tag.AlwaysOnTop = true
+	tag.MaxDistance = 220
+	tag.Adornee = glow
+	local text = Instance.new("TextLabel")
+	text.BackgroundTransparency = 1
+	text.Size = UDim2.fromScale(1, 0.62)
+	text.Font = Enum.Font.FredokaOne
+	text.Text = "YOUR SPOT"
+	text.TextScaled = true
+	text.TextColor3 = WHITE
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(46, 36, 66)
+	stroke.Thickness = 3
+	stroke.Parent = text
+	text.Parent = tag
+	local arrow = text:Clone()
+	arrow.Text = "▼"
+	arrow.TextColor3 = GOLD
+	arrow.Position = UDim2.fromScale(0, 0.55)
+	arrow.Size = UDim2.fromScale(1, 0.45)
+	arrow.Parent = tag
+	tag.Parent = folder
+	folder.Parent = lane
+	-- Pulse the ring; show the tag only while you're not on your spot
+	task.spawn(function()
+		while folder.Parent do
+			local root = Players.LocalPlayer.Character
+				and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local on = root ~= nil and LaneUtil.IsInThrowZone(lane, root.Position)
+			tag.Enabled = not on
+			glow.Transparency = 0.25 + 0.25 * math.sin(os.clock() * 4)
+			arrow.Position = UDim2.fromScale(0, 0.5 + 0.08 * math.abs(math.sin(os.clock() * 5)))
+			task.wait(0.05)
+		end
+	end)
+	return folder
 end
 
 -- The lane scoreboard's STREAK and RANK screens show the lane owner's numbers (Studio-built labels).
@@ -923,6 +1047,41 @@ local function watchBoard(lane: Model)
 end
 
 function LaneVisuals:Start()
+	if LaneUtil.Shared() then
+		-- Addendum 5 A3: one rack on this screen, at your own spot (built when the server gives you one)
+		local mine: { Lane: Model?, Fence: Instance?, Mark: Instance? } = {}
+		local function refreshMine()
+			local lane = LaneUtil.GetOwnedLane(Players.LocalPlayer.UserId)
+			if lane == mine.Lane then
+				return
+			end
+			if mine.Lane and racks[mine.Lane] then
+				racks[mine.Lane]:Destroy()
+				racks[mine.Lane] = nil
+			end
+			for _, item in { mine.Fence, mine.Mark } do
+				if item then
+					item:Destroy()
+				end
+			end
+			mine = { Lane = lane }
+			if lane then
+				local pinSpot = lane.PinSpot :: BasePart
+				racks[lane] = PinRack.new(
+					pinSpot.CFrame * CFrame.new(0, -pinSpot.Size.Y / 2, CORE.Rack.HeadPinForward),
+					lane
+				)
+				mine.Fence = buildPinFence(lane)
+				mine.Mark = markOwnSpot(lane)
+			end
+		end
+		for _, lane in LaneUtil.GetLanes() do
+			lane:GetAttributeChangedSignal("OwnerId"):Connect(refreshMine)
+		end
+		refreshMine()
+		ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ThrowResult").OnClientEvent:Connect(playThrow)
+		return
+	end
 	for _, lane in LaneUtil.GetLanes() do
 		watchBoard(lane)
 		buildPinFence(lane)

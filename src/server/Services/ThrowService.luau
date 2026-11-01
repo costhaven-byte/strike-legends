@@ -404,7 +404,7 @@ local function coreThrow(player: Player)
 		AwayService.OnCoins(player, paid, multiplier) -- (coins/min on the HUD and away coins measure real throws)
 	end
 
-	ThrowService.Remotes.ThrowResult:FireAllClients({
+	local data = {
 		Core = true,
 		Lane = lane,
 		UserId = player.UserId,
@@ -427,7 +427,22 @@ local function coreThrow(player: Player)
 		Paid = paid, -- ...and what fitted in the bag
 		BagFull = paid < coins,
 		Cooldown = cooldown,
-	})
+	}
+	if LaneUtil.Shared() then
+		-- Addendum 5 A3: only the thrower draws pins (their own rack); everyone else gets the light version (no pin
+		-- list) and only rolls a plain ball down that spot
+		ThrowService.Remotes.ThrowResult:FireClient(player, data)
+		local light = table.clone(data)
+		light.Pins = {}
+		light.Light = true
+		for _, other in Players:GetPlayers() do
+			if other ~= player then
+				ThrowService.Remotes.ThrowResult:FireClient(other, light)
+			end
+		end
+	else
+		ThrowService.Remotes.ThrowResult:FireAllClients(data)
+	end
 
 	CoreLoopService.OnThrow(player)
 	BallService.HideHeldBall(player, result.RollTime)
