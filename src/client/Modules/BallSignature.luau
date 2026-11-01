@@ -301,8 +301,8 @@ function BallSignature.Roll(ball: BasePart, name: string?, t: number, _forward: 
 		return handle
 	end
 	local d = ball.Size.X
-	if name == "Bounce" then
-		-- Rubber Bouncer hops down the lane (lower and lower), landing on the head pin
+	if name == "Bounce" or name == "BeachBall" then
+		-- Rubber Bouncer hops down the lane (lower and lower), landing on the head pin; the Beach Ball takes one big hop
 		local hops = row.Hops or 3
 		local height = (row.HopHeight or 1.4) * (1 + t)
 		function handle.Lift(progress: number): number
@@ -358,6 +358,92 @@ function BallSignature.Roll(ball: BasePart, name: string?, t: number, _forward: 
 			Emission = 0.6,
 			Spin = 180,
 		})
+	elseif name == "Shell" then
+		trailEmitter(ball, {
+			Image = IMAGES.Dot,
+			Colors = { WHITE, Color3.fromHex("FFD6E8"), Color3.fromHex("CFF6FF") },
+			Rate = 14 + 30 * t,
+			Size = 0.22,
+			EndSize = 0.05,
+			Life = { 0.4, 0.8 },
+			Speed = { 0.5, 2 },
+			Emission = 0.8,
+		})
+	elseif name == "Kite" then
+		trailEmitter(ball, {
+			Image = IMAGES.Diamond,
+			Colors = RAINBOW,
+			Rate = 10 + 24 * t,
+			Size = 0.35,
+			EndSize = 0.1,
+			Life = { 0.5, 1 },
+			Speed = { 1, 3 },
+			Accel = Vector3.new(0, 8, 0),
+			Emission = 0.5,
+			Spin = 200,
+		})
+	elseif name == "Tide" or name == "Coral" or name == "Surf" or name == "Tsunami" then
+		-- sea spray: foam behind the ball and droplets (more, and bigger, the bigger the wave)
+		local big = if name == "Tsunami" then 1.6 elseif name == "Surf" then 1.25 else 1
+		local tint = if name == "Coral" then Color3.fromHex("FFB0A0") else Color3.fromHex("9BE9FF")
+		trailEmitter(ball, {
+			Image = IMAGES.Smoke,
+			Colors = { WHITE, Color3.fromHex("DDF8FF") },
+			Rate = (10 + 24 * t) * big,
+			Size = d * 0.5 * big,
+			EndSize = d * 1.2 * big,
+			Life = { 0.25, 0.5 },
+			Speed = { 1, 3 },
+			Emission = 0.1,
+			Fade = 0.35,
+		})
+		trailEmitter(ball, {
+			Image = if name == "Coral" then IMAGES.Bubble else IMAGES.Dot,
+			Colors = { WHITE, tint },
+			Rate = (12 + 30 * t) * big,
+			Size = 0.25,
+			EndSize = 0.08,
+			Life = { 0.4, 0.8 },
+			Speed = { 3, 6 * big },
+			Accel = Vector3.new(0, if name == "Coral" then 6 else -18, 0),
+			Emission = 0.5,
+		})
+	elseif name == "Splash" then
+		trailEmitter(ball, {
+			Image = IMAGES.Dot,
+			Colors = { Color3.fromHex("FFD45A"), Color3.fromHex("FF8A5A"), Color3.fromHex("FF5A8A") },
+			Rate = 16 + 36 * t,
+			Size = 0.28,
+			EndSize = 0.06,
+			Life = { 0.4, 0.7 },
+			Speed = { 3, 7 },
+			Accel = Vector3.new(0, -20, 0),
+			Emission = 0.6,
+		})
+	elseif name == "Pound" then
+		trailEmitter(ball, {
+			Image = IMAGES.Smoke,
+			Colors = { Color3.fromHex("E8CFA8"), Color3.fromHex("B8925E") },
+			Rate = 10 + 20 * t,
+			Size = d * 0.6,
+			EndSize = d * 1.4,
+			Life = { 0.3, 0.6 },
+			Speed = { 0.5, 2 },
+			Emission = 0,
+			Fade = 0.4,
+		})
+	elseif name == "Lighthouse" then
+		-- a golden spotlight follows the ball down the lane
+		local gap = 0.06
+		local last = 0
+		function handle.Step(position: Vector3)
+			local now = os.clock()
+			if now - last < gap then
+				return
+			end
+			last = now
+			glow(position, Color3.fromHex("FFE27A"), d * (2.5 + 2 * t), 0.35)
+		end
 	elseif name == "BlackHole" then
 		-- Sonic Boom: rings peel off the ball like it breaks the sound barrier
 		local gap = 0.07 - 0.03 * t
@@ -786,6 +872,431 @@ function impacts.BlackHole(c)
 	end)
 end
 
+---------------------------------------------------------------------------------------------------------------
+-- Zone 2, Sunset Boardwalk (Addendum 6 Stage 4): sea and beach effects, one per ball
+---------------------------------------------------------------------------------------------------------------
+local SEA = { WHITE, Color3.fromHex("9BE9FF"), Color3.fromHex("3CC8E6") }
+local SUNSET = { Color3.fromHex("FFE27A"), Color3.fromHex("FF9A5A"), Color3.fromHex("FF5A8A") }
+local BEACH = { Color3.fromHex("FF4D4D"), Color3.fromHex("FFE45A"), Color3.fromHex("3C9CFF"), WHITE }
+
+-- A visible part that lives for `life`
+local function solid(cframe: CFrame, size: Vector3, color: Color3, life: number, material: Enum.Material?): Part
+	local p = holder(cframe.Position, life, size)
+	p.CFrame = cframe
+	p.Transparency = 0
+	p.Color = color
+	p.Material = material or Enum.Material.SmoothPlastic
+	return p
+end
+
+-- Water bursting up at one point: droplets and foam (scale 1 = a normal splash)
+local function splash(at: Vector3, t: number, scale: number, tint: { Color3 }?)
+	puff(at, {
+		Image = IMAGES.Dot,
+		Colors = tint or SEA,
+		Count = (14 + 36 * t) * scale,
+		Size = 0.8 * math.sqrt(scale),
+		EndSize = 0.3,
+		Life = { 0.6, 1 },
+		Speed = { 12 * scale, (20 + 12 * t) * scale },
+		Spread = 40,
+		Accel = Vector3.new(0, -40, 0),
+		Drag = 0.5,
+		Emission = 0.3,
+	})
+	puff(at, {
+		Image = IMAGES.Smoke,
+		Colors = { WHITE, Color3.fromHex("E6FAFF") },
+		Count = (6 + 12 * t) * scale,
+		Size = 2.4 * scale,
+		EndSize = 4.5 * scale,
+		Life = { 0.45, 0.8 },
+		Speed = { 4, 9 * scale },
+		Spread = 60,
+		Emission = 0.1,
+		Fade = 0.05,
+	})
+end
+
+-- 11 Seashell Spinner: a pearly shell spiral spins open and pearls scatter
+function impacts.Shell(c)
+	local t = c.T
+	sprite(c.Hit + Vector3.new(0, 1, 0), IMAGES.Spiral, Color3.fromHex("FFC6DD"), 2, 7 + 6 * t, 0.5, 540)
+	sprite(c.Hit + Vector3.new(0, 1, 0), IMAGES.Spiral, WHITE, 1, 5 + 4 * t, 0.4, -360)
+	puff(c.Hit, {
+		Image = IMAGES.Dot,
+		Colors = { WHITE, Color3.fromHex("FFE6F0"), Color3.fromHex("DFF6FF") },
+		Count = 14 + 40 * t,
+		Size = 0.45,
+		EndSize = 0.3,
+		Life = { 0.5, 0.9 },
+		Speed = { 8, 18 + 8 * t },
+		Spread = 70,
+		Accel = Vector3.new(0, -30, 0),
+		Drag = 1,
+		Emission = 0.9,
+	})
+	floorRing(c.Floor, Color3.fromHex("FFC6DD"), 4 + 8 * t, 0.4)
+	glow(c.Hit, Color3.fromHex("FFE6F0"), 5 + 5 * t, 0.3, 3)
+	Sfx.PlayAt("Tap", c.Lane.PinSpot, 1.6 + math.random() * 0.2, 0.7)
+end
+
+-- 12 Beach Ball: one big hop onto the rack, then a burst of beach-ball colour panels and bounce rings
+function impacts.BeachBall(c)
+	local t = c.T
+	for _, color in BEACH do -- (one burst per colour: a particle's Colors run over its life)
+		puff(c.Hit + Vector3.new(0, 1, 0), {
+			Image = SQUARE,
+			Colors = { color },
+			Count = 4 + 10 * t,
+			Size = 0.8,
+			EndSize = 0.6,
+			Life = { 0.6, 1.1 },
+			Speed = { 12, 22 + 10 * t },
+			Spread = 70,
+			Accel = Vector3.new(0, -30, 0),
+			Drag = 1.5,
+			Emission = 0.2,
+			Spin = 260,
+			Fade = 0,
+		})
+	end
+	for i, color in BEACH do
+		task.delay((i - 1) * 0.05, function()
+			floorRing(c.Floor + Vector3.new(0, i * 0.02, 0), color, (4 + i * 1.5) * (1 + t * 0.8), 0.4)
+		end)
+	end
+	glow(c.Hit, Color3.fromHex("FFE45A"), 6 + 5 * t, 0.3, 3)
+	Sfx.PlayAt("Tap", c.Lane.PinSpot, 0.42 + math.random() * 0.05, 1)
+end
+
+-- 13 Kite Flyer: kites with rainbow tails lift off the rack and sail up into the sky
+function impacts.Kite(c)
+	local t = c.T
+	local count = math.floor(3 + 4 * t)
+	for i = 1, count do
+		local color = RAINBOW[(i - 1) % #RAINBOW + 1]
+		local start = c.Center + c.Right * ((i - (count + 1) / 2) * 2.8) + Vector3.new(0, 1.5, 0)
+		local kite = solid(
+			CFrame.new(start) * CFrame.Angles(0, 0, math.rad(45)),
+			Vector3.new(2.2, 2.2, 0.12),
+			color,
+			1.5,
+			Enum.Material.Neon
+		)
+		local a0 = Instance.new("Attachment")
+		a0.Position = Vector3.new(0, 0.4, 0)
+		a0.Parent = kite
+		local a1 = Instance.new("Attachment")
+		a1.Position = Vector3.new(0, -0.4, 0)
+		a1.Parent = kite
+		local tail = Instance.new("Trail")
+		tail.Attachment0 = a0
+		tail.Attachment1 = a1
+		tail.Texture = IMAGES.TrailRainbow
+		tail.LightEmission = 0.6
+		tail.Lifetime = 0.45
+		tail.FaceCamera = true
+		tail.WidthScale = NumberSequence.new(1, 0)
+		tail.Parent = kite
+		local rise = 10 + 10 * t + math.random() * 4
+		local drift = c.Right * ((math.random() - 0.5) * 10) + c.Forward * (2 + math.random() * 4)
+		local tilt = math.rad(45 + (math.random() - 0.5) * 60)
+		tween(kite, 1.2, { CFrame = CFrame.new(start + Vector3.new(0, rise, 0) + drift) * CFrame.Angles(0, math.rad(90), tilt) }, Enum.EasingStyle.Sine)
+		task.delay(0.8, function()
+			tween(kite, 0.4, { Transparency = 1 })
+		end)
+	end
+	puff(c.Hit, {
+		Image = IMAGES.Diamond,
+		Colors = RAINBOW,
+		Count = 10 + 26 * t,
+		Size = 0.4,
+		Life = { 0.5, 1 },
+		Speed = { 6, 12 },
+		Spread = 40,
+		Accel = Vector3.new(0, 14, 0),
+		Spin = 300,
+	})
+	ThrowFx.Shockwave(c.Floor, c.Color, 4 + 8 * t, 0.3)
+	Sfx.PlayAt("Teleport", c.Lane.PinSpot, 1.5 + math.random() * 0.1, 0.35 + 0.3 * t)
+end
+
+-- 14 Tide Turner: a wave rolls across the rack from one side, splashing as it goes, and washes the pins away
+function impacts.Tide(c)
+	local t = c.T
+	local steps = 6
+	for k = 0, steps do
+		task.delay(k * 0.045, function()
+			splash(c.Center - c.Right * 9 + c.Right * (k * 18 / steps), t, 0.6 + 0.4 * t)
+		end)
+	end
+	puff(c.Center - c.Right * 8, {
+		Image = IMAGES.Smoke,
+		Colors = SEA,
+		Count = 8 + 20 * t,
+		Size = 2,
+		EndSize = 3.5,
+		Life = { 0.4, 0.7 },
+		Speed = { 2, 4 },
+		Accel = c.Right * (50 + 30 * t),
+		Emission = 0.2,
+		Fade = 0.3,
+	})
+	floorRing(c.Floor, Color3.fromHex("9BE9FF"), 5 + 9 * t, 0.45)
+	Sfx.PlayAt("Teleport", c.Lane.PinSpot, 0.8 + math.random() * 0.1, 0.4 + 0.3 * t)
+end
+
+-- 15 Coral Crusher: coral spikes burst up out of the deck round the rack, bubbles rise, then the coral sinks
+function impacts.Coral(c)
+	local t = c.T
+	local count = math.floor(6 + 8 * t)
+	local corals = { Color3.fromHex("FF7A60"), Color3.fromHex("FF5AA8"), Color3.fromHex("FFB347"), Color3.fromHex("B48CFF") }
+	for i = 1, count do
+		local a = (i / count) * math.pi * 2 + math.random() * 0.4
+		local r = 3 + math.random() * (3 + 2 * t)
+		local base = c.Floor + c.Right * math.cos(a) * r + c.Forward * math.sin(a) * r
+		local height = 2 + math.random() * (2 + 3 * t)
+		local lean = CFrame.Angles(math.rad((math.random() - 0.5) * 40), 0, math.rad((math.random() - 0.5) * 40))
+		local up = CFrame.Angles(0, 0, math.rad(90)) -- (cylinders run along X)
+		local w = 0.8 + 0.5 * t
+		local spike = solid(CFrame.new(base) * lean * up, Vector3.new(0.1, w, w), corals[i % #corals + 1], 1.1)
+		spike.Shape = Enum.PartType.Cylinder
+		local grown = CFrame.new(base) * lean * CFrame.new(0, height / 2, 0) * up
+		task.delay(i * 0.012, function()
+			tween(spike, 0.14, { Size = Vector3.new(height, w, w), CFrame = grown }, Enum.EasingStyle.Back)
+		end)
+		task.delay(0.65, function()
+			tween(spike, 0.3, { Size = Vector3.new(0.1, w * 0.5, w * 0.5), CFrame = CFrame.new(base) * lean * up, Transparency = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		end)
+	end
+	puff(c.Center, {
+		Image = IMAGES.Bubble,
+		Colors = { WHITE, Color3.fromHex("CFF6FF") },
+		Count = 12 + 30 * t,
+		Size = 0.5,
+		EndSize = 0.2,
+		Life = { 0.7, 1.2 },
+		Speed = { 3, 7 },
+		Accel = Vector3.new(0, 10, 0),
+		Emission = 0.3,
+	})
+	ThrowFx.Shockwave(c.Floor, c.Color, 5 + 9 * t, 0.35)
+	Sfx.PlayAt("CrateLand", c.Lane.PinSpot, 1.4 + math.random() * 0.1, 0.4 + 0.3 * t)
+end
+
+-- 16 Surf Rider: a curling wave arches over the rack and crashes down in foam
+function impacts.Surf(c)
+	local t = c.T
+	local half = 6 + 4 * t
+	local beam = ribbon(c.Center - c.Right * half, c.Center + c.Right * half, {
+		Texture = IMAGES.TrailWisp,
+		Mode = Enum.TextureMode.Wrap,
+		Length = 4,
+		Speed = 3,
+		Colors = { WHITE, Color3.fromHex("9BE9FF"), Color3.fromHex("2AA8E0") },
+		Emission = 0.4,
+		Width = 2.5 + 2 * t,
+		Axis0 = Vector3.yAxis,
+		Axis1 = -Vector3.yAxis,
+		Curve0 = 5 + 5 * t,
+		Curve1 = 5 + 5 * t,
+		Life = 0.8,
+	})
+	fadeRibbon(beam, 0.25, 0.5)
+	task.delay(0.12, function()
+		splash(c.Center + c.Forward * 1.5, t, 1.2)
+		splash(c.Center - c.Right * 4, t, 0.7)
+		splash(c.Center + c.Right * 4, t, 0.7)
+	end)
+	floorRing(c.Floor, WHITE, 5 + 9 * t, 0.45)
+	ThrowFx.Shockwave(c.Floor, c.Color, 4 + 9 * t, 0.35)
+	Sfx.PlayAt("Teleport", c.Lane.PinSpot, 0.65, 0.5 + 0.3 * t)
+end
+
+-- 17 Sunset Splash: a tall column of sunset-coloured water shoots up and rains back down
+function impacts.Splash(c)
+	local t = c.T
+	puff(c.Center, {
+		Image = IMAGES.Dot,
+		Colors = SUNSET,
+		Count = 30 + 70 * t,
+		Size = 0.85,
+		EndSize = 0.1,
+		Life = { 0.9, 1.4 },
+		Speed = { 22, 34 + 14 * t },
+		Spread = 14,
+		Accel = Vector3.new(0, -45, 0),
+		Drag = 0.4,
+		Emission = 0.7,
+	})
+	splash(c.Center, t, 1.3, SUNSET)
+	sprite(c.Center + Vector3.new(0, 2, 0), IMAGES.Burst, Color3.fromHex("FFB070"), 3, 10 + 8 * t, 0.35, 45)
+	glow(c.Center + Vector3.new(0, 2, 0), Color3.fromHex("FF9A5A"), 8 + 8 * t, 0.4, 5)
+	if c.Big then
+		-- a rainbow in the mist
+		local beam = ribbon(c.Center - c.Right * (5 + 3 * t), c.Center + c.Right * (5 + 3 * t), {
+			Texture = IMAGES.TrailRainbow,
+			Colors = { WHITE },
+			Emission = 0.5,
+			Width = 1.2 + 1.2 * t,
+			Axis0 = Vector3.yAxis,
+			Axis1 = -Vector3.yAxis,
+			Curve0 = 8 + 4 * t,
+			Curve1 = 8 + 4 * t,
+			Transparency = 0.3,
+			Life = 1.1,
+		})
+		fadeRibbon(beam, 0.5, 0.6)
+	end
+	floorRing(c.Floor, Color3.fromHex("FFB070"), 6 + 10 * t, 0.45)
+	Sfx.PlayAt("Teleport", c.Lane.PinSpot, 0.55, 0.5 + 0.3 * t)
+end
+
+-- 18 Pier Pounder: a giant pier post drops out of the sky onto the rack (wood splinters, a dust ring)
+function impacts.Pound(c)
+	local t = c.T
+	local height = 6 + 6 * t
+	local radius = 1.2 + 1.2 * t
+	local up = CFrame.Angles(0, 0, math.rad(90))
+	local top = c.Floor + Vector3.new(0, 30, 0)
+	local post = solid(CFrame.new(top) * up, Vector3.new(height, radius * 2, radius * 2), Color3.fromHex("A8743E"), 1.2, Enum.Material.Wood)
+	post.Shape = Enum.PartType.Cylinder
+	local cap = solid(CFrame.new(top + Vector3.new(0, height / 2, 0)) * up, Vector3.new(0.6, radius * 2.3, radius * 2.3), Color3.fromHex("FF7660"), 1.2)
+	cap.Shape = Enum.PartType.Cylinder
+	local landed = c.Floor + Vector3.new(0, height / 2, 0)
+	tween(post, 0.16, { CFrame = CFrame.new(landed) * up }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	tween(cap, 0.16, { CFrame = CFrame.new(landed + Vector3.new(0, height / 2, 0)) * up }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	task.delay(0.16, function()
+		ThrowFx.Shockwave(c.Floor, Color3.fromHex("E8CFA8"), 8 + 12 * t, 0.4)
+		floorRing(c.Floor + Vector3.new(0, 0.05, 0), Color3.fromHex("FFE0B0"), 10 + 14 * t, 0.5)
+		puff(c.Floor + Vector3.new(0, 0.5, 0), {
+			Image = SQUARE,
+			Colors = { Color3.fromHex("C8945A"), Color3.fromHex("8A5A2E"), Color3.fromHex("E8CFA8") },
+			Count = 16 + 40 * t,
+			Size = 0.4,
+			EndSize = 0.3,
+			Life = { 0.5, 0.9 },
+			Speed = { 14, 26 + 10 * t },
+			Spread = 75,
+			Accel = Vector3.new(0, -40, 0),
+			Emission = 0,
+			Spin = 400,
+			Fade = 0,
+		})
+		puff(c.Floor + Vector3.new(0, 0.5, 0), {
+			Image = IMAGES.Smoke,
+			Colors = { Color3.fromHex("F2DDB8"), Color3.fromHex("C8A070") },
+			Count = 8 + 20 * t,
+			Size = 2,
+			EndSize = 4,
+			Life = { 0.5, 0.9 },
+			Speed = { 6, 12 },
+			Spread = 85,
+			Emission = 0,
+			Fade = 0.35,
+		})
+		CameraShake.Add(0.25 + 0.4 * t)
+		Sfx.PlayAt("CrateLand", c.Lane.PinSpot, 0.7, 0.8 + 0.2 * t)
+		task.delay(0.45, function()
+			tween(post, 0.4, { Transparency = 1, CFrame = post.CFrame - Vector3.new(0, height, 0) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+			tween(cap, 0.4, { Transparency = 1, CFrame = cap.CFrame - Vector3.new(0, height, 0) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		end)
+	end)
+end
+
+-- 19 Tsunami: a towering wave rises behind the rack, crashes forward over it and floods the deck in foam
+function impacts.Tsunami(c)
+	local t = c.T
+	local function crash(scale: number)
+		for _, side in { -1, 0, 1 } do
+			splash(c.Center + c.Right * side * 5, t, 1.4 * scale)
+		end
+		floorRing(c.Floor, WHITE, (10 + 16 * t) * scale, 0.5)
+		floorRing(c.Floor + Vector3.new(0, 0.04, 0), Color3.fromHex("3CC8E6"), (8 + 12 * t) * scale, 0.45)
+		ThrowFx.Shockwave(c.Floor, Color3.fromHex("9BE9FF"), (8 + 12 * t) * scale, 0.4)
+	end
+	if not c.Big then
+		crash(0.7)
+		return
+	end
+	local half = 10 + 6 * t
+	local back = c.Center + c.Forward * 6 + Vector3.new(0, 0.5, 0)
+	local beam, a0, a1 = ribbon(back - c.Right * half, back + c.Right * half, {
+		Texture = IMAGES.TrailWisp,
+		Mode = Enum.TextureMode.Wrap,
+		Length = 6,
+		Speed = 4,
+		Colors = { WHITE, Color3.fromHex("6CD8F0"), Color3.fromHex("1E8FC8") },
+		Emission = 0.3,
+		Width = 5 + 4 * t,
+		Axis0 = Vector3.yAxis,
+		Axis1 = -Vector3.yAxis,
+		Curve0 = 10 + 8 * t,
+		Curve1 = 10 + 8 * t,
+		Life = 0.9,
+	})
+	tween(a0, 0.3, { Position = a0.Position - c.Forward * 10 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	tween(a1, 0.3, { Position = a1.Position - c.Forward * 10 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	tween(beam, 0.3, { CurveSize0 = 2, CurveSize1 = 2 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	fadeRibbon(beam, 0.3, 0.4)
+	task.delay(0.28, function()
+		crash(1)
+		UiFx.Flash(Color3.fromHex("CFF6FF"), 0.2 + 0.3 * t, 0.3)
+		CameraShake.Add(0.3 + 0.4 * t)
+		Sfx.PlayAt("BossHit", c.Lane.PinSpot, 1.2, 0.5 + 0.3 * t)
+	end)
+	Sfx.PlayAt("Teleport", c.Lane.PinSpot, 0.45, 0.6)
+end
+
+-- 20 Lighthouse Beam: a golden lighthouse beam sweeps across the rack, then a pillar of light blasts up from it
+function impacts.Lighthouse(c)
+	local t = c.T
+	local gold = Color3.fromHex("FFE27A")
+	local source = c.Center + c.Forward * 30 + Vector3.new(0, 26, 0)
+	local beam, _, a1 = ribbon(source, c.Center - c.Right * 10, {
+		Texture = IMAGES.TrailSoft,
+		Colors = { WHITE, gold },
+		Emission = 0.8,
+		Width = 1,
+		Width1 = 4 + 3 * t,
+		Transparency = 0.25,
+		Life = 0.7,
+	})
+	tween(a1, 0.3, { Position = c.Center + c.Right * 10 }, Enum.EasingStyle.Sine)
+	fadeRibbon(beam, 0.3, 0.3)
+	task.delay(0.22, function()
+		local pillar = ribbon(c.Floor, c.Floor + Vector3.new(0, 24 + 16 * t, 0), {
+			Texture = IMAGES.TrailCore,
+			Colors = { WHITE, gold },
+			Emission = 1,
+			Width = 3 + 3 * t,
+			Width1 = 0.5,
+			Life = 0.6,
+		})
+		fadeRibbon(pillar, 0.15, 0.4)
+		for i = 1, 3 do
+			task.delay((i - 1) * 0.06, function()
+				floorRing(c.Floor + Vector3.new(0, i * 0.03, 0), gold, (4 + i * 3) * (1 + t * 0.7), 0.45)
+			end)
+		end
+		puff(c.Center + Vector3.new(0, 1, 0), {
+			Image = IMAGES.Star,
+			Colors = { WHITE, gold },
+			Count = 16 + 40 * t,
+			Size = 0.5,
+			Life = { 0.4, 0.8 },
+			Speed = { 10, 22 + 10 * t },
+			Spin = 200,
+		})
+		glow(c.Center + Vector3.new(0, 2, 0), gold, 10 + 10 * t, 0.45, 8)
+		if c.Big and t > 0.3 then
+			UiFx.Flash(Color3.fromHex("FFF4C8"), 0.15 + 0.25 * t, 0.25)
+		end
+		Sfx.PlayAt("Reveal", c.Lane.PinSpot, 1.2, 0.4 + 0.3 * t)
+	end)
+end
+
 local lastBig = -math.huge
 
 -- Plays the ball's hit. Returns how long the pins should wait before flying (the black hole holds them a moment).
@@ -811,6 +1322,9 @@ function BallSignature.Impact(name: string?, c): number
 		impacts[name](c)
 	elseif name == "BlackHole" then
 		Sfx.PlayAt("OverchargeBlast", c.Lane.PinSpot, 1, 0.6 + 0.4 * c.T)
+	end
+	if name == "Pound" then
+		return 0.16 -- (the pins wait for the post to land)
 	end
 	return if name == "BlackHole" and c.Big then 0.2 else 0
 end

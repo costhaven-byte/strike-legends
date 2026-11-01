@@ -78,21 +78,22 @@ Config.CoreLoop = {
 		{ Ball = "Lightning", Name = "Sunbolt", Fx = "Bolt", Pins = 650, Price = 44000, Rarity = "Epic" },
 		{ Ball = "SolidGold", Name = "Tornado", Fx = "Tornado", Pins = 1400, Price = 150000, Rarity = "Legendary" },
 		{ Ball = "Daybreak", Name = "Sonic Boom", Fx = "BlackHole", Pins = 3200, Price = 590000, Rarity = "Mythic" },
-		-- Addendum 6 Stage 3: zones 2-4, 10 balls each (Zone = the zone that must be open to buy it). PLACEHOLDER: Fx re-uses
-		-- a zone 1 effect until that zone's stage builds its own; zone 3/4 Ball = existing models (no new designs yet).
+		-- Addendum 6 Stage 3: zones 2-4, 10 balls each (Zone = the zone that must be open to buy it). Zone 2 (Stage 4) has
+		-- its own sea/beach effects and the original ball designs. PLACEHOLDER (zones 3-4): Fx re-uses a zone 1 effect
+		-- until that zone's stage builds its own; Ball = existing models (no new designs yet).
 		-- Numbers: pins x1.7 a ball from ball 10 of the zone before; price = income with the ball before (pins x the
 		-- zone's PinValue x 84 throws a minute, zone 1's late pace with pets) x Zone 1's gaps (3, 2, 2, 2, 2, 5, 5, 5, 5, 5
 		-- min). Stage 9 tunes them from the pacing sim.
-		{ Ball = "Ocean", Name = "Seashell Spinner", Fx = "Burn", Pins = 5400, Price = 4800000, Rarity = "Uncommon", Zone = 2, Placeholder = true },
-		{ Ball = "Sunset", Name = "Beach Ball", Fx = "Frost", Pins = 9200, Price = 5400000, Rarity = "Uncommon", Zone = 2, Placeholder = true },
-		{ Ball = "Electric", Name = "Kite Flyer", Fx = "Arms", Pins = 16000, Price = 9300000, Rarity = "Uncommon", Zone = 2, Placeholder = true },
-		{ Ball = "Toxic", Name = "Tide Turner", Fx = "Prism", Pins = 27000, Price = 16000000, Rarity = "Rare", Zone = 2, Placeholder = true },
-		{ Ball = "Magma", Name = "Coral Crusher", Fx = "Bolt", Pins = 45000, Price = 27000000, Rarity = "Rare", Zone = 2, Placeholder = true },
-		{ Ball = "Galaxy", Name = "Surf Rider", Fx = "Tornado", Pins = 77000, Price = 110000000, Rarity = "Rare", Zone = 2, Placeholder = true },
-		{ Ball = "Thunder", Name = "Sunset Splash", Fx = "BlackHole", Pins = 130000, Price = 190000000, Rarity = "Epic", Zone = 2, Placeholder = true },
-		{ Ball = "Plasma", Name = "Pier Pounder", Fx = "Sand", Pins = 220000, Price = 330000000, Rarity = "Epic", Zone = 2, Placeholder = true },
-		{ Ball = "Nebula", Name = "Tsunami", Fx = "Bounce", Pins = 380000, Price = 550000000, Rarity = "Epic", Zone = 2, Placeholder = true },
-		{ Ball = "Golden", Name = "Lighthouse Beam", Fx = "Confetti", Pins = 650000, Price = 960000000, Rarity = "Legendary", Zone = 2, Placeholder = true },
+		{ Ball = "Ocean", Name = "Seashell Spinner", Fx = "Shell", Pins = 5400, Price = 4800000, Rarity = "Uncommon", Zone = 2 },
+		{ Ball = "Sunset", Name = "Beach Ball", Fx = "BeachBall", Pins = 9200, Price = 5400000, Rarity = "Uncommon", Zone = 2 },
+		{ Ball = "Electric", Name = "Kite Flyer", Fx = "Kite", Pins = 16000, Price = 9300000, Rarity = "Uncommon", Zone = 2 },
+		{ Ball = "Toxic", Name = "Tide Turner", Fx = "Tide", Pins = 27000, Price = 16000000, Rarity = "Rare", Zone = 2 },
+		{ Ball = "Magma", Name = "Coral Crusher", Fx = "Coral", Pins = 45000, Price = 27000000, Rarity = "Rare", Zone = 2 },
+		{ Ball = "Galaxy", Name = "Surf Rider", Fx = "Surf", Pins = 77000, Price = 110000000, Rarity = "Rare", Zone = 2 },
+		{ Ball = "Thunder", Name = "Sunset Splash", Fx = "Splash", Pins = 130000, Price = 190000000, Rarity = "Epic", Zone = 2 },
+		{ Ball = "Plasma", Name = "Pier Pounder", Fx = "Pound", Pins = 220000, Price = 330000000, Rarity = "Epic", Zone = 2 },
+		{ Ball = "Nebula", Name = "Tsunami", Fx = "Tsunami", Pins = 380000, Price = 550000000, Rarity = "Epic", Zone = 2 },
+		{ Ball = "Golden", Name = "Lighthouse Beam", Fx = "Lighthouse", Pins = 650000, Price = 960000000, Rarity = "Legendary", Zone = 2 },
 		{ Ball = "LeagueBlack", Name = "Vine Swinger", Fx = "Prism", Pins = 1100000, Price = 5900000000, Rarity = "Rare", Zone = 3, Placeholder = true },
 		{ Ball = "CherrySwirl", Name = "Coconut", Fx = "Bolt", Pins = 1900000, Price = 6700000000, Rarity = "Rare", Zone = 3, Placeholder = true },
 		{ Ball = "BlueMarble", Name = "Toucan Roll", Fx = "Tornado", Pins = 3200000, Price = 11000000000, Rarity = "Rare", Zone = 3, Placeholder = true },
@@ -144,6 +145,17 @@ Config.CoreLoop = {
 			Bolt = { Force = 1.35, KnockFrom = "Ball", Shake = 0.5, Color = Color3.fromHex("FFE45A") }, -- lightning chains pin to pin
 			Tornado = { Force = 1.4, KnockFrom = "Under", Shake = 0.55, Color = Color3.fromHex("FFD45A") }, -- gold twister lifts the rack
 			BlackHole = { Force = 1.7, KnockFrom = "Center", Shake = 0.75, Color = Color3.fromHex("B45CFF") }, -- black hole pulls in, then a sonic boom
+			-- Zone 2, Sunset Boardwalk (Addendum 6 Stage 4)
+			Shell = { Force = 1.2, KnockFrom = "Ball", Shake = 0.3, Color = Color3.fromHex("FFC6DD") }, -- pearly shell spiral, pearls scatter
+			BeachBall = { Force = 1.25, KnockFrom = "Ball", Shake = 0.35, Color = Color3.fromHex("FF4D4D"), Hops = 1, HopHeight = 3.2 }, -- one big hop, beach-ball panels burst
+			Kite = { Force = 1.25, KnockFrom = "Under", Shake = 0.3, Color = Color3.fromHex("4FD8E0") }, -- kites with rainbow tails lift off the rack
+			Tide = { Force = 1.3, KnockFrom = "Side", Shake = 0.4, Color = Color3.fromHex("3CC8E6") }, -- a wave rolls across the rack
+			Coral = { Force = 1.35, KnockFrom = "Center", Shake = 0.45, Color = Color3.fromHex("FF7A60") }, -- coral spikes burst out of the deck
+			Surf = { Force = 1.4, KnockFrom = "Ball", Shake = 0.45, Color = Color3.fromHex("7FE8FF") }, -- a curling wave arches over and crashes
+			Splash = { Force = 1.45, KnockFrom = "Under", Shake = 0.55, Color = Color3.fromHex("FF9A5A") }, -- sunset water column + rainbow
+			Pound = { Force = 1.5, KnockFrom = "Center", Shake = 0.65, Color = Color3.fromHex("C8945A") }, -- a pier post drops out of the sky
+			Tsunami = { Force = 1.6, KnockFrom = "Ball", Shake = 0.7, Color = Color3.fromHex("2AA8E0") }, -- a towering wave crashes over the rack
+			Lighthouse = { Force = 1.7, KnockFrom = "Center", Shake = 0.75, Color = Color3.fromHex("FFE27A") }, -- lighthouse beam sweep, light pillar
 		},
 	},
 	-- Bags: BagSizes[BagLevel] pins fit (Addendum 6: the bag holds pins, a sell turns them into coins); BagPrices[n] buys bag n (bag 1 is free). Bag n fills in ~10 throws (bag 1)
@@ -331,8 +343,12 @@ Config.CoreLoop = {
 				Offset = Vector3.new(0, -800, 8000),
 				PinValue = 6,
 				Price = 22000,
-				Placeholder = true,
+				-- Stage 4: the real map (server/Modules/ZoneMaps "Boardwalk"): a wooden pier over Terrain water, a sand
+				-- beach with umbrellas, palms and huts to the east, a lighthouse past the pit, kites, boats, a ferris wheel
+				Map = "Boardwalk",
 				Palette = { Ground = Color3.fromRGB(240, 214, 150), Edge = Color3.fromRGB(64, 206, 214), Accent = Color3.fromRGB(255, 120, 100) },
+				-- the lane in deep sea navy (matt), so the beach effects (foam, coral, gold) read on it (Addendum 6 1.2)
+				Lane = { Wood = { Color3.fromRGB(26, 50, 96), Color3.fromRGB(22, 44, 86) }, Deck = Color3.fromRGB(32, 60, 110) },
 			},
 			{
 				Name = "Jungle Falls",
@@ -5303,6 +5319,40 @@ Config.Zones = {
 		},
 	},
 }
+
+-- Addendum 6 Stage 4: the outdoor zones 2-4 get their own sunny look (without a row here a player standing in them got
+-- the place's night lighting). Area = the zone's ground round zone 1's layout, moved by its Offset. Look = the
+-- rooftop's daytime look unless the zone's Config.CoreLoop.Zones row has its own LookChanges. Hide = models this
+-- screen hides (LocalTransparencyModifier, nothing else changes) while you stand there: the rooftop's city, its
+-- ground and its tower, and the old switched-off zones, which otherwise show across the open sea.
+do
+	local roofLook
+	for _, world in Config.Zones.Worlds do
+		if world.Id == "SkylineLanes" then
+			roofLook = world.Look
+		end
+	end
+	local far = {
+		{ "SkylineLanes", "City" }, { "SkylineLanes", "Ground" }, { "SkylineLanes", "Design", "roof" },
+		{ "SkylineLanes", "Design", "floodlights" }, { "SkylineLanes", "Design", "zone_sign" },
+		{ "BackAlley" }, { "NeonAlley" }, { "MainStreetLanes" }, { "Hub" }, { "Leaderboards" },
+	}
+	for zone, info in Config.CoreLoop.Zones.List do
+		if zone > 1 then
+			local look = table.clone(roofLook)
+			for key, value in info.LookChanges or {} do
+				look[key] = value
+			end
+			table.insert(Config.Zones.Worlds, {
+				Id = info.Folder,
+				Folder = info.Folder,
+				Area = { Center = Vector3.new(-10, 870, -3480) + info.Offset, Size = Vector3.new(600, 180, 640) },
+				Look = look,
+				Hide = far,
+			})
+		end
+	end
+end
 
 -- Elevators (owner 2026-10-22): Skyline Lanes is a rooftop, so you ride up to it. One car at the east end of
 -- Main Street Lanes' back walkway, one on the roof. Built in code on each screen (ElevatorController); the server

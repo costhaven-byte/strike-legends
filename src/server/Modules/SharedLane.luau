@@ -14,6 +14,7 @@ local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local CoreLadder = require(ReplicatedStorage.Shared:WaitForChild("Modules"):WaitForChild("CoreLadder"))
+local ZoneMaps = require(script.Parent:WaitForChild("ZoneMaps"))
 
 local CORE = Config.CoreLoop
 local LANE = CORE.SharedLane
@@ -181,6 +182,8 @@ local function buildSpot(n: number, spots: Instance, visuals: Instance, zone: nu
 	local length = LANE.FoulZ - LANE.DeckZ
 	local deck = LANE.DeckZ - LANE.EndZ
 	local width = LANE.Spacing
+	-- Addendum 6 Stage 4: a zone can paint its lane its own way (Config.CoreLoop.Zones List[z].Lane)
+	local look = (CoreLadder.ZoneInfo(zone) or {}).Lane or LANE
 
 	marker("BallStart", Vector3.one, CFrame.new(x, 849.605, LANE.BallStartZ), spot)
 	marker("PinSpot", Vector3.new(1, 0.2, 1), CFrame.new(x, floorTop + 0.1, LANE.PinSpotZ), spot)
@@ -215,16 +218,16 @@ local function buildSpot(n: number, spots: Instance, visuals: Instance, zone: nu
 			"Wood" .. n,
 			Vector3.new(width + left + right, 0.4, length),
 			CFrame.new(mid, floorTop - 0.2, (LANE.FoulZ + LANE.DeckZ) / 2),
-			LANE.Wood[(n - 1) % 2 + 1],
-			LANE.LaneMaterial or Enum.Material.WoodPlanks
+			look.Wood[(n - 1) % 2 + 1],
+			look.LaneMaterial or LANE.LaneMaterial or Enum.Material.WoodPlanks
 		)
 		wood.Parent = visuals
 		local deckPart = part(
 			"Deck" .. n,
 			Vector3.new(width + left + right, 0.4, deck),
 			CFrame.new(mid, floorTop - 0.2, (LANE.DeckZ + LANE.EndZ) / 2),
-			LANE.Deck,
-			LANE.LaneMaterial or Enum.Material.WoodPlanks
+			look.Deck,
+			look.LaneMaterial or LANE.LaneMaterial or Enum.Material.WoodPlanks
 		)
 		deckPart.Parent = visuals
 
@@ -531,7 +534,13 @@ function SharedLane.Build()
 			zoneFolder:SetAttribute("Zone", zone)
 			zoneFolder.Parent = Workspace
 		end
-		if info.Placeholder and not zoneFolder:FindFirstChild("Placeholder") then
+		if info.Map and not zoneFolder:FindFirstChild("Map") then
+			-- Addendum 6 Stages 4-6: the zone's real map (server/Modules/ZoneMaps), built in zone 1's layout
+			local map = ZoneMaps.Build(info.Map, zone, info)
+			shift(map, info.Offset)
+			map.Parent = zoneFolder
+			ZoneMaps.Terrain(info.Map, info)
+		elseif info.Placeholder and not zoneFolder:FindFirstChild("Placeholder") then
 			local ground = buildPlaceholder(zone, info)
 			shift(ground, info.Offset)
 			ground.Parent = zoneFolder

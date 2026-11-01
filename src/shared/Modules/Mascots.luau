@@ -401,9 +401,18 @@ function Mascots.EggUnlocked(egg, rankLevel: number, zone: number): (boolean, st
 		return false, ("LEVEL %d"):format(egg.Rank)
 	end
 	if egg.Zone and zone < egg.Zone then
-		return false, Zones.NeedText(egg.Zone)
+		return false, if egg.Tier then ("ZONE %d"):format(egg.Zone) else Zones.NeedText(egg.Zone)
 	end
 	return true, nil
+end
+
+-- Addendum 6 Stage 4: the zone number EggUnlocked checks. The zone eggs (Config.CoreLoop.Eggs) open with the zones you
+-- opened at the gates (CoreZonesOpen), not the old rebirth zones (ZonesOpen)
+function Mascots.EggZone(zonesOpen: any, coreZonesOpen: any): number
+	if CORE_EGGS and Config.CoreLoop.Zones and Config.CoreLoop.Zones.Enabled then
+		return math.max(1, math.floor(tonumber(coreZonesOpen) or 1))
+	end
+	return Zones.Highest(zonesOpen)
 end
 
 -- Owned counts <-> "Pinny=2,Gus=1"

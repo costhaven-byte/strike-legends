@@ -132,3 +132,56 @@
 - I didn't hatch a Speckled Egg or press the gate prompt by hand. The gate was tested through the same request the prompt sends.
 
 **Save change:** save version 38 adds which zones you've opened and the zone you were last in. Both start at 1, so old saves need nothing.
+
+## Stage 4: Zone 2, Sunset Boardwalk (2026-11-01, code tag `restore-a6-s4-before`)
+
+### What changed
+- **Zone 2 has a real map now** in place of the flat placeholder. It's a wooden pier over a real turquoise sea:
+  - Warm plank deck with railings (coral top rail), lamp posts and pier legs going into the water.
+  - The lane is **deep sea navy** (matt), with bright turquoise gutters and coral walls, so effects stand out (the rule from 1.2).
+  - A striped back wall behind the pins and a big **SUNSET BOARDWALK** arch with two red-and-white towers.
+  - Bunting (coral, yellow, turquoise, white flags) over the lane.
+  - To the east, a **sand beach** with striped umbrellas and towels, palm trees, five pastel beach huts, a lifeguard tower, surfboards, a sandcastle and a volleyball net.
+  - A **ferris wheel** on the beach, a red-and-white **lighthouse** on a rock island past the pins, sailboats and buoys on the sea, and kites in the sky.
+  - The sell pad and the shop got **striped beach-hut awnings**.
+- The map is built from simple parts when the server starts. It's all tagged "ZoneArt", so designed 3D models can replace it later.
+- **10 new ball effects, one for each zone 2 ball**, all different. They're sea and beach themed, and they get bigger the more pins you knock:
+  - 11 Seashell Spinner: a pearly shell spiral, and pearls scatter.
+  - 12 Beach Ball: one big hop onto the pins, then beach-ball colour panels and bounce rings.
+  - 13 Kite Flyer: rainbow kites with tails lift off the pins and fly away.
+  - 14 Tide Turner: a wave of splashes rolls across the pins from one side.
+  - 15 Coral Crusher: coral spikes burst up out of the lane around the pins.
+  - 16 Surf Rider: a curling wave arches over the pins and crashes in foam.
+  - 17 Sunset Splash: a tall sunset-coloured water column, with a rainbow in the mist.
+  - 18 Pier Pounder: a giant pier post drops out of the sky onto the pins.
+  - 19 Tsunami: a towering wave rises behind the pins and crashes over them (screen flash).
+  - 20 Lighthouse Beam: a golden beam sweeps the pins, then a pillar of light blasts up. A spotlight follows the ball down the lane.
+  - On the way down the lane: sea spray behind the water balls, pearls, kite sparkles, sunset drops, dust, or the lighthouse spotlight.
+- Zone 2's balls are no longer marked as placeholders. They use the original ball designs plus their own effect.
+- **Egg (3.3):** the Neon Egg already moved to zone 2 in Stage 3. Its stand is on the pier, next to the lane.
+
+### Bugs found and fixed on the way
+- **Zones 2 to 4 had night lighting.** The zone lighting only knew the rooftop, so anyone standing in a new zone got the place's default night look. Each new zone now gets the rooftop's sunny daytime look.
+- **The Neon Egg (and the zone 3/4 eggs) wouldn't hatch until you'd rebirthed.** The egg lock still checked the old "zones open by rebirths" rule instead of the zones you open at the gates. Now an egg opens with its zone, and a locked stand says "REACH ZONE 3" (not "REACH 1 REBIRTH").
+- **Brand-new players could get a stuck camera.** The join screen moved the camera to the old Back Alley for its fly-over, but that fly-over is switched off now, so the camera never came back. New players now start on the roof with the normal camera.
+- **You could see the rooftop's city from the beach.** It's about 8,000 studs away across the open sea. While you stand in zones 2 to 4, your screen now hides the far-away rooftop city, its ground and tower, and the old switched-off alley zones. Nothing changes for other players or on the roof.
+
+### Checklist (3.4)
+- Map: lane, sell, shop, egg stand, gate and spawn all on the bright outdoor pier: **done**
+- Lane passes the effect-readability test: **done** (navy lane, all 10 effects checked on it)
+- 10 balls with their own effects: **done**. 10 bags: **already there** (bags 11 to 20 from Stage 3; bags have no look of their own)
+- One egg with its own pets: **done** (Neon Egg, Stage 3)
+- Gate wired in, price in the config: **done** (Stage 3, 22K)
+- Silhouette shop rows for zone 2: **done** (Stage 2/3)
+- Screenshots: **done**, in `screenshots/addendum6-stage4/` (the lane from your spot, sell + shop + gate, egg + beach, and one of each effect)
+
+### Tested (Studio Play test, with screenshots)
+- Jumped to zone 2 with the TEST panel as a brand-new player. The camera followed me, the lighting was sunny, the far city was hidden and the lane view looked right.
+- Played each of the 10 effects on a zone 2 throw spot and looked at it: all are clearly readable on the navy lane. Three of them got fixes after looking: the coral spikes came out as small balls, the Tsunami splash was too small, and the Beach Ball panels were all one colour.
+- Each zone 2 ball points at its own effect. The Neon Egg stand shows "19M COINS" once zone 2 is open. No new errors in Output.
+
+### Not verified
+- I didn't throw a zone 2 ball by hand (Studio can't hold the throw button from here). The effects were played straight on the lane, the same way a throw calls them.
+- I didn't hatch a Neon Egg by hand. The server's lock now uses the same rule as the stand label I checked.
+- Sounds: there are no water sounds in the game yet, so the sea effects borrow the whoosh, thud and boss-hit sounds. New sound slots would make them better (placeholder).
+- **Placeholders still in use:** the map is simple part art (tagged "ZoneArt"). The Neon Egg stand is still the old neon-on-dark design, which doesn't fit the sunny rule, so it needs a beach-style stand. The effects use borrowed sounds.

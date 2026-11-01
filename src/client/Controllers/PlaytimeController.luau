@@ -12,7 +12,6 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local Mascots = require(Shared.Modules.Mascots)
-local Zones = require(Shared.Modules.Zones)
 local Currency = require(Shared.Modules.Currency)
 local PlaytimeRewards = require(Shared.Modules.PlaytimeRewards)
 local CrateController = require(script.Parent.CrateController)
@@ -428,7 +427,11 @@ function PlaytimeController:Start()
 			local egg = Mascots.GetEgg(result.Egg)
 			local level = player:GetAttribute("RankLevel") or 1
 			local unlocked = egg ~= nil
-				and Mascots.EggUnlocked(egg, level, Zones.Highest(player:GetAttribute("ZonesOpen")))
+				and Mascots.EggUnlocked(
+					egg,
+					level,
+					Mascots.EggZone(player:GetAttribute("ZonesOpen"), player:GetAttribute("CoreZonesOpen"))
+				)
 			local look = Config.EggLooks[result.Egg]
 			local eggName = string.upper(if look then look.Name else "EGG")
 			toast(

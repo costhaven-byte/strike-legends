@@ -179,6 +179,9 @@ local function play()
 	repeat
 		if isNew == nil then
 			isNew = isNewPlayer()
+			if isNew and Config.CoreLoop.Enabled then
+				isNew = false -- (Addendum 6 Stage 4: no Back Alley fly-over in the core loop, so never take the camera there)
+			end
 			if isNew ~= nil then
 				task.spawn(function()
 					if not game:IsLoaded() then

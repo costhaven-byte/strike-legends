@@ -119,6 +119,26 @@ local function flicker(world)
 	end)
 end
 
+-- Addendum 6 Stage 4: hides (on this screen only) the far-away models a world lists in Hide, e.g. the rooftop's city
+-- seen across the sea from the outdoor zones; on = false shows them again
+local function hideFar(world, on: boolean)
+	for _, path in world.Hide or {} do
+		local node: Instance? = Workspace
+		for _, name in path do
+			node = node and node:FindFirstChild(name)
+		end
+		if node then
+			local list = node:GetDescendants()
+			table.insert(list, node)
+			for _, part in list do
+				if part:IsA("BasePart") then
+					part.LocalTransparencyModifier = if on then 1 else 0
+				end
+			end
+		end
+	end
+end
+
 -- Addendum 4 core loop: the night rooftop repainted for daytime on this screen (Config.CoreLoop DayColors/DayNeon/
 -- DayLightsOff). The place file keeps the night colours.
 local function daylight()
@@ -171,8 +191,14 @@ function ZoneLookController:Start()
 	while true do
 		local world = currentWorld()
 		if world ~= shown then
+			if shown then
+				hideFar(shown, false)
+			end
 			shown = world
 			applyLook(if world then world.Look else base)
+			if world then
+				hideFar(world, true)
+			end
 		end
 		task.wait(0.25)
 	end

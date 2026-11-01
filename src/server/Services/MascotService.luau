@@ -49,7 +49,7 @@ end
 
 -- The highest zone the player has open (eggs with a Zone unlock there)
 local function zone(player: Player): number
-	return Zones.Highest(PlayerDataService.Get(player, "ZonesOpen"))
+	return Mascots.EggZone(PlayerDataService.Get(player, "ZonesOpen"), PlayerDataService.Get(player, "CoreZonesOpen"))
 end
 
 -- Keeps the equipped list valid: real mascots, never more copies than owned, never more than the slots
