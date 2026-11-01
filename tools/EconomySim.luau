@@ -1141,11 +1141,30 @@ function EconomySim.CoreLadder(config: any?, tripSeconds: number?): string
 		local size = core.BagSizes[bag]
 		return 60 * size / (size / rate + trip)
 	end
-	local lines = { ("BALL / BAG LADDER (throw every %.1f s, sell trip %d s)"):format(core.Cooldown, trip) }
+	local independent = core.Ladders and core.Ladders.Independent
+	local lines = {
+		("BALL / BAG LADDER (throw every %.1f s, sell trip %d s, %s)"):format(
+			core.Cooldown,
+			trip,
+			if independent then "two ladders: buys the cheaper next step" else "alternating"
+		),
+	}
 	local ball, bag, minutes, since = 1, 1, 0, 0
 	while true do
 		local kind, step, price
-		if bag < ball and bag < #core.BagSizes then
+		if independent then
+			-- Addendum 5 A2: the next ball and the next bag are both on sale; this player buys the cheaper one (the
+			-- goal bar points at it), a tie = the ball
+			local ballPrice = if ball < #core.Balls then core.Balls[ball + 1].Price else nil
+			local bagPrice = if bag < #core.BagSizes then core.BagPrices[bag + 1] else nil
+			if ballPrice and (not bagPrice or ballPrice <= bagPrice) then
+				kind, step, price = "Ball", ball + 1, ballPrice
+			elseif bagPrice then
+				kind, step, price = "Bag", bag + 1, bagPrice
+			else
+				break
+			end
+		elseif bag < ball and bag < #core.BagSizes then
 			kind, step, price = "Bag", bag + 1, core.BagPrices[bag + 1]
 		elseif ball < #core.Balls then
 			kind, step, price = "Ball", ball + 1, core.Balls[ball + 1].Price

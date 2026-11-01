@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
 local PowerLevels = require(Shared.Modules.PowerLevels)
 local Currency = require(Shared.Modules.Currency)
 local Analytics = require(script.Parent.Analytics)
@@ -22,6 +23,10 @@ end
 local function onBuy(player: Player)
 	if not PlayerDataService.IsLoaded(player) or not RateLimit.Allow(player, "BuyPowerLevel") then
 		return { Ok = false, Error = "That didn't work. Try again" }
+	end
+	if Config.CoreLoop.Enabled then
+		-- Addendum 5 A2: the core loop sells nothing away from the shop booth (Power Levels don't count there anyway)
+		return { Ok = false, Error = "Buy at the shop" }
 	end
 	local level = currentLevel(player)
 	local nextRow = PowerLevels.Next(level)

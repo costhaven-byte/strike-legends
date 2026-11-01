@@ -1,7 +1,7 @@
 -- Addendum 4 core loop (Config.CoreLoop), the screen half: the live pin counter ("+1.2K" pins this throw, with a
 -- LUCKY! badge on high rolls; Addendum 5 A1), the bag bar, the SELL
--- button (it shows the way to the sell station: selling only happens there), the BAG FULL, SELL prompt and the
--- sold pop. Style from the owner's simulator refs (assets/ui_refs_addendum4): rounded bold Fredoka text with a thin
+-- button (Addendum 5 A2: it teleports you onto the sell pad, where the bag sells: selling only happens there), the
+-- BAG FULL, SELL prompt and the sold pop. Style from the owner's simulator refs (assets/ui_refs_addendum4): rounded bold Fredoka text with a thin
 -- dark outline, flat fills, one hard offset shadow, thick dark outlines, corners that differ by element.
 -- Everything here only shows numbers the server sends (Bag / BagSize attributes, ThrowResult, CoreSold).
 local Players = game:GetService("Players")
@@ -180,7 +180,7 @@ function CoreHudController:Start()
 	prompt.Rotation = -2
 	prompt.Visible = false
 	text(promptFace, "Your bag is full", { Size = UDim2.new(1, -20, 0.6, 0), Position = UDim2.new(0, 10, 0.08, 0) })
-	text(promptFace, "Go sell at the green circle", {
+	text(promptFace, "Tap Sell to cash it in", {
 		Size = UDim2.new(1, -20, 0.26, 0),
 		Position = UDim2.new(0, 10, 0.68, 0),
 		Body = true,
@@ -308,19 +308,29 @@ function CoreHudController:Start()
 		end
 		tutorLine.Text = if step == 1
 			then "Hold Throw to bowl"
-			elseif step == 2 then "That's enough. Go sell at the green circle"
-			else ("%d coins. Go buy the %s"):format(firstBall.Price, firstBall.Name)
+			elseif step == 2 then "That's enough. Tap Sell"
+			else ("%d coins. Buy the %s at the shop"):format(firstBall.Price, firstBall.Name)
 		if step > 1 then
 			Sfx.Play("Click")
 			UiFx.Pop(tutor, 1.1, 0.18)
 		end
 	end
 
+	-- SELL: teleports you onto the sell pad (the server moves you; the pad sells the bag)
+	local goRemote = remotes:WaitForChild("CoreGoTo") :: RemoteEvent
+	local lastGo = 0
 	sellButton.Activated:Connect(function()
 		Sfx.Play("Click")
 		sellScale.Scale = 0.92
 		TweenService:Create(sellScale, TweenInfo.new(0.15, Enum.EasingStyle.Back), { Scale = 1 }):Play()
-		guideUntil = os.clock() + 20
+		if os.clock() - lastGo < CORE.Teleport.Cooldown then
+			return
+		end
+		lastGo = os.clock()
+		goRemote:FireServer("Sell")
+		Sfx.Play("Teleport", 1.1, 0.6)
+		UiFx.Flash(WHITE, 0.25, 0.25)
+		guideUntil = os.clock() + 4 -- (the beam shows for a moment in case the teleport was refused)
 	end)
 
 	-- Bag numbers from the server
@@ -440,7 +450,7 @@ function CoreHudController:Start()
 		sellScale.Scale = if full or step == 2 then 1 + math.abs(math.sin(os.clock() * 5)) * 0.06 else sellScale.Scale
 		sellGuide((full or step == 2 or os.clock() < guideUntil) and amount > 0)
 		shopGuide(step == 3)
-		-- the BALLS button (opens the shop anywhere) bounces while it's time to buy
+		-- the BALLS button (the price list with GO TO SHOP) bounces while it's time to buy
 		if ballsButton and not ballsScale then
 			ballsScale = (ballsButton :: GuiObject):FindFirstChild("GuideScale") :: UIScale?
 				or new("UIScale", { Name = "GuideScale" }, ballsButton)

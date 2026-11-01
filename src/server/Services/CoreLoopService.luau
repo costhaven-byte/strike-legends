@@ -2,8 +2,10 @@
 -- spawn and the hold-to-throw cooldown. Pins knocked fill the bag (ThrowService calls AddToBag); standing on the green
 -- sell pad sells the whole bag for Coins. There is no remote sell: the SELL button only shows the way to the pad.
 -- The server owns the bag: clients only see it through the Bag / BagSize player attributes.
--- Stage 2: the ball and bag ladders (Config.CoreLoop Balls / BagSizes / BagPrices), bought in turn (ball, bag, ball,
--- bag) through the CoreBuy remote; you throw the last ball you bought. Crates no longer give balls here.
+-- Stage 2: the ball and bag ladders (Config.CoreLoop Balls / BagSizes / BagPrices), bought through the CoreBuy remote;
+-- you throw the last ball you bought. Crates no longer give balls here.
+-- Addendum 5 A2: two independent ladders (any order), bought ONLY while standing at the shop booth (server distance
+-- check); the SELL / GO TO SHOP buttons teleport you onto the sell pad / shop circle (CoreGoTo remote).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
@@ -52,9 +54,21 @@ function CoreLoopService.Pose(player: Player): number
 	return CoreLadder.Pose(PlayerDataService.Get(player, "BallStep"))
 end
 
--- What the shop sells next ("Ball" / "Bag", step, price; nil = everything bought)
-local function nextBuy(player: Player): (string?, number, number)
-	return CoreLadder.Next(PlayerDataService.Get(player, "BallStep"), PlayerDataService.Get(player, "BagLevel"))
+-- What the shop can sell of `kind` now (step, price; nil = nothing)
+local function nextBuy(player: Player, kind: string): (number?, number)
+	return CoreLadder.Buyable(kind, PlayerDataService.Get(player, "BallStep"), PlayerDataService.Get(player, "BagLevel"))
+end
+
+-- Addendum 5 A2: is the player standing at the shop booth (its blue circle + BuySlack)? Every coin buy checks this.
+function CoreLoopService.AtShop(player: Player): boolean
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not root then
+		return false
+	end
+	local offset = root.Position - SHOP.Position
+	return Vector2.new(offset.X, offset.Z).Magnitude <= SHOP.Radius + (SHOP.BuySlack or 0)
+		and offset.Y > -4
+		and offset.Y < 10
 end
 
 -- Owns and equips the ladder ball of the player's step (model, trail and look come from Config.Balls)
@@ -66,20 +80,31 @@ local function equipLadderBall(player: Player)
 	end
 end
 
--- Buys the next step of the ladder. kind must be what the shop sells next (the client shows the same order).
+-- Buys the next step of the ball or bag ladder (kind "Ball" / "Bag"), only at the shop booth
 local function buy(player: Player, kind: any)
 	if not PlayerDataService.IsLoaded(player) then
 		return { Ok = false, Error = "Hang on, still loading" }
 	end
+	if kind ~= "Ball" and kind ~= "Bag" then
+		return { Ok = false, Error = "That didn't work. Try again" }
+	end
 	if not RateLimit.Allow(player, "CoreBuy", 0.3) then
 		return { Ok = false, Error = "Too fast, wait a sec" }
 	end
-	local want, step, price = nextBuy(player)
-	if not want then
-		return { Ok = false, Error = "You've got everything" }
+	if not CoreLoopService.AtShop(player) then
+		return { Ok = false, Error = "Buy it at the shop" }
 	end
-	if kind ~= want then
-		return { Ok = false, Error = if want == "Bag" then "Get the next bag first" else "Get the next ball first" }
+	local want = kind
+	local step, price = nextBuy(player, kind)
+	if not step then
+		local all = if kind == "Ball" then CoreLadder.NextBall(PlayerDataService.Get(player, "BallStep")) == nil
+			else CoreLadder.NextBag(PlayerDataService.Get(player, "BagLevel")) == nil
+		return {
+			Ok = false,
+			Error = if all then "You've got them all"
+				elseif kind == "Bag" then "Get the next ball first"
+				else "Get the next bag first",
+		}
 	end
 	if not PlayerDataService.Spend(player, "Coins", price) then
 		return { Ok = false, Error = "Not enough coins" }
@@ -520,6 +545,32 @@ function CoreLoopService:Start()
 		return result
 	end
 	buyRemote.Parent = soldRemote.Parent
+
+	-- Addendum 5 A2: SELL / GO TO SHOP teleport you onto that pad (the pad loop below sells; the shop opens itself)
+	local goRemote = Instance.new("RemoteEvent")
+	goRemote.Name = "CoreGoTo"
+	goRemote.OnServerEvent:Connect(function(player, where)
+		local target = if where == "Sell" then SELL elseif where == "Shop" then SHOP else nil
+		if not target or not PlayerDataService.IsLoaded(player) then
+			return
+		end
+		if not RateLimit.Allow(player, "CoreGoTo", CORE.Teleport.Cooldown) then
+			return
+		end
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if not character or not humanoid or humanoid.Health <= 0 then
+			return
+		end
+		humanoid.Sit = false
+		-- land a little up (feet clear of the rim): on the sell pad facing the lanes (-Z), on the shop circle
+		-- facing the booth's counter (+Z)
+		local at = target.Position + Vector3.new(0, humanoid.HipHeight + CORE.Teleport.Height, 0)
+		local look = if where == "Shop" then Vector3.new(0, 0, 1) else Vector3.new(0, 0, -1)
+		character:PivotTo(CFrame.lookAt(at, at + look))
+		SessionLog.Moment(player, "Teleported to " .. where)
+	end)
+	goRemote.Parent = soldRemote.Parent
 
 	buildSpawn()
 	buildStation()

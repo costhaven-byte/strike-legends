@@ -549,7 +549,8 @@ function EventController:Start()
 			Icon = "Crate",
 		})
 
-		-- Addendum 4 Stage 2: the only goal is the next step of the ball / bag ladder
+		-- Addendum 4 Stage 2: the only goal is the next step of the ball / bag ladder (Addendum 5 A2: the cheaper of
+		-- the next ball and the next bag; bought only at the shop booth)
 		if Config.CoreLoop.Enabled then
 			local coins = player:GetAttribute("Coins") or 0
 			local kind, step, price = CoreLadder.Next(player:GetAttribute("BallStep"), player:GetAttribute("BagLevel"))
@@ -559,7 +560,7 @@ function EventController:Start()
 					{
 						Progress = math.min(coins / math.max(price, 1), 1),
 						Text = if coins >= price
-							then ("%s: tap BALLS to buy"):format(name)
+							then ("%s: buy it at the shop"):format(name)
 							else ("Next: %s  %s / %s"):format(name, short(coins), short(price)),
 						Color = GOLD,
 						Icon = "Ball",

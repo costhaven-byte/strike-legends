@@ -58,24 +58,33 @@ Config.CoreLoop = {
 	-- Prices: income per minute with the ball you have x the target minutes to the next ball (2, 2, 5, 5, 5, 5, 5, 8,
 	-- 12), with the bag in between taking about 30% of that time. Sell trips counted at 6 s; check with
 	-- require(game.ServerStorage.Tools.EconomySim).CoreLadder(). Full ladder ~51 min of play.
-	-- Addendum 5 A1: steeper pins curve (about x2 a ball; was 6, 9, 12 .. 43), bag sizes and prices scaled with it
-	-- so every step still takes the same minutes. Step A2 splits balls and bags into two ladders.
+	-- Addendum 5 A1: steeper pins curve (about x2 a ball; was 6, 9, 12 .. 43).
+	-- Addendum 5 A2: balls and bags are TWO ladders (Ladders.Independent): buy the next ball or the next bag in any
+	-- order, neither blocks the other. Ball pacing (minutes between balls for a player who always buys the cheaper
+	-- of the two next steps, bags included): ball 2 in the first ~15 s (the Throw > Sell > Buy guide), balls 3-5
+	-- about 2 min each, balls 6-10 about 5 min each (ball 10 at ~31 min). Check with
+	-- require(game.ServerStorage.Tools.EconomySim).CoreLadder(). Rarity = the colour its row shows in the shop.
 	Balls = {
-		{ Ball = "Tangerine", Name = "Beach Roller", Pins = 6, Price = 0 },
-		{ Ball = "Bubblegum", Name = "Rubber Bouncer", Pins = 10, Price = 50 }, -- one bag: bought in the first 30 s (Stage 3)
-		{ Ball = "Lime", Name = "Confetti Popper", Pins = 18, Price = 580 },
-		{ Ball = "Sunburst", Name = "Sunspike", Pins = 35, Price = 2800 },
-		{ Ball = "Frostbite", Name = "Gust", Pins = 70, Price = 5600 },
-		{ Ball = "CloudSwirl", Name = "Cloud Roll", Pins = 140, Price = 12000 },
-		{ Ball = "Crystal", Name = "Rainbow Arc", Pins = 300, Price = 24000 },
-		{ Ball = "Lightning", Name = "Sunbolt", Pins = 650, Price = 52000 },
-		{ Ball = "SolidGold", Name = "Tornado", Pins = 1400, Price = 180000 },
-		{ Ball = "Daybreak", Name = "Sonic Boom", Pins = 3200, Price = 600000 },
+		{ Ball = "Tangerine", Name = "Beach Roller", Pins = 6, Price = 0, Rarity = "Common" },
+		{ Ball = "Bubblegum", Name = "Rubber Bouncer", Pins = 10, Price = 50, Rarity = "Common" }, -- one bag: bought in the first 30 s (Stage 3)
+		{ Ball = "Lime", Name = "Confetti Popper", Pins = 18, Price = 500, Rarity = "Uncommon" },
+		{ Ball = "Sunburst", Name = "Sunspike", Pins = 35, Price = 950, Rarity = "Uncommon" },
+		{ Ball = "Frostbite", Name = "Gust", Pins = 70, Price = 1900, Rarity = "Rare" },
+		{ Ball = "CloudSwirl", Name = "Cloud Roll", Pins = 140, Price = 10000, Rarity = "Rare" },
+		{ Ball = "Crystal", Name = "Rainbow Arc", Pins = 300, Price = 21000, Rarity = "Epic" },
+		{ Ball = "Lightning", Name = "Sunbolt", Pins = 650, Price = 45000, Rarity = "Epic" },
+		{ Ball = "SolidGold", Name = "Tornado", Pins = 1400, Price = 99000, Rarity = "Legendary" },
+		{ Ball = "Daybreak", Name = "Sonic Boom", Pins = 3200, Price = 220000, Rarity = "Mythic" },
 	},
-	-- Bags: BagSizes[BagLevel] coins fit; BagPrices[n] buys bag n (bag 1 is free). Each bag fills in ~10 s (bag 1)
-	-- to ~40 s (bag 10) with the ball it comes after.
+	-- Bags: BagSizes[BagLevel] coins fit; BagPrices[n] buys bag n (bag 1 is free). Bag n fills in ~10 throws (bag 1)
+	-- to ~40 throws (bag 10) with ball n. Bag pacing (A2): its own ladder, each bag lands about 40% of the way
+	-- between two balls (bag 2 ~1 min, bags 3-4 ~2 min apart, then ~5 min apart, bag 10 ~3 min after ball 10).
+	-- A small bag caps your income (a throw that doesn't fit pays only what fits), so bags matter as much as balls.
 	BagSizes = { 60, 140, 300, 700, 1600, 3700, 8700, 21000, 50000, 130000 },
-	BagPrices = { 0, 180, 920, 1900, 3800, 8400, 18000, 65000, 220000, 570000 },
+	BagPrices = { 0, 240, 600, 990, 5200, 11000, 24000, 54000, 120000, 420000 },
+	Ladders = {
+		Independent = true, -- Addendum 5 A2: two ladders (false = Addendum 4's ball, bag, ball, bag order)
+	},
 	-- Gifts in the core loop (owner 2026-11-01: scale to income): daily, playtime and level rewards pay CoreMinutes
 	-- (on each reward row; RewardMinutes when a row has none) of the income your ball + bag make now (ladder income,
 	-- sell trips of TripSeconds counted, no multipliers). A crate in a reward pays CrateMinutes of it instead, since
@@ -85,11 +94,19 @@ Config.CoreLoop = {
 		RewardMinutes = 2,
 		CrateMinutes = 5,
 	},
-	-- The ball shop booth in the plaza: stand on its blue circle (or tap BALLS) to open the shop
+	-- The ball shop booth in the plaza: stand on its blue circle to open the shop. Addendum 5 A2: everything is
+	-- bought here only. The server refuses a buy unless you stand within Radius + BuySlack studs (flat) of the
+	-- circle; the HUD BALLS window is a price list only (its GO TO SHOP button takes you here).
 	Shop = {
 		Position = Vector3.new(-17, 848.65, -3415),
 		Radius = 4.5,
+		BuySlack = 4, -- extra studs for lag (walking off while the buy is on its way)
 		Color = Color3.fromRGB(64, 160, 236), -- sky blue
+	},
+	-- Addendum 5 A2: the SELL and GO TO SHOP buttons teleport you onto the pad (once every Cooldown seconds)
+	Teleport = {
+		Cooldown = 1.5,
+		Height = 3, -- studs above the pad floor the character lands
 	},
 	-- Stage 3b plaza props: copies of existing models (the originals stay where they are), placed at server start in
 	-- <Folder>.Plaza. From = path from Workspace, At = floor point under the model's middle, Turn = degrees around Y.
@@ -146,7 +163,8 @@ Config.CoreLoop = {
 	PopsPerThrow = 8, -- coin numbers over pins per throw (one per pin up to this many; the total pops too)
 	BigClear = 24, -- drawn pins a LUCKY throw needs for the camera shake + crash sound (Addendum 5 A1)
 	-- Bag: coins from pins go here, not to your coins (BagSizes above, bought in the shop).
-	-- Selling only happens at the sell station (owner 2026-11-01); the SELL button points the way there.
+	-- Selling only happens at the sell station (owner 2026-11-01); the SELL button teleports you onto its pad
+	-- (Addendum 5 A2, Teleport above), where the bag sells.
 	-- A "sell anywhere" pass or upgrade can come later.
 	Sell = {
 		-- floor centre of the pad, in the strip behind the lane approaches (lanes 1 and 6 are ~2.7 s away; the middle

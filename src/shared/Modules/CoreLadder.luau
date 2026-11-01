@@ -1,5 +1,6 @@
 -- Addendum 4 Stage 2: the ball and bag ladders (Config.CoreLoop Balls / BagSizes / BagPrices). Shared so the server
 -- (CoreLoopService sells them) and the screens (shop, next-goal bar) agree on what comes next.
+-- Addendum 5 A2: two independent ladders (Config.CoreLoop.Ladders.Independent).
 local Config = require(script.Parent.Parent.Config)
 
 local CORE = Config.CoreLoop
@@ -21,11 +22,58 @@ function CoreLadder.Pose(ballStep: any): number
 	return CORE.Poses[CoreLadder.BallStep(ballStep)] or 1
 end
 
--- What the shop sells next: "Ball" or "Bag", its step and price. They alternate: ball 2, bag 2, ball 3, bag 3 ...
--- ball 10, bag 10. nil = everything bought.
+-- The next ball on the ball ladder (step, price), or nil when every ball is bought
+function CoreLadder.NextBall(ballStep: any): (number?, number)
+	local step = CoreLadder.BallStep(ballStep) + 1
+	if step > #CORE.Balls then
+		return nil, 0
+	end
+	return step, CORE.Balls[step].Price
+end
+
+-- The next bag on the bag ladder (level, price), or nil when every bag is bought
+function CoreLadder.NextBag(bagLevel: any): (number?, number)
+	local level = CoreLadder.BagLevel(bagLevel) + 1
+	if level > #CORE.BagSizes then
+		return nil, 0
+	end
+	return level, CORE.BagPrices[level]
+end
+
+-- What the shop can sell of `kind` right now ("Ball" / "Bag"): its step and price, nil = can't (bought them all,
+-- or, with the old alternating ladder, the other kind comes first)
+function CoreLadder.Buyable(kind: string, ballStep: any, bagLevel: any): (number?, number)
+	if not CORE.Ladders.Independent then
+		local want, step, price = CoreLadder.Next(ballStep, bagLevel)
+		if want == kind then
+			return step, price
+		end
+		return nil, 0
+	end
+	if kind == "Ball" then
+		return CoreLadder.NextBall(ballStep)
+	elseif kind == "Bag" then
+		return CoreLadder.NextBag(bagLevel)
+	end
+	return nil, 0
+end
+
+-- The next goal: "Ball" or "Bag", its step and price; nil = everything bought. Addendum 5 A2 (Ladders.Independent):
+-- the cheaper of the next ball and the next bag (a tie = the ball). Addendum 4: they alternate ball 2, bag 2, ball 3,
+-- bag 3 ... ball 10, bag 10.
 function CoreLadder.Next(ballStep: any, bagLevel: any): (string?, number, number)
 	local ball = CoreLadder.BallStep(ballStep)
 	local bag = CoreLadder.BagLevel(bagLevel)
+	if CORE.Ladders.Independent then
+		local ballNext, ballPrice = CoreLadder.NextBall(ball)
+		local bagNext, bagPrice = CoreLadder.NextBag(bag)
+		if ballNext and (not bagNext or ballPrice <= bagPrice) then
+			return "Ball", ballNext, ballPrice
+		elseif bagNext then
+			return "Bag", bagNext, bagPrice
+		end
+		return nil, 0, 0
+	end
 	if bag < ball and bag < #CORE.BagSizes then
 		return "Bag", bag + 1, CORE.BagPrices[bag + 1]
 	elseif ball < #CORE.Balls then
