@@ -289,3 +289,55 @@ Shiny = every stat x2.
 **Studio-only edits:** a new ModuleScript `StarterPlayer.StarterPlayerScripts.Client.Modules.BallSignature` was created in the open Studio (same as the repo file). Save the place or reconnect Rojo to keep it.
 
 **Placeholders:** none new (all existing images and sounds).
+
+## Step 8 (E): pacing + logging (2026-11-01)
+**What changed**
+- **Pacing record for every player** (new server module `Modules/Pacing`, `Config.Pacing`). Per run (from the start or
+  a rebirth to the next rebirth) it notes when each ball, bag, pet slot and egg was first bought (minutes of play into
+  the run), when the rebirth came, and the income (coins a minute over the last 3 minutes): the top of the run, 5
+  minutes in, just before the rebirth, and when the next run got back to it.
+- **Where to read it:** the Output prints the whole record when a player leaves, plus one line per buy as it happens;
+  the Studio TEST panel has a new **PACING** button (EVENTS row) that prints it any time; it is saved with the player
+  (newest 8 runs, save v36, nothing old touched); Analytics gets a `Pacing` event, a `PacingIncome` event and a **Run**
+  funnel (start, balls 2-10, rebirth) for the Creator Dashboard.
+- **Simulator:** `EconomySim.CorePacing()` plays the whole new loop (two ladders, slots, eggs, 4-stat pets, EQUIP BEST,
+  Shiny merges, bag cap, rebirth multiplier on pins and sells, ladder power) for a rebirther and a never-rebirther.
+- **PACING_REPORT.md**: the full table and every finding. Short version of the Config fixes:
+  - balls 6-10 and bags 6-10 re-priced (pets had made balls 7-10 come 2.4-4.3 min apart; now ~5 min, ball 10 at ~30 min)
+  - rebirth prices 10M, 25M, 60M, 120M, 220M, 380M then x1.5 (x3 made rebirth 5 a 2-hour save, rebirth 7 a 13-hour one)
+  - EQUIP BEST counts the Bag stat 8 instead of 0.6 (it was swapping bag pets out and halving income)
+  - PIN CRUSHER goals 10K / 1M / 10M / 100M (the old 1K-500K went in 30 minutes)
+- Result: rebirths at ~44 min, 55 min, 1h11, 1h30, 1h55, 2h29; each rebirth gets back to the last top income in
+  15-40% of the first run's time and passes it; a never-rebirther stays at 1.3-3.2M a minute while a rebirther is at
+  6.6M after an hour and 23M after three.
+
+**Restore tag:** `restore-a5-E-before`. **Commit:** see below. **Save:** v36 adds `Pacing` (starts empty).
+
+**2-minute test**
+1. Play (TEST: START FROM ZERO). Throw, sell, buy ball 2 at the shop. Expected in Output: `[Pacing] <you>: Ball2 at 0:xx into run 0`.
+2. Buy a bag and hatch the Neon Egg. Expected: `Bag2 at ...` and `Egg_Alley at ...` lines.
+3. TEST > PACING. Expected: a block with run 0, balls / bags / eggs / slots with times, "income a minute: top ...".
+4. TEST > READY TO REBIRTH, rebirth at the shop, buy ball 2 again, press PACING. Expected: run 0 now says "rebirth 1
+   after ...", a new run 1 with its own times; the shop's ball 6 costs 16K (5.3K x3) and REBIRTH shows 25M next.
+5. Stop. Expected: the same PACING block prints once more as you leave.
+- Silent failures to watch for: no `[Pacing]` lines at all (module not in the place: save the place / reconnect Rojo),
+  times not restarting after a rebirth, the same ball printed twice in one run, a `[Analytics] 'Pacing' is not in
+  Config.Analytics.Events` warning.
+
+**Checked by numbers** (`screenshots/addendum5/E/PLAYTEST_LOG.md`): buys, rebirth, sells (income 397K a minute after 4
+x 100K sells), hatch all logged in the right run; PACING prints; analytics calls fire; no errors. One fix during the
+test (a run with no sells no longer counts as "got back to its income"). The Lua simulator and its Python twin agree.
+
+**Choices made for you**
+- Times are minutes of **play** (all sessions added up), not clock time, so a run spread over days still reads right.
+- Income = coins sold in the last 3 minutes (`Config.Pacing.IncomeWindow`), so it is what the player really earned.
+- Rebirth price growth eased from x3 to the list above (the addendum's "roughly 3x" holds for rebirth 1 to 2 only):
+  with the bag cap, income can't keep up with x3. `LadderPower` stays 1.6 (gives ~1/4 recovery best).
+- Bag weight 8 in EQUIP BEST: a stopgap. A real fix (EQUIP BEST by actual income) is code, left for you / step F.
+- Not changed, needs code or your call (details in PACING_REPORT.md): gift coins are tiny next to rebirth prices; eggs
+  get cheap after rebirth 2 (no 5th egg); from rebirth 1 the bag is the real cap on income.
+
+**Studio-only edits:** new ModuleScript `ServerScriptService.Server.Modules.Pacing` created in the open Studio (same as
+the repo file); all changed scripts pushed into Studio. Save the place or reconnect Rojo to keep them.
+
+**Placeholders:** none.

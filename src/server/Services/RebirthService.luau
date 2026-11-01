@@ -24,6 +24,7 @@ local Players = game:GetService("Players")
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionService = require(script.Parent.ProgressionService)
 local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
+local Pacing = require(script.Parent.Parent.Modules.Pacing)
 local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
 local REBIRTH = Config.Economy.Rebirth
@@ -53,6 +54,7 @@ local function coreRebirth(player: Player)
 	AwayService.Reset(player)
 	Analytics.Event(player, "Rebirth", done + 1)
 	Analytics.Currency(player, "Coins", -price, "Shop", ("Rebirth%d"):format(done + 1))
+	Pacing.Rebirth(player, done + 1) -- (step E: closes this run's pacing record, opens the next)
 	SessionLog.Moment(
 		player,
 		("Rebirth %d (paid %s, had %s, now x%s)"):format(

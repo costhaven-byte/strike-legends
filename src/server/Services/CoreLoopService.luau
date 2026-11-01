@@ -24,6 +24,7 @@ local BallService = require(script.Parent.BallService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
+local Pacing = require(script.Parent.Parent.Modules.Pacing)
 local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
 local CORE = Config.CoreLoop
@@ -133,6 +134,7 @@ local function buyPetSlot(player: Player)
 	Analytics.Currency(player, "Coins", -price, "Shop", ("PetSlot%d"):format(start + bought + 1))
 	Analytics.Purchase(player, "PetSlot", tostring(start + bought + 1))
 	SessionLog.Moment(player, ("Pet slot %d bought"):format(start + bought + 1))
+	Pacing.Slot(player, start + bought + 1)
 	return { Ok = true, Kind = "PetSlot", Step = start + bought + 1 }
 end
 
@@ -175,10 +177,12 @@ local function buy(player: Player, kind: any)
 		local id = CORE.Balls[step].Ball
 		Analytics.Purchase(player, "Ball", id)
 		SessionLog.BallBought(player, id, "Shop")
+		Pacing.Ball(player, step)
 	else
 		PlayerDataService.Set(player, "BagLevel", step)
 		Analytics.Purchase(player, "Bag", tostring(step))
 		SessionLog.Moment(player, ("Bag %d bought"):format(step))
+		Pacing.Bag(player, step)
 	end
 	return { Ok = true, Kind = want, Step = step }
 end
@@ -251,6 +255,7 @@ local function sell(player: Player)
 	LeaderboardService.RecordThrow(player, 0, paid) -- (COINS THIS WEEK counts sold coins)
 	Analytics.Currency(player, "Coins", paid, "Gameplay", "Sell")
 	SessionLog.Sell(player, paid, PlayerDataService.Get(player, "CoreSells") or 1)
+	Pacing.Sold(player, paid)
 	soldRemote:FireClient(player, paid, multiplier)
 end
 

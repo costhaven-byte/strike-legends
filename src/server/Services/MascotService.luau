@@ -21,6 +21,7 @@ local Analytics = require(script.Parent.Analytics)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionService = require(script.Parent.ProgressionService)
 local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
+local Pacing = require(script.Parent.Parent.Modules.Pacing)
 local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
 local HATCH_RANGE = Config.MascotFx.HatchRange
@@ -308,6 +309,7 @@ local function hatch(player: Player, eggId: any)
 	if not free then
 		Analytics.Currency(player, "Coins", -egg.Price * count, "Shop", egg.Id .. "Egg")
 		Analytics.Purchase(player, "Egg", egg.Id)
+		Pacing.Egg(player, egg.Id) -- (step E: the first bought hatch of each egg in this run)
 	end
 	Analytics.Event(player, "MascotHatched", hatched, { egg.Id, mascot.Rarity, mascot.Id })
 	Analytics.Step(player, "Hatched Mascot")

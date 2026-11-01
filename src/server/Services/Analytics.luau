@@ -93,6 +93,17 @@ function Analytics.MinutesPlayed(player: Player): number
 	return math.floor(((PlayerDataService.Get(player, "PlayTime") or 0) + unsaved) / 6) / 10
 end
 
+-- Total seconds this player has played, all sessions together (Addendum 5 E: the pacing clock)
+function Analytics.SecondsPlayed(player: Player): number
+	local unsaved = if playTimeCounted[player] then os.clock() - playTimeCounted[player] else 0
+	return (PlayerDataService.Get(player, "PlayTime") or 0) + unsaved
+end
+
+-- A step of a recurring funnel (Creator Dashboard > Funnels). sessionId groups one pass (e.g. one rebirth run).
+function Analytics.Funnel(player: Player, funnelName: string, sessionId: string, step: number, stepName: string)
+	try(AnalyticsService.LogFunnelStepEvent, player, funnelName, sessionId, step, stepName)
+end
+
 -- Anything bought: kind = "Crate", "Ball", "Egg"...; logged with the player's total minutes played
 function Analytics.Purchase(player: Player, kind: string, item: string)
 	Analytics.Event(player, "Purchase", Analytics.MinutesPlayed(player), { kind, item })

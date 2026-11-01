@@ -13,6 +13,7 @@ local Mascots = require(Shared.Modules.Mascots)
 local Progression = require(Shared.Modules.Progression)
 local Rebirth = require(Shared.Modules.Rebirth)
 local Zones = require(Shared.Modules.Zones)
+local Pacing = require(script.Parent.Parent.Modules.Pacing)
 local StudioTestMode = require(script.Parent.Parent.Modules.StudioTestMode)
 local BallService = require(script.Parent.BallService)
 local BossService = require(script.Parent.BossService)
@@ -191,6 +192,11 @@ local ACTIONS: { [string]: (Player) -> any } = {
 	GemPin = function(player)
 		return reply(LaneEventService.Force(player, "GemPin"))
 	end,
+	-- Addendum 5 step E: prints this player's pacing record (time to each ball / bag / egg / rebirth, income)
+	Pacing = function(player)
+		print(Pacing.Report(player))
+		return reply(true, "Pacing record printed in Output")
+	end,
 }
 
 local function onRequest(player: Player, action: any, mode: any)
@@ -204,6 +210,9 @@ local function onRequest(player: Player, action: any, mode: any)
 	local run = type(action) == "string" and ACTIONS[action]
 	if not run or not PlayerDataService.IsLoaded(player) then
 		return reply(false, "Not ready yet")
+	end
+	if action == "Pacing" then
+		return run(player) -- (read only: works in any test)
 	end
 	if not PlayerDataService.IsTestSession(player) then
 		return reply(false, "Only in a test that isn't saved: pick a start mode, then Stop and Play")

@@ -64,17 +64,20 @@ Config.CoreLoop = {
 	-- of the two next steps, bags included): ball 2 in the first ~15 s (the Throw > Sell > Buy guide), balls 3-5
 	-- about 2 min each, balls 6-10 about 5 min each (ball 10 at ~31 min). Check with
 	-- require(game.ServerStorage.Tools.EconomySim).CoreLadder(). Rarity = the colour its row shows in the shop.
+	-- Addendum 5 E (pacing pass, EconomySim.CorePacing with pets + eggs + slots): the pets had pulled balls 7-10 in to
+	-- 2.4-4.3 min apart (ball 10 at ~27 min), so balls 6-10 were re-priced to ~5 min apart again (ball 10 at ~30 min).
+	-- Was ball 6-10: 10K, 21K, 45K, 99K, 220K.
 	Balls = {
 		{ Ball = "Tangerine", Name = "Beach Roller", Fx = "Sand", Pins = 6, Price = 0, Rarity = "Common" },
 		{ Ball = "Bubblegum", Name = "Rubber Bouncer", Fx = "Bounce", Pins = 10, Price = 50, Rarity = "Common" }, -- one bag: bought in the first 30 s (Stage 3)
 		{ Ball = "Lime", Name = "Confetti Popper", Fx = "Confetti", Pins = 18, Price = 500, Rarity = "Uncommon" },
 		{ Ball = "Sunburst", Name = "Sunspike", Fx = "Burn", Pins = 35, Price = 950, Rarity = "Uncommon" },
 		{ Ball = "Frostbite", Name = "Gust", Fx = "Frost", Pins = 70, Price = 1900, Rarity = "Rare" },
-		{ Ball = "CloudSwirl", Name = "Cloud Roll", Fx = "Arms", Pins = 140, Price = 10000, Rarity = "Rare" },
-		{ Ball = "Crystal", Name = "Rainbow Arc", Fx = "Prism", Pins = 300, Price = 21000, Rarity = "Epic" },
-		{ Ball = "Lightning", Name = "Sunbolt", Fx = "Bolt", Pins = 650, Price = 45000, Rarity = "Epic" },
-		{ Ball = "SolidGold", Name = "Tornado", Fx = "Tornado", Pins = 1400, Price = 99000, Rarity = "Legendary" },
-		{ Ball = "Daybreak", Name = "Sonic Boom", Fx = "BlackHole", Pins = 3200, Price = 220000, Rarity = "Mythic" },
+		{ Ball = "CloudSwirl", Name = "Cloud Roll", Fx = "Arms", Pins = 140, Price = 5300, Rarity = "Rare" },
+		{ Ball = "Crystal", Name = "Rainbow Arc", Fx = "Prism", Pins = 300, Price = 22000, Rarity = "Epic" },
+		{ Ball = "Lightning", Name = "Sunbolt", Fx = "Bolt", Pins = 650, Price = 44000, Rarity = "Epic" },
+		{ Ball = "SolidGold", Name = "Tornado", Fx = "Tornado", Pins = 1400, Price = 150000, Rarity = "Legendary" },
+		{ Ball = "Daybreak", Name = "Sonic Boom", Fx = "BlackHole", Pins = 3200, Price = 590000, Rarity = "Mythic" },
 	},
 	-- Addendum 5 D: each ladder ball's own signature effect (Fx on its row above; client Modules/BallSignature).
 	-- Visual and feel only, never a number. Strength 0..1 grows with the REAL pin count of the throw on a log scale:
@@ -113,7 +116,9 @@ Config.CoreLoop = {
 	-- between two balls (bag 2 ~1 min, bags 3-4 ~2 min apart, then ~5 min apart, bag 10 ~3 min after ball 10).
 	-- A small bag caps your income (a throw that doesn't fit pays only what fits), so bags matter as much as balls.
 	BagSizes = { 60, 140, 300, 700, 1600, 3700, 8700, 21000, 50000, 130000 },
-	BagPrices = { 0, 240, 600, 990, 5200, 11000, 24000, 54000, 120000, 420000 },
+	-- Addendum 5 E: bags 6-10 re-priced with balls 6-10 (still ~40% of the way between two balls). Was 11K, 24K,
+	-- 54K, 120K, 420K.
+	BagPrices = { 0, 240, 600, 990, 5200, 7400, 29000, 75000, 200000, 690000 },
 	Ladders = {
 		Independent = true, -- Addendum 5 A2: two ladders (false = Addendum 4's ball, bag, ball, bag order)
 	},
@@ -253,8 +258,12 @@ Config.CoreLoop = {
 	-- only: your own pins' rings, the ring of your throw spot (everyone sees it) and the REBIRTH tag over your head.
 	Rebirth = {
 		Enabled = true, -- false = no rebirth in the core loop (button hidden, server refuses)
-		Prices = { 10000000 }, -- rebirth 1, 2, 3... (then the last one x Growth each)
-		Growth = 3,
+		-- Addendum 5 E (pacing pass): x3 every rebirth made rebirth 5 a 2-hour save and rebirth 7 a 13-hour one,
+		-- because income only grows about x(n+1)/n per rebirth once the bag fills in a throw (PACING_REPORT.md). Now
+		-- x2.5 / x2.4 / x2 / x1.8 / x1.7, then x1.5 each: rebirths at ~43 min, 55 min, 1h11, 1h31, 1h57, 2h46, 4h09
+		-- (EconomySim.CorePacing). Was Prices { 10000000 }, Growth 3.
+		Prices = { 10000000, 25000000, 60000000, 120000000, 220000000, 380000000 }, -- rebirth 1, 2, 3... (then the last one x Growth each)
+		Growth = 1.5,
 		Bonus = 1, -- x2 after rebirth 1, x3 after rebirth 2 ...
 		LadderPower = 1.6,
 		Tiers = {
@@ -641,6 +650,7 @@ Config.StartingData = {
 	ThrowSpeedLevel = 0, -- throw speed upgrades: each takes CooldownStep off the hold-to-throw cooldown
 	CoreThrows = 0, -- core loop throws ever (first and 10th throw are logged once per player)
 	CoreSells = 0, -- sells ever (the first is logged once per player)
+	Pacing = {}, -- Addendum 5 step E: time to each ball / bag / egg / rebirth and income per run (Config.Pacing; v36)
 }
 
 -- Saving (DataStore)
@@ -648,7 +658,7 @@ Config.Data = {
 	-- "PlayerData_A4": every account starts from zero for the Addendum 4 loop (owner 2026-11-01). The old saves are
 	-- still in "PlayerData" (set it back to bring them back).
 	StoreName = "PlayerData_A4",
-	SchemaVersion = 35, -- v35 PetSlotsBought (Addendum 5 B1 coin pet slots; starts at 0, nothing to upgrade). v34 BallStep (Addendum 4 Stage 2 ball ladder; starts at 1, nothing to upgrade). v33 Bag, BagLevel, ThrowSpeedLevel, CoreThrows, CoreSells (Addendum 4 core loop; start at 0/1, every old field kept, nothing to upgrade). v32 BestLevel + BestRank (batch D1 rebirth resets levels; old saves start at their RankLevel / Rank). v31 AutoDelete (batch C3 X'd pets on the egg odds boards; starts empty, nothing to upgrade or delete). v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 36, -- v36 Pacing (Addendum 5 E pacing record; starts empty, nothing to upgrade). v35 PetSlotsBought (Addendum 5 B1 coin pet slots; starts at 0, nothing to upgrade). v34 BallStep (Addendum 4 Stage 2 ball ladder; starts at 1, nothing to upgrade). v33 Bag, BagLevel, ThrowSpeedLevel, CoreThrows, CoreSells (Addendum 4 core loop; start at 0/1, every old field kept, nothing to upgrade). v32 BestLevel + BestRank (batch D1 rebirth resets levels; old saves start at their RankLevel / Rank). v31 AutoDelete (batch C3 X'd pets on the egg odds boards; starts empty, nothing to upgrade or delete). v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -706,6 +716,18 @@ Config.SessionLog = {
 	Keep = 10,
 	Print = true,
 	First5Seconds = 300,
+}
+
+-- Addendum 5 step E: the pacing record (server Modules/Pacing). Per run (start or rebirth to the next rebirth): when
+-- each ball, bag, pet slot and egg was first bought (minutes of play into the run), the rebirth, and the income
+-- (coins sold a minute over the last IncomeWindow seconds) at the top, before the rebirth, 5 min into the next run
+-- and when it got back to the old income. Printed in Output when the player leaves and by TEST > PACING (Studio),
+-- saved with the player (newest KeepRuns runs), and sent to Analytics (event "Pacing", funnel "Run").
+Config.Pacing = {
+	Enabled = true,
+	Print = true,
+	KeepRuns = 8,
+	IncomeWindow = 180,
 }
 
 -- Requests a player can't send faster than this (seconds). Extra ones are ignored by the server.
@@ -4906,6 +4928,9 @@ Config.Analytics = {
 		"CoreMilestone", -- value = seconds played in total when it happened; labels = FirstThrow/TenthThrow/FirstSell
 		"BallBought", -- value = seconds played in total; labels = ball, how (Crate/Shop/...)
 		"LastAction", -- value = seconds from the last throw or sell to leaving; labels = what it was
+		-- Addendum 5 step E pacing (Config.Pacing)
+		"Pacing", -- value = seconds of play into the run; labels = Ball3/Bag2/Slot4/Egg_Alley/Rebirth1/BackToIncome, R<rebirths>, minutes played in total
+		"PacingIncome", -- value = coins a minute just before a rebirth; labels = BeforeRebirth<n>
 	},
 }
 
@@ -5403,7 +5428,10 @@ Config.PetStats = {
 	Types = {
 		Coins = { Label = "Coins", Color = Color3.fromRGB(255, 205, 50), Best = 1 },
 		Pins = { Label = "Pins", Color = Color3.fromRGB(255, 120, 200), Best = 1 },
-		Bag = { Label = "Bag", Color = Color3.fromRGB(80, 200, 255), Best = 0.6 },
+		-- Addendum 5 E: Bag counts 8 (was 0.6): once pets and rebirths fill the bag in a throw or two, a bigger bag is
+		-- the only stat that still raises income, and at 0.6 EQUIP BEST swapped bag pets out for Shiny Volcano pets and
+		-- income fell by half (sim: 4 still did it from rebirth 6; 8 keeps them through rebirth 8; run 0 unchanged)
+		Bag = { Label = "Bag", Color = Color3.fromRGB(80, 200, 255), Best = 8 },
 		Speed = { Label = "Speed", Color = Color3.fromRGB(130, 235, 90), Best = 0.8 },
 	},
 	-- Equip slots: StartSlots (Config.Economy.Mascots) + slots bought with coins at the shop booth, one at a time,
@@ -5614,6 +5642,18 @@ if Config.CoreLoop.Enabled and Config.CoreLoop.NoLevels then
 		if swap[slice.Potion] then
 			slice.Potion = swap[slice.Potion]
 			slice.Label = if slice.Potion == "CoinBig" then "MEGA COINS" else "COIN POTION"
+		end
+	end
+end
+
+-- Addendum 5 E (pacing pass): pins are a big number now (16K+ a throw at ball 10 with pets), so PIN CRUSHER's old goals
+-- (1K / 10K / 100K / 500K) all went in the first ~30 minutes. Core loop goals: ~15 min, ~40 min, ~5 h, then long.
+if Config.CoreLoop.Enabled then
+	for _, achievement in Config.Profile.Achievements do
+		if achievement.Id == "Pins" then
+			for index, goal in { 10000, 1000000, 10000000, 100000000 } do
+				achievement.Tiers[index].Goal = goal
+			end
 		end
 	end
 end

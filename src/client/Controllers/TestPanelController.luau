@@ -54,6 +54,7 @@ local SECTIONS = {
 			{ Text = "GOLDEN RACK", Action = "GoldenRack" },
 			{ Text = "7-10 SPLIT", Action = "Split" },
 			{ Text = "GEM PIN", Action = "GemPin" },
+			{ Text = "PACING", Action = "Pacing" }, -- (Addendum 5 E: prints the pacing record in Output)
 		},
 	},
 }

@@ -1600,4 +1600,316 @@ function EconomySim.Gaps(config: any?, seed: number?): string
 	return report
 end
 
+-- Addendum 5 step E: the whole new loop in one run (PACING_REPORT.md). Two ladders, pet slots, the roof eggs with
+-- pets of 4 stats (EQUIP BEST by Mascots.Score weights, 3 copies merge into a Shiny), rebirth with its multiplier on
+-- pins AND on the sell, ladder prices x multiplier ^ LadderPower, the bag cap and the sell trip.
+--   REBIRTHER  each run buys the cheapest next thing (ball, bag, pet slot, the next egg it hasn't hatched), then
+--              hatches the top egg `hatches` times (default 3), saves for the rebirth and rebirths at once.
+--   NEVER      the same start, never rebirths: after the ladders it keeps hatching the top egg.
+-- Prints, per run: when each ball / bag / egg / slot came (minutes into the run), the top income, how long the
+-- rebirth save took, when the run got back to the last run's top income (and its share of run 0), pins a throw;
+-- then both players' coins a minute and pins / coins earned ever side by side. A Python twin with the same rules
+-- lives in the step E notes (it ran the tuning; the numbers match).
+--   print(require(game.ServerStorage.Tools.EconomySim).CorePacing())        (Studio command bar, edit mode)
+function EconomySim.CorePacing(config: any?, seed: number?, runs: number?, hatches: number?): string
+	config = config or loadConfig()
+	local core = config.CoreLoop
+	local R = core.Rebirth
+	local eggs = core.Eggs.List
+	local stats = config.PetStats
+	local shiny = config.Economy.Mascots.ShinyMultiplier
+	local trip = core.Gifts.TripSeconds
+	local extra = hatches or 3
+	local byId = {}
+	for _, mascot in config.Mascots do
+		byId[mascot.Id] = mascot
+	end
+	local function rebirthPrice(n: number): number
+		if n < #R.Prices then
+			return R.Prices[n + 1]
+		end
+		return R.Prices[#R.Prices] * R.Growth ^ (n + 1 - #R.Prices)
+	end
+	local function newPlayer(rngSeed: number)
+		return {
+			Rng = Random.new(rngSeed),
+			Pets = {}, -- [id .. "|" or "|S"] = { Id, Shiny, Count }
+			Slots = config.Economy.Mascots.StartSlots,
+			SlotsBought = 0,
+			Ball = 1,
+			Bag = 1,
+			NextEgg = 1,
+			Rebirths = 0,
+			Minutes = 0,
+			Pins = 0,
+			Coins = 0,
+			Hatched = 0,
+			Team = nil,
+			Samples = {},
+		}
+	end
+	local function team(p)
+		if p.Team then
+			return p.Team
+		end
+		local owned = {}
+		for _, entry in p.Pets do
+			local mul = if entry.Shiny then shiny else 1
+			local st, score = {}, 0
+			for name, value in byId[entry.Id].Stats or {} do
+				st[name] = value * mul
+				score += value * mul * stats.Types[name].Best
+			end
+			for _ = 1, entry.Count do
+				table.insert(owned, { Score = score, Stats = st })
+			end
+		end
+		table.sort(owned, function(a, b)
+			return a.Score > b.Score
+		end)
+		local t = { Coins = 0, Pins = 0, Bag = 0, Speed = 0 }
+		for i = 1, math.min(p.Slots, #owned) do
+			for name, value in owned[i].Stats do
+				t[name] += value
+			end
+		end
+		p.Team = t
+		return t
+	end
+	-- coins a minute, pins a minute, pins a throw (the bag fills at pins x coin stats; the sell pays bag x multiplier)
+	local function rates(p): (number, number, number)
+		local t = team(p)
+		local mult = 1 + R.Bonus * p.Rebirths
+		local cooldown = math.max(core.Cooldown / (1 + t.Speed), core.CooldownFloor)
+		local perThrow = core.Balls[p.Ball].Pins * (1 + t.Pins) * mult
+		local rate = perThrow * core.PinValue * (1 + t.Coins) / cooldown
+		local size = core.BagSizes[p.Bag] * (1 + t.Bag)
+		local cycle = size / rate + trip
+		return 60 * size / cycle * mult, 60 * perThrow / cooldown * (size / rate) / cycle, perThrow
+	end
+	local function spend(p, price: number)
+		local income, pinsMinute = rates(p)
+		local minutes = price / income
+		p.Minutes += minutes
+		p.Coins += price
+		p.Pins += pinsMinute * minutes
+		table.insert(p.Samples, { p.Minutes, income, p.Pins, p.Coins })
+	end
+	local function hatch(p, egg)
+		local total = 0
+		for _, chance in egg.Odds do
+			total += chance
+		end
+		local pick = p.Rng:NextNumber() * total
+		local rarity
+		for _, rarityRow in config.Rarities do
+			local chance = egg.Odds[rarityRow.Name]
+			if chance then
+				pick -= chance
+				rarity = rarityRow.Name
+				if pick <= 0 then
+					break
+				end
+			end
+		end
+		local pool = {}
+		for _, id in egg.Pets do
+			if byId[id] and byId[id].Rarity == rarity then
+				table.insert(pool, id)
+			end
+		end
+		local id = pool[p.Rng:NextInteger(1, #pool)]
+		local key = id .. "|"
+		p.Pets[key] = p.Pets[key] or { Id = id, Shiny = false, Count = 0 }
+		p.Pets[key].Count += 1
+		if p.Pets[key].Count >= config.Economy.Mascots.ShinyMerge then -- (Shiny merge as soon as there are enough copies)
+			p.Pets[key].Count -= config.Economy.Mascots.ShinyMerge
+			local shinyKey = id .. "|S"
+			p.Pets[shinyKey] = p.Pets[shinyKey] or { Id = id, Shiny = true, Count = 0 }
+			p.Pets[shinyKey].Count += 1
+		end
+		p.Hatched += 1
+		p.Team = nil
+		return id
+	end
+	local function nextBuy(p)
+		local options = {}
+		local scale = (1 + R.Bonus * p.Rebirths) ^ (R.LadderPower or 0)
+		if p.Ball < #core.Balls then
+			table.insert(options, { Kind = "Ball", Price = core.Balls[p.Ball + 1].Price * scale })
+		end
+		if p.Bag < #core.BagSizes then
+			table.insert(options, { Kind = "Bag", Price = core.BagPrices[p.Bag + 1] * scale })
+		end
+		if stats.SlotPrices[p.SlotsBought + 1] then
+			table.insert(options, { Kind = "Slot", Price = stats.SlotPrices[p.SlotsBought + 1] })
+		end
+		if eggs[p.NextEgg] then
+			table.insert(options, { Kind = "Egg", Price = eggs[p.NextEgg].Price })
+		end
+		table.sort(options, function(a, b)
+			return a.Price < b.Price
+		end)
+		return options[1]
+	end
+	local function buy(p, option): string
+		spend(p, option.Price)
+		if option.Kind == "Ball" then
+			p.Ball += 1
+			return "Ball" .. p.Ball
+		elseif option.Kind == "Bag" then
+			p.Bag += 1
+			return "Bag" .. p.Bag
+		elseif option.Kind == "Slot" then
+			p.SlotsBought += 1
+			p.Slots += 1
+			p.Team = nil
+			return "Slot" .. p.Slots
+		end
+		local egg = eggs[p.NextEgg]
+		p.NextEgg += 1
+		return ("Egg %s (%s)"):format(egg.Id, hatch(p, egg))
+	end
+	local function at(list, minute: number, column: number): number
+		local value = list[1][column]
+		for _, sample in list do
+			if sample[1] > minute then
+				break
+			end
+			value = sample[column]
+		end
+		return value
+	end
+
+	local lines = {
+		("PACING (Config: two ladders, %d pet slots + %d to buy, %d eggs, rebirth +%g a rebirth on pins AND sells, ladder x mult^%g; the rebirther hatches the top egg %d times a run)"):format(
+			config.Economy.Mascots.StartSlots,
+			#stats.SlotPrices,
+			#eggs,
+			R.Bonus,
+			R.LadderPower or 0,
+			extra
+		),
+	}
+	local p = newPlayer(seed or 7)
+	local lastTop, firstLength = nil, nil
+	for run = 0, (runs or 3) do
+		local start = p.Minutes
+		local backAt = nil
+		local balls, bags, other = {}, {}, {}
+		local lastBall = 0
+		while true do
+			local option = nextBuy(p)
+			if not option then
+				break
+			end
+			local what = buy(p, option)
+			local into = p.Minutes - start
+			if option.Kind == "Ball" then
+				table.insert(balls, ("%d %s (+%.1f)"):format(p.Ball, clock(into * 60), into - lastBall))
+				lastBall = into
+			elseif option.Kind == "Bag" then
+				table.insert(bags, ("%d %s"):format(p.Bag, clock(into * 60)))
+			else
+				table.insert(other, ("%s %s"):format(what, clock(into * 60)))
+			end
+			if lastTop and not backAt and rates(p) >= lastTop then
+				backAt = into
+			end
+		end
+		for _ = 1, extra do
+			spend(p, eggs[#eggs].Price)
+			hatch(p, eggs[#eggs])
+			if lastTop and not backAt and rates(p) >= lastTop then
+				backAt = p.Minutes - start
+			end
+		end
+		local ladder = p.Minutes - start
+		local top, _, perThrow = rates(p)
+		local price = rebirthPrice(p.Rebirths)
+		local save = price / top
+		spend(p, price)
+		if run == 0 then
+			firstLength = p.Minutes - start
+		end
+		table.insert(
+			lines,
+			("run %d (x%g): ladder + eggs %s, top %s/min, %s pins a throw, saves %s for rebirth %d (%s) -> rebirth at %s played%s"):format(
+				run,
+				1 + R.Bonus * p.Rebirths,
+				clock(ladder * 60),
+				short(top),
+				short(perThrow),
+				clock(save * 60),
+				p.Rebirths + 1,
+				short(price),
+				clock(p.Minutes * 60),
+				if backAt
+					then ("; back to the last run's %s/min after %s (%d%% of run 0)"):format(
+						short(lastTop),
+						clock(backAt * 60),
+						math.floor(backAt / firstLength * 100 + 0.5)
+					)
+					else ""
+			)
+		)
+		table.insert(lines, "   balls: " .. table.concat(balls, ", "))
+		table.insert(lines, "   bags:  " .. table.concat(bags, ", "))
+		if #other > 0 then
+			table.insert(lines, "   eggs + slots: " .. table.concat(other, ", "))
+		end
+		local t = team(p)
+		table.insert(
+			lines,
+			("   pets: +%d%% Coins +%d%% Pins +%d%% Bag +%d%% Speed, %d hatched; pins ever %s, coins ever %s"):format(
+				math.floor(t.Coins * 100 + 0.5),
+				math.floor(t.Pins * 100 + 0.5),
+				math.floor(t.Bag * 100 + 0.5),
+				math.floor(t.Speed * 100 + 0.5),
+				p.Hatched,
+				short(p.Pins),
+				short(p.Coins)
+			)
+		)
+		lastTop = top
+		p.Rebirths += 1
+		p.Ball, p.Bag = 1, 1
+		p.Team = nil
+	end
+	-- NEVER: same seed, no rebirths; after the ladders it keeps hatching the top egg
+	local q = newPlayer(seed or 7)
+	local top = eggs[#eggs]
+	local guard = 0
+	while q.Minutes < math.min(p.Minutes, 600) and guard < 20000 do
+		guard += 1
+		local option = nextBuy(q)
+		if option then
+			buy(q, option)
+		else
+			spend(q, top.Price)
+			hatch(q, top)
+		end
+	end
+	table.insert(lines, "coins a minute (pins / coins earned ever)   rebirther | never rebirths")
+	for _, minute in { 15, 30, 45, 60, 90, 120, 180, 240, 300 } do
+		if minute <= p.Minutes then
+			table.insert(
+				lines,
+				("  %3d min: %s (%s / %s) | %s (%s / %s)"):format(
+					minute,
+					short(at(p.Samples, minute, 2)),
+					short(at(p.Samples, minute, 3)),
+					short(at(p.Samples, minute, 4)),
+					short(at(q.Samples, minute, 2)),
+					short(at(q.Samples, minute, 3)),
+					short(at(q.Samples, minute, 4))
+				)
+			)
+		end
+	end
+	local report = table.concat(lines, "\n")
+	print(report)
+	return report
+end
+
 return EconomySim
