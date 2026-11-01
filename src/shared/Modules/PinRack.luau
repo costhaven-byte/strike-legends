@@ -431,6 +431,33 @@ local function cleanPin(pin: Model)
 	pin.Parent = nil
 end
 
+-- Addendum 5 step C: the rebirth tier's colour on a pin's neck rings or band (nil = the pin's own colours)
+local TINTED = { RingBottom = true, RingTop = true, Neck = true, Band = true } -- (Band = the zone pin sets, the roof)
+local function tintPin(pin: Model, color: Color3?)
+	for _, part in pin:GetDescendants() do
+		if part:IsA("BasePart") and TINTED[part.Name] then
+			if part:GetAttribute("BaseColor") == nil then
+				part:SetAttribute("BaseColor", part.Color)
+			end
+			part.Color = color or part:GetAttribute("BaseColor")
+		end
+	end
+end
+
+-- Paints every pin of the rack (standing, flying and pooled) and every pin made later
+function PinRack:SetTint(color: Color3?)
+	self.Tint = color
+	for _, pin in self.Pins do
+		tintPin(pin, color)
+	end
+	for _, pin in self.Pool do
+		tintPin(pin, color)
+	end
+	for _, item in self.Debris do
+		tintPin(item.Pin, color)
+	end
+end
+
 -- A standing pin at spot `index`, from the pool when there is one
 function PinRack:_takePin(index: number): Model
 	local spot = self:SpotFor(index)
@@ -441,6 +468,9 @@ function PinRack:_takePin(index: number): Model
 		pin = buildMeshPin(spot, self.Scale, false, self.Zone) or buildPin(spot, self.Scale)
 		-- how the pin's pivot sits on its spot, so a pooled pin stands the same way again
 		pin:SetAttribute("Stand", spot:ToObjectSpace(pin:GetPivot()))
+		if self.Tint then
+			tintPin(pin, self.Tint)
+		end
 		-- Addendum 5 A3: on the shared lane your pins are yours alone: they never touch players or balls
 		local shared = Config.CoreLoop.SharedLane
 		if self.Core and shared and shared.Enabled then

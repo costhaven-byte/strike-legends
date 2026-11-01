@@ -553,7 +553,8 @@ function EventController:Start()
 		-- the next ball and the next bag; bought only at the shop booth)
 		if Config.CoreLoop.Enabled then
 			local coins = player:GetAttribute("Coins") or 0
-			local kind, step, price = CoreLadder.Next(player:GetAttribute("BallStep"), player:GetAttribute("BagLevel"))
+			local kind, step, price =
+				CoreLadder.Next(player:GetAttribute("BallStep"), player:GetAttribute("BagLevel"), player:GetAttribute("Rebirths"))
 			if kind then
 				local name = CoreLadder.Name(kind, step)
 				options = {
@@ -564,6 +565,19 @@ function EventController:Start()
 							else ("Next: %s  %s / %s"):format(name, short(coins), short(price)),
 						Color = GOLD,
 						Icon = "Ball",
+					},
+				}
+			elseif Rebirth.CoreOn() then
+				-- Addendum 5 step C: every ball and bag bought: the next goal is the rebirth
+				local price = Rebirth.CorePrice(player:GetAttribute("Rebirths"))
+				options = {
+					{
+						Progress = math.min(coins / math.max(price, 1), 1),
+						Text = if coins >= price
+							then "REBIRTH: ready at the shop"
+							else ("Next: REBIRTH  %s / %s"):format(short(coins), short(price)),
+						Color = GOLD,
+						Icon = "Rebirth",
 					},
 				}
 			else

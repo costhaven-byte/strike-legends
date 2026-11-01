@@ -22,38 +22,60 @@ function CoreLadder.Pose(ballStep: any): number
 	return CORE.Poses[CoreLadder.BallStep(ballStep)] or 1
 end
 
+-- Addendum 5 step C: ball and bag prices x (rebirth multiplier) ^ LadderPower after rebirths (Config.CoreLoop.Rebirth),
+-- rounded to 2 figures. rebirths nil / 0 = the Config price.
+function CoreLadder.Price(price: number, rebirths: any): number
+	local done = math.max(0, math.floor(tonumber(rebirths) or 0))
+	local rebirth = CORE.Rebirth
+	if done == 0 or price <= 0 or not rebirth or not rebirth.Enabled or (rebirth.LadderPower or 0) == 0 then
+		return price
+	end
+	local scaled = price * (1 + rebirth.Bonus * done) ^ rebirth.LadderPower
+	local unit = 10 ^ math.max(math.floor(math.log10(scaled)) - 1, 0)
+	return math.floor(scaled / unit + 0.5) * unit
+end
+
+-- The price of ball `step` / bag `level` after `rebirths` rebirths
+function CoreLadder.BallPrice(step: number, rebirths: any): number
+	return CoreLadder.Price(CORE.Balls[step].Price, rebirths)
+end
+
+function CoreLadder.BagPrice(level: number, rebirths: any): number
+	return CoreLadder.Price(CORE.BagPrices[level], rebirths)
+end
+
 -- The next ball on the ball ladder (step, price), or nil when every ball is bought
-function CoreLadder.NextBall(ballStep: any): (number?, number)
+function CoreLadder.NextBall(ballStep: any, rebirths: any): (number?, number)
 	local step = CoreLadder.BallStep(ballStep) + 1
 	if step > #CORE.Balls then
 		return nil, 0
 	end
-	return step, CORE.Balls[step].Price
+	return step, CoreLadder.BallPrice(step, rebirths)
 end
 
 -- The next bag on the bag ladder (level, price), or nil when every bag is bought
-function CoreLadder.NextBag(bagLevel: any): (number?, number)
+function CoreLadder.NextBag(bagLevel: any, rebirths: any): (number?, number)
 	local level = CoreLadder.BagLevel(bagLevel) + 1
 	if level > #CORE.BagSizes then
 		return nil, 0
 	end
-	return level, CORE.BagPrices[level]
+	return level, CoreLadder.BagPrice(level, rebirths)
 end
 
 -- What the shop can sell of `kind` right now ("Ball" / "Bag"): its step and price, nil = can't (bought them all,
 -- or, with the old alternating ladder, the other kind comes first)
-function CoreLadder.Buyable(kind: string, ballStep: any, bagLevel: any): (number?, number)
+function CoreLadder.Buyable(kind: string, ballStep: any, bagLevel: any, rebirths: any): (number?, number)
 	if not CORE.Ladders.Independent then
-		local want, step, price = CoreLadder.Next(ballStep, bagLevel)
+		local want, step, price = CoreLadder.Next(ballStep, bagLevel, rebirths)
 		if want == kind then
 			return step, price
 		end
 		return nil, 0
 	end
 	if kind == "Ball" then
-		return CoreLadder.NextBall(ballStep)
+		return CoreLadder.NextBall(ballStep, rebirths)
 	elseif kind == "Bag" then
-		return CoreLadder.NextBag(bagLevel)
+		return CoreLadder.NextBag(bagLevel, rebirths)
 	end
 	return nil, 0
 end
@@ -61,12 +83,12 @@ end
 -- The next goal: "Ball" or "Bag", its step and price; nil = everything bought. Addendum 5 A2 (Ladders.Independent):
 -- the cheaper of the next ball and the next bag (a tie = the ball). Addendum 4: they alternate ball 2, bag 2, ball 3,
 -- bag 3 ... ball 10, bag 10.
-function CoreLadder.Next(ballStep: any, bagLevel: any): (string?, number, number)
+function CoreLadder.Next(ballStep: any, bagLevel: any, rebirths: any): (string?, number, number)
 	local ball = CoreLadder.BallStep(ballStep)
 	local bag = CoreLadder.BagLevel(bagLevel)
 	if CORE.Ladders.Independent then
-		local ballNext, ballPrice = CoreLadder.NextBall(ball)
-		local bagNext, bagPrice = CoreLadder.NextBag(bag)
+		local ballNext, ballPrice = CoreLadder.NextBall(ball, rebirths)
+		local bagNext, bagPrice = CoreLadder.NextBag(bag, rebirths)
 		if ballNext and (not bagNext or ballPrice <= bagPrice) then
 			return "Ball", ballNext, ballPrice
 		elseif bagNext then
@@ -75,11 +97,11 @@ function CoreLadder.Next(ballStep: any, bagLevel: any): (string?, number, number
 		return nil, 0, 0
 	end
 	if bag < ball and bag < #CORE.BagSizes then
-		return "Bag", bag + 1, CORE.BagPrices[bag + 1]
+		return "Bag", bag + 1, CoreLadder.BagPrice(bag + 1, rebirths)
 	elseif ball < #CORE.Balls then
-		return "Ball", ball + 1, CORE.Balls[ball + 1].Price
+		return "Ball", ball + 1, CoreLadder.BallPrice(ball + 1, rebirths)
 	elseif bag < #CORE.BagSizes then
-		return "Bag", bag + 1, CORE.BagPrices[bag + 1]
+		return "Bag", bag + 1, CoreLadder.BagPrice(bag + 1, rebirths)
 	end
 	return nil, 0, 0
 end

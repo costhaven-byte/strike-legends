@@ -103,6 +103,9 @@ function MultiplierService.Steady(all): number
 		for _, name in Config.CoreLoop.Multipliers do
 			product *= all[name] or 1
 		end
+		if Rebirth.CoreOn() then
+			product *= all.Rebirth or 1 -- (Addendum 5 step C: paid on the sell, still part of the income)
+		end
 		return product
 	end
 	for _, name in ORDER do

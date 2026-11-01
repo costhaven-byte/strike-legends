@@ -401,7 +401,9 @@ local function coreThrow(player: Player)
 	-- Coins land in the bag when the ball reaches the pins; a full bag takes nothing (pins still fall)
 	local paid = CoreLoopService.AddToBag(player, coins, result.RollTime)
 	if paid > 0 then
-		AwayService.OnCoins(player, paid, multiplier) -- (coins/min on the HUD and away coins measure real throws)
+		-- (coins/min on the HUD and away coins measure real throws; step C: x the rebirth multiplier the sell pays)
+		local rebirth = CoreLoopService.RebirthMultiplier(player)
+		AwayService.OnCoins(player, paid * rebirth, multiplier * rebirth)
 	end
 
 	local data = {

@@ -80,6 +80,20 @@ local function things(): { { [string]: any } }
 		})
 	end
 	local done = player:GetAttribute("Rebirths") or 0
+	if Rebirth.CoreOn() then
+		-- Addendum 5 step C: the core loop rebirth (coins only, at the ball shop)
+		table.insert(list, {
+			Key = "CoreRebirth" .. done,
+			Name = ("REBIRTH %d = %s COINS + PINS"):format(
+				done + 1,
+				Currency.FormatMultiplier(Rebirth.CoreMultiplier(done + 1))
+			),
+			Price = Rebirth.CorePrice(done),
+			Icon = "Rebirth",
+			Color = K.Lime,
+			Ok = true,
+		})
+	end
 	if Config.Economy.Rebirth.Enabled and not Config.CoreLoop.Enabled then
 		table.insert(list, {
 			Key = "Rebirth" .. done,

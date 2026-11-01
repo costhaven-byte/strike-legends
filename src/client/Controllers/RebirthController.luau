@@ -6,6 +6,11 @@
 -- buttons) and a done rebirth gets a full-screen "REBIRTH!" moment. While it shows, the local attribute
 -- RebirthParty holds back the ZONE UNLOCKED window (ZoneGateController), which follows when you tap CONTINUE.
 -- Built in code (not in Studio), so it lives in git. The server decides everything (RebirthService).
+-- Addendum 5 step C (core loop, Config.CoreLoop.Rebirth): a big gold REBIRTH button in the left column (the hidden
+-- POWER LV's spot) shows the multiplier now > after ("x1 > x2") and a coins bar; its window shows what goes back to
+-- the start, what you keep, the multiplier on coins AND pins, the tier colour and the price. Rebirth is bought only
+-- standing at the ball shop: away from it the window's button says GO TO SHOP (teleports you there). Tap twice,
+-- then the full-screen REBIRTH! moment with a flash.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -30,6 +35,7 @@ local C = UiKit.C
 local make = UiKit.Make
 local tween = UiKit.Tween
 local CONFIRM_SECONDS = 3
+local CORE = Config.CoreLoop
 
 local RebirthController = {}
 
@@ -187,8 +193,17 @@ local function celebration(): (number, number?) -> ()
 		end
 		local coins = Currency.FormatMultiplier(Rebirth.CoinMultiplier(done))
 		chip(chips, coins .. " COINS", C.Gold, "Coin", 28, 56).LayoutOrder = 1
-		local xp = Currency.FormatMultiplier(Rebirth.XpMultiplier(done))
-		chip(chips, xp .. " XP", C.Cyan, "Xp", 28, 56).LayoutOrder = 2
+		if Rebirth.CoreOn() then
+			-- Addendum 5 step C: coins and pins, and the tier the rebirth reached
+			chip(chips, coins .. " PINS", C.Pink, "Pin", 28, 56).LayoutOrder = 2
+			local tier = Rebirth.Tier(done)
+			if tier then
+				chip(chips, tier.Name .. " TIER", tier.Color, "Rebirth", 28, 56).LayoutOrder = 3
+			end
+		else
+			local xp = Currency.FormatMultiplier(Rebirth.XpMultiplier(done))
+			chip(chips, xp .. " XP", C.Cyan, "Xp", 28, 56).LayoutOrder = 2
+		end
 		if zone then
 			chip(chips, Zones.Name(zone):upper() .. " OPEN!", C.Pink, "Portal", 28, 56).LayoutOrder = 3
 		end
@@ -232,9 +247,391 @@ local function celebration(): (number, number?) -> ()
 	end
 end
 
+
+-- ===== Addendum 5 step C: the core loop rebirth (button, window, moment) =====
+local function startCore()
+	local playerGui = player:WaitForChild("PlayerGui")
+	local hud = playerGui:WaitForChild("HUD") :: ScreenGui
+	local remotes = ReplicatedStorage:WaitForChild("Remotes")
+	local remote = remotes:WaitForChild("Rebirth") :: RemoteFunction
+	local goRemote = remotes:WaitForChild("CoreGoTo") :: RemoteEvent
+	local K = HudKit.C
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "RebirthUI"
+	gui.ResetOnSpawn = false
+	gui.DisplayOrder = 5
+	gui.IgnoreGuiInset = hud.IgnoreGuiInset
+	gui.Parent = playerGui
+
+	-- ===== The big gold button (left column, under BALLS / PETS / STORE) =====
+	local block = HudKit.Block(gui, { Name = "RebirthButton", Paint = "Gold", Button = true, Radius = 16, Lip = 6 })
+	local button = block.Holder :: TextButton
+	local face = block.Face
+	local icon = HudKit.Image(face, "Rebirth", 40, {
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 6, 0.5, 0),
+		ZIndex = 5,
+	})
+	local title = HudKit.Text(face, "REBIRTH", HudKit.Head, 22, K.White, 2.5)
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.ZIndex = 5
+	-- "x1 > x2" under the title: the multiplier now and after the next rebirth
+	local preview = HudKit.Text(face, "", HudKit.Num, 15, K.White, 2)
+	preview.TextXAlignment = Enum.TextXAlignment.Left
+	preview.ZIndex = 5
+	-- red dot (ready) on the top-right corner
+	local dot = Instance.new("Frame")
+	dot.Name = "Dot"
+	dot.AnchorPoint = Vector2.new(0.5, 0.5)
+	dot.Position = UDim2.new(1, -4, 0, 4)
+	dot.Size = UDim2.fromOffset(18, 18)
+	dot.BackgroundColor3 = K.Red
+	dot.ZIndex = 9
+	dot.Visible = false
+	dot.Parent = button
+	HudKit.Corner(dot, 9)
+	HudKit.Outline(dot, K.Ink, 2.5)
+	-- progress strip along the bottom of the face: coins / price
+	local track = Instance.new("Frame")
+	track.Name = "Track"
+	track.AnchorPoint = Vector2.new(0.5, 1)
+	track.BackgroundColor3 = K.Ink
+	track.BackgroundTransparency = 0.55
+	track.BorderSizePixel = 0
+	track.ZIndex = 5
+	track.Parent = face
+	HudKit.Corner(track, 3)
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.BackgroundColor3 = K.White
+	fill.BorderSizePixel = 0
+	fill.Size = UDim2.fromScale(0, 1)
+	fill.ZIndex = 6
+	fill.Parent = track
+	HudKit.Corner(fill, 3)
+
+	HudKit.OnLayout(function(isPhone)
+		block:SetRadius(if isPhone then 12 else 16)
+		block:SetLip(if isPhone then 5 else 6)
+		icon.Size = UDim2.fromOffset(if isPhone then 28 else 42, if isPhone then 28 else 42)
+		icon.Position = UDim2.new(0, if isPhone then 4 else 6, 0.5, -2)
+		local left = if isPhone then 36 else 56
+		title.Position = UDim2.fromOffset(left, if isPhone then 3 else 5)
+		title.Size = UDim2.new(1, -left - 6, 0, if isPhone then 16 else 22)
+		HudKit.Fit(title, if isPhone then 15 else 22)
+		-- (the x1 > x2 line ends above the coins bar)
+		preview.Position = UDim2.fromOffset(left, if isPhone then 19 else 27)
+		preview.Size = UDim2.new(1, -left - 6, 0, if isPhone then 13 else 15)
+		HudKit.Fit(preview, if isPhone then 11 else 14)
+		track.Position = UDim2.new(0.5, 0, 1, if isPhone then -3 else -5)
+		track.Size = UDim2.new(1, if isPhone then -12 else -20, 0, if isPhone then 4 else 5)
+	end)
+	HudKit.Place(button, "CoreRebirth")
+
+	-- ready: the glow breathes, the button grows a little, the arrows turn, a red dot
+	local glowTween = TweenService:Create(
+		block.GlowRing,
+		TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		{ Transparency = 0.7 }
+	)
+	local breatheTween = TweenService:Create(
+		block.Scale,
+		TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		{ Scale = 1.06 }
+	)
+	local stopSpin: (() -> ())? = nil
+	local readyShown = false
+	local function setReady(ready: boolean)
+		if ready == readyShown then
+			return
+		end
+		readyShown = ready
+		block:SetGlow(if ready then K.Lime else nil)
+		dot.Visible = ready
+		if ready then
+			block.GlowRing.Transparency = 0.2
+			glowTween:Play()
+			breatheTween:Play()
+			stopSpin = HudKit.Spin(icon, 3)
+		else
+			glowTween:Cancel()
+			breatheTween:Cancel()
+			block.Scale.Scale = 1
+			if stopSpin then
+				stopSpin()
+				stopSpin = nil
+			end
+			icon.Rotation = 0
+		end
+	end
+
+	-- ===== The window =====
+	local W, H = 560, 568
+	local IN_W = W - 48
+	local windowGui = make("ScreenGui", {
+		Name = "RebirthWindowUI",
+		ResetOnSpawn = false,
+		IgnoreGuiInset = true,
+		DisplayOrder = 12,
+	}, playerGui) :: ScreenGui
+	local win = RewardKit.Window(windowGui, W, H)
+	local cover, closeX = RewardKit.Cover(win.Panel, W, H, "REBIRTH", "START AGAIN, STRONGER FOREVER", C.Gold)
+	local titleFront = (cover:FindFirstChild("TitleBox") :: Frame):FindFirstChild("Front", true) :: TextLabel
+
+	local function section(name: string, heading: string, color: Color3, y: number, h: number, ring: Color3?): Frame
+		local sectionBlock = UiKit.Block(cover, {
+			Name = name,
+			Size = Vector2.new(IN_W, h),
+			Fill = C.Card,
+			Lip = C.Page,
+			LipPx = 5,
+			Radius = 16,
+			Outline = 3,
+			Ring = ring,
+		})
+		sectionBlock.Holder.Position = UDim2.fromOffset(24, y)
+		local head = RewardKit.Label(sectionBlock.Face, heading, UiKit.Head, 18, color, 2, 16, 8, IN_W - 32, 22)
+		head.Name = "Heading"
+		head.TextXAlignment = Enum.TextXAlignment.Left
+		return sectionBlock.Face
+	end
+
+	-- 1. YOU GO BACK TO: ball 1, bag 1, 0 coins
+	local back = section("Back", "YOU GO BACK TO", C.Price, 94, 80)
+	local backRow = make("Frame", {
+		Name = "Row",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(14, 32),
+		Size = UDim2.new(1, -28, 0, 38),
+	}, back)
+	make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Padding = UDim.new(0, 10),
+	}, backRow)
+	chip(backRow, "BALL 1", C.White, "Ball", 18, 38).LayoutOrder = 1
+	chip(backRow, "BAG 1", C.White, nil, 18, 38).LayoutOrder = 2
+	chip(backRow, "0 COINS", C.White, "Coin", 18, 38).LayoutOrder = 3
+
+	-- 2. YOU KEEP: pets (all, equipped, Shiny), pet slots, rebirths
+	local keep = section("Keep", "YOU KEEP", C.Lime, 184, 92)
+	local KEEPS = {
+		{ "Paw", "ALL PETS" },
+		{ "Check", "EQUIPPED" },
+		{ "Clover", "SHINY" },
+		{ "Paw", "PET SLOTS" },
+		{ "Rebirth", "REBIRTHS" },
+	}
+	local cellW = (IN_W - 28) / #KEEPS
+	for i, item in KEEPS do
+		local cell = make("Frame", {
+			Name = item[2],
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(14 + (i - 1) * cellW, 30),
+			Size = UDim2.fromOffset(cellW, 56),
+		}, keep)
+		HudKit.Image(cell, item[1], 34, {
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.fromScale(0.5, 0),
+		})
+		RewardKit.Label(cell, item[2], UiKit.Head, 14, C.White, 2, 0, 36, cellW, 18)
+	end
+
+	-- 3. YOU GET FOREVER: "x2 > x3" big, on coins AND pins, and the tier colour
+	local forever = section("Forever", "YOU GET FOREVER", C.Gold, 286, 140, C.Gold)
+	local multBig = RewardKit.Label(forever, "", UiKit.Head, 50, C.Gold, 3.5, 16, 30, 270, 58)
+	multBig.TextXAlignment = Enum.TextXAlignment.Left
+	make("UIPadding", { PaddingTop = UDim.new(0, 5) }, multBig)
+	local multWhat = RewardKit.Label(forever, "COINS AND PINS", UiKit.Head, 20, C.White, 2.5, 18, 92, 270, 24)
+	multWhat.TextXAlignment = Enum.TextXAlignment.Left
+	local tierSwatch = make("Frame", {
+		Name = "Swatch",
+		Position = UDim2.fromOffset(292, 42),
+		Size = UDim2.fromOffset(24, 24),
+		BorderSizePixel = 0,
+	}, forever)
+	make("UICorner", { CornerRadius = UDim.new(1, 0) }, tierSwatch)
+	make("UIStroke", { Color = C.Ink, Thickness = 2.5 }, tierSwatch)
+	local tierLine = RewardKit.Label(forever, "", UiKit.Head, 20, C.White, 2.5, 324, 40, IN_W - 340, 26)
+	tierLine.TextXAlignment = Enum.TextXAlignment.Left
+	local tierNote = RewardKit.Label(forever, "", UiKit.Body, 13, C.Muted, 0, 292, 72, IN_W - 308, 54)
+	tierNote.TextXAlignment = Enum.TextXAlignment.Left
+	tierNote.TextYAlignment = Enum.TextYAlignment.Top
+	tierNote.TextWrapped = true
+
+	-- the price (green = you have it, red = not yet) + where it's bought
+	local needs = RewardKit.Label(cover, "", UiKit.Head, 22, C.White, 2.5, 24, 438, IN_W, 28)
+	needs.RichText = true
+
+	local go = RewardKit.Button(cover, "REBIRTH!", "Gold", 300, 66, 30)
+	go.Holder.Position = UDim2.fromOffset(24, H - 66 - 24)
+	local notYet = RewardKit.Button(cover, "NOT YET", "Grey", IN_W - 300 - 12, 66, 28)
+	notYet.Holder.Position = UDim2.fromOffset(24 + 300 + 12, H - 66 - 24)
+
+	local party = celebration()
+	local confirmUntil = 0
+	local busy = false
+	local stopConfirmPulse: (() -> ())? = nil
+
+	-- Standing at the ball shop booth (the circle the server checks, CoreLoopService.AtShop; a little stricter here)
+	local function atShop(): boolean
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not root then
+			return false
+		end
+		local offset = root.Position - CORE.Shop.Position
+		return Vector2.new(offset.X, offset.Z).Magnitude <= CORE.Shop.Radius + (CORE.Shop.BuySlack or 0) - 0.5
+			and offset.Y > -4
+			and offset.Y < 10
+	end
+
+	local function state()
+		local done = player:GetAttribute("Rebirths") or 0
+		local price = Rebirth.CorePrice(done)
+		return done, price, Currency.CanAfford(player:GetAttribute("Coins"), price)
+	end
+
+	local lastShop: boolean? = nil
+	local function refresh()
+		local done, price, hasCoins = state()
+		local nowText = Currency.FormatMultiplier(Rebirth.CoreMultiplier(done))
+		local afterText = Currency.FormatMultiplier(Rebirth.CoreMultiplier(done + 1))
+		-- the button
+		preview.Text = ("%s  ›  %s"):format(nowText, afterText)
+		local coins = tonumber(player:GetAttribute("Coins")) or 0
+		TweenService:Create(fill, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+			Size = UDim2.fromScale(math.clamp(coins / math.max(price, 1), 0, 1), 1),
+		}):Play()
+		setReady(hasCoins)
+		title.Text = if hasCoins then "REBIRTH!" else "REBIRTH"
+
+		-- the window
+		titleFront.Text = ("REBIRTH %d"):format(done + 1)
+		multBig.Text = ("%s › %s"):format(nowText, afterText)
+		local tier, nextTier = Rebirth.Tier(done), Rebirth.Tier(done + 1)
+		local newTier = nextTier ~= nil and (tier == nil or tier.Name ~= nextTier.Name)
+		local shown = nextTier or tier
+		tierSwatch.Visible = shown ~= nil
+		if shown then
+			tierSwatch.BackgroundColor3 = shown.Color
+			tierLine.Text = if newTier then ("%s TIER!"):format(shown.Name) else ("%s TIER"):format(shown.Name)
+			tierLine.TextColor3 = shown.Color
+			tierNote.Text = if newTier
+				then "New colour on your pins, your throw spot and the tag over your head"
+				else "Your pins, throw spot and head tag keep this colour"
+		end
+		local here = atShop()
+		lastShop = here
+		needs.Text = ('PRICE  <font color="#%s">%s COINS</font>%s'):format(
+			(if hasCoins then C.Lime else C.Red):ToHex(),
+			Currency.Format(price),
+			if here then "" else "  ·  AT THE BALL SHOP"
+		)
+
+		local confirming = hasCoins and here and os.clock() < confirmUntil
+		if not hasCoins then
+			go:SetText(("NEED %s"):format(Currency.Format(price)))
+			go:Paint(C.Grey, C.GreyLip, C.LockedText)
+		elseif not here then
+			go:SetText("GO TO SHOP")
+			go:Paint(C.Cyan, C.CyanLip, C.White)
+		elseif confirming then
+			go:SetText("TAP AGAIN TO REBIRTH")
+			go:Paint(C.Pink, C.PinkLip, C.White)
+		else
+			go:SetText("REBIRTH!")
+			go:Paint(C.Gold, C.GoldLip, C.White)
+		end
+		if not confirming and stopConfirmPulse then
+			stopConfirmPulse()
+			stopConfirmPulse = nil
+		end
+	end
+
+	local function setOpen(open: boolean)
+		windowGui:SetAttribute("Open", open) -- (the shop doesn't pop open over it, CoreShopController)
+		if open then
+			confirmUntil = 0
+			refresh()
+			win:Open()
+			RewardKit.Stagger({
+				cover:FindFirstChild("Back") :: GuiObject,
+				cover:FindFirstChild("Keep") :: GuiObject,
+				cover:FindFirstChild("Forever") :: GuiObject,
+			}, 0.07, 0.1)
+		else
+			win:Close()
+		end
+	end
+
+	button.Activated:Connect(function()
+		setOpen(not win:IsOpen())
+	end)
+	closeX.Activated:Connect(function()
+		setOpen(false)
+	end)
+	notYet.Activated:Connect(function()
+		setOpen(false)
+	end)
+	go.Activated:Connect(function()
+		local done, _, hasCoins = state()
+		if busy or not hasCoins then
+			go:Shake()
+			return
+		end
+		if not atShop() then
+			-- rebirth is bought at the ball shop: take the player there (the window stays open)
+			goRemote:FireServer("Shop")
+			task.delay(0.6, refresh)
+			return
+		end
+		-- A rebirth can't be undone: the first tap asks, the second (within a few seconds) does it
+		if os.clock() >= confirmUntil then
+			confirmUntil = os.clock() + CONFIRM_SECONDS
+			refresh()
+			if stopConfirmPulse then
+				stopConfirmPulse()
+			end
+			stopConfirmPulse = RewardKit.Pulse(go.Holder, 1.06, 0.3)
+			task.delay(CONFIRM_SECONDS, refresh)
+			return
+		end
+		busy = true
+		local ok, result = pcall(remote.InvokeServer, remote)
+		busy = false
+		confirmUntil = 0
+		if ok and result and result.Ok then
+			setOpen(false)
+			task.delay(0.25, party, done + 1, nil)
+		else
+			go:SetText(if ok and result and result.Error then result.Error:upper() else "TRY AGAIN")
+			go:Shake()
+			task.delay(2, refresh)
+		end
+	end)
+
+	for _, key in { "Coins", "Rebirths" } do
+		player:GetAttributeChangedSignal(key):Connect(refresh)
+	end
+	-- walking onto / off the shop circle changes the window's button
+	task.spawn(function()
+		while true do
+			task.wait(0.3)
+			if win:IsOpen() and atShop() ~= lastShop then
+				refresh()
+			end
+		end
+	end)
+	refresh()
+end
+
 function RebirthController:Start()
--- (switched off in the Addendum 4 core loop: the rooftop is the only zone)
+	-- (switched off in the Addendum 4 core loop: the rooftop is the only zone; Addendum 5 step C: the core rebirth)
 	if Config.CoreLoop.Enabled then
+		if Rebirth.CoreOn() then
+			startCore()
+		end
 		return
 	end
 	local playerGui = player:WaitForChild("PlayerGui")

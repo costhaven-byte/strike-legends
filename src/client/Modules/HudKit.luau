@@ -132,6 +132,8 @@ HudKit.Layout = {
 	-- Level bar + REBIRTH sit in the strip at the very top (next to Roblox's own buttons), so the boss pill fits under them
 	LevelBar = { Pc = { 650, 14, 620, 52, "C", "T" }, Phone = { 262, 6, 320, 34, "C", "T" } },
 	Rebirth = { Pc = { 1290, 12, 56, 56, "C", "T" }, Phone = { 592, 2, 44, 46, "C", "T" } },
+	-- Addendum 5 step C: the core loop's big gold REBIRTH button takes the hidden POWER LV's spot
+	CoreRebirth = { Pc = { 32, 362, 176, 66, "L", "T" }, Phone = { 12, 200, 144, 52, "L", "T" } }, -- (phone 52 tall: the x1 > x2 line clears the bar)
 	AfterThrow = { Pc = { 660, 140, 600, 30, "C", "T" }, Phone = { 272, 84, 300, 18, "C", "T" } },
 	Gifts = { Pc = { 1832, 72, 56, 56, "R", "T" }, Phone = { 788, 40, 44, 46, "R", "T" } },
 	-- SETTINGS (grey, owner 2026-10-29) under GIFTS; TELEPORT moved to the left column under DAILY + PROFILE

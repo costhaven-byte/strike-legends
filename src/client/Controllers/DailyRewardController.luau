@@ -557,7 +557,7 @@ function DailyRewardController:Start()
 	end
 	-- Addendum 4 Stage 3: a new player buys ball 2 first (Throw > Sell > Buy), then the calendar opens
 	local guide = Config.CoreLoop.Enabled and Config.CoreLoop.Guide.Enabled
-	if guide and (tonumber(player:GetAttribute("BallStep")) or 1) < 2 then
+	if guide and (tonumber(player:GetAttribute("BallStep")) or 1) < 2 and (player:GetAttribute("Rebirths") or 0) == 0 then
 		while (tonumber(player:GetAttribute("BallStep")) or 1) < 2 do
 			player:GetAttributeChangedSignal("BallStep"):Wait()
 		end

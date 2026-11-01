@@ -43,9 +43,47 @@ function Rebirth.Cost(rebirths: number): number
 	return math.floor(costs[#costs] * REBIRTH.CostGrowth ^ (rebirths + 1 - #costs) + 0.5)
 end
 
--- Permanent coin and XP multipliers from rebirths done
+-- Permanent coin and XP multipliers from rebirths done (Addendum 5 step C core loop: the rebirth multiplier)
 function Rebirth.CoinMultiplier(rebirths: number?): number
+	if Rebirth.CoreOn() then
+		return Rebirth.CoreMultiplier(rebirths)
+	end
 	return 1 + FORMULA.RebirthBonus * (rebirths or 0)
+end
+
+-- ===== Addendum 5 step C: rebirth in the core loop (Config.CoreLoop.Rebirth) =====
+local CORE_REBIRTH = Config.CoreLoop.Rebirth
+
+-- Is the core loop rebirth on?
+function Rebirth.CoreOn(): boolean
+	return Config.CoreLoop.Enabled and CORE_REBIRTH ~= nil and CORE_REBIRTH.Enabled == true
+end
+
+-- Coins the next rebirth costs (rebirths = rebirths done so far): Prices, then the last one x Growth each, rounded
+-- to 2 figures
+function Rebirth.CorePrice(rebirths: number?): number
+	local done = math.max(0, math.floor(tonumber(rebirths) or 0))
+	local prices = CORE_REBIRTH.Prices
+	local price = if done < #prices then prices[done + 1] else prices[#prices] * CORE_REBIRTH.Growth ^ (done + 1 - #prices)
+	local unit = 10 ^ math.max(math.floor(math.log10(price)) - 1, 0)
+	return math.floor(price / unit + 0.5) * unit
+end
+
+-- The rebirth multiplier on pins per swing and on what a sell pays: 1 + Bonus x rebirths
+function Rebirth.CoreMultiplier(rebirths: number?): number
+	return 1 + CORE_REBIRTH.Bonus * math.max(0, math.floor(tonumber(rebirths) or 0))
+end
+
+-- The tier row for a rebirth count ({ From, Name, Color }), nil before the first rebirth
+function Rebirth.Tier(rebirths: number?): { [string]: any }?
+	local done = math.max(0, math.floor(tonumber(rebirths) or 0))
+	local found = nil
+	for _, row in CORE_REBIRTH.Tiers or {} do
+		if done >= row.From then
+			found = row
+		end
+	end
+	return found
 end
 
 function Rebirth.XpMultiplier(rebirths: number?): number

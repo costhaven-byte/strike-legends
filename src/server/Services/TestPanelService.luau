@@ -104,6 +104,15 @@ local ACTIONS: { [string]: (Player) -> any } = {
 	end,
 	Rebirth = function(player)
 		local done = PlayerDataService.Get(player, "Rebirths") or 0
+		if Rebirth.CoreOn() then
+			-- Addendum 5 step C: just the coins (rebirth is bought at the ball shop)
+			local price = Rebirth.CorePrice(done)
+			local have = PlayerDataService.Get(player, "Coins") or 0
+			if not Currency.CanAfford(have, price) then
+				PlayerDataService.Add(player, "Coins", Currency.Sub(price, have))
+			end
+			return reply(true, "Ready: rebirth at the ball shop")
+		end
 		setLevel(player, Rebirth.Level(done))
 		local cost = Rebirth.Cost(done)
 		local coins = PlayerDataService.Get(player, "Coins") or 0

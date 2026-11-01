@@ -205,6 +205,36 @@ Config.CoreLoop = {
 		-- GO TO EGGS (PETS window, no pets yet): CoreGoTo "Eggs" lands you here, facing the first egg
 		GoTo = Vector3.new(26, 848.65, -3430),
 	},
+	-- Addendum 5 step C: REBIRTH, bought with coins only at the ball shop (server distance check, like every buy),
+	-- whenever you can pay; never forced. It resets coins, the bag (its coins and its level), the ball ladder and the
+	-- throw speed upgrades; it keeps pets (all of them, equipped, Shiny), pet slots (Config.PetStats.KeepPetSlots)
+	-- and the rebirth count. Each rebirth adds Bonus to the rebirth multiplier (1 + Bonus x rebirths), which
+	-- multiplies BOTH the pins per swing (CoreLoopService.PinsMultiplier) AND the coins a sell pays (the bag's coins
+	-- x the multiplier, so the bag's size doesn't cap it). Price n = Prices[n], then the last one x Growth each.
+	-- Tuned with print(require(game.ServerStorage.Tools.EconomySim).CoreRebirth()).
+	-- The ball and bag prices are x (rebirth multiplier) ^ LadderPower after a rebirth (x3.0 after rebirth 1, x5.8
+	-- after 2, x9.2 after 3 ...): your pets come with you, so without this the ladder would take 2 minutes the second
+	-- time. Sim (EconomySim.CoreRebirth, one of each egg, rebirth as soon as it's paid): run 1 = ladder 33 min + 6 min
+	-- saving (1.6M a minute at the top); after rebirth 1 the player is back at 1.6M a minute in ~6 min (17% of run 1)
+	-- and tops out at 4.2M; rebirth 2 / 3 / 4 / 5 at ~53 / 74 / 109 / 180 min (each run's ladder back to the last
+	-- top in 8-10 min); a player who never rebirths stays near 1.6M a minute (7.2M for the rebirther at 1 hour). Tiers: what each rebirth count changes in the world, from existing parts
+	-- only: your own pins' rings, the ring of your throw spot (everyone sees it) and the REBIRTH tag over your head.
+	Rebirth = {
+		Enabled = true, -- false = no rebirth in the core loop (button hidden, server refuses)
+		Prices = { 10000000 }, -- rebirth 1, 2, 3... (then the last one x Growth each)
+		Growth = 3,
+		Bonus = 1, -- x2 after rebirth 1, x3 after rebirth 2 ...
+		LadderPower = 1.6,
+		Tiers = {
+			{ From = 1, Name = "BRONZE", Color = Color3.fromRGB(222, 140, 70) },
+			{ From = 2, Name = "SILVER", Color = Color3.fromRGB(200, 222, 240) },
+			{ From = 3, Name = "GOLD", Color = Color3.fromRGB(255, 205, 60) },
+			{ From = 5, Name = "EMERALD", Color = Color3.fromRGB(70, 230, 130) },
+			{ From = 8, Name = "DIAMOND", Color = Color3.fromRGB(110, 225, 255) },
+			{ From = 12, Name = "RUBY", Color = Color3.fromRGB(255, 70, 100) },
+			{ From = 20, Name = "COSMIC", Color = Color3.fromRGB(190, 110, 255) },
+		},
+	},
 	-- Stage 3 first 30 seconds: until ball 2 is bought a card under the pin counter says Throw > Sell > Buy and beams
 	-- lead to the sell pad, then to the shop. The join daily window waits until then too.
 	Guide = {
@@ -215,7 +245,8 @@ Config.CoreLoop = {
 	-- Coins: each pin = PinValue coins x these multipliers (MultiplierService.Coins names; zone, power, rank, streak
 	-- and ball are left out on purpose, Stage 2 prices balls on pins per throw)
 	PinValue = 1,
-	Multipliers = { "Mascots", "Potion", "Rebirth", "Friends", "Passes", "RobuxBoost" },
+	-- (Addendum 5 step C: "Rebirth" left out: the rebirth multiplier pays on the SELL instead, CoreLoop.Rebirth)
+	Multipliers = { "Mascots", "Potion", "Friends", "Passes", "RobuxBoost" },
 	-- Stage 3c: XP per throw = pins x XpPerPin x these (MultiplierService.Xp names; zone and streak left out), so levels,
 	-- level rewards and ranks move again. Ranks come with levels: no rank trials in the core loop.
 	XpPerPin = 1,
@@ -223,7 +254,8 @@ Config.CoreLoop = {
 	-- Stage 3c: profile stats (Config.Profile.Stats Key) and achievements (their Stat) the rooftop can't move; hidden
 	-- Rooftop stations moved to ServerStorage.CoreLoopHidden (Stage 2 crate kiosk; Stage 3c egg stand, pets wait for Stage 5)
 	HiddenStations = { "CrateShop", "EggPad" },
-	HideProfile = { "Perfects", "BestStreak", "Eggs", "Crates", "Pets", "Rebirths", "BossWins", "Zones", "Level", "Strikes" },
+	HideProfile = { "Perfects", "BestStreak", "Eggs", "Crates", "Pets", "BossWins", "Zones", "Level", "Strikes" },
+	-- (Addendum 5 step C: "Rebirths" shows again; rebirth is back in the core loop)
 	-- (Addendum 5 A1: "Level" and "Strikes" too: no levels, no full clears)
 	-- Hold to keep throwing: seconds between throws = Cooldown - ThrowSpeedLevel x CooldownStep, never below
 	-- CooldownFloor (raise the floor if frame time suffers). ThrowSpeedLevel is saved; the upgrade shop is Stage 2.
@@ -4762,12 +4794,13 @@ Config.Leaderboards = {
 		},
 		{
 			-- Stage 3c: the core loop has no strike streaks (was BEST STRIKE STREAK, BestStreak, LB_BestStreak)
+			-- Addendum 5 step C: MOST REBIRTHS (was MOST COINS EARNED, LifetimeCoins / LB_LifetimeCoins; that stat is
+			-- still saved, and COINS THIS WEEK stays)
 			Id = "Streak", -- (the Studio panel is still named Streak)
-			Title = "MOST COINS EARNED",
-			Column = "COINS",
-			ShowCoin = true,
-			Stat = "LifetimeCoins",
-			Store = "LB_LifetimeCoins",
+			Title = "MOST REBIRTHS",
+			Column = "REBIRTHS",
+			Stat = "Rebirths",
+			Store = "LB_Rebirths",
 		},
 		{
 			Id = "Weekly",

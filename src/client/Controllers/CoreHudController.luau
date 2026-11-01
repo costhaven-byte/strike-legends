@@ -285,7 +285,11 @@ function CoreHudController:Start()
 	local tutorDoneAt: number? = nil
 	local tutorWasOn = false
 	local function guideStep(): number
-		if not GUIDE.Enabled or (tonumber(player:GetAttribute("BallStep")) or 1) >= 2 then
+		if
+			not GUIDE.Enabled
+			or (tonumber(player:GetAttribute("BallStep")) or 1) >= 2
+			or (tonumber(player:GetAttribute("Rebirths")) or 0) > 0 -- (step C: a rebirthed player knows the way)
+		then
 			return 0
 		end
 		local coins = player:GetAttribute("Coins") or 0
@@ -365,7 +369,7 @@ function CoreHudController:Start()
 	end)
 
 	-- Sold at the station: coins fly up from the bag
-	remotes:WaitForChild("CoreSold").OnClientEvent:Connect(function(amount)
+	remotes:WaitForChild("CoreSold").OnClientEvent:Connect(function(amount, multiplier)
 		guideUntil = 0
 		Sfx.Play("Coin", 1, 1.4)
 		Sfx.Play("SpinWin", 1.2, 0.6)
@@ -391,6 +395,19 @@ function CoreHudController:Start()
 			Position = UDim2.new(0.3, 0, 0.15, 0),
 			TextXAlignment = Enum.TextXAlignment.Left,
 		})
+		-- Addendum 5 step C: the rebirth multiplier paid on this sell, as a gold tag on the pop's corner
+		if type(multiplier) == "number" and multiplier > 1 then
+			local tag, tagFace = plate(pop, "RebirthTag", GOLD, 6)
+			tag.AnchorPoint = Vector2.new(0.5, 0.5)
+			tag.Position = UDim2.fromScale(0.92, 0.02)
+			tag.Size = UDim2.fromScale(0.5, 0.52)
+			tag.Rotation = 8
+			tag.ZIndex = 6
+			text(tagFace, Currency.FormatMultiplier(multiplier) .. " REBIRTH", {
+				Size = UDim2.new(1, -8, 0.8, 0),
+				Position = UDim2.new(0, 4, 0.1, 0),
+			})
+		end
 		UiFx.Pop(pop, 1.2, 0.18)
 		TweenService:Create(pop, TweenInfo.new(1.1, Enum.EasingStyle.Quint), {
 			Position = pop.Position + UDim2.fromOffset(0, -60),

@@ -493,7 +493,8 @@ function CoreShopController:Start()
 		local coins = player:GetAttribute("Coins") or 0
 		for _, kind in { "Ball", "Bag" } do
 			local have = if kind == "Ball" then ballStep else bagLevel
-			local buyStep, price = CoreLadder.Buyable(kind, ballStep, bagLevel)
+			local rebirths = player:GetAttribute("Rebirths") -- (step C: prices rise each rebirth)
+			local buyStep, price = CoreLadder.Buyable(kind, ballStep, bagLevel, rebirths)
 			for step, row in rows[kind] do
 				if kind == "Ball" then
 					local entry = CORE.Balls[step]
@@ -503,7 +504,7 @@ function CoreShopController:Start()
 					row.Name.Text = ("Bag %d"):format(step)
 					row.Line.Text = ("Holds %s coins"):format(Currency.Format(CORE.BagSizes[step]))
 				end
-				local fullPrice = if kind == "Ball" then CORE.Balls[step].Price else CORE.BagPrices[step]
+				local fullPrice = if kind == "Ball" then CoreLadder.BallPrice(step, rebirths) else CoreLadder.BagPrice(step, rebirths)
 				local state
 				if step == have then
 					state = "Using"
@@ -777,7 +778,11 @@ function CoreShopController:Start()
 			end
 			if here ~= atShop then
 				atShop = here
-				if here then
+				-- (not over the REBIRTH window: its GO TO SHOP brings you here to rebirth, step C)
+				local rebirthWindow = playerGui:FindFirstChild("RebirthWindowUI")
+				if here and rebirthWindow and rebirthWindow:GetAttribute("Open") then
+					continue
+				elseif here then
 					if open then
 						refresh()
 						UiFx.Pop(window, 1.04, 0.2)

@@ -11,6 +11,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local PinRack = require(Shared.Modules.PinRack)
+local Rebirth = require(Shared.Modules.Rebirth)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Balls = require(Shared.Modules.Balls)
 local BallLook = require(Shared.Modules.BallLook)
@@ -1050,6 +1051,17 @@ function LaneVisuals:Start()
 	if LaneUtil.Shared() then
 		-- Addendum 5 A3: one rack on this screen, at your own spot (built when the server gives you one)
 		local mine: { Lane: Model?, Fence: Instance?, Mark: Instance? } = {}
+		-- Addendum 5 step C: your pins' neck rings in your rebirth tier's colour (Config.CoreLoop.Rebirth Tiers)
+		local function tintMine()
+			local rack = mine.Lane and racks[mine.Lane]
+			if rack then
+				local tier = Rebirth.Tier(Players.LocalPlayer:GetAttribute("Rebirths"))
+				rack:SetTint(if tier then tier.Color else nil)
+			end
+		end
+		Players.LocalPlayer:GetAttributeChangedSignal("Rebirths"):Connect(function()
+			tintMine()
+		end)
 		local function refreshMine()
 			local lane = LaneUtil.GetOwnedLane(Players.LocalPlayer.UserId)
 			if lane == mine.Lane then
@@ -1073,6 +1085,7 @@ function LaneVisuals:Start()
 				)
 				mine.Fence = buildPinFence(lane)
 				mine.Mark = markOwnSpot(lane)
+				tintMine()
 			end
 		end
 		for _, lane in LaneUtil.GetLanes() do
