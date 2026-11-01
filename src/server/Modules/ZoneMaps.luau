@@ -890,7 +890,347 @@ local function buildJungle(info: any)
 	end
 end
 
-local BUILDERS = { Boardwalk = buildBoardwalk, Jungle = buildJungle }
+---------------------------------------------------------------------------------------------------------------
+-- Canyon props
+---------------------------------------------------------------------------------------------------------------
+local CANYON = {
+	Ground = { X0 = -150, X1 = 280, Z0 = -3596, Z1 = -3330 }, -- the sandy canyon floor (zone 1's layout)
+	Pond = { X0 = 196, X1 = 256, Z0 = -3536, Z1 = -3464 }, -- the palm oasis pond, east of the lane
+	LakeTop = 846.4, -- the turquoise lake past the pit and the pond, 2.25 studs under the sand
+	Sand = Color3.fromRGB(236, 182, 124),
+	Path = Color3.fromRGB(246, 208, 162),
+	Terracotta = Color3.fromRGB(206, 104, 70),
+	RedRock = Color3.fromRGB(184, 84, 58),
+	Peach = Color3.fromRGB(240, 178, 132),
+	Turquoise = Color3.fromRGB(40, 196, 196),
+	Gold = Color3.fromRGB(255, 196, 64),
+	Adobe = Color3.fromRGB(228, 162, 112),
+	Cactus = { Color3.fromRGB(86, 158, 82), Color3.fromRGB(70, 140, 74) },
+	Palm = { Color3.fromRGB(70, 176, 74), Color3.fromRGB(110, 200, 80) },
+}
+
+-- A rock stack (a hoodoo or a butte): blocks in red / peach bands, a wider cap rock on top
+local function hoodoo(at: Vector3, height: number, width: number, seed: number)
+	local g = "Rocks"
+	local bands = math.max(3, math.floor(height / 5))
+	local step = height / bands
+	for i = 0, bands - 1 do
+		local w = width * (1 - i * 0.05) * (if i % 2 == 0 then 1 else 0.92)
+		local turn = math.rad((seed * 37 + i * 11) % 30 - 15)
+		add(g, "Band", Vector3.new(w, step + 0.2, w * 0.9), CFrame.new(at + Vector3.new(0, step * (i + 0.5), 0)) * CFrame.Angles(0, turn, 0), if i % 2 == 0 then CANYON.RedRock else CANYON.Terracotta, { Material = Enum.Material.Sandstone })
+	end
+	add(g, "CapRock", Vector3.new(width * 1.15, step * 0.7, width * 1.05), CFrame.new(at + Vector3.new(0, height + step * 0.3, 0)) * CFrame.Angles(0, math.rad(seed * 13 % 40), 0), CANYON.Peach, { Material = Enum.Material.Sandstone })
+end
+
+-- A saguaro cactus: a trunk, one or two bent arms, round tops, sometimes a pink flower
+local function cactus(at: Vector3, height: number, seed: number)
+	local g = "Cacti"
+	local color = CANYON.Cactus[seed % 2 + 1]
+	local r = 0.9 + height * 0.03
+	post(g, "Trunk", at, height, r, color, { Material = Enum.Material.Grass })
+	add(g, "Top", Vector3.one * r * 2, CFrame.new(at + Vector3.new(0, height, 0)), color, { Shape = Enum.PartType.Ball, Material = Enum.Material.Grass })
+	for _, s in { -1, 1 } do
+		if (seed + (s + 1)) % 3 ~= 0 then
+			local armY = height * (0.4 + ((seed + s) % 3) * 0.1)
+			local out = 2.2 + seed % 2
+			local turn = CFrame.Angles(0, math.rad(seed * 40), 0)
+			local base = CFrame.new(at) * turn
+			add(g, "Arm", Vector3.new(out, r * 1.5, r * 1.5), base * CFrame.new(s * out / 2, armY, 0), color, { Material = Enum.Material.Grass })
+			local up = height * 0.3
+			add(g, "Arm", Vector3.new(r * 1.5, up, r * 1.5), base * CFrame.new(s * out, armY + up / 2, 0), color, { Material = Enum.Material.Grass })
+			add(g, "ArmTop", Vector3.one * r * 1.5, base * CFrame.new(s * out, armY + up, 0), color, { Shape = Enum.PartType.Ball, Material = Enum.Material.Grass })
+		end
+	end
+	if seed % 3 == 0 then
+		add(g, "Flower", Vector3.one * r * 0.9, CFrame.new(at + Vector3.new(0, height + r * 0.8, 0)), Color3.fromRGB(255, 110, 170), { Shape = Enum.PartType.Ball, Collide = false })
+	end
+end
+
+-- A hot-air balloon high up: a striped envelope (sphere slices, narrower at the bottom), ropes and a basket
+local function balloon(at: Vector3, stripes: { Color3 })
+	local g = "Balloons"
+	local R = 9
+	for i = -5, 4 do
+		local y = i * 1.9
+		local r = R * math.sqrt(math.max(0.05, 1 - (y / (R + 0.6)) ^ 2))
+		if i < 0 then
+			r *= 1 + i * 0.06 -- (a teardrop: narrower toward the basket)
+		end
+		add(g, "Envelope", Vector3.new(2, r * 2, r * 2), CFrame.new(at + Vector3.new(0, y, 0)) * UP, stripes[(i + 5) % #stripes + 1], { Shape = Enum.PartType.Cylinder, Collide = false })
+	end
+	local basket = at - Vector3.new(0, R + 6, 0)
+	add(g, "Basket", Vector3.new(3, 2.4, 3), CFrame.new(basket), Color3.fromRGB(150, 100, 60), { Collide = false, Material = Enum.Material.WoodPlanks })
+	for _, o in { { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } } do
+		local from = basket + Vector3.new(o[1] * 1.4, 1.2, o[2] * 1.4)
+		local to = at + Vector3.new(o[1] * 3.2, -R + 0.5, o[2] * 3.2)
+		add(g, "Rope", Vector3.new(0.12, 0.12, (to - from).Magnitude), CFrame.lookAt((from + to) / 2, to), Color3.fromRGB(90, 70, 50), { Collide = false, Shadow = false })
+	end
+	add(g, "Burner", Vector3.one * 0.9, CFrame.new(basket + Vector3.new(0, 2.6, 0)), Color3.fromRGB(255, 160, 60), { Shape = Enum.PartType.Ball, Collide = false, Material = Enum.Material.Neon })
+end
+
+-- An adobe house: rounded clay walls, a parapet, wooden roof beams poking out, a turquoise door and window
+local function adobe(at: Vector3, size: Vector3, face: number)
+	local g = "Adobe"
+	local base = CFrame.new(at) * CFrame.Angles(0, math.rad(face), 0)
+	add(g, "Walls", size, base * CFrame.new(0, size.Y / 2, 0), CANYON.Adobe, { Material = Enum.Material.Sand })
+	add(g, "Parapet", Vector3.new(size.X + 0.6, 1, size.Z + 0.6), base * CFrame.new(0, size.Y + 0.3, 0), CANYON.Adobe:Lerp(Color3.new(1, 1, 1), 0.12), { Material = Enum.Material.Sand })
+	for k = -2, 2 do
+		add(g, "Viga", Vector3.new(0.6, 0.6, 1.6), base * CFrame.new(k * size.X / 5.5, size.Y - 1, -size.Z / 2 - 0.6), Color3.fromRGB(120, 80, 50), { Material = Enum.Material.Wood, Collide = false })
+	end
+	add(g, "Door", Vector3.new(2.6, 4.4, 0.3), base * CFrame.new(-size.X * 0.2, 2.2, -size.Z / 2 - 0.1), CANYON.Turquoise)
+	add(g, "Window", Vector3.new(1.8, 1.8, 0.3), base * CFrame.new(size.X * 0.25, size.Y * 0.6, -size.Z / 2 - 0.1), CANYON.Turquoise:Lerp(Color3.new(0, 0, 0), 0.25))
+	-- a string of red chillies by the door
+	for k = 0, 4 do
+		add(g, "Chilli", Vector3.new(0.5, 0.9, 0.5), base * CFrame.new(-size.X * 0.2 + 2, 4 - k * 0.8, -size.Z / 2 - 0.4), Color3.fromRGB(220, 40, 40), { Collide = false, Shadow = false })
+	end
+end
+
+-- A peaked market tent: four posts and a striped canopy (two slopes), open on every side
+local function tent(at: Vector3, width: number, a: Color3, b: Color3, turn: number)
+	local g = "Tents"
+	local base = CFrame.new(at) * CFrame.Angles(0, math.rad(turn), 0)
+	local half = width / 2
+	for _, o in { { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } } do
+		post(g, "TentPost", (base * CFrame.new(o[1] * (half - 0.3), 0, o[2] * (half - 0.3))).Position, 7.5, 0.2, Color3.fromRGB(150, 100, 60), { Collide = false })
+	end
+	local strips = math.max(3, math.floor(width / 1.6))
+	for i = 1, strips do
+		local x = -half + width * (i - 0.5) / strips
+		for _, s in { -1, 1 } do
+			add(g, "Canopy", Vector3.new(width / strips, 0.25, half * 1.16), base * CFrame.new(x, 8.6, s * half * 0.5) * CFrame.Angles(math.rad(s * 30), 0, 0), if i % 2 == 0 then a else b, { Collide = false })
+		end
+	end
+	add(g, "Ridge", Vector3.new(width + 0.4, 0.4, 0.4), base * CFrame.new(0, 9.9, 0), CANYON.Gold, { Collide = false })
+end
+
+local function canyonPalm(at: Vector3, height: number, lean: number)
+	palm(at, height, lean)
+end
+
+---------------------------------------------------------------------------------------------------------------
+-- Zone 4: Canyon Oasis
+---------------------------------------------------------------------------------------------------------------
+local function buildCanyon(info: any)
+	local palette = info.Palette
+	local gr, pond = CANYON.Ground, CANYON.Pond
+
+	-- The canyon floor: warm sand slabs round the oasis pond (a hole for its Terrain water), packed paths
+	local function slab(x0: number, x1: number, z0: number, z1: number)
+		add("Ground", "Sand", Vector3.new(x1 - x0, 6, z1 - z0), CFrame.new((x0 + x1) / 2, TOP - 3, (z0 + z1) / 2), CANYON.Sand, { Material = Enum.Material.Sand })
+	end
+	slab(gr.X0, pond.X0, gr.Z0, gr.Z1)
+	slab(pond.X0, gr.X1, pond.Z1, gr.Z1)
+	slab(pond.X0, gr.X1, gr.Z0, pond.Z0)
+	slab(pond.X1, gr.X1, pond.Z0, pond.Z1)
+	add("Ground", "Clearing", Vector3.new(118, 0.1, 50), CFrame.new(-34, TOP + 0.03, -3410), CANYON.Path, { Material = Enum.Material.Sand, Collide = false })
+	add("Ground", "PathToEgg", Vector3.new(40, 0.1, 10), CFrame.new(18, TOP + 0.03, -3436), CANYON.Path, { Material = Enum.Material.Sand, Collide = false })
+	add("Ground", "PathToGates", Vector3.new(12, 0.1, 40), CFrame.new(-96, TOP + 0.03, -3410), CANYON.Path, { Material = Enum.Material.Sand, Collide = false })
+	add("Ground", "PathToOasis", Vector3.new(150, 0.1, 9), CFrame.new(112, TOP + 0.03, -3440), CANYON.Path, { Material = Enum.Material.Sand, Collide = false })
+	-- turquoise tiles round the pond's edge, and an invisible fence round the lake and the pond
+	for _, e in {
+		{ Vector3.new(pond.X1 - pond.X0 + 2, 0.4, 1.4), Vector3.new((pond.X0 + pond.X1) / 2, TOP + 0.2, pond.Z0 - 0.7) },
+		{ Vector3.new(pond.X1 - pond.X0 + 2, 0.4, 1.4), Vector3.new((pond.X0 + pond.X1) / 2, TOP + 0.2, pond.Z1 + 0.7) },
+		{ Vector3.new(1.4, 0.4, pond.Z1 - pond.Z0), Vector3.new(pond.X0 - 0.7, TOP + 0.2, (pond.Z0 + pond.Z1) / 2) },
+		{ Vector3.new(1.4, 0.4, pond.Z1 - pond.Z0), Vector3.new(pond.X1 + 0.7, TOP + 0.2, (pond.Z0 + pond.Z1) / 2) },
+	} do
+		add("Ground", "PondTiles", e[1], CFrame.new(e[2]), CANYON.Turquoise, { Material = Enum.Material.Slate })
+		add("Ground", "EdgeFence", Vector3.new(e[1].X, 6, e[1].Z), CFrame.new(e[2] + Vector3.new(0, 3, 0)), WHITE, { Transparency = 1 })
+	end
+	add("Ground", "EdgeFence", Vector3.new(gr.X1 - gr.X0, 8, 1), CFrame.new((gr.X0 + gr.X1) / 2, TOP + 4, gr.Z0 - 0.5), WHITE, { Transparency = 1 })
+
+	-- The lane: turquoise gutters, sandstone walls with a gold cap, the pit and an adobe back wall with a tile band
+	local length = LANE.FoulZ - LANE.EndZ
+	local midZ = (LANE.FoulZ + LANE.EndZ) / 2
+	for _, side in { -1, 1 } do
+		add("Lane", "Gutter", Vector3.new(2.4, 0.3, length), CFrame.new(LANE.Centre + side * (LANE.Width / 2 + 1.2), TOP + 0.05, midZ), palette.Edge)
+		add("Lane", "GutterWall", Vector3.new(0.9, 1.6, length + 10), CFrame.new(LANE.Centre + side * (LANE.Width / 2 + 2.8), TOP + 0.8, midZ - 5), CANYON.Terracotta, { Material = Enum.Material.Sandstone })
+		add("Lane", "GutterCap", Vector3.new(1.1, 0.3, length + 10), CFrame.new(LANE.Centre + side * (LANE.Width / 2 + 2.8), TOP + 1.75, midZ - 5), CANYON.Gold)
+	end
+	add("Lane", "Pit", Vector3.new(LANE.Width + 6, 0.3, 8), CFrame.new(LANE.Centre, TOP + 0.02, LANE.EndZ - 4), Color3.fromRGB(96, 52, 40))
+	local backZ = LANE.EndZ - 8.6
+	local wallWidth = LANE.Width + 6.4
+	add("Lane", "BackWall", Vector3.new(wallWidth, 8, 1.4), CFrame.new(LANE.Centre, TOP + 4, backZ), CANYON.Adobe, { Material = Enum.Material.Sand })
+	local tiles = 24
+	for i = 1, tiles do
+		local sx = LANE.Centre - wallWidth / 2 + wallWidth * (i - 0.5) / tiles
+		add("Lane", "Tile", Vector3.new(wallWidth / tiles - 0.3, 1.6, 0.2), CFrame.new(sx, TOP + 5.4, backZ + 0.75), if i % 2 == 0 then CANYON.Turquoise else CANYON.Gold, { Collide = false })
+	end
+	add("Lane", "BackWallCap", Vector3.new(wallWidth + 1, 0.8, 2), CFrame.new(LANE.Centre, TOP + 8.3, backZ), CANYON.Terracotta, { Material = Enum.Material.Sandstone })
+
+	-- The CANYON OASIS sign behind the pit: two banded sandstone pillars with gold suns, a carved board
+	local signZ = backZ - 3
+	for _, side in { -1, 1 } do
+		local sx = LANE.Centre + side * 36
+		for k = 0, 4 do
+			add("Arch", "Pillar", Vector3.new(4.8 - k * 0.2, 4.8, 4.8 - k * 0.2), CFrame.new(sx, TOP + 2.4 + k * 4.8, signZ), if k % 2 == 0 then CANYON.Terracotta else CANYON.Peach, { Material = Enum.Material.Sandstone })
+		end
+		add("Arch", "PillarTop", Vector3.new(6, 1.4, 6), CFrame.new(sx, TOP + 24.7, signZ), CANYON.RedRock, { Material = Enum.Material.Sandstone })
+		add("Arch", "Sun", Vector3.new(0.6, 5, 5), CFrame.new(sx, TOP + 28.4, signZ) * CFrame.Angles(0, math.rad(90), 0), CANYON.Gold, { Shape = Enum.PartType.Cylinder })
+		for r = 0, 7 do
+			add("Arch", "SunRay", Vector3.new(0.5, 1.6, 0.4), CFrame.new(sx, TOP + 28.4, signZ) * CFrame.Angles(0, 0, math.rad(r * 45)) * CFrame.new(0, 3.4, 0), CANYON.Gold, { Collide = false })
+		end
+		add("Arch", "SunStand", Vector3.new(1.2, 2, 1.2), CFrame.new(sx, TOP + 25.6, signZ), CANYON.RedRock, { Material = Enum.Material.Sandstone })
+	end
+	local board = add("Arch", "NameBoard", Vector3.new(64, 11, 1), CFrame.new(LANE.Centre, TOP + 19, signZ), CANYON.Peach, { Material = Enum.Material.Sandstone })
+	add("Arch", "NameBoardTrim", Vector3.new(66, 13, 0.6), CFrame.new(LANE.Centre, TOP + 19, signZ - 0.5), CANYON.Turquoise)
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Back -- (faces the bowlers, +Z)
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 24
+	gui.LightInfluence = 0
+	gui.Parent = board
+	local title = label(gui, "CANYON OASIS", UDim2.fromScale(0.94, 0.62), UDim2.fromScale(0.5, 0.4), Color3.new(1, 1, 1))
+	local gradient = Instance.new("UIGradient")
+	gradient.Color = ColorSequence.new(Color3.fromRGB(255, 226, 110), Color3.fromRGB(255, 120, 70))
+	gradient.Rotation = 90
+	gradient.Parent = title
+	label(gui, "ZONE 4", UDim2.fromScale(0.3, 0.26), UDim2.fromScale(0.5, 0.83), CANYON.Turquoise)
+
+	-- Pennants over the lane, on carved posts at the gutter walls
+	local flags = { CANYON.Terracotta, CANYON.Gold, CANYON.Turquoise, WHITE }
+	for _, bz in { -3470, -3505, -3540 } do
+		for _, side in { -1, 1 } do
+			post("Bunting", "BuntingPole", Vector3.new(LANE.Centre + side * (LANE.Width / 2 + 2.8), TOP + 1.9, bz), 17, 0.4, Color3.fromRGB(150, 100, 60), { Material = Enum.Material.Wood })
+		end
+		bunting(Vector3.new(LANE.Centre - LANE.Width / 2 - 2.8, TOP + 18.4, bz), Vector3.new(LANE.Centre + LANE.Width / 2 + 2.8, TOP + 18.4, bz), flags)
+	end
+
+	-- Striped market awnings over the sell pad and the shop
+	local sell, shop = CORE.Sell, CORE.Shop
+	awning(sell.Position + Vector3.new(0, 0, sell.Radius + 2.2), 12, CANYON.Terracotta, CANYON.Peach)
+	awning(shop.Position + Vector3.new(0, 0, shop.Radius + 2.2), 11, CANYON.Turquoise, WHITE)
+
+	-- Past the pit: the turquoise lake (Terrain), a huge natural stone arch standing in it, hoodoos at its shores,
+	-- the red canyon walls behind with a gap to far-off buttes (ZoneMaps.Terrain)
+	local lake = CANYON.LakeTop
+	local archZ = -3662
+	local xL, xR = LANE.Centre - 54, LANE.Centre + 54
+	local spring = TOP + 18
+	local rr, rh = (xR - xL) / 2, 34
+	for _, x in { xL, xR } do
+		local bands = 7
+		local h = spring - (lake - 8)
+		for k = 0, bands - 1 do
+			add("StoneArch", "Leg", Vector3.new(14 - k * 0.3, h / bands + 0.2, 14), CFrame.new(x, lake - 8 + h / bands * (k + 0.5), archZ), if k % 2 == 0 then CANYON.RedRock else CANYON.Terracotta, { Material = Enum.Material.Sandstone })
+		end
+	end
+	local pieces = 22
+	for i = 0, pieces do
+		local a = math.pi * i / pieces
+		local at = Vector3.new(LANE.Centre - math.cos(a) * rr, spring + math.sin(a) * rh, archZ)
+		local na = math.pi * (i + 1) / pieces
+		local nextAt = Vector3.new(LANE.Centre - math.cos(na) * rr, spring + math.sin(na) * rh, archZ)
+		local tangent = (nextAt - at).Unit
+		local thick = 12 - math.sin(a) * 4 -- (thinner at the top)
+		add("StoneArch", "Span", Vector3.new(9, thick, 13), CFrame.fromMatrix(at, tangent, Vector3.new(-tangent.Y, tangent.X, 0)), if i % 3 == 0 then CANYON.Terracotta else CANYON.RedRock, { Material = Enum.Material.Sandstone })
+	end
+	for i, h in { { -130, -3640, 34, 10 }, { -112, -3690, 46, 12 }, { 60, -3640, 30, 9 }, { 92, -3680, 52, 13 }, { 150, -3630, 26, 8 }, { -150, -3615, 22, 7 } } do
+		hoodoo(Vector3.new(h[1], lake - 6, h[2]), h[3], h[4], i)
+	end
+	-- the lake's shore: sand banks with palms and reeds where the floor meets the water
+	for i, p in { { -140, -3604, 15, 40 }, { -100, -3606, 13, 120 }, { 40, -3606, 14, 200 }, { 120, -3606, 16, 300 }, { 170, -3604, 13, 250 } } do
+		canyonPalm(Vector3.new(p[1], TOP, p[2] + 6), p[3], p[4] + i * 10)
+	end
+
+	-- The palm oasis east of the lane: the pond (Terrain), palms all round, reeds, a little dock, market tents
+	for i, p in {
+		{ 190, -3456, 17, 30 }, { 210, -3452, 15, 110 }, { 246, -3456, 18, 200 }, { 264, -3480, 14, 260 },
+		{ 266, -3520, 16, 290 }, { 240, -3548, 15, 340 }, { 204, -3548, 17, 20 }, { 186, -3500, 14, 80 },
+	} do
+		canyonPalm(Vector3.new(p[1], TOP, p[2]), p[3], p[4] + i * 7)
+	end
+	for i = 1, 18 do
+		local a = i / 18 * math.pi * 2
+		local at = Vector3.new((pond.X0 + pond.X1) / 2 + math.cos(a) * 28, lake + 1.2, (pond.Z0 + pond.Z1) / 2 + math.sin(a) * 33)
+		post("Oasis", "Reed", at, 3 + (i % 3), 0.15, CANYON.Palm[i % 2 + 1], { Collide = false })
+	end
+	for i = 1, 6 do
+		local at = Vector3.new(pond.X0 + 8 + (i * 17) % 44, lake + 0.1, pond.Z0 + 10 + (i * 23) % 52)
+		add("Oasis", "LilyPad", Vector3.new(0.15, 3 + i % 2, 3 + i % 2), CFrame.new(at) * UP, CANYON.Palm[i % 2 + 1], { Shape = Enum.PartType.Cylinder, Collide = false })
+	end
+	-- the dock: planks out over the pond from its west edge
+	for k = 0, 6 do
+		add("Oasis", "DockPlank", Vector3.new(1.6, 0.4, 6), CFrame.new(pond.X0 + 1 + k * 1.7, TOP - 0.2, -3500), if k % 2 == 0 then Color3.fromRGB(176, 128, 78) else Color3.fromRGB(156, 110, 66), { Material = Enum.Material.WoodPlanks })
+	end
+	for _, z in { -3502.6, -3497.4 } do
+		post("Oasis", "DockPost", Vector3.new(pond.X0 + 11.5, lake - 3, z), 4.4, 0.3, Color3.fromRGB(120, 86, 58), { Material = Enum.Material.Wood })
+	end
+	tent(Vector3.new(150, TOP, -3410), 10, CANYON.Terracotta, WHITE, 0)
+	tent(Vector3.new(170, TOP, -3392), 9, CANYON.Turquoise, CANYON.Gold, 20)
+	tent(Vector3.new(232, TOP, -3420), 11, CANYON.Gold, CANYON.Terracotta, -10)
+	tent(Vector3.new(160, TOP, -3570), 9, CANYON.Turquoise, WHITE, 30)
+	-- rugs and clay pots under the tents
+	for i, r in { { 150, -3410 }, { 232, -3420 } } do
+		add("Tents", "Rug", Vector3.new(7, 0.1, 5), CFrame.new(r[1], TOP + 0.06, r[2]), if i == 1 then Color3.fromRGB(200, 60, 60) else CANYON.Turquoise, { Collide = false })
+		add("Tents", "RugBand", Vector3.new(7.02, 0.12, 1), CFrame.new(r[1], TOP + 0.07, r[2]), CANYON.Gold, { Collide = false })
+	end
+	for i, p in { { 146, -3404 }, { 155, -3415 }, { 228, -3414 }, { 238, -3426 }, { 166, -3566 } } do
+		post("Pots", "Pot", Vector3.new(p[1], TOP, p[2]), 2 + i % 2, 0.9 + (i % 3) * 0.2, CANYON.Terracotta, { Material = Enum.Material.Sand })
+		add("Pots", "PotBand", Vector3.new(0.3, 2.2 + (i % 3) * 0.4, 2.2 + (i % 3) * 0.4), CFrame.new(p[1], TOP + 1.2, p[2]) * UP, CANYON.Turquoise, { Shape = Enum.PartType.Cylinder, Collide = false })
+	end
+
+	-- The golden sphinx on its plinth at the oasis, looking at the lane
+	local sphinx = Vector3.new(232, TOP, -3384)
+	local S = 1.6
+	local function sp(x: number, y: number, z: number): CFrame
+		return CFrame.new(sphinx + Vector3.new(x, y, z) * S)
+	end
+	local gold, goldDark = CANYON.Gold, Color3.fromRGB(214, 150, 50)
+	add("Sphinx", "Plinth", Vector3.new(10, 3, 18) * S, sp(0, 1.5, 0), CANYON.Peach, { Material = Enum.Material.Sandstone })
+	add("Sphinx", "PlinthBand", Vector3.new(10.2, 0.8, 18.2) * S, sp(0, 2.6, 0), CANYON.Turquoise)
+	add("Sphinx", "Body", Vector3.new(6, 4.6, 11) * S, sp(0, 5.3, 2), gold)
+	for _, s in { -1, 1 } do
+		add("Sphinx", "Paw", Vector3.new(1.6, 1.6, 6) * S, sp(s * 2, 3.8, -5.6), gold)
+	end
+	add("Sphinx", "Chest", Vector3.new(5, 6, 3) * S, sp(0, 6.5, -2.6), gold)
+	add("Sphinx", "Head", Vector3.new(3.4, 3.8, 3.2) * S, sp(0, 10.6, -3.4), gold)
+	for k = 0, 4 do
+		for _, s in { -1, 1 } do
+			add("Sphinx", "Headdress", Vector3.new(0.6, 1, 3) * S, sp(s * 2, 12 - k * 1, -3), if k % 2 == 0 then CANYON.Turquoise else goldDark)
+		end
+	end
+	add("Sphinx", "HeaddressTop", Vector3.new(4.6, 0.8, 3.6) * S, sp(0, 12.8, -3.2), CANYON.Turquoise)
+	for _, s in { -1, 1 } do
+		add("Sphinx", "Eye", Vector3.new(0.7, 0.4, 0.2) * S, sp(s * 0.8, 11.2, -5.05), CANYON.Turquoise, { Material = Enum.Material.Neon, Collide = false })
+	end
+	add("Sphinx", "Beard", Vector3.new(0.8, 1.8, 0.6) * S, sp(0, 8.2, -4.8), CANYON.Turquoise)
+
+	-- Adobe houses along the north edge and the west side, saguaros, boulders and desert flowers all round
+	for _, h in {
+		{ -130, -3352, Vector3.new(12, 9, 10), 0 }, { -104, -3346, Vector3.new(10, 7, 8), 0 },
+		{ 60, -3348, Vector3.new(14, 10, 10), 0 }, { 90, -3352, Vector3.new(10, 8, 9), 0 },
+		{ -136, -3470, Vector3.new(10, 8, 12), -90 }, { -136, -3530, Vector3.new(12, 10, 12), -90 },
+	} do
+		adobe(Vector3.new(h[1], TOP, h[2]), h[3], h[4])
+	end
+	local cacti = {
+		{ -120, -3400, 12 }, { -126, -3440, 9 }, { -118, -3570, 14 }, { -84, -3348, 10 }, { 30, -3352, 13 },
+		{ 46, -3470, 11 }, { 72, -3520, 15 }, { 100, -3420, 10 }, { 120, -3480, 13 }, { 110, -3560, 9 },
+		{ 140, -3360, 14 }, { 186, -3370, 11 }, { 266, -3360, 15 }, { 268, -3580, 12 }, { 130, -3590, 10 },
+	}
+	for i, c in cacti do
+		cactus(Vector3.new(c[1], TOP, c[2]), c[3], i)
+	end
+	for i, b in { { -128, -3420, 4 }, { 60, -3380, 3 }, { 140, -3530, 5 }, { -110, -3500, 3 }, { 100, -3350, 4 }, { 270, -3440, 5 } } do
+		add("Rocks", "Boulder", Vector3.new(b[3] * 1.3, b[3], b[3] * 1.1), CFrame.new(b[1], TOP + b[3] * 0.3, b[2]) * CFrame.Angles(0, math.rad(i * 37), 0), if i % 2 == 0 then CANYON.Terracotta else CANYON.RedRock, { Shape = Enum.PartType.Ball, Material = Enum.Material.Sandstone })
+	end
+	local blooms = { Color3.fromRGB(255, 110, 170), Color3.fromRGB(255, 200, 60), Color3.fromRGB(255, 130, 60) }
+	for i = 1, 26 do
+		local x = if i % 2 == 0 then 30 + (i * 37) % 140 else -140 + (i * 29) % 46
+		local z = -3340 - (i * 53) % 250
+		add("Flowers", "Bloom", Vector3.one * (0.8 + i % 3 * 0.3), CFrame.new(x, TOP + 0.4, z), blooms[i % #blooms + 1], { Shape = Enum.PartType.Ball, Collide = false })
+		add("Flowers", "Shrub", Vector3.new(2.4, 1, 2.4), CFrame.new(x + 0.6, TOP + 0.3, z + 0.4), Color3.fromRGB(138, 160, 90), { Shape = Enum.PartType.Ball, Collide = false, Material = Enum.Material.Grass })
+	end
+
+	-- Hot-air balloons drifting over the canyon (seen over the arch and the walls)
+	balloon(Vector3.new(-120, TOP + 74, -3700), { CANYON.Terracotta, CANYON.Gold, WHITE })
+	balloon(Vector3.new(40, TOP + 92, -3760), { CANYON.Turquoise, WHITE, CANYON.Gold })
+	balloon(Vector3.new(160, TOP + 66, -3640), { Color3.fromRGB(255, 110, 150), CANYON.Gold, CANYON.Turquoise })
+	balloon(Vector3.new(220, TOP + 84, -3330), { CANYON.Gold, CANYON.Terracotta, CANYON.Turquoise })
+	balloon(Vector3.new(-170, TOP + 70, -3380), { CANYON.Turquoise, CANYON.Terracotta, WHITE })
+end
+
+local BUILDERS = { Boardwalk = buildBoardwalk, Jungle = buildJungle, Canyon = buildCanyon }
 
 -- Builds a zone's map in zone 1's layout (SharedLane moves it by the zone's Offset and parents it)
 function ZoneMaps.Build(name: string, zone: number, info: any): Model
@@ -964,6 +1304,50 @@ function ZoneMaps.Terrain(name: string, info: any)
 		for i, at in { { -70, 30, 14 }, { 0, 48, 12 }, { 90, 22, 16 }, { -150, 40, 15 }, { 170, 50, 13 } } do
 			terrain:FillBall(Vector3.new(at[1], TOP + at[2], JUNGLE.CliffZ + 1) + o, at[3] - i % 2 * 2, Enum.Material.Rock)
 		end
+	elseif name == "Canyon" then
+		local o = offset
+		local lake = CANYON.LakeTop
+		local gr, pond = CANYON.Ground, CANYON.Pond
+		local function block(x0: number, x1: number, y0: number, y1: number, z0: number, z1: number, material: Enum.Material)
+			terrain:FillBlock(CFrame.new(Vector3.new((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2) + o), Vector3.new(x1 - x0, y1 - y0, z1 - z0), material)
+		end
+		-- red canyon wall: Sandstone (terracotta) and Limestone (peach) bands, 8 studs each, from the lake bed up
+		local function wall(x0: number, x1: number, z0: number, z1: number, top: number)
+			local y = lake - 6
+			local k = 0
+			while y < top do
+				local y1 = math.min(y + 8, top)
+				block(x0, x1, y, y1, z0, z1, if k % 3 == 1 then Enum.Material.Limestone else Enum.Material.Sandstone)
+				y = y1
+				k += 1
+			end
+		end
+		-- the bed under everything, the lake past the pit (and the oasis pond), sand level with the floor elsewhere
+		block(-300, 400, lake - 16, lake - 6, -4000, -3200, Enum.Material.Mud)
+		block(-260, 360, lake - 6, lake, -3800, gr.Z0, Enum.Material.Water)
+		block(pond.X0, pond.X1, lake - 6, lake, pond.Z0, pond.Z1, Enum.Material.Water)
+		block(-240, 380, lake - 6, TOP, gr.Z1, -3290, Enum.Material.Sand)
+		block(gr.X0 - 4, gr.X0, lake - 6, TOP, -3740, -3240, Enum.Material.Sand)
+		block(gr.X1, gr.X1 + 4, lake - 6, TOP, -3740, -3240, Enum.Material.Sand)
+		-- the walls: tall on both sides of the south end, a low gap in the middle that shows far buttes; lower walls
+		-- close the west, north and east
+		wall(-280, -112, -3800, -3712, TOP + 86)
+		wall(40, 380, -3800, -3712, TOP + 86)
+		wall(-112, 40, -3880, -3800, TOP + 16)
+		wall(-260, gr.X0 - 4, -3740, -3240, TOP + 52)
+		wall(-260, 380, -3290, -3200, TOP + 44)
+		wall(gr.X1 + 4, 380, -3740, -3240, TOP + 60)
+		-- far buttes through the gap (faded by the haze) and rocky bulges along the wall faces
+		wall(-160, -90, -4060, -4000, TOP + 60)
+		wall(-40, 30, -4120, -4060, TOP + 74)
+		wall(60, 140, -4000, -3950, TOP + 48)
+		for i, at in { { -200, 30, -3712, 14 }, { -140, 60, -3712, 12 }, { 80, 40, -3712, 15 }, { 180, 64, -3712, 13 }, { 300, 24, -3712, 16 }, { -152, 20, -3420, 12 }, { -152, 38, -3560, 11 }, { 284, 30, -3400, 13 }, { 284, 46, -3600, 12 } } do
+			terrain:FillBall(Vector3.new(at[1], TOP + at[2], at[3]) + o, at[4] - i % 2 * 2, Enum.Material.Sandstone)
+		end
+		-- (Terrain colours are shared by every zone; only this canyon uses Sandstone, Limestone and Sand)
+		terrain:SetMaterialColor(Enum.Material.Sandstone, Color3.fromRGB(196, 96, 64))
+		terrain:SetMaterialColor(Enum.Material.Limestone, Color3.fromRGB(236, 168, 120))
+		terrain:SetMaterialColor(Enum.Material.Sand, CANYON.Sand)
 	end
 end
 

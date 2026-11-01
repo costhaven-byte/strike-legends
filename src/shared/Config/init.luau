@@ -79,8 +79,8 @@ Config.CoreLoop = {
 		{ Ball = "SolidGold", Name = "Tornado", Fx = "Tornado", Pins = 1400, Price = 150000, Rarity = "Legendary" },
 		{ Ball = "Daybreak", Name = "Sonic Boom", Fx = "BlackHole", Pins = 3200, Price = 590000, Rarity = "Mythic" },
 		-- Addendum 6 Stage 3: zones 2-4, 10 balls each (Zone = the zone that must be open to buy it). Zone 2 (Stage 4) has
-		-- its own sea/beach effects and the original ball designs. Zone 3 (Stage 5) has its own jungle effects. PLACEHOLDER:
-		-- zone 4 Fx re-uses a zone 1 effect until Stage 6 builds its own; zone 3/4 Ball = existing models (no new designs yet).
+		-- its own sea/beach effects and the original ball designs. Zones 3/4 (Stages 5/6) have their own effects. PLACEHOLDER:
+		-- zone 3/4 Ball = existing models (no new designs yet).
 		-- Numbers: pins x1.7 a ball from ball 10 of the zone before; price = income with the ball before (pins x the
 		-- zone's PinValue x 84 throws a minute, zone 1's late pace with pets) x Zone 1's gaps (3, 2, 2, 2, 2, 5, 5, 5, 5, 5
 		-- min). Stage 9 tunes them from the pacing sim.
@@ -104,16 +104,16 @@ Config.CoreLoop = {
 		{ Ball = "Championship", Name = "Temple Stone", Fx = "Temple", Pins = 45000000, Price = 410000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
 		{ Ball = "Dragon", Name = "Monsoon", Fx = "Monsoon", Pins = 77000000, Price = 680000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
 		{ Ball = "Void", Name = "Jungle King", Fx = "JungleKing", Pins = 130000000, Price = 1200000000000, Rarity = "Mythic", Zone = 3, Placeholder = true },
-		{ Ball = "Hubcap", Name = "Dust Devil", Fx = "BlackHole", Pins = 220000000, Price = 7100000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
-		{ Ball = "DumpsterDiamond", Name = "Cactus Roller", Fx = "Sand", Pins = 380000000, Price = 8000000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
-		{ Ball = "DuctTape", Name = "Mesa Smash", Fx = "Bounce", Pins = 640000000, Price = 14000000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
-		{ Ball = "RustBucket", Name = "Sandstorm", Fx = "Confetti", Pins = 1100000000, Price = 23000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
-		{ Ball = "Rookie", Name = "Oasis Spring", Fx = "Burn", Pins = 1800000000, Price = 40000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
-		{ Ball = "Crystal", Name = "Scorpion", Fx = "Frost", Pins = 3100000000, Price = 160000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
-		{ Ball = "Perfect300", Name = "Sun Disc", Fx = "Arms", Pins = 5300000000, Price = 280000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
-		{ Ball = "Lightning", Name = "Canyon Echo", Fx = "Prism", Pins = 9100000000, Price = 480000000000000, Rarity = "Mythic", Zone = 4, Placeholder = true },
-		{ Ball = "SolidGold", Name = "Mirage", Fx = "Bolt", Pins = 15000000000, Price = 830000000000000, Rarity = "Mythic", Zone = 4, Placeholder = true },
-		{ Ball = "Supernova", Name = "Golden Sphinx", Fx = "Tornado", Pins = 26000000000, Price = 1400000000000000, Rarity = "Mythic", Zone = 4, Placeholder = true },
+		{ Ball = "Hubcap", Name = "Dust Devil", Fx = "DustDevil", Pins = 220000000, Price = 7100000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
+		{ Ball = "DumpsterDiamond", Name = "Cactus Roller", Fx = "Cactus", Pins = 380000000, Price = 8000000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
+		{ Ball = "DuctTape", Name = "Mesa Smash", Fx = "Mesa", Pins = 640000000, Price = 14000000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
+		{ Ball = "RustBucket", Name = "Sandstorm", Fx = "Sandstorm", Pins = 1100000000, Price = 23000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
+		{ Ball = "Rookie", Name = "Oasis Spring", Fx = "Oasis", Pins = 1800000000, Price = 40000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
+		{ Ball = "Crystal", Name = "Scorpion", Fx = "Scorpion", Pins = 3100000000, Price = 160000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
+		{ Ball = "Perfect300", Name = "Sun Disc", Fx = "SunDisc", Pins = 5300000000, Price = 280000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
+		{ Ball = "Lightning", Name = "Canyon Echo", Fx = "Echo", Pins = 9100000000, Price = 480000000000000, Rarity = "Mythic", Zone = 4, Placeholder = true },
+		{ Ball = "SolidGold", Name = "Mirage", Fx = "Mirage", Pins = 15000000000, Price = 830000000000000, Rarity = "Mythic", Zone = 4, Placeholder = true },
+		{ Ball = "Supernova", Name = "Golden Sphinx", Fx = "Sphinx", Pins = 26000000000, Price = 1400000000000000, Rarity = "Mythic", Zone = 4, Placeholder = true },
 	},
 	-- Addendum 5 D: each ladder ball's own signature effect (Fx on its row above; client Modules/BallSignature).
 	-- Visual and feel only, never a number. Strength 0..1 grows with the REAL pin count of the throw on a log scale:
@@ -167,6 +167,17 @@ Config.CoreLoop = {
 			Temple = { Force = 1.6, KnockFrom = "Center", Shake = 0.65, Color = Color3.fromHex("FFC83C") }, -- glyph stones slam in, a gold sunburst
 			Monsoon = { Force = 1.65, KnockFrom = "Center", Shake = 0.7, Color = Color3.fromHex("9BC8FF") }, -- storm cloud, rain, one huge lightning strike
 			JungleKing = { Force = 1.8, KnockFrom = "Center", Shake = 0.8, Color = Color3.fromHex("FFD23C") }, -- a giant gold crown slams down, jungle roar
+			-- Zone 4, Canyon Oasis (Addendum 6 Stage 6)
+			DustDevil = { Force = 1.4, KnockFrom = "Side", Shake = 0.45, Color = Color3.fromHex("E8B878") }, -- a dust devil whirls across the rack
+			Cactus = { Force = 1.45, KnockFrom = "Under", Shake = 0.5, Color = Color3.fromHex("5CC85C") }, -- saguaros burst up through the rack
+			Mesa = { Force = 1.5, KnockFrom = "Center", Shake = 0.6, Color = Color3.fromHex("D2643C") }, -- a red mesa slams down from the sky
+			Sandstorm = { Force = 1.55, KnockFrom = "Side", Shake = 0.55, Color = Color3.fromHex("F0B464") }, -- a wall of sand sweeps across
+			Oasis = { Force = 1.6, KnockFrom = "Under", Shake = 0.6, Color = Color3.fromHex("3CDCD2") }, -- a turquoise spring erupts, palm fronds
+			Scorpion = { Force = 1.65, KnockFrom = "Center", Shake = 0.65, Color = Color3.fromHex("FF7A3C") }, -- a giant scorpion tail stings the rack
+			SunDisc = { Force = 1.7, KnockFrom = "Center", Shake = 0.7, Color = Color3.fromHex("FFD23C") }, -- a gold sun disc burns rays into it
+			Echo = { Force = 1.75, KnockFrom = "Center", Shake = 0.75, Color = Color3.fromHex("FF9A5A") }, -- rock walls rise, the hit echoes x3
+			Mirage = { Force = 1.8, KnockFrom = "Center", Shake = 0.75, Color = Color3.fromHex("7AF0E6") }, -- shimmering ghost balls converge
+			Sphinx = { Force = 1.9, KnockFrom = "Center", Shake = 0.85, Color = Color3.fromHex("FFC83C") }, -- a golden sphinx rises, eye beams
 		},
 	},
 	-- Bags: BagSizes[BagLevel] pins fit (Addendum 6: the bag holds pins, a sell turns them into coins); BagPrices[n] buys bag n (bag 1 is free). Bag n fills in ~10 throws (bag 1)
@@ -380,8 +391,15 @@ Config.CoreLoop = {
 				Offset = Vector3.new(5000, -800, 8000),
 				PinValue = 216,
 				Price = 240000000000,
-				Placeholder = true,
+				-- Stage 6: the real map (server/Modules/ZoneMaps "Canyon"): a sandy canyon floor, a turquoise lake past
+				-- the pit with a huge stone arch and hoodoos, banded red Terrain walls with a gap to far buttes, a palm
+				-- oasis pond with market tents and a golden sphinx to the east, adobe houses, saguaros, hot-air balloons
+				Map = "Canyon",
 				Palette = { Ground = Color3.fromRGB(214, 124, 84), Edge = Color3.fromRGB(56, 200, 200), Accent = Color3.fromRGB(255, 200, 70) },
+				-- the lane in deep plum (matt), so the sand, gold, fire and turquoise effects read on it (Addendum 6 1.2)
+				Lane = { Wood = { Color3.fromRGB(66, 34, 62), Color3.fromRGB(58, 30, 56) }, Deck = Color3.fromRGB(76, 40, 70) },
+				-- a warmer, golden desert haze than the rooftop's sky blue
+				LookChanges = { HazeColor = Color3.fromHex("FFE6C4"), HazeDecay = Color3.fromHex("FFC08A"), Tint = Color3.fromRGB(255, 246, 228) },
 			},
 		},
 		-- The gates, in zone 1's layout (moved by each zone's Offset): Next = the gate to the next zone (pay once to open,

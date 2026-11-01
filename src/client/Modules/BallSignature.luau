@@ -532,6 +532,77 @@ function BallSignature.Roll(ball: BasePart, name: string?, t: number, _forward: 
 			Speed = { 2, 5 },
 			Emission = if name == "Temple" then 0.8 else 0.3,
 		})
+	elseif name == "DustDevil" or name == "Cactus" or name == "Mesa" or name == "Sandstorm" or name == "Scorpion" then
+		-- zone 4: desert sand kicked up behind the ball (Sandstorm thicker, Scorpion with orange flecks)
+		local big = if name == "Sandstorm" then 1.6 else 1
+		trailEmitter(ball, {
+			Image = IMAGES.Smoke,
+			Colors = { Color3.fromHex("F7DCA8"), Color3.fromHex("E2B26A") },
+			Rate = (12 + 26 * t) * big,
+			Size = d * 0.6 * big,
+			EndSize = d * 1.4 * big,
+			Life = { 0.3, 0.6 },
+			Speed = { 0.5, 2 },
+			Emission = 0,
+			Fade = 0.35,
+		})
+		trailEmitter(ball, {
+			Image = IMAGES.Dot,
+			Colors = if name == "Scorpion" then { Color3.fromHex("FF7A3C"), Color3.fromHex("FFB43C") } elseif name == "Cactus" then { Color3.fromHex("6CD65C"), Color3.fromHex("FF6EAA") } else { Color3.fromHex("D2964E"), Color3.fromHex("B87A3C") },
+			Rate = 12 + 26 * t,
+			Size = 0.28,
+			EndSize = 0.06,
+			Life = { 0.3, 0.6 },
+			Speed = { 2, 5 },
+			Accel = Vector3.new(0, -16, 0),
+			Emission = if name == "Scorpion" then 0.6 else 0.1,
+		})
+	elseif name == "Oasis" or name == "Mirage" then
+		-- zone 4: turquoise droplets (Oasis) or a shimmer of turquoise sparkles (Mirage)
+		trailEmitter(ball, {
+			Image = if name == "Mirage" then SPARKLE else IMAGES.Dot,
+			Colors = { WHITE, Color3.fromHex("7AF0E6") },
+			Rate = 14 + 30 * t,
+			Size = if name == "Mirage" then 0.5 else 0.25,
+			EndSize = 0.08,
+			Life = { 0.4, 0.8 },
+			Speed = { 2, 5 },
+			Accel = Vector3.new(0, if name == "Oasis" then -18 else 3, 0),
+			Emission = 0.6,
+		})
+	elseif name == "SunDisc" or name == "Sphinx" then
+		-- zone 4: gold sparkles and a warm glow following the ball
+		trailEmitter(ball, {
+			Image = SPARKLE,
+			Colors = { WHITE, Color3.fromHex("FFC83C") },
+			Rate = 16 + 30 * t,
+			Size = 0.5,
+			Life = { 0.3, 0.6 },
+			Speed = { 1, 3 },
+			Emission = 0.8,
+		})
+		local gap = 0.08
+		local last = 0
+		function handle.Step(position: Vector3)
+			local now = os.clock()
+			if now - last < gap then
+				return
+			end
+			last = now
+			glow(position, Color3.fromHex("FFD23C"), d * (2 + 1.5 * t), 0.3)
+		end
+	elseif name == "Echo" then
+		-- Canyon Echo: terracotta sound rings peel off the ball
+		local gap = 0.09
+		local last = 0
+		function handle.Step(position: Vector3)
+			local now = os.clock()
+			if now - last < gap then
+				return
+			end
+			last = now
+			sprite(position, IMAGES.Ring, Color3.fromHex("FF9A5A"), d * 1.2, d * (2.5 + 2 * t), 0.3)
+		end
 	elseif name == "BlackHole" then
 		-- Sonic Boom: rings peel off the ball like it breaks the sound barrier
 		local gap = 0.07 - 0.03 * t
@@ -1921,8 +1992,495 @@ function impacts.JungleKing(c)
 	end)
 end
 
+---------------------------------------------------------------------------------------------------------------
+-- Zone 4, Canyon Oasis (Addendum 6 Stage 6): desert effects, one per ball
+---------------------------------------------------------------------------------------------------------------
+local SAND = { Color3.fromHex("F7DCA8"), Color3.fromHex("E8B878"), Color3.fromHex("D2964E") }
+local TERRACOTTA = Color3.fromHex("D2643C")
+local TURQUOISE = Color3.fromHex("3CDCD2")
+
+-- A cloud of sand thrown up at one point (scale 1 = a normal puff)
+local function sandBurst(at: Vector3, t: number, scale: number)
+	puff(at, { Image = IMAGES.Smoke, Colors = { SAND[1], SAND[2] }, Count = (6 + 10 * t) * scale, Size = 2.6 * scale, EndSize = 5 * scale, Life = { 0.6, 1 }, Speed = { 4, 10 * scale }, Spread = 70, Emission = 0, Fade = 0.15, Drag = 2 })
+	puff(at, { Image = IMAGES.Dot, Colors = { SAND[3] }, Count = (12 + 26 * t) * scale, Size = 0.35, EndSize = 0.2, Life = { 0.5, 0.9 }, Speed = { 10, 20 * scale }, Spread = 75, Accel = Vector3.new(0, -40, 0), Drag = 0.5, Emission = 0 })
+end
+
+-- 31 Dust Devil: a whirling column of dust sweeps across the rack, tumbleweeds roll out of it
+function impacts.DustDevil(c)
+	local t = c.T
+	local from = c.Center - c.Right * 14
+	local to = c.Center + c.Right * 12
+	local height = 12 + 6 * t
+	local rings = 12
+	local bits = {}
+	for i = 1, rings do
+		local k = i / rings
+		local cloud = solid(CFrame.new(from), Vector3.one * (1.8 + k * 4.4 * (1 + t * 0.5)), SAND[(i % 3) + 1], 1.4)
+		cloud.Shape = Enum.PartType.Ball
+		cloud.Transparency = 0.35
+		table.insert(bits, { cloud, k })
+	end
+	animate(0.6, function(k)
+		local base = from:Lerp(to, k)
+		for _, b in bits do
+			local a = os.clock() * 14 + b[2] * 9
+			local r = 0.8 + b[2] * 3.2 * (1 + t * 0.4)
+			b[1].CFrame = CFrame.new(base + Vector3.new(math.cos(a) * r, b[2] * height, math.sin(a) * r))
+		end
+		if math.random() < 0.35 then
+			puff(base + Vector3.new(0, 1, 0), { Image = IMAGES.Smoke, Colors = { SAND[1] }, Count = 2, Size = 3, EndSize = 5, Life = { 0.4, 0.7 }, Speed = { 3, 6 }, Emission = 0, Fade = 0.3 })
+		end
+	end, function()
+		for _, b in bits do
+			tween(b[1], 0.35, { Transparency = 1, Size = b[1].Size * 1.6 })
+		end
+	end)
+	sprite(c.Center + Vector3.new(0, 4, 0), IMAGES.Spiral, Color3.fromHex("E8B878"), 4, 12 + 6 * t, 0.6, 900)
+	task.delay(0.25, function()
+		-- tumbleweeds bounce out
+		for i = 1, math.floor(2 + 2 * t) do
+			local start = c.Center + c.Right * ((i - 1.5) * 3) + Vector3.new(0, 1.2, 0)
+			local weed = solid(CFrame.new(start), Vector3.one * (1.6 + t), Color3.fromHex("B48C50"), 1.3, Enum.Material.Grass)
+			weed.Shape = Enum.PartType.Ball
+			weed.Transparency = 0.15
+			local dir = (c.Right * (if i % 2 == 0 then 1 else -1) - c.Forward * 0.6).Unit
+			animate(0.8, function(k)
+				local hop = math.abs(math.sin(k * math.pi * 3)) * 2.4 * (1 - k)
+				weed.CFrame = CFrame.new(start + dir * k * 16 + Vector3.new(0, hop, 0)) * CFrame.Angles(k * 12, 0, k * 8)
+			end, function()
+				tween(weed, 0.3, { Transparency = 1 })
+			end)
+		end
+		sandBurst(c.Center, t, 1)
+		floorRing(c.Floor, Color3.fromHex("E8B878"), 6 + 9 * t, 0.45)
+		ThrowFx.Shockwave(c.Floor, c.Color, 5 + 9 * t, 0.35)
+		Sfx.PlayAt("Tap", c.Lane.PinSpot, 0.9, 0.6)
+	end)
+	Sfx.PlayAt("Throw", c.Lane.PinSpot, 0.7, 0.6 + 0.2 * t)
+end
+
+-- 32 Cactus Roller: saguaros burst up through the rack, spines fly, pink flowers pop on top
+function impacts.Cactus(c)
+	local t = c.T
+	local count = math.floor(3 + 3 * t)
+	local green = Color3.fromHex("4CB04C")
+	for i = 1, count do
+		task.delay((i - 1) * 0.04, function()
+			local x = (i - (count + 1) / 2) * (14 / count) * 1.6
+			local foot = c.Floor + c.Right * x + c.Forward * (((i * 7) % 5) - 2)
+			local h = 7 + 3 * t + (i % 2) * 2
+			local side = if i % 2 == 0 then 1 else -1
+			local UPRIGHT = CFrame.Angles(0, 0, math.rad(90)) -- (cylinders run along X)
+			local hidden = CFrame.new(foot - Vector3.new(0, h, 0))
+			local trunk = solid(hidden * UPRIGHT, Vector3.new(h, 1.8, 1.8), green, 1.5, Enum.Material.Grass)
+			trunk.Shape = Enum.PartType.Cylinder
+			local elbow = solid(hidden, Vector3.new(1.1, 1.1, 1.8), green, 1.5, Enum.Material.Grass)
+			local arm = solid(hidden * UPRIGHT, Vector3.new(h * 0.32, 1.2, 1.2), green, 1.5, Enum.Material.Grass)
+			arm.Shape = Enum.PartType.Cylinder
+			tween(trunk, 0.14, { CFrame = CFrame.new(foot + Vector3.new(0, h / 2, 0)) * UPRIGHT }, Enum.EasingStyle.Back)
+			tween(elbow, 0.14, { CFrame = CFrame.lookAt(foot + c.Right * side * 1.2 + Vector3.new(0, h * 0.45, 0), foot + c.Right * side * 5 + Vector3.new(0, h * 0.45, 0)) }, Enum.EasingStyle.Back)
+			tween(arm, 0.14, { CFrame = CFrame.new(foot + c.Right * side * 2.1 + Vector3.new(0, h * 0.45 + h * 0.16, 0)) * UPRIGHT }, Enum.EasingStyle.Back)
+			task.delay(0.14, function()
+				puff(foot + Vector3.new(0, h * 0.5, 0), { Image = IMAGES.TrailCore, Colors = { Color3.fromHex("FFF6D8") }, Count = 10 + 14 * t, Size = 0.25, EndSize = 0.1, Life = { 0.3, 0.6 }, Speed = { 14, 24 }, Spread = 180, Emission = 0.4 })
+				puff(foot + Vector3.new(0, h + 0.6, 0), { Image = IMAGES.Clover, Colors = { Color3.fromHex("FF6EAA") }, Count = 4 + 4 * t, Size = 0.9, EndSize = 0.5, Life = { 0.6, 1 }, Speed = { 4, 9 }, Spread = 60, Accel = Vector3.new(0, -10, 0), Emission = 0.3, Spin = 200, Fade = 0 })
+				local bloom = solid(CFrame.new(foot + Vector3.new(0, h + 0.4, 0)), Vector3.one * 0.3, Color3.fromHex("FF6EAA"), 1.3)
+				bloom.Shape = Enum.PartType.Ball
+				tween(bloom, 0.2, { Size = Vector3.one * (1.4 + t) }, Enum.EasingStyle.Back)
+				sandBurst(foot, t, 0.5)
+			end)
+			task.delay(0.75, function()
+				for _, p in { trunk, elbow, arm } do
+					tween(p, 0.3, { CFrame = p.CFrame - Vector3.new(0, h, 0) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+				end
+			end)
+		end)
+	end
+	floorRing(c.Floor, green, 6 + 9 * t, 0.45)
+	ThrowFx.Shockwave(c.Floor, c.Color, 5 + 9 * t, 0.35)
+	Sfx.PlayAt("CrateLand", c.Lane.PinSpot, 1.4, 0.5 + 0.3 * t)
+end
+
+-- 33 Mesa Smash: a flat-topped red mesa drops out of the sky onto the rack, rock chunks and a sand blast
+function impacts.Mesa(c)
+	local t = c.T
+	local w = 9 + 5 * t
+	local pieces = {}
+	local bands = 4
+	for i = 0, bands - 1 do
+		table.insert(pieces, { Vector3.new(w * (1 - i * 0.08), 1.6, w * 0.8 * (1 - i * 0.08)), CFrame.new(0, i * 1.6, 0), if i % 2 == 0 then TERRACOTTA else Color3.fromHex("F0A878"), nil, Enum.Material.Sandstone })
+	end
+	table.insert(pieces, { Vector3.new(w * 0.78, 0.6, w * 0.6), CFrame.new(0, bands * 1.6 - 0.5, 0), Color3.fromHex("8CB45A"), nil, Enum.Material.Grass })
+	local land = c.Floor + Vector3.new(0, 0.8, 0)
+	local high = land + Vector3.new(0, 34, 0)
+	local parts, move = rig(CFrame.new(high), pieces, 1.6)
+	animate(0.2, function(k)
+		move(CFrame.new(high:Lerp(land, k * k)) * CFrame.Angles(0, (1 - k) * 0.6, 0))
+	end, function()
+		sandBurst(c.Center, t, 1.5)
+		puff(c.Floor + Vector3.new(0, 1, 0), { Image = SQUARE, Colors = { TERRACOTTA }, Count = 16 + 30 * t, Size = 0.8, EndSize = 0.5, Life = { 0.5, 0.9 }, Speed = { 14, 26 }, Spread = 70, Accel = Vector3.new(0, -50, 0), Emission = 0, Spin = 400, Fade = 0 })
+		for i = 1, 2 do
+			task.delay((i - 1) * 0.08, function()
+				floorRing(c.Floor + Vector3.new(0, i * 0.03, 0), if i == 1 then Color3.fromHex("F0A878") else TERRACOTTA, (8 + i * 4) * (1 + t * 0.6), 0.5)
+			end)
+		end
+		ThrowFx.Shockwave(c.Floor, Color3.fromHex("F0C890"), 10 + 12 * t, 0.45)
+		CameraShake.Add(0.3 + 0.4 * t)
+		Sfx.PlayAt("BossHit", c.Lane.PinSpot, 0.8, 0.6 + 0.3 * t)
+		task.delay(0.45, function()
+			move(CFrame.new(land - Vector3.new(0, 0.4, 0)))
+			fadeParts(parts, 0.4)
+		end)
+	end)
+	Sfx.PlayAt("Throw", c.Lane.PinSpot, 0.5, 0.5)
+end
+
+-- 34 Sandstorm: a towering wall of sand sweeps across the rack from the side, the sky goes orange for a moment
+function impacts.Sandstorm(c)
+	local t = c.T
+	local width = 10
+	local from = c.Center - c.Right * 18 + Vector3.new(0, 5, 0)
+	local to = c.Center + c.Right * 18 + Vector3.new(0, 5, 0)
+	local front = holder(from, 1.6, Vector3.new(2, 12 + 4 * t, width + 6))
+	front.CFrame = CFrame.lookAt(from, from + c.Right)
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = IMAGES.Smoke
+	e.Color = colors({ SAND[1], SAND[2] })
+	e.LightEmission = 0
+	e.Size = NumberSequence.new(7, 11)
+	e.Transparency = NumberSequence.new(0.05, 1)
+	e.Lifetime = NumberRange.new(0.5, 0.9)
+	e.Speed = NumberRange.new(6, 12)
+	e.EmissionDirection = Enum.NormalId.Front
+	e.SpreadAngle = Vector2.new(25, 25)
+	e.Shape = Enum.ParticleEmitterShape.Box
+	e.Rotation = NumberRange.new(0, 360)
+	e.RotSpeed = NumberRange.new(-60, 60)
+	e.Rate = 220 + 200 * t
+	e.Parent = front
+	local grit = e:Clone()
+	grit.Texture = IMAGES.Dot
+	grit.Color = ColorSequence.new(SAND[3])
+	grit.Size = NumberSequence.new(0.3, 0.15)
+	grit.Speed = NumberRange.new(20, 30)
+	grit.Rate = 200 + 200 * t
+	grit.Parent = front
+	tween(front, 0.6, { CFrame = CFrame.lookAt(to, to + c.Right) }, Enum.EasingStyle.Linear)
+	task.delay(0.6, function()
+		e.Enabled = false
+		grit.Enabled = false
+	end)
+	if c.Big then
+		UiFx.Flash(Color3.fromHex("FFC88C"), 0.15 + 0.2 * t, 0.4)
+	end
+	task.delay(0.25, function()
+		sandBurst(c.Center, t, 1.2)
+		floorRing(c.Floor, Color3.fromHex("F0B464"), 7 + 10 * t, 0.5)
+		ThrowFx.Shockwave(c.Floor, c.Color, 6 + 10 * t, 0.4)
+		Sfx.PlayAt("Teleport", c.Lane.PinSpot, 0.7, 0.6 + 0.3 * t)
+	end)
+	Sfx.PlayAt("Throw", c.Lane.PinSpot, 0.6, 0.7)
+end
+
+-- 35 Oasis Spring: a turquoise spring bursts up out of the rack, palm fronds fan open round it, droplets rain down
+function impacts.Oasis(c)
+	local t = c.T
+	local width = 3 + 3 * t
+	local foot = c.Floor + Vector3.new(0, 0.3, 0)
+	local beam, _, a1 = ribbon(foot, foot + Vector3.new(0, 1, 0), {
+		Texture = IMAGES.TrailWisp,
+		Mode = Enum.TextureMode.Wrap,
+		Length = 5,
+		Speed = 3,
+		Colors = { WHITE, Color3.fromHex("9BF5EE"), TURQUOISE },
+		Emission = 0.4,
+		Width = width,
+		Width1 = width * 1.8,
+		Life = 1.1,
+	})
+	tween(a1, 0.18, { Position = foot + Vector3.new(0, 16 + 6 * t, 0) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	fadeRibbon(beam, 0.5, 0.5)
+	splash(c.Center, t, 1, { WHITE, Color3.fromHex("9BF5EE"), TURQUOISE })
+	task.delay(0.18, function()
+		local top = foot + Vector3.new(0, 16 + 6 * t, 0)
+		puff(top, { Image = IMAGES.Dot, Colors = { Color3.fromHex("9BF5EE") }, Count = 24 + 30 * t, Size = 0.6, EndSize = 0.3, Life = { 0.8, 1.2 }, Speed = { 8, 16 }, Spread = 100, Accel = Vector3.new(0, -40, 0), Drag = 0.5, Emission = 0.4 })
+		-- palm fronds fan out round the spring
+		local fronds = math.floor(6 + 4 * t)
+		for i = 1, fronds do
+			local a = i / fronds * math.pi * 2
+			local dir = (c.Right * math.cos(a) + c.Forward * math.sin(a))
+			local base = foot + Vector3.new(0, 0.4, 0)
+			local p = leafPart(CFrame.lookAt(base, base + dir) * CFrame.Angles(math.rad(80), 0, 0), 1, LEAVES[i % #LEAVES + 1], 1.3)
+			tween(p, 0.25, { Size = Vector3.new(2.6 + t, 0.2, 7 + 3 * t), CFrame = CFrame.lookAt(base + dir * (3.5 + 1.5 * t), base + dir * 10 + Vector3.new(0, 1.5, 0)) }, Enum.EasingStyle.Back)
+			task.delay(0.8, function()
+				tween(p, 0.35, { Transparency = 1 })
+			end)
+		end
+		floorRing(c.Floor, TURQUOISE, 7 + 10 * t, 0.5)
+		floorRing(c.Floor + Vector3.new(0, 0.03, 0), WHITE, 5 + 7 * t, 0.45)
+		glow(c.Center + Vector3.new(0, 2, 0), TURQUOISE, 10 + 8 * t, 0.45, 4)
+		ThrowFx.Shockwave(c.Floor, TURQUOISE, 6 + 10 * t, 0.4)
+		Sfx.PlayAt("Teleport", c.Lane.PinSpot, 1.3, 0.5 + 0.3 * t)
+	end)
+	Sfx.PlayAt("PowerUp", c.Lane.PinSpot, 1.2, 0.4)
+end
+
+-- 36 Scorpion: a giant scorpion tail curls over from behind the rack and stings it, a burst of hot venom
+function impacts.Scorpion(c)
+	local t = c.T
+	local s = 1.3 + 0.9 * t
+	local segs = 7
+	local shell = { Color3.fromHex("C8461E"), Color3.fromHex("8C2A14") }
+	local parts = {}
+	for i = 1, segs do
+		local p = solid(CFrame.new(c.Center), Vector3.one * (2.6 - i * 0.18) * s, shell[i % 2 + 1], 1.4)
+		p.Shape = Enum.PartType.Ball
+		table.insert(parts, p)
+	end
+	local stinger = solid(CFrame.new(c.Center), Vector3.new(0.5, 0.5, 2.4) * s, Color3.fromHex("FFB43C"), 1.4, Enum.Material.Neon)
+	local root = c.Center + c.Right * (11 + 3 * t) + c.Forward * 2
+	-- the tail: a curve from its root beside the rack, up high and over; the tip moves from raised (k = 0) to
+	-- stabbing the middle of the rack (k = 1)
+	local height = 12 + 4 * t
+	local toward = -c.Right
+	local control = root + Vector3.new(0, height * 1.3, 0) + toward * 3
+	local restTip = root + Vector3.new(0, height, 0) + toward * 7
+	local strikeTip = c.Center + Vector3.new(0, 1.5, 0)
+	local function pose(k: number)
+		local tip = restTip:Lerp(strikeTip, k)
+		local function at(u: number): Vector3
+			return root:Lerp(control, u):Lerp(control:Lerp(tip, u), u)
+		end
+		for i = 1, segs do
+			parts[i].CFrame = CFrame.new(at(i / (segs + 1)))
+		end
+		local before = at(segs / (segs + 1))
+		stinger.CFrame = CFrame.lookAt(tip, tip + (tip - before).Unit)
+	end
+	pose(0)
+	animate(0.18, function(k)
+		pose(k * k)
+	end, function()
+		local tip = stinger.Position
+		glow(tip, Color3.fromHex("FFB43C"), 8 + 8 * t, 0.4, 6)
+		sprite(c.Center + Vector3.new(0, 2, 0), IMAGES.Burst, Color3.fromHex("FF7A3C"), 4, 14 + 8 * t, 0.45, 120)
+		puff(c.Center + Vector3.new(0, 1, 0), { Image = IMAGES.Dot, Colors = { Color3.fromHex("FFE45A") }, Count = 16 + 30 * t, Size = 0.7, EndSize = 0.2, Life = { 0.5, 0.9 }, Speed = { 12, 24 }, Spread = 80, Accel = Vector3.new(0, -30, 0), Emission = 0.8 })
+		puff(c.Center + Vector3.new(0, 1, 0), { Image = IMAGES.Dot, Colors = { Color3.fromHex("FF5A1E") }, Count = 10 + 20 * t, Size = 0.9, EndSize = 0.3, Life = { 0.5, 0.9 }, Speed = { 10, 20 }, Spread = 80, Accel = Vector3.new(0, -30, 0), Emission = 0.6 })
+		floorRing(c.Floor, Color3.fromHex("FF7A3C"), 7 + 10 * t, 0.45)
+		ThrowFx.Shockwave(c.Floor, c.Color, 7 + 10 * t, 0.4)
+		CameraShake.Add(0.2 + 0.3 * t)
+		Sfx.PlayAt("BossPlate", c.Lane.PinSpot, 1.1, 0.6 + 0.3 * t)
+		task.delay(0.5, function()
+			animate(0.3, function(k)
+				pose(1 - k)
+			end)
+			task.delay(0.15, function()
+				fadeParts(parts, 0.25)
+				fadeParts({ stinger }, 0.25)
+			end)
+		end)
+	end)
+	sandBurst(root, t, 0.7)
+	Sfx.PlayAt("Throw", c.Lane.PinSpot, 1.2, 0.5)
+end
+
+-- 37 Sun Disc: a gold sun disc blazes over the rack and burns rays down into it, heat ripples and a gold flare
+function impacts.SunDisc(c)
+	local t = c.T
+	local sky = c.Center + Vector3.new(0, 8 + 2 * t, 0) + c.Forward * 2
+	local disc = solid(CFrame.lookAt(sky, sky - c.Forward) * CFrame.Angles(0, math.rad(90), 0), Vector3.new(0.6, 1, 1), Color3.fromHex("FFD23C"), 1.4, Enum.Material.Neon)
+	disc.Shape = Enum.PartType.Cylinder
+	tween(disc, 0.15, { Size = Vector3.new(0.6, 6 + 3 * t, 6 + 3 * t) }, Enum.EasingStyle.Back)
+	local rim = solid(disc.CFrame * CFrame.new(-0.2, 0, 0), Vector3.new(0.5, 1, 1), Color3.fromHex("FF8A2E"), 1.4, Enum.Material.Neon)
+	rim.Shape = Enum.PartType.Cylinder
+	tween(rim, 0.15, { Size = Vector3.new(0.5, 7.6 + 3.6 * t, 7.6 + 3.6 * t) }, Enum.EasingStyle.Back)
+	sprite(sky, IMAGES.Burst, GOLD, 4, 18 + 8 * t, 0.9, 120)
+	glow(sky, Color3.fromHex("FFE27A"), 14 + 8 * t, 0.9, 6)
+	task.delay(0.1, function()
+		local rays = math.floor(5 + 4 * t)
+		for i = 1, rays do
+			local a = i / rays * math.pi * 2
+			local land = c.Floor + c.Right * math.cos(a) * (3 + 2 * t) + c.Forward * math.sin(a) * (3 + 2 * t)
+			local beam = ribbon(sky, land, { Texture = IMAGES.TrailCore, Colors = { WHITE, Color3.fromHex("FFD23C") }, Emission = 1, Width = 0.8 + 0.6 * t, Width1 = 1.6 + t, Life = 0.7 })
+			fadeRibbon(beam, 0.3, 0.35)
+			floorRing(land + Vector3.new(0, 0.02, 0), Color3.fromHex("FFE27A"), 2 + 2 * t, 0.4)
+		end
+		floorRing(c.Floor, GOLD, 8 + 10 * t, 0.5)
+		sprite(c.Center + Vector3.new(0, 1, 0), IMAGES.Ring, Color3.fromHex("FFF0B0"), 4, 14 + 8 * t, 0.4)
+		puff(c.Center + Vector3.new(0, 1, 0), { Image = SPARKLE, Colors = { WHITE, GOLD }, Count = 20 + 30 * t, Size = 0.8, Life = { 0.4, 0.8 }, Speed = { 10, 20 }, Spin = 200 })
+		ThrowFx.Shockwave(c.Floor, GOLD, 8 + 10 * t, 0.4)
+		if c.Big then
+			UiFx.Flash(Color3.fromHex("FFF0B0"), 0.15 + 0.25 * t, 0.25)
+		end
+		Sfx.PlayAt("PowerUp", c.Lane.PinSpot, 0.7, 0.6 + 0.3 * t)
+	end)
+	task.delay(0.8, function()
+		tween(disc, 0.35, { Transparency = 1, Size = Vector3.new(0.6, 1, 1) })
+		tween(rim, 0.35, { Transparency = 1, Size = Vector3.new(0.5, 1, 1) })
+	end)
+end
+
+-- 38 Canyon Echo: two red rock walls burst up beside the rack and the hit bounces between them three times
+function impacts.Echo(c)
+	local t = c.T
+	local gap = 10 + 3 * t
+	local h = 7 + 3 * t
+	local walls = {}
+	for _, s in { -1, 1 } do
+		local at = c.Floor + c.Right * s * gap
+		local w = solid(CFrame.lookAt(at - Vector3.new(0, h / 2, 0), at - Vector3.new(0, h / 2, 0) + c.Forward), Vector3.new(2.4, h, 9), TERRACOTTA, 1.6, Enum.Material.Sandstone)
+		local band = solid(w.CFrame, Vector3.new(2.5, h * 0.25, 9.1), Color3.fromHex("F0A878"), 1.6, Enum.Material.Sandstone)
+		tween(w, 0.12, { CFrame = w.CFrame + Vector3.new(0, h, 0) }, Enum.EasingStyle.Back)
+		tween(band, 0.12, { CFrame = band.CFrame + Vector3.new(0, h * 1.1, 0) }, Enum.EasingStyle.Back)
+		sandBurst(at, t, 0.5)
+		table.insert(walls, { w, band })
+	end
+	for k = 0, 2 do
+		task.delay(0.1 + k * 0.16, function()
+			local scale = 1 - k * 0.25
+			local side = if k % 2 == 0 then 1 else -1
+			sprite(c.Center + Vector3.new(0, 2, 0), IMAGES.Ring, Color3.fromHex("FF9A5A"):Lerp(WHITE, k * 0.3), 3, (gap * 2.2) * scale, 0.3)
+			floorRing(c.Floor + Vector3.new(0, k * 0.02, 0), Color3.fromHex("FF9A5A"), gap * scale, 0.35)
+			ThrowFx.Shockwave(c.Floor, c.Color, (6 + 8 * t) * scale, 0.3)
+			glow(c.Floor + c.Right * side * (gap - 1.5) + Vector3.new(0, h * 0.5, 0), Color3.fromHex("FFC88C"), 6 * scale, 0.3, 3)
+			-- the echo: a glowing wave crosses from one wall to the other
+			local fromAt = c.Floor + c.Right * side * (gap - 1.5) + Vector3.new(0, h * 0.45, 0)
+			local toAt = c.Floor - c.Right * side * (gap - 1.5) + Vector3.new(0, h * 0.45, 0)
+			local wave = solid(CFrame.lookAt(fromAt, fromAt + c.Forward), Vector3.new(1.2, h * 0.9 * scale, 8), Color3.fromHex("FFB878"), 0.7, Enum.Material.Neon)
+			wave.Transparency = 0.1
+			tween(wave, 0.2, { CFrame = CFrame.lookAt(toAt, toAt + c.Forward), Transparency = 0.6 }, Enum.EasingStyle.Linear)
+			task.delay(0.2, function()
+				tween(wave, 0.15, { Transparency = 1 })
+			end)
+			CameraShake.Add((0.15 + 0.2 * t) * scale)
+			Sfx.PlayAt("BossHit", c.Lane.PinSpot, 1 + k * 0.15, (0.5 + 0.3 * t) * scale)
+		end)
+	end
+	task.delay(0.85, function()
+		for _, w in walls do
+			for _, p in w do
+				tween(p, 0.3, { CFrame = p.CFrame - Vector3.new(0, h, 0), Transparency = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+			end
+		end
+	end)
+end
+
+-- 39 Mirage: shimmering see-through copies of the ball close in from all round, merge, and the air ripples turquoise
+function impacts.Mirage(c)
+	local t = c.T
+	local count = math.floor(5 + 3 * t)
+	local radius = 12 + 4 * t
+	local ghosts = {}
+	for i = 1, count do
+		local a = i / count * math.pi * 2
+		local at = c.Center + c.Right * math.cos(a) * radius + c.Forward * math.sin(a) * radius + Vector3.new(0, 1.5, 0)
+		local g = solid(CFrame.new(at), Vector3.one * (2 + t), Color3.fromHex("9BF5EE"), 1, Enum.Material.Glass)
+		g.Shape = Enum.PartType.Ball
+		g.Transparency = 0.55
+		table.insert(ghosts, { g, at })
+	end
+	animate(0.22, function(k)
+		for i, g in ghosts do
+			local wob = math.sin(k * 20 + i) * 0.6
+			g[1].CFrame = CFrame.new(g[2]:Lerp(c.Center + Vector3.new(0, 1.5, 0), k * k) + c.Right * wob)
+			g[1].Transparency = 0.55 + math.sin(k * 30 + i) * 0.2
+		end
+	end, function()
+		for _, g in ghosts do
+			g[1]:Destroy()
+		end
+		for i = 0, 3 do
+			task.delay(i * 0.07, function()
+				sprite(c.Center + Vector3.new(0, 1.5, 0), IMAGES.Ring, if i % 2 == 0 then TURQUOISE else Color3.fromHex("FFE6C4"), 2, (10 + 8 * t) * (1 + i * 0.3), 0.4)
+				floorRing(c.Floor + Vector3.new(0, i * 0.02, 0), if i % 2 == 0 then TURQUOISE else Color3.fromHex("FFE6C4"), (5 + 6 * t) * (1 + i * 0.35), 0.45)
+			end)
+		end
+		glow(c.Center + Vector3.new(0, 2, 0), Color3.fromHex("BFFFF8"), 12 + 10 * t, 0.5, 6)
+		puff(c.Center + Vector3.new(0, 1.5, 0), { Image = SPARKLE, Colors = { WHITE, TURQUOISE }, Count = 20 + 30 * t, Size = 0.7, Life = { 0.4, 0.8 }, Speed = { 10, 22 }, Spin = 200 })
+		puff(c.Center + Vector3.new(0, 1.5, 0), { Image = IMAGES.Smoke, Colors = { Color3.fromHex("CFFFFA") }, Count = 8 + 8 * t, Size = 3, EndSize = 6, Life = { 0.5, 0.8 }, Speed = { 4, 8 }, Emission = 0.2, Fade = 0.4 })
+		ThrowFx.Shockwave(c.Floor, TURQUOISE, 8 + 10 * t, 0.4)
+		Sfx.PlayAt("Teleport", c.Lane.PinSpot, 1.6, 0.6 + 0.3 * t)
+	end)
+	Sfx.PlayAt("PowerUp", c.Lane.PinSpot, 1.5, 0.4)
+end
+
+-- 40 Golden Sphinx: a giant golden sphinx head rises out of the sand behind the rack, its eyes blast beams into it
+function impacts.Sphinx(c)
+	local t = c.T
+	local s = 1.6 + 1.2 * t
+	local gold, deep = Color3.fromHex("FFC83C"), Color3.fromHex("D29632")
+	local pieces = {
+		{ Vector3.new(3.4, 3.8, 3.2) * s, CFrame.new(), gold, nil, Enum.Material.Metal },
+		{ Vector3.new(4.8, 0.8, 3.6) * s, CFrame.new(0, 2.2 * s, 0.2 * s), TURQUOISE, nil, Enum.Material.Metal },
+		{ Vector3.new(0.8, 1.8, 0.6) * s, CFrame.new(0, -2.6 * s, -1.4 * s), TURQUOISE, nil, Enum.Material.Metal },
+	}
+	for k = 0, 4 do
+		for _, sd in { -1, 1 } do
+			table.insert(pieces, { Vector3.new(0.7, 1, 3) * s, CFrame.new(sd * 2.1 * s, (1.4 - k) * s, 0.3 * s), if k % 2 == 0 then TURQUOISE else deep, nil, Enum.Material.Metal })
+		end
+	end
+	local eyes = {}
+	for _, sd in { -1, 1 } do
+		table.insert(pieces, { Vector3.new(0.8, 0.45, 0.2) * s, CFrame.new(sd * 0.8 * s, 0.5 * s, -1.65 * s), Color3.fromHex("1E5A5A"), nil, Enum.Material.Neon })
+		table.insert(eyes, #pieces)
+	end
+	local rise = c.Center + c.Forward * (9 + 3 * t)
+	local low = rise - Vector3.new(0, 6 * s, 0)
+	local high = rise + Vector3.new(0, 2.6 * s, 0)
+	local face = CFrame.lookAt(Vector3.zero, -c.Forward) -- (looks back at the rack)
+	local parts, move = rig(CFrame.new(low) * face, pieces, 2)
+	sandBurst(rise, t, 1.3)
+	animate(0.18, function(k)
+		move(CFrame.new(low:Lerp(high, math.sin(k * math.pi / 2))) * face)
+	end, function()
+		for _, i in eyes do
+			parts[i].Color = Color3.fromHex("7AFFF4")
+		end
+		for _, i in eyes do
+			local from = parts[i].Position
+			local beam = ribbon(from, c.Center + Vector3.new(0, 0.6, 0), { Texture = IMAGES.TrailCore, Colors = { WHITE, TURQUOISE }, Emission = 1, Width = 0.8 + 0.6 * t, Width1 = 1.4 + t, Life = 0.6 })
+			fadeRibbon(beam, 0.25, 0.3)
+		end
+		task.delay(0.04, function()
+			sprite(c.Center + Vector3.new(0, 3, 0), IMAGES.Burst, gold, 5, 20 + 10 * t, 0.5, 60)
+			glow(c.Center + Vector3.new(0, 3, 0), gold, 14 + 12 * t, 0.5, 10)
+			for i = 1, 3 do
+				task.delay((i - 1) * 0.08, function()
+					floorRing(c.Floor + Vector3.new(0, i * 0.03, 0), if i == 2 then TURQUOISE else gold, (8 + i * 5) * (1 + t * 0.6), 0.55)
+				end)
+			end
+			-- a glowing pyramid outline over the rack
+			local apex = c.Center + Vector3.new(0, 9 + 3 * t, 0)
+			local r = 7 + 3 * t
+			for _, a in { 0, 1, 2, 3 } do
+				local ang = a * math.pi / 2 + math.pi / 4
+				local corner = c.Floor + c.Right * math.cos(ang) * r + c.Forward * math.sin(ang) * r
+				local edge = ribbon(corner, apex, { Texture = IMAGES.TrailCore, Colors = { gold }, Emission = 1, Width = 0.5, Life = 0.8 })
+				fadeRibbon(edge, 0.4, 0.4)
+			end
+			ThrowFx.Shockwave(c.Floor, gold, 12 + 14 * t, 0.5)
+			sandBurst(c.Center, t, 1.5)
+			puff(c.Center + Vector3.new(0, 1, 0), { Image = IMAGES.Star, Colors = { WHITE, gold }, Count = 20 + 40 * t, Size = 0.6, Life = { 0.5, 1 }, Speed = { 14, 30 }, Spin = 200 })
+			if c.Big then
+				UiFx.Flash(Color3.fromHex("FFF0B0"), 0.2 + 0.3 * t, 0.3)
+			end
+			CameraShake.Add(0.35 + 0.45 * t)
+			Sfx.PlayAt("BossHit", c.Lane.PinSpot, 0.6, 0.7 + 0.3 * t)
+			Sfx.PlayAt("Firework", c.Lane.PinSpot, 0.9, 0.4)
+		end)
+		task.delay(0.9, function()
+			animate(0.4, function(k)
+				move(CFrame.new(high:Lerp(low, k * k)) * face)
+			end)
+		end)
+	end)
+	Sfx.PlayAt("PowerUp", c.Lane.PinSpot, 0.6, 0.5)
+end
+
 -- Seconds the pins wait for an effect's falling part (keep at or under 0.2: the next rack stands soon after)
-local HOLD = { Coconut = 0.18, Toucan = 0.15, Waterfall = 0.15, Bridge = 0.2, Temple = 0.2, Monsoon = 0.18, JungleKing = 0.2 }
+local HOLD = {
+	Coconut = 0.18, Toucan = 0.15, Waterfall = 0.15, Bridge = 0.2, Temple = 0.2, Monsoon = 0.18, JungleKing = 0.2,
+	Mesa = 0.2, Cactus = 0.14, Scorpion = 0.18, SunDisc = 0.1, Mirage = 0.2, Sphinx = 0.2, Oasis = 0.1,
+}
 
 local lastBig = -math.huge
 

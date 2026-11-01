@@ -235,3 +235,52 @@
 - Rock and leafy-grass colours in the game are shared across every zone, so zone 2's lighthouse rocks are now the same warm green-grey stone.
 - Sounds: still borrowed (whoosh, thud, boss hit, crate land). Jungle sounds (birds, rain, roar) would need new sound slots (placeholder).
 - **Placeholders still in use:** the map is simple part art (tagged "ZoneArt"). The Main Street Egg stand is still the old Main Street design and doesn't match the jungle. Zone 3's balls still use the old ball models (only their effects are new). Borrowed sounds.
+
+## Stage 6: Zone 4, Canyon Oasis (2026-11-02, code tag `restore-a6-s6-before`)
+
+### What changed
+- **Zone 4 has a real map now** in place of the flat placeholder. It's a sunny red-rock canyon:
+  - Warm sand floor with light packed paths to the sell pad, shop, egg stand, gates and the oasis.
+  - The lane is **deep plum** (matt), with turquoise gutters and terracotta stone walls with a gold cap, so sand, gold, fire and turquoise effects all stand out (the rule from 1.2).
+  - An adobe back wall with a turquoise and gold tile band, and a carved **CANYON OASIS** sign on banded pillars with gold suns on top.
+  - Pennants over the lane (terracotta, gold, turquoise, white). Striped market awnings over the sell pad and the shop.
+  - Past the pins: a **turquoise lake** with a **huge natural stone arch** standing in it, rock towers (hoodoos) along the shore and palms at the water's edge.
+  - Tall **red canyon walls in terracotta and peach bands** on every side, with a gap at the far end that shows distant flat-topped buttes.
+  - To the east: a **palm oasis** with a pond (lily pads, reeds, a little wooden dock), market tents with rugs and clay pots, and a **golden sphinx** on a stone plinth.
+  - Adobe houses with turquoise doors and chilli strings, saguaro cacti (some with pink flowers), boulders, desert flowers, and **five striped hot-air balloons** in the sky.
+- The map is built from simple parts and terrain when the server starts, all tagged "ZoneArt" so designed models can replace it later.
+- A warmer golden haze in the sky for this zone only.
+- **10 new ball effects, one for each zone 4 ball**, all different and desert themed:
+  - 31 Dust Devil: a whirling column of dust sweeps across the pins, tumbleweeds bounce out.
+  - 32 Cactus Roller: saguaro cacti burst up through the pins, spines fly, pink flowers pop on top.
+  - 33 Mesa Smash: a red flat-topped mesa drops out of the sky onto the pins, rock chunks and rings.
+  - 34 Sandstorm: a towering wall of sand sweeps across the pins from the side (the screen goes orange for a moment on big hits).
+  - 35 Oasis Spring: a turquoise spring shoots up out of the pins, palm fronds fan open round it, water rains down.
+  - 36 Scorpion: a giant scorpion tail curls over from beside the pins and stings the middle, a burst of hot venom.
+  - 37 Sun Disc: a blazing gold sun disc appears over the pins and burns rays down into them.
+  - 38 Canyon Echo: two red rock walls burst up beside the pins and the hit bounces between them three times.
+  - 39 Mirage: see-through copies of the ball close in from all round, merge, and the air ripples turquoise.
+  - 40 Golden Sphinx: a giant golden sphinx head rises behind the pins, its eyes fire beams into them, a glowing pyramid outline and a gold blast.
+  - On the way down the lane: sand dust, turquoise droplets or sparkles, gold sparkles with a warm glow, or sound rings, depending on the ball.
+  - Effects that drop or swing something in (mesa, scorpion tail, sphinx...) make the pins wait up to 0.2 seconds for it, same as zones 2 and 3.
+- The Skyline Egg stand and the gate were already in from Stage 3.
+
+### Checklist (3.4)
+- Map: lane, sell, shop, egg stand, gate and spawn all in the bright outdoor canyon: **done**
+- Lane passes the effect-readability test: **done** (plum lane, all 10 effects checked on it)
+- 10 balls with their own effects: **done**. 10 bags: **already there** (bags 31 to 40 from Stage 3)
+- One egg with its own pets: **done** (Skyline Egg, Stage 3)
+- Gate wired in, price in the config: **done** (Stage 3, 240B)
+- Silhouette shop rows for zone 4: **done** (Stage 2/3)
+- Screenshots: **done**, in `screenshots/addendum6-stage6/` (the lane from the spawn in Play, the lake and arch, the oasis, the sphinx, and one of each effect)
+
+### Tested (Studio Play test, with screenshots)
+- Stood in zone 4 in a Play test: sunny look, map and lane all there, stations in place, no new errors in Output.
+- Played each of the 10 effects on the zone 4 lane and looked at it. Five got fixes after looking: the cacti were square posts (now round saguaros with arms), the sandstorm was too thin, the scorpion tail was hidden edge-on and then ended under the floor (now a clear curl from the side), the sun disc was too high and lying flat (now faces you, with an orange rim), the echo was hard to see (now a glowing wave crosses between the walls).
+- Map fixes after looking: the dirt paths near the spawn were too dark, and the gold sphinx, sign suns, tents and balloons looked dull (metal and fabric looks darken colours in this lighting; now plain bright).
+
+### Not verified
+- I didn't throw a zone 4 ball by hand. The effects were played straight on the lane, the same way a throw calls them.
+- Some effect pictures are "frozen" copies of the effect at its key moment, because the picture tool kept landing after the effect had ended (scorpion, echo).
+- Sounds: still borrowed (whoosh, thud, boss hit, power-up). Desert sounds (wind, rattle, roar) would need new sound slots (placeholder).
+- **Placeholders still in use:** the map is simple part art (tagged "ZoneArt"). The Skyline Egg stand is still the old cloud/night design and doesn't match the canyon. Zone 4's balls still use the old ball models (only their effects are new). Borrowed sounds.
