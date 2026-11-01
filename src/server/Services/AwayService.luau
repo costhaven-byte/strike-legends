@@ -10,6 +10,7 @@ local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local CoreLadder = require(Shared.Modules.CoreLadder)
 local Currency = require(Shared.Modules.Currency)
 local MilestoneService = require(script.Parent.MilestoneService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
@@ -80,7 +81,10 @@ function AwayService.PerMinute(player: Player, steady: number): number
 		end
 	end
 	local perMinute
-	if count < INCOME.MinThrows then
+	if count < INCOME.MinThrows and Config.CoreLoop.Enabled then
+		-- (core loop: the guess is the ladder income of your ball + bag)
+		perMinute = CoreLadder.IncomePerMinute(PlayerDataService.Get(player, "BallStep"), PlayerDataService.Get(player, "BagLevel"))
+	elseif count < INCOME.MinThrows then
 		perMinute = INCOME.GuessPinsPerThrow * Config.Rewards.BaseCoinsPerPin * INCOME.GuessThrowsPerMinute
 	else
 		-- the span covers the throws plus one throw's time after the last (idle time doesn't lower it)

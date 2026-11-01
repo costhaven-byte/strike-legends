@@ -98,6 +98,13 @@ end
 local NOT_STEADY = { Streak = true, Modifier = true, Fever = true }
 function MultiplierService.Steady(all): number
 	local product = 1
+	if Config.CoreLoop.Enabled then
+		-- (Addendum 4 core loop: pins pay only these multipliers, ThrowService coreThrow)
+		for _, name in Config.CoreLoop.Multipliers do
+			product *= all[name] or 1
+		end
+		return product
+	end
 	for _, name in ORDER do
 		if not NOT_STEADY[name] then
 			product *= all[name] or 1

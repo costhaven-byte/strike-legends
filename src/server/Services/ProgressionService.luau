@@ -138,7 +138,8 @@ local function refreshLevel(player: Player)
 			inTier = true
 			gems += if Config.Gems.Enabled and first then LEVELS.LevelGems else 0
 		end
-		if first and LEVELS.FreeCrateEvery and reached % LEVELS.FreeCrateEvery == 0 then
+		-- (Addendum 4 core loop: no free crates, crates no longer give balls)
+		if first and LEVELS.FreeCrateEvery and reached % LEVELS.FreeCrateEvery == 0 and not Config.CoreLoop.Enabled then
 			crates += 1
 		end
 		Analytics.Event(player, "LevelUp", reached)

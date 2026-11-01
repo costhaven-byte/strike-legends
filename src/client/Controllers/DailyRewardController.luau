@@ -49,6 +49,8 @@ local function resolve(day: number)
 		PowerLevel = player:GetAttribute("PowerLevel"),
 		ZonesOpen = player:GetAttribute("ZonesOpen"),
 		AwayRate = player:GetAttribute("AwayRate"),
+		BallStep = player:GetAttribute("BallStep"),
+		BagLevel = player:GetAttribute("BagLevel"),
 	})
 end
 

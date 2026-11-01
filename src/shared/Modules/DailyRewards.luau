@@ -3,14 +3,21 @@
 -- The server pays it and the calendar shows it, both from here, so they always agree.
 local Config = require(script.Parent.Parent.Config)
 local Zones = require(script.Parent.Zones)
+local CoreLadder = require(script.Parent.CoreLadder)
 local PowerLevels = require(script.Parent.PowerLevels)
 
 local DAILY = Config.Daily
 
 local DailyRewards = {}
 
--- progress = { PowerLevel, ZonesOpen, AwayRate } (save fields; Player attributes on the client)
-export type Progress = { PowerLevel: number?, ZonesOpen: number?, AwayRate: number? }
+-- progress = { PowerLevel, ZonesOpen, AwayRate, BallStep, BagLevel } (save fields; Player attributes on the client)
+export type Progress = {
+	PowerLevel: number?,
+	ZonesOpen: number?,
+	AwayRate: number?,
+	BallStep: number?, -- (Addendum 4 core loop: gifts follow the ball + bag ladder)
+	BagLevel: number?,
+}
 
 -- 4,134,000 -> 4,100,000
 local function round(coins: number): number
@@ -21,6 +28,10 @@ end
 -- Coins that grow with progress: the biggest of reward.Coins x your zone's coin pay, reward.LevelShare of your next
 -- Power Level's price, or incomeMinutes of your own bowling income (AwayRate). Playtime gifts use it too.
 function DailyRewards.Coins(reward, incomeMinutes: number?, progress: Progress): number
+	if Config.CoreLoop.Enabled then
+		local minutes = reward.CoreMinutes or Config.CoreLoop.Gifts.RewardMinutes
+		return CoreLadder.GiftCoins(minutes, progress.BallStep, progress.BagLevel)
+	end
 	local zone = Zones.Highest(progress.ZonesOpen)
 	local coins = math.max(
 		(reward.Coins or 0) * Zones.CoinPay(zone),
@@ -52,7 +63,11 @@ function DailyRewards.Resolve(day: number, progress: Progress)
 	if reward.Egg then
 		out.Egg = if reward.Egg == "Zone" then row.Egg else reward.Egg
 	end
-	if reward.Crate then
+	if reward.Crate and Config.CoreLoop.Enabled then
+		-- (core loop: crates no longer give balls, so a crate day pays coins)
+		out.Coins = (out.Coins or 0)
+			+ CoreLadder.GiftCoins(Config.CoreLoop.Gifts.CrateMinutes, progress.BallStep, progress.BagLevel)
+	elseif reward.Crate then
 		-- a crate from a zone you haven't unlocked yet comes as your zone's crate
 		out.Crate = Zones.RewardCrateId(if reward.Crate == "Zone" then row.Crate else reward.Crate, progress.ZonesOpen)
 	end

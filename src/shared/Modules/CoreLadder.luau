@@ -30,6 +30,29 @@ function CoreLadder.Next(ballStep: any, bagLevel: any): (string?, number, number
 	return nil, 0, 0
 end
 
+-- Coins per minute with this ball and bag: the ball's average throw (a full clear pays FullClearMultiplier) every
+-- Cooldown, with a sell trip (Gifts.TripSeconds) each time the bag fills. No multipliers. Same rule as
+-- EconomySim.CoreLadder.
+function CoreLadder.IncomePerMinute(ballStep: any, bagLevel: any): number
+	local pins = CORE.Balls[CoreLadder.BallStep(ballStep)].Pins
+	local total, n = 0, 200
+	for i = 1, n do
+		local wanted = pins * (1 + ((i - 0.5) / n * 2 - 1) * CORE.PinsSpread)
+		local count = math.clamp(math.floor(wanted + 0.5), 1, 40)
+		total += count * (if count >= 40 then CORE.FullClearMultiplier else 1)
+	end
+	local rate = total / n * CORE.PinValue / CORE.Cooldown
+	local size = CORE.BagSizes[CoreLadder.BagLevel(bagLevel)]
+	return 60 * size / (size / rate + CORE.Gifts.TripSeconds)
+end
+
+-- A gift worth `minutes` of that income, rounded to 2 figures (at least 10)
+function CoreLadder.GiftCoins(minutes: number, ballStep: any, bagLevel: any): number
+	local coins = math.max(minutes * CoreLadder.IncomePerMinute(ballStep, bagLevel), 10)
+	local unit = 10 ^ math.max(math.floor(math.log10(coins)) - 1, 0)
+	return math.floor(coins / unit + 0.5) * unit
+end
+
 -- "Rubber Bouncer" / "Bag 3" (what a step is called on screen)
 function CoreLadder.Name(kind: string, step: number): string
 	return if kind == "Ball" then CORE.Balls[step].Name else ("Bag %d"):format(step)

@@ -24,7 +24,8 @@ local lastWritten: { [Player]: { [string]: number } } = {} -- store name -> valu
 local names: { [number]: string } = {} -- display name cache
 
 local function storeName(board): string
-	return if board.Weekly then board.Store .. "_W" .. Calendar.Week() else board.Store
+	local store = board.Store .. (Config.Leaderboards.StoreSuffix or "")
+	return if board.Weekly then store .. "_W" .. Calendar.Week() else store
 end
 
 local function getStore(board): OrderedDataStore?

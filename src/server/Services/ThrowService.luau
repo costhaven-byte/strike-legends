@@ -402,6 +402,9 @@ local function coreThrow(player: Player)
 	)
 	-- Coins land in the bag when the ball reaches the pins; a full bag takes nothing (pins still fall)
 	local paid = CoreLoopService.AddToBag(player, coins, result.RollTime)
+	if paid > 0 then
+		AwayService.OnCoins(player, paid, multiplier) -- (coins/min on the HUD and away coins measure real throws)
+	end
 
 	ThrowService.Remotes.ThrowResult:FireAllClients({
 		Core = true,

@@ -96,6 +96,8 @@ local function claim(player: Player, index: any)
 		PowerLevel = PlayerDataService.Get(player, "PowerLevel"),
 		ZonesOpen = PlayerDataService.Get(player, "ZonesOpen"),
 		AwayRate = PlayerDataService.Get(player, "AwayRate"),
+		BallStep = PlayerDataService.Get(player, "BallStep"),
+		BagLevel = PlayerDataService.Get(player, "BagLevel"),
 	})
 	local kind, item = nil, nil
 	local result: { [string]: any } = { Ok = true }

@@ -67,6 +67,15 @@ Config.CoreLoop = {
 	-- to ~40 s (bag 10) with the ball it comes after.
 	BagSizes = { 60, 130, 200, 300, 440, 600, 780, 990, 1500, 2700 },
 	BagPrices = { 0, 170, 700, 930, 1200, 1600, 1900, 3600, 7200, 13000 },
+	-- Gifts in the core loop (owner 2026-11-01: scale to income): daily, playtime and level rewards pay CoreMinutes
+	-- (on each reward row; RewardMinutes when a row has none) of the income your ball + bag make now (ladder income,
+	-- sell trips of TripSeconds counted, no multipliers). A crate in a reward pays CrateMinutes of it instead, since
+	-- crates no longer give balls. Away coins measure your real throws.
+	Gifts = {
+		TripSeconds = 6,
+		RewardMinutes = 2,
+		CrateMinutes = 5,
+	},
 	-- The ball shop booth in the plaza: stand on its blue circle (or tap BALLS) to open the shop
 	Shop = {
 		Position = Vector3.new(-17, 848.65, -3415),
@@ -377,7 +386,9 @@ Config.StartingData = {
 
 -- Saving (DataStore)
 Config.Data = {
-	StoreName = "PlayerData",
+	-- "PlayerData_A4": every account starts from zero for the Addendum 4 loop (owner 2026-11-01). The old saves are
+	-- still in "PlayerData" (set it back to bring them back).
+	StoreName = "PlayerData_A4",
 	SchemaVersion = 34, -- v34 BallStep (Addendum 4 Stage 2 ball ladder; starts at 1, nothing to upgrade). v33 Bag, BagLevel, ThrowSpeedLevel, CoreThrows, CoreSells (Addendum 4 core loop; start at 0/1, every old field kept, nothing to upgrade). v32 BestLevel + BestRank (batch D1 rebirth resets levels; old saves start at their RankLevel / Rank). v31 AutoDelete (batch C3 X'd pets on the egg odds boards; starts empty, nothing to upgrade or delete). v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
@@ -3992,12 +4003,12 @@ Config.PetIdle = {
 --   Potions stay the same (a x2 potion already pays more the more you earn).
 Config.Daily = {
 	Rewards = {
-		{ Coins = 15000, LevelShare = 0.25, Minutes = 5 },
+		{ Coins = 15000, LevelShare = 0.25, Minutes = 5, CoreMinutes = 2 },
 		{ Potions = { { Id = "CoinSmall", Count = 3 } } },
-		{ Coins = 500000, LevelShare = 0.5, Minutes = 12, Gems = 5 },
+		{ Coins = 500000, LevelShare = 0.5, Minutes = 12, Gems = 5, CoreMinutes = 4 },
 		{ Egg = "Zone", Gems = 10 }, -- a free hatch of your zone's egg at its egg stand
 		{ Potions = { { Id = "CoinBig", Count = 1 }, { Id = "XpBig", Count = 1 } } },
-		{ Coins = 5000000, LevelShare = 0.5, Minutes = 30, Gems = 15 },
+		{ Coins = 5000000, LevelShare = 0.5, Minutes = 30, Gems = 15, CoreMinutes = 8 },
 		{ Crate = "Zone", Potions = { { Id = "CoinBig", Count = 2 } }, Gems = 25 },
 	},
 	-- By your highest open zone (ZonesOpen). Zone 1 gets the Neon Egg too (pets open with zone 2; it waits at the stand).
@@ -4322,8 +4333,8 @@ Config.Cosmetics = {
 Config.Milestones = {
 	Enabled = true,
 	LevelRewards = {
-		{ Level = 7, Coins = 50000, LevelShare = 0.3, Crate = "Bronze" }, -- D2: shares were 0.1 / 0.15 (Power Levels got ~10x cheaper)
-		{ Level = 9, Coins = 150000, LevelShare = 0.5, Potions = { { Id = "CoinSmall", Count = 2 } } },
+		{ Level = 7, Coins = 50000, LevelShare = 0.3, Crate = "Bronze", CoreMinutes = 2 }, -- D2: shares were 0.1 / 0.15 (Power Levels got ~10x cheaper)
+		{ Level = 9, Coins = 150000, LevelShare = 0.5, Potions = { { Id = "CoinSmall", Count = 2 } }, CoreMinutes = 3 },
 	},
 	Challenges = {
 		{
@@ -4403,7 +4414,7 @@ Config.Potions = {
 Config.Playtime = {
 	Enabled = true,
 	Rewards = {
-		{ Minutes = 0, Coins = 500, LevelShare = 0.1, IncomeMinutes = 3 }, -- the join gift
+		{ Minutes = 0, Coins = 500, LevelShare = 0.1, IncomeMinutes = 3, CoreMinutes = 1 }, -- the join gift
 		{ Minutes = 15, Potion = "CoinSmall" },
 		{ Minutes = 30, Egg = "Zone" },
 		{ Minutes = 45, Potion = "XpSmall" },
@@ -4412,7 +4423,7 @@ Config.Playtime = {
 		{ Minutes = 90, Potion = "XpBig" },
 		{ Minutes = 105, Crate = 2 },
 		{ Minutes = 120, Potion = "CoinBig" },
-		{ Minutes = 135, Coins = 50000, LevelShare = 0.5, IncomeMinutes = 15 },
+		{ Minutes = 135, Coins = 50000, LevelShare = 0.5, IncomeMinutes = 15, CoreMinutes = 8 },
 		{ Minutes = 150, Potion = "CoinBig" },
 		{ Minutes = 165, Crate = 3 },
 	},
@@ -4486,6 +4497,8 @@ Config.Spin = {
 -- each player's scores are written every WriteInterval and when they leave, never per throw.
 -- Stat = the saved player value the board ranks. Weekly boards start fresh every Monday 00:00 UTC.
 Config.Leaderboards = {
+	-- "_A4": fresh boards for the Addendum 4 reset (owner 2026-11-01); "" brings the old boards back
+	StoreSuffix = "_A4",
 	RefreshInterval = 90,
 	WriteInterval = 120,
 	FetchSize = 100, -- how many top scores to read; your position shows as "100+" below this

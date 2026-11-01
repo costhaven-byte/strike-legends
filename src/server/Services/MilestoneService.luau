@@ -9,6 +9,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
+local CoreLadder = require(Shared.Modules.CoreLadder)
 local PowerLevels = require(Shared.Modules.PowerLevels)
 local Zones = require(Shared.Modules.Zones)
 local Analytics = require(script.Parent.Analytics)
@@ -29,8 +30,20 @@ local progress: { [Player]: { [string]: number } } = {}
 -- (also used by BossService for the boss reward)
 local function give(player: Player, reward, source: string)
 	local shown = { Coins = 0, Potions = reward.Potions }
-	if reward.Coins then
-		local coins = PowerLevels.DailyCoins(reward, PlayerDataService.Get(player, "PowerLevel"))
+	-- Addendum 4 core loop: rewards pay minutes of ladder income (Config.CoreLoop.Gifts), a crate pays coins too;
+	-- away coins (source "Away") come already measured from real throws
+	local core = Config.CoreLoop.Enabled
+	local ballStep, bagLevel = PlayerDataService.Get(player, "BallStep"), PlayerDataService.Get(player, "BagLevel")
+	local crateCoins = if core and reward.Crate
+		then CoreLadder.GiftCoins(Config.CoreLoop.Gifts.CrateMinutes, ballStep, bagLevel)
+		else 0
+	if reward.Coins or crateCoins > 0 then
+		local coins = if not core or source == "Away"
+			then PowerLevels.DailyCoins(reward, PlayerDataService.Get(player, "PowerLevel"))
+			elseif reward.Coins
+			then CoreLadder.GiftCoins(reward.CoreMinutes or Config.CoreLoop.Gifts.RewardMinutes, ballStep, bagLevel)
+			else 0
+		coins += crateCoins
 		PlayerDataService.Add(player, "Coins", coins)
 		Analytics.Currency(player, "Coins", coins, "Gameplay", source)
 		shown.Coins = coins
@@ -39,7 +52,8 @@ local function give(player: Player, reward, source: string)
 		PotionService.Give(player, potion.Id, potion.Count)
 	end
 	-- A crate from a zone you haven't unlocked yet comes as your zone's crate
-	local crate = Balls.GetCrate(Zones.RewardCrateId(reward.Crate, PlayerDataService.Get(player, "ZonesOpen")))
+	local crate = not core
+		and Balls.GetCrate(Zones.RewardCrateId(reward.Crate, PlayerDataService.Get(player, "ZonesOpen")))
 	if crate then
 		shown.CrateId = crate.Id
 		shown.Crate = BallService.GiveCrate(player, crate)

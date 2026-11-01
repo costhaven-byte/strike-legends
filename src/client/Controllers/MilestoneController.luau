@@ -10,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
+local CoreLadder = require(Shared.Modules.CoreLadder)
 local Currency = require(Shared.Modules.Currency)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local CrateController = require(script.Parent.CrateController)
@@ -45,6 +46,14 @@ end
 local function rewardItems(reward, coins: number?): { { Kind: string, Value: any, Text: string } }
 	local items = {}
 	local shownCoins = coins or reward.Coins
+	local core = Config.CoreLoop.Enabled
+	if core and not coins then
+		-- (Addendum 4 core loop: rewards pay minutes of ladder income, a crate pays coins; same rule as the server)
+		local ballStep, bagLevel = player:GetAttribute("BallStep"), player:GetAttribute("BagLevel")
+		local gifts = Config.CoreLoop.Gifts
+		shownCoins = (if reward.Coins then CoreLadder.GiftCoins(reward.CoreMinutes or gifts.RewardMinutes, ballStep, bagLevel) else 0)
+			+ (if reward.Crate then CoreLadder.GiftCoins(gifts.CrateMinutes, ballStep, bagLevel) else 0)
+	end
 	if shownCoins and shownCoins > 0 then
 		table.insert(items, { Kind = "Coins", Text = ("+%s COINS"):format(Currency.Format(shownCoins)) })
 	end
@@ -57,7 +66,7 @@ local function rewardItems(reward, coins: number?): { { Kind: string, Value: any
 		})
 	end
 	local crate = reward.CrateId or reward.Crate
-	if type(crate) == "string" then
+	if type(crate) == "string" and not core then
 		local row = Balls.GetCrate(crate)
 		table.insert(items, { Kind = "Crate", Value = crate, Text = string.upper(if row then row.Name else crate) })
 	end
@@ -293,7 +302,7 @@ function MilestoneController:Start()
 		-- Only from zone 2 on: in the Back Alley the next goal bar already points the way
 		preview.Holder.Visible = nextRow ~= nil and zone >= 2
 		if nextRow then
-			if nextRow ~= previewRow then
+			if nextRow ~= previewRow or Config.CoreLoop.Enabled then -- (core loop: the coins follow your ball + bag)
 				previewRow = nextRow
 				local items = rewardItems(nextRow)
 				local texts = {}
