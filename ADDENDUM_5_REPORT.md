@@ -211,3 +211,36 @@ Shiny = every stat x2.
 **Studio-only edits:** none (scripts pushed into the open Studio; save the place or reconnect Rojo to keep them in the place file).
 
 **Placeholders:** none new.
+
+## Step 6 (C): rebirth (2026-11-01)
+**What changed**
+- **REBIRTH is bought at the ball shop, with coins only.** Rebirth 1 costs 10M coins, each next one x3 (30M, 90M...). A big gold **REBIRTH** button sits on the left of the HUD (where POWER LV was) with "x1 › x2" and a bar that fills with your coins; it glows with a red dot when you can afford it.
+- Tap it: a window shows **YOU GO BACK TO** (ball 1, bag 1, 0 coins), **YOU KEEP** (all pets, equipped pets, Shiny pets, pet slots, rebirths) and **YOU GET FOREVER** ("x1 › x2" on coins and pins, plus the new tier colour), and the price. Away from the shop the big button says **GO TO SHOP** and takes you there; at the shop it says **REBIRTH!**, and you tap twice (the second tap within 3 seconds) so nobody rebirths by accident. Then a full-screen **REBIRTH!** moment with confetti and x2 COINS / x2 PINS / BRONZE TIER.
+- **What a rebirth does:** coins, bag, bag size, ball ladder and throw speed go back to the start (ball 1, bag 1). Pets and pet slots stay. Forever after: **x2 pins every throw and x2 coins on every sell** after rebirth 1, x3 after rebirth 2, x4 after 3 ...
+- **The ladders cost more after each rebirth** (x3 after rebirth 1), so the run feels like a fresh climb but faster. Simulator: the first run reaches ball 10 in ~33 min, then saves 6 min for the 10M; after rebirth 1 the player is back at the old top income in ~5.6 min (17% of the first run's time, the goal was about 1/4) and then goes past it (1.6M/min -> 4.2M/min). Rebirths 2/3/4/5 at about 53/74/109/180 min. A player who never rebirths stays at ~1.6M/min.
+- **Tier colours** (cheap, from what exists): Bronze (rebirth 1), Silver (2), Gold (3), Emerald (5), Diamond (8), Ruby (12), Cosmic (20). Your tier colours the "★ REBIRTH n" tag over your head (everyone sees it), your throw spot's ring and the band on your pins.
+- **MOST REBIRTHS** leaderboard on the roof board (it takes the old BEST STREAK slot; streaks don't exist in the core loop).
+- The sold pop shows a gold "x2 REBIRTH" tag; the goal bar points to REBIRTH once the ladders are done; TEST > READY TO REBIRTH gives exactly the coins for the next rebirth.
+
+**Restore tag:** `restore-a5-C-before`. **Commit:** 6c9dd04. **Save:** no new fields (Rebirths already existed).
+
+**2-minute test**
+1. Play (TEST: START FROM ZERO). Throw 5 times and look at the pins number (about 6). Sell once and note bag -> coins (same number).
+2. TEST > READY TO REBIRTH. Expected: the gold REBIRTH! button glows with a red dot.
+3. Tap it on the lane. Expected: the window with GO TO SHOP. Tap GO TO SHOP. Expected: you land on the shop circle, the window stays on top and the button turns gold REBIRTH!. Tap it twice. Expected: the REBIRTH! moment, coins 0, bag 0/60, ball 1, your pets still out, "★ REBIRTH 1" in bronze over your head.
+4. Throw 5 times. Expected: about 12 pins a throw (x2), the bag fills twice as fast, a sell pays double what the bag shows with a gold "x2 REBIRTH" tag. The shop's ball 2 costs 150 (was 50), the button now says "x2 › x3".
+- Silent failures to watch for: rebirth working away from the shop, pets or bought pet slots gone after a rebirth, the shop window opening over the rebirth window, the price line hidden behind the buttons, pins or sell not doubled, the old prices after a rebirth, no head tag, pins still with gold bands (they should be bronze), MOST REBIRTHS board empty after you rebirthed.
+
+**Checked** (`screenshots/addendum5/C/PLAYTEST_LOG.md`, screenshots 1-5): refused away from the shop; GO TO SHOP teleports; tap twice works; after rebirth coins/bag/BagLevel/BallStep/ball reset, pets + bought slot kept; real throws 6.08 -> 12.25 pins a throw; a 60-coin bag sold for 60 before and 120 after; ladder prices x3.03; head tag, ring and pin bands Bronze; MOST REBIRTHS shows 1; no errors. Fixed during the test: the shop popped open over the rebirth window, the price line overlapped the buttons, the pin colour missed the roof pins (they have a "Band", not rings), the phone button's "x1 › x2" sat on its bar. The 3D view did not draw in Play captures this session, so the colours were checked by their numbers, not by eye.
+
+**Choices made for you**
+- The rebirth multiplier is paid on the **sell** (bag coins x2), not per pin, so the bag still fills at the same speed per coin and the HUD bag numbers stay simple. Pins per throw are x2 as well, so the bag does fill faster.
+- Ladder prices rise x (rebirth multiplier)^1.6 (x3 after rebirth 1, x5.8 after 2): that's what made "recover in about a quarter of the time, then pass it" come out in the simulator. `Config.CoreLoop.Rebirth.LadderPower` (0 = old prices).
+- MOST REBIRTHS took the BEST STREAK board slot (no new board model).
+- Tiers at rebirths 1/2/3/5/8/12/20, colours only (no new art).
+- Gift coins (daily / playtime gifts) don't grow with rebirth prices; they stay a small help. Worth a look in step E.
+- Throw speed still has no shop item; it resets anyway.
+
+**Studio-only edits:** none (scripts pushed into the open Studio; save the place or reconnect Rojo to keep them in the place file).
+
+**Placeholders:** none new.
