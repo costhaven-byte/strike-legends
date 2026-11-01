@@ -542,6 +542,174 @@ local function buildPlaza()
 	end
 end
 
+-- Addendum 5 B2: hue-shifts every colour in a copy (Config.CoreLoop.Eggs.Tints): parts, lights, beams and particles
+local function tint(root: Instance, name: string)
+	local rules = CORE.Eggs.Tints[name]
+	if not rules then
+		return
+	end
+	local function shift(color: Color3): Color3
+		local h, sat, v = color:ToHSV()
+		if sat < 0.15 then
+			return color -- whites, greys and chrome stay
+		end
+		for _, rule in rules do
+			if h >= rule.From and h <= rule.To then
+				return Color3.fromHSV(rule.Hue, sat, v * (rule.Dark or 1))
+			end
+		end
+		return color
+	end
+	local function shiftSequence(sequence: ColorSequence): ColorSequence
+		local points = {}
+		for _, point in sequence.Keypoints do
+			table.insert(points, ColorSequenceKeypoint.new(point.Time, shift(point.Value)))
+		end
+		return ColorSequence.new(points)
+	end
+	for _, d in root:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.Color = shift(d.Color)
+		elseif d:IsA("Light") then
+			d.Color = shift(d.Color)
+		elseif d:IsA("Beam") or d:IsA("ParticleEmitter") or d:IsA("Trail") then
+			d.Color = shiftSequence(d.Color)
+		elseif d:IsA("SurfaceAppearance") then
+			d.Color = shift(d.Color)
+		end
+	end
+end
+
+-- B2: a stand or machine to copy: the path from Workspace, else (hidden at start) ServerStorage.CoreLoopHidden
+local function source(path: { string }): Instance?
+	local node: Instance? = Workspace
+	for _, name in path do
+		node = node and node:FindFirstChild(name)
+	end
+	if not node then
+		local hidden = ServerStorage:FindFirstChild("CoreLoopHidden")
+		node = hidden and hidden:FindFirstChild(path[#path])
+	end
+	return node
+end
+
+-- B2: puts a copy's pivot (its pad) on the floor at `at` (raycast), turned `turn` degrees, its lowest point on the floor
+local function placeOnFloor(copy: Model, at: Vector3, turn: number?, skip: { Instance })
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = skip
+	local floorY = at.Y
+	local hit = Workspace:Raycast(at + Vector3.new(0, 25, 0), Vector3.new(0, -40, 0), params)
+	if hit and math.abs(hit.Position.Y - at.Y) < 4 then
+		floorY = hit.Position.Y
+	end
+	local pivot = copy:GetPivot()
+	copy:PivotTo(CFrame.new(at.X, floorY, at.Z) * CFrame.Angles(0, math.rad(turn or 0), 0) * pivot.Rotation)
+	-- the lowest point in world space (a model's bounding box follows its pivot part, and the pads are turned
+	-- cylinders, so its "bottom" can be a side)
+	local bottom = math.huge
+	for _, d in copy:GetDescendants() do
+		if d:IsA("BasePart") and d.Transparency < 1 then
+			local cf, s = d.CFrame, d.Size
+			local half = (math.abs(cf.RightVector.Y) * s.X + math.abs(cf.UpVector.Y) * s.Y + math.abs(cf.LookVector.Y) * s.Z)
+				/ 2
+			bottom = math.min(bottom, cf.Position.Y - half)
+		end
+	end
+	if bottom < math.huge then
+		copy:PivotTo(copy:GetPivot() + Vector3.new(0, floorY - bottom, 0))
+	end
+end
+
+-- B2: a clean, anchored copy (no scripts or prompts: the client adds its own)
+local function copyOf(node: Instance): Model?
+	if not node:IsA("Model") then
+		return nil
+	end
+	local copy = node:Clone()
+	for _, d in copy:GetDescendants() do
+		if d:IsA("BaseScript") or d:IsA("ProximityPrompt") then
+			d:Destroy()
+		elseif d:IsA("BasePart") then
+			d.Anchored = true
+		end
+	end
+	return copy
+end
+
+-- Addendum 5 B2: the EGG ROW next to the shop (Config.CoreLoop.Eggs): a copy of an existing stand per egg in
+-- <Folder>.EggRow.<egg Id> (MascotController hatches there, MascotService checks you stand by it), the 4th egg's
+-- model as a re-tinted copy of the Neon Egg, and a copy of the PET FUSION machine for the Shiny merge
+local function buildEggRow()
+	local EGGS = CORE.Eggs
+	local roof = Workspace:FindFirstChild(CORE.Folder)
+	if not EGGS or not EGGS.Enabled or not roof then
+		return
+	end
+	-- the egg models first (clients build their stand eggs from PetModels)
+	local petModels = ReplicatedStorage:FindFirstChild("PetModels")
+	for id, look in Config.EggLooks do
+		local from = petModels and look.Copy and petModels:FindFirstChild("Egg_" .. look.Copy)
+		if from and not petModels:FindFirstChild("Egg_" .. id) then
+			local egg = from:Clone()
+			egg.Name = "Egg_" .. id
+			if look.Tint then
+				tint(egg, look.Tint)
+			end
+			egg.Parent = petModels
+		end
+	end
+
+	for _, name in { "EggRow", EGGS.Fusion.Name } do
+		local old = roof:FindFirstChild(name)
+		if old then
+			old:Destroy()
+		end
+	end
+	local row = Instance.new("Model")
+	row.Name = "EggRow"
+	local skip: { Instance } = { row }
+	for _, player in Players:GetPlayers() do
+		if player.Character then
+			table.insert(skip, player.Character)
+		end
+	end
+	for _, egg in EGGS.List do
+		local node = source(egg.From)
+		local copy = node and copyOf(node)
+		if not copy then
+			warn(("[CoreLoopService] egg row: %s is missing (%s egg)"):format(table.concat(egg.From, "."), egg.Id))
+			continue
+		end
+		copy.Name = egg.Id
+		copy:SetAttribute("Egg", egg.Id)
+		placeOnFloor(copy, egg.At, egg.Turn, skip)
+		if egg.Tint then
+			tint(copy, egg.Tint)
+		end
+		local sign = copy:FindFirstChild("Sign")
+		if egg.Sign and sign then
+			for _, d in sign:GetDescendants() do
+				if d:IsA("TextLabel") then
+					d.Text = egg.Sign
+				end
+			end
+		end
+		copy.Parent = row
+	end
+	row.Parent = roof
+
+	local fusion = source(EGGS.Fusion.From)
+	local machine = fusion and copyOf(fusion)
+	if machine then
+		machine.Name = EGGS.Fusion.Name
+		placeOnFloor(machine, EGGS.Fusion.At, EGGS.Fusion.Turn, skip)
+		machine.Parent = roof
+	else
+		warn("[CoreLoopService] egg row: no fusion machine to copy (" .. table.concat(EGGS.Fusion.From, ".") .. ")")
+	end
+end
+
 -- The rooftop spawn (the lobby spawn is switched off, not removed)
 local function buildSpawn()
 	for _, spawn in Workspace:GetDescendants() do
@@ -595,7 +763,11 @@ function CoreLoopService:Start()
 	local goRemote = Instance.new("RemoteEvent")
 	goRemote.Name = "CoreGoTo"
 	goRemote.OnServerEvent:Connect(function(player, where)
-		local target = if where == "Sell" then SELL elseif where == "Shop" then SHOP else nil
+		local target = if where == "Sell"
+			then SELL
+			elseif where == "Shop" then SHOP
+			elseif where == "Eggs" and CORE.Eggs and CORE.Eggs.Enabled then { Position = CORE.Eggs.GoTo } -- (B2)
+			else nil
 		if not target or not PlayerDataService.IsLoaded(player) then
 			return
 		end
@@ -609,7 +781,7 @@ function CoreLoopService:Start()
 		end
 		humanoid.Sit = false
 		-- land a little up (feet clear of the rim): on the sell pad facing the lanes (-Z), on the shop circle
-		-- facing the booth's counter (+Z)
+		-- facing the booth's counter (+Z), in front of the first egg facing it (-Z, B2)
 		local at = target.Position + Vector3.new(0, humanoid.HipHeight + CORE.Teleport.Height, 0)
 		local look = if where == "Shop" then Vector3.new(0, 0, 1) else Vector3.new(0, 0, -1)
 		character:PivotTo(CFrame.lookAt(at, at + look))
@@ -622,6 +794,7 @@ function CoreLoopService:Start()
 	buildShop()
 	buildPlaza()
 	hideCrateShop()
+	buildEggRow() -- (after hideCrateShop: the roof's own Skyline stand is copied from its hiding place)
 
 	-- The bag size and throw cooldown the HUD shows (B1: and the pins multiplier, PinsMultiplier)
 	local function publish(player: Player)

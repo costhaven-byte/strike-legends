@@ -141,13 +141,15 @@ end
 
 -- Odds with luck: every rarity from Config.Monetization.LuckFrom up is multiplied by luck, then the total is scaled
 -- back to what it was. odds = { Common = 60, Rare = 10, ... } (percent). Returns a new table (the same one at luck 1).
-function Store.LuckyOdds(odds: { [string]: number }, luck: number): { [string]: number }
+-- from = the rarity luck starts at instead of LuckFrom (Addendum 5 B2: a roof egg's second-commonest rarity, so luck
+-- also helps eggs whose pets are all Rare or better)
+function Store.LuckyOdds(odds: { [string]: number }, luck: number, from: string?): { [string]: number }
 	if luck == 1 then
 		return odds
 	end
 	local fromIndex = 1
 	for index, rarity in Config.Rarities do
-		if rarity.Name == MONEY.LuckFrom then
+		if rarity.Name == (from or MONEY.LuckFrom) then
 			fromIndex = index
 		end
 	end

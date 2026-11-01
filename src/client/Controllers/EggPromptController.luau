@@ -16,6 +16,8 @@ local MomentKit = require(Modules:WaitForChild("MomentKit"))
 local Sfx = require(Modules:WaitForChild("Sfx"))
 
 local PROMPT = Config.EggPrompt
+-- Addendum 5 B2: on the roof the prompt leads to the egg row's first egg once you can pay for it (no zone)
+local CORE = Mascots.CoreEggsOn()
 local GOLD = Color3.fromRGB(255, 200, 40)
 
 local player = Players.LocalPlayer
@@ -54,7 +56,7 @@ function EggPromptController:Start()
 	end
 	local egg = Mascots.GetEgg(PROMPT.Egg)
 	local area = zoneArea()
-	if not egg or not area then
+	if not egg or (not area and not CORE) then
 		return
 	end
 	local pad, spot = findStand()
@@ -155,13 +157,16 @@ function EggPromptController:Start()
 		return false
 	end
 	local function inZone(): boolean
+		if CORE then
+			return true
+		end
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		return root ~= nil and Zones.InArea(area, root.Position)
 	end
 	local function ready(): boolean
 		return (player:GetAttribute("EggsHatched") or 0) == 0
-			and Zones.Unlocked(player:GetAttribute("ZonesOpen"), PROMPT.Zone)
-			and (player:GetAttribute("Coins") or 0) >= PROMPT.Coins
+			and (CORE or Zones.Unlocked(player:GetAttribute("ZonesOpen"), PROMPT.Zone))
+			and (player:GetAttribute("Coins") or 0) >= (if CORE then egg.Price else PROMPT.Coins)
 			and inZone()
 	end
 	local function refresh()

@@ -165,3 +165,49 @@ Shiny = every stat x2.
 **Studio-only edits:** none (scripts pushed into the open Studio; save the place or reconnect Rojo to keep them in the place file).
 
 **Placeholders:** none new (paw icon = the HUD paw image).
+
+## Step 5 (B2): egg ladder, pet inventory, Shiny merge on the roof (2026-11-01)
+**What changed**
+- **EGG ROW** next to the shop (east of the lanes, facing the shop side): four egg stands in a price ladder, bought with coins only. A hatch only works standing at that egg's own stand (the server checks the distance). Each egg has its own pets and its own odds, so a pricier egg hatches rarer pets:
+
+| Egg | Price | Stand (copy of) | Pets and odds |
+|---|---|---|---|
+| Neon Egg | 400 | lobby Neon stand | Gus 50% (Common), Pinny / Bumper / Lane Pup 15% each, Strikey 5% (Rare) |
+| Main Street Egg | 6.5K | zone 3 stand | Splitz / Wood Pup 42.5% each (Rare), Hambone / Neon Bat 7.5% each (Epic) |
+| Skyline Egg | 80K | the roof's own Skyline stand | Chrome Bat / Cloud Bumper 44% each (Epic), Kingpin / Moony 6% each (Legendary) |
+| Volcano Egg | 1.5M | Neon stand + Neon Egg re-coloured orange/red | Blaze / Titan Jr. 46% each (Legendary), Cosmo / Perfecto 4% each (Mythic) |
+
+- The stands are built from code when the server starts (copies; the originals stay where they are). Each keeps the full egg juice: odds bubbles over the egg (tap a pet to auto-delete it, as before), price over the stand, hold E to hatch, the full hatch scene, AUTO and triple hatch.
+- **Pet re-rating** (stats rise with each egg, Shiny still x2): Gus +10% Coins, Pinny +20% Coins, Bumper +30% Bag, Lane Pup +15% Bag +10% Speed, Strikey +40% Pins; Splitz +35% Coins +25% Pins, Wood Pup +60% Bag +15% Coins, Hambone +100% Coins, Neon Bat +60% Pins +25% Speed; Chrome Bat +120% Coins +100% Bag, Cloud Bumper +80% Pins +150% Bag, Kingpin +250% Pins, Moony +250% Coins +200% Bag; Blaze +400% Coins +40% Speed, Titan Jr. +400% Pins +150% Coins, Cosmo +1200% Coins +600% Pins, Perfecto +1000% Pins +60% Speed.
+- **Shiny merge on the roof:** a copy of the PET FUSION machine stands at the end of the egg row (open to everyone, no zone). 3 copies -> 1 Shiny with double stats, same fusion window and animation as before. (I chose the machine over a merge button in the inventory: it reuses the finished fusion window and makes a place to go.)
+- **PETS window:** strongest pets first; Mythic cards have a turning rainbow frame and Shiny cards a turning gold frame; coloured stat lines (from B1); BEST ONES OUT is now **EQUIP BEST**; a gold **FUSE!** badge on any pet you have 3+ of (tap = where to fuse); with no pets a pink **GO TO EGGS** button teleports you to the Neon Egg. Red dot on PETS when you can buy your first egg or have 3 copies to fuse.
+- **First egg prompt** works on the roof: once you have 400 coins, BUY YOUR FIRST PET EGG! with a gold beam and GO HERE! over the Neon Egg (once ever).
+- Signs PET EGGS and FUSION float over the row and the machine. Two lounges moved behind the row, one in front facing the eggs.
+- LUCKY passes now help every egg (before, eggs 2-4 had no luck at all because luck started at Rare).
+- TEST panel FREE EGG gives a free hatch of the next roof egg each press.
+
+**Restore tag:** `restore-a5-B2-before`. **Commit:** see below. **Save:** no new fields.
+
+**Prices (EconomySim.CoreEggs, a player buying the cheapest next thing, one of each egg):** Neon Egg at ~2 min, Main Street ~11 min, Skyline ~23 min, Volcano ~31 min. The pets pull ball 10 in from ~31 to ~26 min, which leaves room for extra hatches (Shinies need 3) and for step C's rebirth.
+
+**2-minute test**
+1. Play (TEST: START FROM ZERO). Throw and sell until you have 400 coins. Expected: BUY YOUR FIRST PET EGG! popup and a gold beam to the Neon Egg on the egg row east of the lanes.
+2. Walk to the Neon Egg. Expected: odds bubbles with 5 pets, "400 COINS". Hold E. Expected: the hatch scene, the pet card with its stats, the pet follows you.
+3. Open PETS. Expected: the pet card with its coloured stat line, PET BOOSTS totals; the HUD bag size / throw speed change by the stated %.
+4. TEST > COINS a few times, buy the other three eggs at their stands. Expected: prices 6.5K / 80K / 1.5M, rarer pets; EQUIP BEST puts the strongest out.
+5. Hatch Neon Eggs until a pet shows FUSE!. Walk to the FUSION machine at the end of the row, use it. Expected: one Shiny with double stats.
+- Silent failures to watch for: a stand floating or sunk into the roof, a stand facing the wrong way, odds bubbles missing on one egg, the Volcano Egg showing as a plain ball instead of the orange Neon Egg, "Hatch it at the egg stand" while standing at it, the fusion prompt missing, cards without stat lines, FUSE! covering the pet badly on a phone.
+
+**Checked** (`screenshots/addendum5/B2/PLAYTEST_LOG.md`, screenshots 1-6): hatch refused away from the stand; exact prices taken; coins per pin x1.2 / bag 60 -> 87 / 1.0 s -> 0.91 s with +20% Coins +45% Bag +10% Speed; with EQUIP BEST (+2500% Coins, +600% Pins, +400% Bag, +80% Speed) 65 coins a pin (2.5 x 26), pins x7, bag 300, 0.556 s; merge refused at the eggs, works at the roof machine; GO TO EGGS; first-egg prompt; no errors. Studio's 3D view worked again for this step, so the row, odds boards, PETS window and hatch were looked at on screen.
+
+**Choices made for you**
+- 4th egg = Volcano Egg (its name and colours were already in Config): the Neon stand and Neon Egg re-coloured, no new art.
+- Pools don't overlap (17 pets over 4 eggs). Titan Jr. (boss drop, boss is off on the roof) now comes from the Volcano Egg; Gus and Bumper (cut from the old Neon Egg) are back in the Neon Egg.
+- Each egg rolls its own rarity odds (pets of one rarity share it), like before; luck boosts every rarity but the egg's commonest.
+- Merge = the fusion machine copy (not an inventory button).
+- Egg row placed east of the lanes beside the shop (x 26..90, z -3438); stands turned so their signs face the shop side. Main Street's price label sits a little over its sign text (same as in zone 3).
+- Old zone eggs and their stands are untouched (`Config.CoreLoop.Eggs.Enabled = false` brings the zone eggs and gates back).
+
+**Studio-only edits:** none (scripts pushed into the open Studio; save the place or reconnect Rojo to keep them in the place file).
+
+**Placeholders:** none new.

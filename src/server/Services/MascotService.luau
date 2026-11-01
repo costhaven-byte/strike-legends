@@ -23,7 +23,6 @@ local ProgressionService = require(script.Parent.ProgressionService)
 local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
 local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
 
-local ODDS = Config.Economy.Mascots.Odds
 local HATCH_RANGE = Config.MascotFx.HatchRange
 
 local MascotService = {}
@@ -84,7 +83,7 @@ end
 local function deletable(mascot): boolean
 	return mascot ~= nil
 		and not mascot.Shiny
-		and Mascots.GetEgg(mascot.Egg) ~= nil
+		and Mascots.FromEgg(mascot) -- (B2: on the roof, any egg's pool)
 		and Mascots.RarityIndex(mascot.Rarity) <= Mascots.RarityIndex(Config.AutoDelete.MaxRarity)
 end
 
@@ -148,7 +147,7 @@ local function roll(eggId: string, luck: number)
 	for _, mascot in Mascots.InEgg(eggId) do
 		present[mascot.Rarity] = true
 	end
-	local odds = Store.LuckyOdds(ODDS, luck) -- LUCKY game passes (Config.Monetization)
+	local odds = Store.LuckyOdds(Mascots.EggOdds(eggId), luck, Mascots.LuckFrom(eggId)) -- LUCKY game passes (Config.Monetization); B2: per egg
 	local total = 0
 	for _, name in Mascots.Rarities do
 		total += if present[name] then odds[name] or 0 else 0
@@ -183,7 +182,7 @@ end
 -- Polish P2: the chance one hatch of this egg gives exactly this pet (same maths as roll), shown as "1 in X".
 -- P3: the maths lives in Mascots.Chance so the stand's odds bubbles show the very same numbers.
 local function chance(eggId: string, mascot, luck: number): number
-	return Mascots.Chance(eggId, mascot, Store.LuckyOdds(ODDS, luck))
+	return Mascots.Chance(eggId, mascot, Store.LuckyOdds(Mascots.EggOdds(eggId), luck, Mascots.LuckFrom(eggId)))
 end
 
 -- Adds one mascot to the player's pets. A free slot gets it straight away, so the bonus shows on the very next throw.
@@ -593,7 +592,7 @@ function MascotService:Start()
 			if not PlayerDataService.IsLoaded(player) then
 				return
 			end
-			local egg = Config.Economy.Eggs[1]
+			local egg = Mascots.GetEgg(Config.Economy.Eggs[1].Id) or Config.Economy.Eggs[1] -- (B2: the roof egg's price)
 			local level = egg.Rank or 1
 			if egg.Zone and (PlayerDataService.Get(player, "ZonesOpen") or 1) < egg.Zone then
 				PlayerDataService.Set(player, "ZonesOpen", egg.Zone) -- Studio test only: opens the egg's zone

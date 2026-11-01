@@ -1200,6 +1200,153 @@ function EconomySim.CoreLadder(config: any?, tripSeconds: number?): string
 	return table.concat(lines, "\n")
 end
 
+-- Addendum 5 B2: the roof egg ladder (Config.CoreLoop.Eggs) against the two ladders. One pretend player throws,
+-- sells when the bag is full and always buys the cheapest of: the next ball, the next bag, the next pet slot
+-- (Config.PetStats.SlotPrices) and the next egg it has not hatched yet (one of each egg; repeats left out). Each hatch
+-- rolls a pet with the egg's odds (fixed seed), EQUIP BEST picks the pets (Mascots.Score weights) and their stats
+-- change the income like the server does (pins x (1+Pins), coins x (1+Coins), bag x (1+Bag), cooldown / (1+Speed),
+-- never under CooldownFloor). Prints when each egg is bought and the income before / after.
+--   print(require(game.ServerStorage.Tools.EconomySim).CoreEggs())
+function EconomySim.CoreEggs(config: any?, seed: number?): string
+	config = config or loadConfig()
+	local core = config.CoreLoop
+	local eggs = core.Eggs.List
+	local stats = config.PetStats
+	local trip = core.Gifts.TripSeconds
+	local rng = Random.new(seed or 7)
+	local byId = {}
+	for _, mascot in config.Mascots do
+		byId[mascot.Id] = mascot
+	end
+	local function perThrow(pins: number): number
+		local total, n = 0, 400
+		for i = 1, n do
+			local wanted = pins * (1 + ((i - 0.5) / n * 2 - 1) * core.PinsSpread)
+			total += math.max(math.floor(wanted + 0.5), 1)
+		end
+		return total / n * core.PinValue
+	end
+	local owned: { any } = {}
+	local slots = config.Economy.Mascots.StartSlots
+	local function score(mascot): number
+		local sum = 0
+		for name, value in mascot.Stats or {} do
+			sum += value * stats.Types[name].Best
+		end
+		return sum
+	end
+	local function totals(): { [string]: number }
+		table.sort(owned, function(a, b)
+			return score(a) > score(b)
+		end)
+		local t = { Coins = 0, Pins = 0, Bag = 0, Speed = 0 }
+		for i = 1, math.min(slots, #owned) do
+			for name, value in owned[i].Stats or {} do
+				t[name] += value
+			end
+		end
+		return t
+	end
+	local function perMinute(ball: number, bag: number): number
+		local t = totals()
+		local cooldown = math.max(core.Cooldown / (1 + t.Speed), core.CooldownFloor)
+		local rate = perThrow(core.Balls[ball].Pins * (1 + t.Pins)) * (1 + t.Coins) / cooldown
+		local size = core.BagSizes[bag] * (1 + t.Bag)
+		return 60 * size / (size / rate + trip)
+	end
+	local function hatch(egg)
+		local total = 0
+		for _, chance in egg.Odds do
+			total += chance
+		end
+		local pick = rng:NextNumber() * total
+		local rarity
+		for _, rarityRow in config.Rarities do
+			local chance = egg.Odds[rarityRow.Name]
+			if chance then
+				pick -= chance
+				rarity = rarityRow.Name
+				if pick <= 0 then
+					break
+				end
+			end
+		end
+		local pool = {}
+		for _, id in egg.Pets do
+			if byId[id] and byId[id].Rarity == rarity then
+				table.insert(pool, byId[id])
+			end
+		end
+		return pool[rng:NextInteger(1, #pool)]
+	end
+	local lines = { "EGG LADDER (two ladders + pet slots + one of each egg; buys the cheapest next thing)" }
+	local ball, bag, slotsBought, nextEgg, minutes = 1, 1, 0, 1, 0
+	while true do
+		local options = {}
+		if ball < #core.Balls then
+			table.insert(options, { Kind = "Ball", Price = core.Balls[ball + 1].Price })
+		end
+		if bag < #core.BagSizes then
+			table.insert(options, { Kind = "Bag", Price = core.BagPrices[bag + 1] })
+		end
+		if stats.SlotPrices[slotsBought + 1] then
+			table.insert(options, { Kind = "Slot", Price = stats.SlotPrices[slotsBought + 1] })
+		end
+		if eggs[nextEgg] then
+			table.insert(options, { Kind = "Egg", Price = eggs[nextEgg].Price })
+		end
+		if #options == 0 then
+			break
+		end
+		table.sort(options, function(a, b)
+			return a.Price < b.Price
+		end)
+		local buy = options[1]
+		local before = perMinute(ball, bag)
+		minutes += buy.Price / before
+		if buy.Kind == "Ball" then
+			ball += 1
+		elseif buy.Kind == "Bag" then
+			bag += 1
+		elseif buy.Kind == "Slot" then
+			slotsBought += 1
+			slots += 1
+		else
+			local egg = eggs[nextEgg]
+			local pet = hatch(egg)
+			table.insert(owned, pet)
+			nextEgg += 1
+			table.insert(
+				lines,
+				("%5.1f min  EGG %d %s (%s coins) -> %s (%s)  income %s -> %s a minute"):format(
+					minutes,
+					nextEgg - 1,
+					egg.Id,
+					short(egg.Price),
+					pet.Id,
+					pet.Rarity,
+					short(before),
+					short(perMinute(ball, bag))
+				)
+			)
+			continue
+		end
+		table.insert(
+			lines,
+			("%5.1f min    %s %s (%s)"):format(
+				minutes,
+				buy.Kind,
+				tostring(if buy.Kind == "Ball" then ball elseif buy.Kind == "Bag" then bag else slots),
+				short(buy.Price)
+			)
+		)
+	end
+	table.insert(lines, ("end: %s coins a minute"):format(short(perMinute(ball, bag))))
+	local report = table.concat(lines, "\n")
+	print(report)
+	return report
+end
+
 function EconomySim.Gaps(config: any?, seed: number?): string
 	config = config or loadConfig()
 	local P = prepare(config)

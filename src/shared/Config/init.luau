@@ -117,10 +117,11 @@ Config.CoreLoop = {
 			-- ball racks either side of the ball shop
 			{ From = { "MainStreetLanes", "Design", "HouseBallRacks", "HouseBallRack1" }, At = Vector3.new(-26.6, 848.65, -3409), Turn = 180 },
 			{ From = { "MainStreetLanes", "Design", "HouseBallRacks", "HouseBallRack2" }, At = Vector3.new(-7.4, 848.65, -3409), Turn = 180 },
-			-- lounges in the open half, looking at the ball cases
-			{ From = { "MainStreetLanes", "Design", "Seating", "BowlerArea1" }, At = Vector3.new(40, 848.65, -3418), Turn = 180 },
-			{ From = { "MainStreetLanes", "Design", "Seating", "BowlerArea2" }, At = Vector3.new(76, 848.65, -3418), Turn = 180 },
-			{ From = { "MainStreetLanes", "Design", "Seating", "BowlerArea3" }, At = Vector3.new(58, 848.65, -3450), Turn = 180 },
+			-- lounges in the open half (Addendum 5 B2: moved out of the egg row's way, two behind the row and one
+			-- facing the eggs; were (40, -3418), (76, -3418), (58, -3450), all Turn 180)
+			{ From = { "MainStreetLanes", "Design", "Seating", "BowlerArea1" }, At = Vector3.new(36, 848.65, -3463), Turn = 0 },
+			{ From = { "MainStreetLanes", "Design", "Seating", "BowlerArea2" }, At = Vector3.new(70, 848.65, -3463), Turn = 0 },
+			{ From = { "MainStreetLanes", "Design", "Seating", "BowlerArea3" }, At = Vector3.new(58, 848.65, -3404), Turn = 0 },
 			-- a ball rack between the lanes and the lounges
 			{ From = { "MainStreetLanes", "Design", "HouseBallRacks", "HouseBallRack3" }, At = Vector3.new(22, 848.65, -3452), Turn = 90 },
 		},
@@ -128,6 +129,81 @@ Config.CoreLoop = {
 			First = Vector3.new(24.5, 848.65, -3393),
 			Step = Vector3.new(7.5, 0, 0),
 		},
+	},
+	-- Addendum 5 B2: the EGG ROW next to the shop. Four eggs in a price ladder, bought with coins only (a hatch only
+	-- works standing at that egg's stand: Config.MascotFx.HatchRange, server check). Each egg has its own pets and its
+	-- own rarity odds (Odds = chance per rarity; pets of one rarity share it), so a pricier egg hatches rarer pets.
+	-- The stands are copies of the existing stands, built at server start in <Folder>.EggRow (one Model per egg,
+	-- named by its Id; the originals stay where they are). From = the stand to copy (path from Workspace; the roof's
+	-- own Skyline stand is hidden first, so it is copied from ServerStorage.CoreLoopHidden), At = floor point under
+	-- its pad, Turn = degrees around Y so its sign faces the shop side (+Z), Tint = hue-shift the copy's colours
+	-- (the 4th egg re-uses the Neon stand + Neon Egg model in volcano colours, no new art), Sign = text on its sign.
+	-- Prices: checked with require(game.ServerStorage.Tools.EconomySim).CoreEggs() against the A2 ladders: the first
+	-- egg at ~2 min, then ~11 min, ~23 min and ~31 min (a player buying the cheapest next thing, one of each egg; its
+	-- pets pull ball 10 in from ~31 to ~26 min, so extra hatches and rebirth (step C) have room).
+	-- Pets: Config.Mascots rows (Stats there). Each egg needs one pet per rarity it has odds for.
+	Eggs = {
+		Enabled = true, -- false = the old zone eggs (and their zone gates) back
+		List = {
+			{
+				Id = "Alley", -- the Neon Egg
+				Price = 400,
+				From = { "Hub", "EggPad" },
+				At = Vector3.new(26, 848.65, -3438),
+				Turn = -90,
+				Sign = "NEON EGG",
+				Odds = { Common = 50, Uncommon = 45, Rare = 5 },
+				Pets = { "Gus", "Pinny", "Bumper", "LanePup", "Strikey" },
+			},
+			{
+				Id = "Arcade", -- the Main Street Egg
+				Price = 6500,
+				From = { "MainStreetLanes", "EggPad" },
+				At = Vector3.new(46, 848.65, -3438),
+				Turn = 180,
+				Odds = { Rare = 85, Epic = 15 },
+				Pets = { "Splitz", "WoodPup", "Hambone", "NeonBat" },
+			},
+			{
+				Id = "Skyline", -- the Skyline Egg
+				Price = 80000,
+				From = { "SkylineLanes", "EggPad" },
+				At = Vector3.new(69, 848.65, -3438),
+				Turn = 90,
+				Odds = { Epic = 88, Legendary = 12 },
+				Pets = { "ChromeBat", "CloudBumper", "Kingpin", "SunnyHam" },
+			},
+			{
+				Id = "Volcano", -- the Volcano Egg: the Neon stand and Neon Egg re-tinted (Config.EggLooks Volcano Model)
+				Price = 1500000,
+				From = { "Hub", "EggPad" },
+				At = Vector3.new(90, 848.65, -3438),
+				Turn = -90,
+				Sign = "VOLCANO EGG",
+				Tint = "Volcano",
+				Odds = { Legendary = 92, Mythic = 8 },
+				Pets = { "Blaze", "TitanJr", "Cosmo", "Perfecto" },
+			},
+		},
+		-- Hue shifts for Tint (hue 0..1 ranges -> new hue; saturation and brightness kept, dark colours darker)
+		Tints = {
+			Volcano = {
+				{ From = 0.72, To = 1.0, Hue = 0.045 }, -- magenta / pink -> orange
+				{ From = 0.0, To = 0.04, Hue = 0.045 },
+				{ From = 0.4, To = 0.6, Hue = 0.12 }, -- cyan -> gold
+				{ From = 0.6, To = 0.72, Hue = 0.0, Dark = 0.7 }, -- blue / purple -> deep red
+			},
+		},
+		-- The Shiny merge on the roof: a copy of zone 3's PET FUSION machine at the end of the egg row (Config.Fusion
+		-- points at it while Enabled). Its prompt opens the PET FUSION window (3 copies -> 1 Shiny).
+		Fusion = {
+			From = { "MainStreetLanes", "FusionStation" },
+			Name = "PetFusion",
+			At = Vector3.new(96, 848.65, -3418),
+			Turn = 90, -- faces west, toward the shop
+		},
+		-- GO TO EGGS (PETS window, no pets yet): CoreGoTo "Eggs" lands you here, facing the first egg
+		GoTo = Vector3.new(26, 848.65, -3430),
 	},
 	-- Stage 3 first 30 seconds: until ball 2 is bought a card under the pin counter says Throw > Sell > Buy and beams
 	-- lead to the sell pad, then to the shop. The join daily window waits until then too.
@@ -3034,6 +3110,12 @@ Config.Fusion = {
 	Path = { "MainStreetLanes", "FusionStation" }, -- owner's fusion machine, placed in Studio
 	Range = 20, -- studs (flat) from the machine; the prompt opens at 12, a little extra so a small step back still fuses
 }
+-- Addendum 5 B2: in the core loop the merge happens at the roof's copy of the machine (Config.CoreLoop.Eggs.Fusion),
+-- open to everyone (no zone)
+if Config.CoreLoop.Enabled and Config.CoreLoop.Eggs.Enabled then
+	Config.Fusion.Zone = 1
+	Config.Fusion.Path = { Config.CoreLoop.Folder, Config.CoreLoop.Eggs.Fusion.Name }
+end
 
 -- Zone 4 boss event: the Pin Titan (owner's milestone 2026-10-26). Every EverySeconds the whole server gets one event:
 -- a countdown in the zone 4 lobby, a siren SirenSeconds before boarding opens, then BoardingSeconds to walk up to the
@@ -3396,7 +3478,7 @@ Config.CrateShop = {
 Config.Mascots = {
 	{
 		Id = "Pinny",
-		Stats = { Coins = 0.25 }, -- Addendum 5 B1 (Config.PetStats)
+		Stats = { Coins = 0.2 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Pinny",
 		Egg = "Alley",
 		Rarity = "Uncommon", -- Phase X: was Common (zone 2 starts at Uncommon); BaseBonus keeps its old +2%
@@ -3407,7 +3489,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Gus",
-		Stats = { Coins = 0.1 }, -- Addendum 5 B1 (Config.PetStats)
+		Stats = { Coins = 0.1 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Gutter Gus",
 		Egg = nil, -- Phase X holding list: cut from the Neon Egg (6 pets now); owners keep it. Was Egg = "Alley"
 		BonusEgg = "Alley", -- its bonus stays the Neon Egg's (owners' pets don't change)
@@ -3418,7 +3500,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "LanePup",
-		Stats = { Speed = 0.1, Bag = 0.15 }, -- Addendum 5 B1 (Config.PetStats)
+		Stats = { Bag = 0.15, Speed = 0.1 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Lane Pup",
 		Egg = "Alley",
 		Rarity = "Uncommon",
@@ -3428,7 +3510,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Bumper",
-		Stats = { Bag = 0.3 }, -- Addendum 5 B1 (Config.PetStats)
+		Stats = { Bag = 0.3 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Bumper",
 		Egg = nil, -- Phase X holding list: cut from the Neon Egg (6 pets now); owners keep it. Was Egg = "Alley"
 		BonusEgg = "Alley", -- its bonus stays the Neon Egg's (owners' pets don't change)
@@ -3439,7 +3521,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Strikey",
-		Stats = { Pins = 0.5 }, -- Addendum 5 B1 (Config.PetStats)
+		Stats = { Pins = 0.4 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Strikey",
 		Egg = "Alley",
 		Rarity = "Rare",
@@ -3449,7 +3531,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Splitz",
-		Stats = { Coins = 0.3, Pins = 0.25 }, -- Addendum 5 B1 (Config.PetStats)
+		Stats = { Coins = 0.35, Pins = 0.25 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Splitz",
 		Egg = "Alley",
 		Rarity = "Rare",
@@ -3459,7 +3541,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Hambone",
-		Stats = { Coins = 1 }, -- Addendum 5 B1 (Config.PetStats)
+		Stats = { Coins = 1 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Hambone",
 		Egg = "Alley",
 		Rarity = "Epic",
@@ -3469,7 +3551,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "NeonBat",
-		Stats = { Pins = 0.6, Speed = 0.25 }, -- Addendum 5 B1 (Config.PetStats)
+		Stats = { Pins = 0.6, Speed = 0.25 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Neon Bat",
 		Egg = "Alley",
 		Rarity = "Epic",
@@ -3479,7 +3561,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Kingpin",
-		Stats = { Pins = 2.5 }, -- Addendum 5 B1 (Config.PetStats)
+		Stats = { Pins = 2.5 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Kingpin",
 		Egg = "Arcade", -- Phase X: moved from the Neon Egg to zone 3's Main Street Egg
 		Rarity = "Legendary",
@@ -3489,7 +3571,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Blaze",
-		Stats = { Coins = 1.5, Speed = 0.4 }, -- Addendum 5 B1 (Config.PetStats)
+		Stats = { Coins = 4, Speed = 0.4 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Blaze",
 		Egg = "Arcade", -- Phase X: moved from the Neon Egg to zone 3's Main Street Egg
 		Rarity = "Legendary",
@@ -3499,7 +3581,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Cosmo",
-		Stats = { Coins = 6, Pins = 3 }, -- Addendum 5 B1 (Config.PetStats)
+		Stats = { Coins = 12, Pins = 6 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Cosmo",
 		Egg = "Skyline", -- Phase X: moved from the Neon Egg to zone 4's Skyline Egg
 		Rarity = "Mythic",
@@ -3509,7 +3591,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Perfecto",
-		Stats = { Pins = 5, Speed = 0.6 }, -- Addendum 5 B1 (Config.PetStats)
+		Stats = { Pins = 10, Speed = 0.6 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Perfecto",
 		Egg = "Skyline", -- Phase X: moved from the Neon Egg to zone 4's Skyline Egg
 		Rarity = "Mythic",
@@ -3520,7 +3602,7 @@ Config.Mascots = {
 	-- Phase X: zone 3 (Main Street Egg) and zone 4 (Skyline Egg) pets (owner's designs since 2026-10-28/29)
 	{
 		Id = "WoodPup",
-		Stats = { Bag = 0.6 }, -- Addendum 5 B1 (Config.PetStats)
+		Stats = { Bag = 0.6, Coins = 0.15 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Wood Pup",
 		Egg = "Arcade",
 		Rarity = "Rare",
@@ -3530,7 +3612,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "ChromeBat",
-		Stats = { Bag = 1, Coins = 0.5 }, -- Addendum 5 B1 (Config.PetStats)
+		Stats = { Coins = 1.2, Bag = 1 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Chrome Bat",
 		Egg = "Arcade",
 		Rarity = "Epic",
@@ -3540,7 +3622,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "CloudBumper",
-		Stats = { Bag = 1.2, Speed = 0.2 }, -- Addendum 5 B1 (Config.PetStats)
+		Stats = { Pins = 0.8, Bag = 1.5 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Cloud Bumper",
 		Egg = "Skyline",
 		Rarity = "Epic",
@@ -3550,7 +3632,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "SunnyHam",
-		Stats = { Coins = 2, Bag = 1.5 }, -- Addendum 5 B1 (Config.PetStats)
+		Stats = { Coins = 2.5, Bag = 2 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Moony", -- was "Sunny" (owner 2026-10-27: zone 4 is at night); Id stays SunnyHam so owned pets keep working
 		Egg = "Skyline",
 		Rarity = "Legendary",
@@ -3561,7 +3643,7 @@ Config.Mascots = {
 	-- Boss-only pet (Config.Boss.Drop): no egg hatches it, only the Pin Titan drops it
 	{
 		Id = "TitanJr",
-		Stats = { Pins = 2, Coins = 1 }, -- Addendum 5 B1 (Config.PetStats)
+		Stats = { Pins = 4, Coins = 1.5 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Titan Jr.",
 		Egg = nil,
 		BonusEgg = "Skyline", -- its bonus counts like a Skyline Egg pet
@@ -3595,7 +3677,9 @@ Config.EggLooks = {
 	Neon = { Name = "Neon Egg", Color = Color3.fromRGB(80, 230, 255), Spots = Color3.fromRGB(255, 60, 210) },
 	Arcade = { Name = "Main Street Egg", Color = Color3.fromRGB(224, 165, 38), Spots = Color3.fromRGB(150, 30, 40) }, -- Phase X: zone 3's egg (Id kept)
 	Skyline = { Name = "Skyline Egg", Color = Color3.fromRGB(255, 79, 139), Spots = Color3.fromRGB(245, 184, 46) }, -- zone 4's egg
-	Volcano = { Name = "Volcano Egg", Color = Color3.fromRGB(255, 100, 40), Spots = Color3.fromRGB(60, 20, 20) },
+	-- Addendum 5 B2: the 4th roof egg. No model of its own: the server copies PetModels.Egg_<Copy> as Egg_Volcano in
+	-- Config.CoreLoop.Eggs.Tints[Tint] colours at start
+	Volcano = { Name = "Volcano Egg", Color = Color3.fromRGB(255, 100, 40), Spots = Color3.fromRGB(60, 20, 20), Copy = "Alley", Tint = "Volcano" },
 }
 
 -- Where each egg is hatched (Phase X: one stand per zone). Path = the stand's folder under Workspace; it holds a
@@ -3606,6 +3690,14 @@ Config.EggStands = {
 	{ Egg = "Arcade", Path = { "MainStreetLanes", "EggPad" } },
 	{ Egg = "Skyline", Path = { "SkylineLanes", "EggPad" } },
 }
+-- Addendum 5 B2: in the core loop the eggs hatch at the roof's EGG ROW instead (Config.CoreLoop.Eggs, stands built
+-- from code at server start as <Folder>.EggRow.<egg Id>); the zone stands above are left alone
+if Config.CoreLoop.Enabled and Config.CoreLoop.Eggs.Enabled then
+	Config.EggStands = {}
+	for _, row in Config.CoreLoop.Eggs.List do
+		table.insert(Config.EggStands, { Egg = row.Id, Path = { Config.CoreLoop.Folder, "EggRow", row.Id } })
+	end
+end
 
 -- Polish P3: odds bubbles float over each egg stand when you walk near: every pet the egg can hatch (3D) and its
 -- chance (LUCKY passes included, same maths as the hatch: Mascots.Chance). Sizes are in studs so they look the same
@@ -3663,6 +3755,12 @@ Config.AreaSigns = {
 	},
 }
 
+-- Addendum 5 B2: signs over the roof's egg row and fusion machine (Config.CoreLoop.Eggs)
+if Config.CoreLoop.Enabled and Config.CoreLoop.Eggs.Enabled then
+	local roof = Config.CoreLoop.Folder
+	table.insert(Config.AreaSigns.Signs, { Text = "PET EGGS", Paint = "Pink", Icon = "Paw", Path = { roof, "EggRow" }, Lift = 4 })
+	table.insert(Config.AreaSigns.Signs, { Text = "FUSION", Paint = "Purple", Icon = "Paw", Path = { roof, Config.CoreLoop.Eggs.Fusion.Name } })
+end
 -- Batch B3 (2026-10-29, teach the first minutes): what the game points out the first times
 -- Ball Book: a gold bubble points at the POLISH button of the ball you throw, every time the book opens, until you buy
 -- a POLISH once (save PolishHinted). Tapping the bubble hides it until the next session.
@@ -4125,6 +4223,8 @@ Config.PetIdle = {
 		},
 	},
 }
+
+Config.PetIdle.Egg_Volcano = Config.PetIdle.Egg_Alley -- (Addendum 5 B2: the re-tinted Neon Egg pulses the same)
 
 -- Daily reward: a 7-day calendar. Claim once per day (days change at midnight UTC).
 -- One missed day is forgiven (GraceDays, Addendum 2 step 11); missing more starts you back at day 1. After day 7 it
@@ -4718,6 +4818,7 @@ Config.Analytics = {
 		"ZoneUnlocked", -- later (Milestone 12)
 		"LuckyThrow", -- later (Milestone 13)
 		"MascotHatched", -- value = eggs hatched so far; labels = egg, rarity, mascot
+		"MascotMerged", -- (Addendum 5 B2: the roof fusion machine) value = 1; labels = mascot, rarity
 		"BossDefeated", -- later (Milestone 15)
 		"BossTrip", -- boarded the Pin Titan helicopter (Config.Boss)
 		"BossWon", -- labels = reward tier

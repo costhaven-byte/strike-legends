@@ -26,6 +26,7 @@ local ProgressionService = require(script.Parent.ProgressionService)
 local TestPanelService = {}
 
 local nextPet: { [Player]: number } = {} -- GIVE PET goes down Config.Mascots one pet per press
+local nextEgg: { [Player]: number } = {} -- (B2) FREE EGG goes down the roof egg row one egg per press
 
 local function reply(ok: boolean, text: string)
 	return { Ok = ok, Text = text }
@@ -116,6 +117,17 @@ local ACTIONS: { [string]: (Player) -> any } = {
 		return reply(true, "+1 free crate: open it at a crate shop")
 	end,
 	Egg = function(player)
+		-- Addendum 5 B2: on the roof, a free hatch of the next egg of the egg row each press
+		if Mascots.CoreEggsOn() then
+			local eggs = Mascots.CoreEggs()
+			local index = (nextEgg[player] or 0) % #eggs + 1
+			nextEgg[player] = index
+			local egg = eggs[index]
+			if not egg or not MascotService.GiveFreeEgg(player, egg.Id, 1) then
+				return reply(false, "No egg to give")
+			end
+			return reply(true, ("+1 free %s: hatch it at its stand on the egg row"):format(Config.EggLooks[egg.Id].Name))
+		end
 		local zone = math.max(Zones.Highest(PlayerDataService.Get(player, "ZonesOpen")), 2)
 		local pick = nil
 		for _, egg in Config.Economy.Eggs do

@@ -17,9 +17,20 @@ for _, mascot in Config.Mascots do
 	byId[mascot.Id] = mascot
 end
 
+-- Addendum 5 B2: the roof's egg ladder (Config.CoreLoop.Eggs) replaces the zone eggs in the core loop: same Ids
+-- (Alley, Arcade, Skyline, Volcano), their own Price, Odds and Pets, no zone gate
+local CORE_EGGS = Config.CoreLoop.Enabled and Config.CoreLoop.Eggs and Config.CoreLoop.Eggs.Enabled
 local eggById = {}
 for _, egg in Config.Economy.Eggs do
 	eggById[egg.Id] = egg
+end
+local corePools: { [string]: { any } } = {}
+if CORE_EGGS then
+	for tier, row in Config.CoreLoop.Eggs.List do
+		local egg = table.clone(row)
+		egg.Tier = tier
+		eggById[row.Id] = egg
+	end
 end
 
 -- Rarity names, commonest first
@@ -71,8 +82,65 @@ function Mascots.RarityColor(name: string): Color3
 	return Config.Rarities[Mascots.RarityIndex(name)].Color
 end
 
--- The mascots an egg can hatch
+-- Addendum 5 B2: the roof's egg ladder is on (Config.CoreLoop.Eggs)
+function Mascots.CoreEggsOn(): boolean
+	return CORE_EGGS == true
+end
+
+-- The roof eggs in price order (Config.CoreLoop.Eggs.List rows with Tier), or {} when off
+function Mascots.CoreEggs(): { any }
+	local list = {}
+	if CORE_EGGS then
+		for _, row in Config.CoreLoop.Eggs.List do
+			table.insert(list, eggById[row.Id])
+		end
+	end
+	return list
+end
+
+-- The rarity odds of an egg: its own Odds on the roof (B2), else the shared Config.Economy.Mascots.Odds
+function Mascots.EggOdds(eggId: string): { [string]: number }
+	local egg = eggById[eggId]
+	return if CORE_EGGS and egg and egg.Odds then egg.Odds else ECONOMY.Odds
+end
+
+-- B2: where LUCKY passes start for this egg (Store.LuckyOdds from): on the roof every rarity but the egg's commonest;
+-- nil = Config.Monetization.LuckFrom (the zone eggs)
+function Mascots.LuckFrom(eggId: string): string?
+	local egg = eggById[eggId]
+	if not CORE_EGGS or not egg or not egg.Odds then
+		return nil
+	end
+	local found = 0
+	for _, rarity in Config.Rarities do
+		if (egg.Odds[rarity.Name] or 0) > 0 then
+			found += 1
+			if found == 2 then
+				return rarity.Name
+			end
+		end
+	end
+	return nil
+end
+
+-- The mascots an egg can hatch (B2, roof eggs: the egg's Pets list)
 function Mascots.InEgg(eggId: string): { any }
+	if CORE_EGGS then
+		local egg = eggById[eggId]
+		if not egg or not egg.Pets then
+			return {}
+		end
+		if not corePools[eggId] then
+			local pool = {}
+			for _, id in egg.Pets do
+				if byId[id] then
+					table.insert(pool, byId[id])
+				end
+			end
+			corePools[eggId] = pool
+		end
+		return table.clone(corePools[eggId])
+	end
 	local list = {}
 	for _, mascot in Config.Mascots do
 		if mascot.Egg == eggId then
@@ -82,8 +150,44 @@ function Mascots.InEgg(eggId: string): { any }
 	return list
 end
 
+-- B2: is this pet in any egg (so it can be X'd on that egg's board)?
+function Mascots.FromEgg(mascot): boolean
+	if CORE_EGGS then
+		local id = if mascot.Shiny then mascot.Base.Id else mascot.Id
+		for _, row in Config.CoreLoop.Eggs.List do
+			if table.find(row.Pets, id) then
+				return true
+			end
+		end
+		return false
+	end
+	return eggById[mascot.Egg] ~= nil
+end
+
 -- Every pet in an egg must sit inside its egg's zone rarity range (Config.ZoneRarity): say so in Output if not
+-- (B2: on the roof every egg needs a pet of each rarity it has odds for instead)
+if CORE_EGGS then
+	for _, row in Config.CoreLoop.Eggs.List do
+		for rarity, chance in row.Odds do
+			local found = false
+			for _, id in row.Pets do
+				local mascot = byId[id]
+				if not mascot then
+					warn(("[Mascots] %s egg: no pet %s (Config.Mascots)"):format(row.Id, id))
+				elseif mascot.Rarity == rarity then
+					found = true
+				end
+			end
+			if chance > 0 and not found then
+				warn(("[Mascots] %s egg has %s odds but no %s pet"):format(row.Id, rarity, rarity))
+			end
+		end
+	end
+end
 for _, mascot in Config.Mascots do
+	if CORE_EGGS then
+		break
+	end
 	local egg = mascot.Egg and eggById[mascot.Egg]
 	if egg and egg.Zone and not Zones.RarityAllowed(egg.Zone, mascot.Rarity) then
 		warn(

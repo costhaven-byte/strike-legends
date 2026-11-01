@@ -39,6 +39,7 @@ local player = Players.LocalPlayer
 local FX = Config.MascotFx
 local ECONOMY = Config.Economy.Mascots
 local EGG = Config.Economy.Eggs[1] -- the Neon Egg (Id "Alley"); zone 3 and 4 eggs hatch at their own stands (Phase X)
+EGG = Mascots.GetEgg(EGG.Id) or EGG -- (Addendum 5 B2: on the roof, the egg ladder's first egg and its price)
 
 local FONT = SunKit.Swap(Font.new("rbxasset://fonts/families/LuckiestGuy.json"))
 local INK = Color3.fromHex("06060F")
@@ -286,7 +287,7 @@ function MascotController:Start()
 			totalLabels[name] = label
 		end
 	end
-	local best = RewardKit.Button(stripFace, "BEST ONES OUT", "Lime", SIDE_W, 46, 22)
+	local best = RewardKit.Button(stripFace, if Mascots.StatsOn() then "EQUIP BEST" else "BEST ONES OUT", "Lime", SIDE_W, 46, 22)
 	best.Holder.Name = "EquipBest"
 	best.Holder.Position = UDim2.fromOffset(sideX, 54)
 	local bestButton = best.Holder
@@ -314,12 +315,28 @@ function MascotController:Start()
 	make("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 2) }, grid)
 	local noPets, noPetsHead, noPetsLine = emptyNote(right, "Paw", GRID_Y, PAGE_H - GRID_Y)
 	noPetsHead.Text = "NO PETS YET"
-	noPetsLine.Text = if Mascots.StatsOn()
+	noPetsLine.Text = if Mascots.CoreEggsOn()
+		then "PETS BOOST YOUR COINS, PINS, BAG AND SPEED. BUY EGGS AT THE EGG ROW NEXT TO THE SHOP"
+		elseif Mascots.StatsOn()
 		then "PETS BOOST YOUR COINS, PINS, BAG AND SPEED. EGGS ARE COMING TO THE SHOP"
 		elseif
 			Config.CoreLoop.Enabled
 		then "PETS COME IN A LATER UPDATE" -- (Addendum 4: the rooftop egg stand waits for Stage 5)
 		else "HATCH THE NEON EGG AT THE EGG STAND"
+
+	-- Addendum 5 B2: GO TO EGGS (teleports you in front of the first egg, CoreGoTo "Eggs")
+	local goRemote = remotes:FindFirstChild("CoreGoTo") :: RemoteEvent?
+	if Mascots.CoreEggsOn() and goRemote then
+		local go = RewardKit.Button(noPets, "GO TO EGGS", "Pink", 240, 50, 24)
+		go.Holder.Name = "GoToEggs"
+		go.Holder.AnchorPoint = Vector2.new(0.5, 0)
+		go.Holder.Position = UDim2.new(0.5, 0, 0, (PAGE_H - GRID_Y) / 2 + 80)
+		go.Activated:Connect(function()
+			Sfx.Play("Click")
+			goRemote:FireServer("Eggs")
+			win:Close()
+		end)
+	end
 
 	type Tile = {
 		Frame: GuiObject,
@@ -330,10 +347,12 @@ function MascotController:Start()
 		Equip: any,
 		Outline: UIStroke,
 		Tick: GuiObject,
+		Fuse: GuiObject?,
 		Mascot: any,
 	}
 	local tiles: { Tile } = {}
 	local doMerge: (mascot: any) -> ()
+	local showFuseHint: () -> () -- (B2, below with the toast)
 	local FACE_W, FACE_H = CARD_W - 6, CARD_H - 12
 	-- Each mascot's card, then its Shiny card right after it (each shown only once owned)
 	local cards = {}
@@ -342,6 +361,33 @@ function MascotController:Start()
 		table.insert(cards, { Mascot = mascot, Order = order })
 		table.insert(cards, { Mascot = Mascots.Get(Mascots.ShinyId(mascot.Id)), Order = order + 1 })
 	end
+	-- B2: strongest first (like EQUIP BEST counts them), a Shiny before its pet
+	if Mascots.StatsOn() then
+		table.sort(cards, function(a, b)
+			local sa, sb = Mascots.Score(a.Mascot), Mascots.Score(b.Mascot)
+			if sa ~= sb then
+				return sa > sb
+			end
+			return a.Order < b.Order
+		end)
+		for rank, card in cards do
+			card.Order = rank
+		end
+	end
+	-- B2: Mythic and Shiny cards get a turning gradient on their frame (rainbow / gold), turned while the panel is open
+	local spinning: { UIGradient } = {}
+	local MYTHIC_RAINBOW = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 70, 160)),
+		ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 200, 60)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(90, 230, 255)),
+		ColorSequenceKeypoint.new(0.75, Color3.fromRGB(180, 90, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 70, 160)),
+	})
+	local SHINY_GOLD = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 200, 40)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 230)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 200, 40)),
+	})
 	for _, card in cards do
 		local mascot = card.Mascot
 		local color = if mascot.Shiny then K.Gold else Mascots.RarityColor(mascot.Rarity)
@@ -360,6 +406,14 @@ function MascotController:Start()
 		frame.Visible = false
 		local face = block.Face
 		local tileOutline = (face:FindFirstChild("Ring") :: Frame):FindFirstChildOfClass("UIStroke") :: UIStroke
+		if Mascots.StatsOn() and (mascot.Shiny or mascot.Rarity == "Mythic") then
+			tileOutline.Color = Color3.new(1, 1, 1)
+			local gradient = Instance.new("UIGradient")
+			gradient.Name = "Spin"
+			gradient.Color = if mascot.Rarity == "Mythic" then MYTHIC_RAINBOW else SHINY_GOLD
+			gradient.Parent = tileOutline
+			table.insert(spinning, gradient)
+		end
 		local holder = make("Frame", {
 			Name = "Pet",
 			BackgroundTransparency = 1,
@@ -392,6 +446,20 @@ function MascotController:Start()
 		pill.Holder.Position = UDim2.fromOffset(FACE_W - 50, 6)
 		pill.Holder.ZIndex = 5
 		local count = RewardKit.Label(pill.Face, "", UiKit.Num, 15, K.Gold, 1.5, 2, 1, 40, 20)
+		-- B2: FUSE! under the count once you own enough copies for a Shiny (tap = where to fuse)
+		local fuse: GuiObject? = nil
+		if Mascots.CoreEggsOn() and Mascots.MergeCost(mascot) then
+			local fuseButton = RewardKit.Button(face, "FUSE!", "Gold", 58, 26, 15)
+			fuseButton.Holder.Name = "Fuse"
+			fuseButton.Holder.Position = UDim2.fromOffset(FACE_W - 64, 36)
+			fuseButton.Holder.ZIndex = 6
+			fuseButton.Holder.Visible = false
+			fuseButton.Activated:Connect(function()
+				Sfx.Play("Click")
+				showFuseHint()
+			end)
+			fuse = fuseButton.Holder
+		end
 		local name =
 			RewardKit.Label(face, string.upper(mascot.Name), UiKit.Head, 17, K.White, 2, 6, 94, FACE_W - 12, 22)
 		name.Name = "Name"
@@ -441,6 +509,7 @@ function MascotController:Start()
 			Equip = equip,
 			Outline = tileOutline,
 			Tick = tick,
+			Fuse = fuse,
 			Mascot = mascot,
 		})
 	end
@@ -576,6 +645,9 @@ function MascotController:Start()
 					equip:Paint(K.Grey, K.GreyLip, K.LockedText)
 				end
 				tile.Outline.Thickness = if inUse > 0 then 5 else 3
+				if tile.Fuse then
+					tile.Fuse.Visible = have >= (Mascots.MergeCost(mascot) or math.huge)
+				end
 			end
 		end
 		noPets.Visible = kinds == 0
@@ -617,10 +689,24 @@ function MascotController:Start()
 	end
 
 	-- Badge on the button: potions to drink (their number), else "!" when an egg can be hatched
+	-- (B2, roof eggs: when the first egg is affordable and you have no pets yet, or 3 copies wait to be fused)
 	function refreshBadge()
 		local potions = PotionController.Count()
 		local unlocked, _, affordable = eggState()
 		petsKit:SetBadge(if potions > 0 then potions else nil)
+		if Mascots.CoreEggsOn() then
+			local mine = owned()
+			local any, fuse = false, false
+			for id, count in mine do
+				local mascot = Mascots.Get(id)
+				if mascot and count > 0 then
+					any = true
+					fuse = fuse or count >= (Mascots.MergeCost(mascot) or math.huge)
+				end
+			end
+			petsKit:SetDot(potions == 0 and ((not any and affordable) or fuse))
+			return
+		end
 		petsKit:SetDot(potions == 0 and unlocked and affordable)
 	end
 
@@ -652,6 +738,18 @@ function MascotController:Start()
 		local upper = message:upper()
 		local problem = upper:find("NOT ENOUGH") or upper:find("WRONG") or upper:find("FULL")
 		kitToast(upper, nil, nil, if problem then RewardKit.C.Price else RewardKit.C.White, 2)
+	end
+	showFuseHint = function()
+		kitToast(
+			("%d COPIES = 1 SHINY (x%s STATS) · FUSE THEM AT THE FUSION MACHINE BY THE EGGS"):format(
+				ECONOMY.ShinyMerge,
+				tostring(ECONOMY.ShinyMultiplier)
+			),
+			nil,
+			nil,
+			RewardKit.C.Gold,
+			3
+		)
 	end
 
 	PotionController.BuildItems(itemsPage, showToast, PAGE_W, PAGE_H)
@@ -1734,6 +1832,17 @@ function MascotController:Start()
 		end
 	end)
 
+	-- B2: the Mythic / Shiny card frames turn while the panel is open
+	if #spinning > 0 then
+		RunService.RenderStepped:Connect(function(dt)
+			if win:IsOpen() and right.Visible then
+				for _, gradient in spinning do
+					gradient.Rotation = (gradient.Rotation + dt * 90) % 360
+				end
+			end
+		end)
+	end
+
 	bestButton.Activated:Connect(function()
 		hintWanted = false -- the server saves it; hide the hand right away
 		Sfx.Play("PetEquip")
@@ -2071,7 +2180,7 @@ function MascotController:Start()
 		end
 		local function refreshOdds()
 			local luck = Store.Luck(player)
-			local odds = Store.LuckyOdds(ECONOMY.Odds, luck)
+			local odds = Store.LuckyOdds(Mascots.EggOdds(egg.Id), luck, Mascots.LuckFrom(egg.Id)) -- (B2: each roof egg has its own odds)
 			for mascot, label in percents do
 				label.Text = percentText(Mascots.Chance(egg.Id, mascot, odds))
 			end
