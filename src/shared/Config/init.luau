@@ -82,6 +82,27 @@ Config.CoreLoop = {
 		Radius = 4.5,
 		Color = Color3.fromRGB(64, 160, 236), -- sky blue
 	},
+	-- Stage 3b plaza props: copies of existing models (the originals stay where they are), placed at server start in
+	-- <Folder>.Plaza. From = path from Workspace, At = floor point under the model's middle, Turn = degrees around Y.
+	-- Main Street's models face +Z with Turn 0 (sofas face -Z). Cases = the zone 4 display case row, one case per
+	-- ladder ball (Config.Showcase set with Ladder = true): First = floor point of case 1, Step = to the next.
+	Plaza = {
+		Props = {
+			-- ball racks either side of the ball shop
+			{ From = { "MainStreetLanes", "Design", "HouseBallRacks", "HouseBallRack1" }, At = Vector3.new(-26.6, 848.65, -3409), Turn = 180 },
+			{ From = { "MainStreetLanes", "Design", "HouseBallRacks", "HouseBallRack2" }, At = Vector3.new(-7.4, 848.65, -3409), Turn = 180 },
+			-- lounges in the open half, looking at the ball cases
+			{ From = { "MainStreetLanes", "Design", "Seating", "BowlerArea1" }, At = Vector3.new(40, 848.65, -3418), Turn = 180 },
+			{ From = { "MainStreetLanes", "Design", "Seating", "BowlerArea2" }, At = Vector3.new(76, 848.65, -3418), Turn = 180 },
+			{ From = { "MainStreetLanes", "Design", "Seating", "BowlerArea3" }, At = Vector3.new(58, 848.65, -3450), Turn = 180 },
+			-- a ball rack between the lanes and the lounges
+			{ From = { "MainStreetLanes", "Design", "HouseBallRacks", "HouseBallRack3" }, At = Vector3.new(22, 848.65, -3452), Turn = 90 },
+		},
+		Cases = {
+			First = Vector3.new(24.5, 848.65, -3393),
+			Step = Vector3.new(7.5, 0, 0),
+		},
+	},
 	-- Stage 3 first 30 seconds: until ball 2 is bought a card under the pin counter says Throw > Sell > Buy and beams
 	-- lead to the sell pad, then to the shop. The join daily window waits until then too.
 	Guide = {
@@ -1048,6 +1069,7 @@ Config.Showcase = {
 			Slots = { "SkylineLanes", "Showcase", "Slots" },
 			Egg = "Skyline",
 			Theme = "Skyline",
+			Ladder = true, -- core loop on: shows the 10 shop balls (Config.CoreLoop.Balls), owned once bought
 		},
 	},
 	-- Base structure colours per zone (Navy = the case body, NavyTop = roof, BlueCap = base top, Pedestal = the

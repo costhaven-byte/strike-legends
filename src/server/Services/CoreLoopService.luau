@@ -396,6 +396,72 @@ local function hideCrateShop()
 	end
 end
 
+-- Stage 3b: the plaza props (copies of existing models, Config.CoreLoop.Plaza) and one display case slot per ladder
+-- ball (ShowcaseController builds the cases on each screen)
+local function buildPlaza()
+	local roof = Workspace:FindFirstChild(CORE.Folder)
+	local plaza = CORE.Plaza
+	if not roof or not plaza then
+		return
+	end
+	local old = roof:FindFirstChild("Plaza")
+	if old then
+		old:Destroy()
+	end
+	local folder = Instance.new("Folder")
+	folder.Name = "Plaza"
+	for i, prop in plaza.Props do
+		local node: Instance? = Workspace
+		for _, name in prop.From do
+			node = node and node:FindFirstChild(name)
+		end
+		if not node or not node:IsA("Model") then
+			warn(("[CoreLoopService] plaza prop %d: %s is missing"):format(i, table.concat(prop.From, ".")))
+			continue
+		end
+		local copy = node:Clone()
+		for _, d in copy:GetDescendants() do
+			if d:IsA("BaseScript") or d:IsA("ProximityPrompt") then
+				d:Destroy()
+			elseif d:IsA("BasePart") then
+				d.Anchored = true
+			end
+		end
+		-- Middle of the model on the floor point, turned around Y
+		local box, size = copy:GetBoundingBox()
+		local offset = box:ToObjectSpace(copy:GetPivot())
+		local target = CFrame.new(prop.At + Vector3.new(0, size.Y / 2, 0))
+			* CFrame.Angles(0, math.rad(prop.Turn or 0), 0)
+			* box.Rotation
+		copy:PivotTo(target * offset)
+		copy.Parent = folder
+	end
+	folder.Parent = roof
+
+	local slots = roof:FindFirstChild("Showcase") and roof.Showcase:FindFirstChild("Slots")
+	local cases = plaza.Cases
+	if not slots or not cases then
+		return
+	end
+	local list = slots:GetChildren()
+	table.sort(list, function(a, b)
+		return (a:GetAttribute("Order") or 0) < (b:GetAttribute("Order") or 0)
+	end)
+	local template = list[1]
+	if not template or not template:IsA("BasePart") then
+		return
+	end
+	for i = 1, #CORE.Balls do
+		local slot = list[i] or template:Clone()
+		slot.Name = "Slot" .. i
+		slot:SetAttribute("Order", i)
+		local floor = cases.First + cases.Step * (i - 1)
+		-- (slots keep their own height and facing; only X and Z move)
+		slot.CFrame = template.CFrame.Rotation + Vector3.new(floor.X, template.Position.Y, floor.Z)
+		slot.Parent = slots
+	end
+end
+
 -- The rooftop spawn (the lobby spawn is switched off, not removed)
 local function buildSpawn()
 	for _, spawn in Workspace:GetDescendants() do
@@ -448,6 +514,7 @@ function CoreLoopService:Start()
 	buildSpawn()
 	buildStation()
 	buildShop()
+	buildPlaza()
 	hideCrateShop()
 
 	-- The bag size and throw cooldown the HUD shows

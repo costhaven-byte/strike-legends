@@ -18,6 +18,7 @@ local Config = require(Shared.Config)
 local Balls = require(Shared.Modules.Balls)
 local BallLook = require(Shared.Modules.BallLook)
 local Mascots = require(Shared.Modules.Mascots)
+local CoreLadder = require(Shared.Modules.CoreLadder)
 local BallFx = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("BallFx"))
 local MascotView = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("MascotView"))
 
@@ -632,7 +633,7 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromScale(0.85, 0.75),
-		Text = ball.Rarity:upper(),
+		Text = ball.ShowTag or ball.Rarity:upper(),
 		TextColor3 = if style.SignGradient then Color3.new(1, 1, 1) else T.Ink,
 		FontFace = Font.new(FONT, Enum.FontWeight.Heavy),
 	})
@@ -653,8 +654,8 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 		Size = UDim2.fromScale(0.92, 0.2),
 		RichText = true,
 	})
-	local stats = ("x%g COINS"):format(ball.Multiplier)
-	local traits = Balls.DescribeTraits(ball, true, true)
+	local stats = ball.ShowStats or ("x%g COINS"):format(ball.Multiplier)
+	local traits = if ball.ShowStats then "" else Balls.DescribeTraits(ball, true, true)
 	if traits ~= "" then
 		stats ..= "  ·  " .. traits
 	end
@@ -696,7 +697,7 @@ local function buildCase(slot: BasePart, ball, parent: Instance, diamondTemplate
 				emitter.Enabled = isOwned
 			end
 			name.Text = if isOwned then ball.Name:upper() else "???"
-			info.Text = if isOwned then stats else "Unlock: find it in a crate"
+			info.Text = if isOwned then stats else (ball.ShowLocked or "Unlock: find it in a crate")
 		end,
 		Animate = function(t: number)
 			local float = center * CFrame.new(0, math.sin(t * 1.6 + phase) * CASE.BobHeight, 0)
@@ -905,11 +906,30 @@ local function buildSet(set, diamondTemplate: BasePart?): ((number) -> ())?
 		return (a:GetAttribute("Order") or 0) < (b:GetAttribute("Order") or 0)
 	end)
 
-	-- Every ball that drops in this zone, best first
+	-- Every ball that drops in this zone, best first; with the core loop on, a Ladder set shows the shop's balls in
+	-- ladder order instead (ladder name, pins a throw, owned once bought)
+	local ladder = set.Ladder and Config.CoreLoop.Enabled
 	local shown = {}
-	for _, ball in Balls.Sorted() do
-		if ball.Zone == set.Zone and not ball.Retired and ball.InCrates ~= false then
-			table.insert(shown, ball)
+	if ladder then
+		for i, step in Config.CoreLoop.Balls do
+			local ball = Balls.Get(step.Ball)
+			if ball then
+				table.insert(
+					shown,
+					setmetatable({
+						Name = step.Name,
+						ShowTag = "BALL " .. i,
+						ShowStats = ("%d PINS A THROW"):format(step.Pins),
+						ShowLocked = "Buy it at the ball shop",
+					}, { __index = ball })
+				)
+			end
+		end
+	else
+		for _, ball in Balls.Sorted() do
+			if ball.Zone == set.Zone and not ball.Retired and ball.InCrates ~= false then
+				table.insert(shown, ball)
+			end
 		end
 	end
 	if #shown > #slots then
@@ -940,11 +960,13 @@ local function buildSet(set, diamondTemplate: BasePart?): ((number) -> ())?
 	-- LOCKED / OWNED, from the balls the server says you own
 	local function refreshOwned()
 		local owned = Balls.DecodeOwned(player:GetAttribute("OwnedBalls"))
-		for _, case in built do
-			case.Refresh(owned[case.Id] == true)
+		local step = CoreLadder.BallStep(player:GetAttribute("BallStep"))
+		for i, case in built do
+			case.Refresh(if ladder then i <= step else owned[case.Id] == true)
 		end
 	end
 	player:GetAttributeChangedSignal("OwnedBalls"):Connect(refreshOwned)
+	player:GetAttributeChangedSignal("BallStep"):Connect(refreshOwned)
 	refreshOwned()
 
 	-- The pet shelf: this zone egg's pets
