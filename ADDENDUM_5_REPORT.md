@@ -39,3 +39,38 @@ At the end: one combined morning playtest.
 **Playtest note:** Studio's 3D view was frozen on an old frame all session (screenshots timed out; restoring the window didn't help, and I didn't restart Studio in case the place has unsaved work). Checked by numbers instead: `screenshots/addendum5/A1/PLAYTEST_LOG.md` (ball 10 = 2.7K-3.8K pins per throw, 40 drawn, counter "3.2K", pose 12, XP stays 0, no errors). Later steps may also be unable to take screenshots until Studio is restarted.
 
 **Placeholders:** none new.
+
+## Step 2 (A2): two ladders, buy only at the shop, SELL teleports (2026-11-01)
+**What changed**
+- Balls and bags are now two separate ladders. You can buy the next ball or the next bag in any order; neither waits for the other. A small bag still holds your income back (a throw that doesn't fit only pays what fits), so bags still matter.
+- New prices (EconomySim, a player who buys whichever is cheaper): ball 2 in the first ~15 s, balls 3, 4, 5 about 2 min apart, balls 6 to 10 about 5 min apart (ball 10 at ~31 min, last bag at ~35 min). Balls: 50, 500, 950, 1.9K, 10K, 21K, 45K, 99K, 220K. Bags: 240, 600, 990, 5.2K, 11K, 24K, 54K, 120K, 420K. Pins and bag sizes didn't change.
+- Buying only works at the shop booth. The server checks you stand on (or right next to) the blue circle; from anywhere else it answers "Buy it at the shop". Power Levels can't be bought in this game any more either.
+- The BALLS button now opens a price list: every ball and bag, what you have, what's next and its price, but no buying. Its blue GO TO SHOP button teleports you onto the shop circle, and the list turns into the real shop.
+- SELL teleports you onto the green sell pad, and the bag sells there (nowhere else). The guide card now says "Tap Sell", then "Buy the Rubber Bouncer at the shop".
+- New shop window: a gold tilted SHOP tab, red X, a coin pill that counts up, two lists (Balls with 3D balls, Bags) with rarity-coloured stripes (grey, green, blue, purple, gold, and a turning rainbow for Sonic Boom). Your current one says USING (blue), older ones OWNED, the next one has its price (green when you can buy it, grey while saving), later ones are faded. Buttons squash when pressed and bounce back; a buy throws confetti and pops the next row.
+- Goal bar: "Next: <whichever is cheaper>", and "buy it at the shop" when you can afford it.
+
+**Restore tag:** `restore-a5-A2-before`. **Commit:** 3bb2a95.
+
+**2-minute test**
+1. Play. Hold THROW until the bag is full. Tap SELL. Expected: you jump onto the green pad, the bag empties, coins go up.
+2. Tap BALLS. Expected: the price list with all 10 balls and 10 bags, the next ones with a gold price, a blue GO TO SHOP button, no way to buy.
+3. Tap GO TO SHOP. Expected: you land on the blue circle and the window says "You're at the shop"; Rubber Bouncer has a green 50 button. Buy it.
+4. TEST panel > COINS. At the shop buy two bags in a row, then a ball. Expected: all three work (no "get the ball first").
+5. Walk a few steps off the circle. Expected: the shop closes.
+- Silent failures to watch for: SELL doing nothing (no jump), the shop opening but every button grey even with coins, the price list letting you buy, the window staying tiny or stuck half open, the guide card stuck on "Sell" after selling.
+
+**Choices made for you**
+- Ball pacing taken literally: balls 3-5 ~2 min each, balls 6-10 ~5 min each (the ladder has only 10 balls, so nothing comes "after" yet). Ball 2 stays the first-30-seconds buy (50 coins).
+- Bag pacing: each bag lands about 40% of the way between two balls (bag 2 ~1 min, then 2 min, then 5 min apart).
+- `Config.CoreLoop.Ladders.Independent = true` (false = the old alternating order back). Buy range = circle radius 4.5 + `Shop.BuySlack` 4 studs.
+- GO TO SHOP teleports (like SELL), so the price list gets you to the shop in one tap. Teleports have a 1.5 s cooldown (`Config.CoreLoop.Teleport`).
+- You land on the sell pad facing the lanes and on the shop circle facing the counter. You walk back to your lane yourself.
+- "Using" badge is sky blue so it can't be mistaken for a green BUY button.
+- Ball rows show each ball's rarity colour from a new `Rarity` field on `Config.CoreLoop.Balls`; bags use the colour of the ball at the same step.
+- Left as is: gem buys in the STORE (cosmetics) and Robux items still work from the store window (they are not coin buys of the ladder). Eggs/pet slots/rebirth get the same shop check in their own steps.
+- A Studio-only `TestOpen` attribute on CoreShopUI opens the price list (for tests; does nothing in the live game).
+
+**Playtest note:** Studio's 3D view was still frozen (viewport 1x1, no RenderStepped, screen_capture timed out), so no screenshots again. All checks were done with numbers: `screenshots/addendum5/A2/PLAYTEST_LOG.md`. Not checked live: the guide card colours and the button bounce (they only run when Studio draws frames). Restarting Studio should fix the frozen view.
+
+**Placeholders:** none new (bag icon = the existing store bag image).
