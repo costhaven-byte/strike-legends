@@ -125,7 +125,7 @@ function CoreHudController:Start()
 		local run = counterRun
 		local total = PinRack.Count()
 		counterText.TextColor3 = if clear then GOLD else WHITE
-		counterNote.Text = if clear then "Full clear! x2" elseif full then "Bag full" else "Pins down"
+		counterNote.Text = if clear then "Cleared it! x2" elseif full then "Bag full, sell" else "Pins down"
 		counterNote.TextColor3 = if clear then GOLD elseif full then CORAL else Color3.fromRGB(196, 204, 214)
 		counterScale.Scale = if clear then 1.2 else 1.08
 		TweenService:Create(counterScale, TweenInfo.new(0.18, Enum.EasingStyle.Back), { Scale = 1 }):Play()
@@ -188,8 +188,8 @@ function CoreHudController:Start()
 	place(prompt, "BagFull")
 	prompt.Rotation = -2
 	prompt.Visible = false
-	text(promptFace, "BAG FULL, SELL", { Size = UDim2.new(1, -20, 0.6, 0), Position = UDim2.new(0, 10, 0.08, 0) })
-	text(promptFace, "Walk to the green Sell circle", {
+	text(promptFace, "Your bag is full", { Size = UDim2.new(1, -20, 0.6, 0), Position = UDim2.new(0, 10, 0.08, 0) })
+	text(promptFace, "Go sell at the green circle", {
 		Size = UDim2.new(1, -20, 0.26, 0),
 		Position = UDim2.new(0, 10, 0.68, 0),
 		TextColor3 = Color3.fromRGB(255, 236, 200),
@@ -315,9 +315,9 @@ function CoreHudController:Start()
 			label.TextColor3 = if i == step then CORAL elseif i < step then GREEN else Color3.fromRGB(190, 182, 166)
 		end
 		tutorLine.Text = if step == 1
-			then "Hold the HOLD! button to throw"
-			elseif step == 2 then "Bag's got enough. Walk to the green circle"
-			else ("You've got %d coins. Get the %s"):format(firstBall.Price, firstBall.Name)
+			then "Hold Throw to bowl"
+			elseif step == 2 then "That's enough. Go sell at the green circle"
+			else ("%d coins. Go buy the %s"):format(firstBall.Price, firstBall.Name)
 		if step > 1 then
 			Sfx.Play("Click")
 			UiFx.Pop(tutor, 1.1, 0.18)
@@ -343,7 +343,7 @@ function CoreHudController:Start()
 		if amount > lastBag then
 			UiFx.Pop(bag, 1.04, 0.12)
 		end
-		if share < 1 and counterNote.Text == "Bag full" then
+		if share < 1 and counterNote.Text == "Bag full, sell" then
 			counterNote.Text = "Pins down"
 			counterNote.TextColor3 = Color3.fromRGB(196, 204, 214)
 		end
@@ -408,7 +408,7 @@ function CoreHudController:Start()
 			for _, label in stepLabels do
 				label.TextColor3 = GREEN
 			end
-			tutorLine.Text = "Done. Keep throwing for the next one"
+			tutorLine.Text = "That's it. Keep throwing for the next one"
 			UiFx.Pop(tutor, 1.12, 0.2)
 		end
 		tutor.Visible = step > 0 or (tutorDoneAt ~= nil and os.clock() - tutorDoneAt < GUIDE.DoneSeconds)

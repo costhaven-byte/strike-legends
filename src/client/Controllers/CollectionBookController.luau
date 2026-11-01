@@ -159,7 +159,7 @@ function CollectionBookController:Start()
 	local swatch = ballsButton:WaitForChild("Swatch") :: Frame
 	local menu = ballsButton.Parent :: Frame
 	local ballsKit =
-		HudKit.Adopt(ballsButton, { Paint = "Cyan", Icon = "Ball", Caption = "BALLS", Key = "Balls", Place = false })
+		HudKit.Adopt(ballsButton, { Paint = "Cyan", Icon = "Ball", Caption = if Config.CoreLoop.Enabled then "SHOP" else "BALLS", Key = "Balls", Place = false })
 	ballsKit.Icon.Visible = false
 	swatch.Parent = ballsKit.Slot
 	swatch.AnchorPoint = Vector2.zero

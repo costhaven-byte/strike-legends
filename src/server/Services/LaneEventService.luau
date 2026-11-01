@@ -132,7 +132,7 @@ function LaneEventService.Force(player: Player, id: string): (boolean, string)
 	end
 	local lane = LaneUtil.GetOwnedLane(player.UserId)
 	if not lane then
-		return false, "Stand on your lane first"
+		return false, "Get on your lane first"
 	end
 	if taken[lane] or Workspace:GetServerTimeNow() < (lane:GetAttribute("ReadyAt") or 0) then
 		forced[player] = id

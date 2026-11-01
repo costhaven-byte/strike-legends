@@ -207,7 +207,8 @@ function ProgressionService.RefreshRankUpReady(player: Player)
 	local nextRank = ProgressionService.GetNextRank(player)
 	local best = PlayerDataService.Get(player, "BestRank") or 1
 	local wonBefore = ProgressionService.GetCurrentRankIndex(player) < best -- the next tier was won before a rebirth
-	if ready and nextRank and (wonBefore or not Config.Trials.Ranks[nextRank.Name]) then
+	-- (Addendum 4 core loop: no trials, ranks come with levels)
+	if ready and nextRank and (wonBefore or Config.CoreLoop.Enabled or not Config.Trials.Ranks[nextRank.Name]) then
 		ProgressionService.PromoteRank(player)
 		return
 	end

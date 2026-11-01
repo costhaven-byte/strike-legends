@@ -92,11 +92,11 @@ end
 
 local function use(player: Player, potionId: any)
 	if not RateLimit.Allow(player, "UsePotion") then
-		return { Ok = false, Error = "Slow down!" }
+		return { Ok = false, Error = "Too fast, wait a sec" }
 	end
 	local potion = type(potionId) == "string" and byId[potionId]
 	if not potion or not PlayerDataService.IsLoaded(player) then
-		return { Ok = false, Error = "Something went wrong" }
+		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 	local potions = PlayerDataService.Get(player, "Potions")
 	local boosts = PlayerDataService.Get(player, "Boosts")
@@ -105,7 +105,7 @@ local function use(player: Player, potionId: any)
 	end
 	local left = boosts[potion.Id] or 0
 	if left + potion.Minutes * 60 > POTIONS.MaxMinutes * 60 then
-		return { Ok = false, Error = "That potion is already full!" }
+		return { Ok = false, Error = "That one is already running" }
 	end
 	potions[potion.Id] -= 1
 	if potions[potion.Id] <= 0 then
@@ -153,7 +153,7 @@ function PotionService:Start()
 		local ok, result = pcall(use, player, potionId)
 		if not ok then
 			warn("[PotionService] " .. tostring(result))
-			return { Ok = false, Error = "Something went wrong" }
+			return { Ok = false, Error = "That didn't work. Try again" }
 		end
 		return result
 	end

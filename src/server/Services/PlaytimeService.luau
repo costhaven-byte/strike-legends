@@ -80,14 +80,14 @@ end
 local function claim(player: Player, index: any)
 	local reward = type(index) == "number" and PLAYTIME.Rewards[index]
 	if not PLAYTIME.Enabled or not reward or not started[player] or not PlayerDataService.IsLoaded(player) then
-		return { Ok = false, Error = "Something went wrong" }
+		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 	if claimed[player][index] then
-		return { Ok = false, Error = "Already claimed" }
+		return { Ok = false, Error = "You already got this one" }
 	end
 	local played = Workspace:GetServerTimeNow() - started[player]
 	if played < reward.Minutes * 60 - 1 then -- 1 second of slack for the client's clock
-		return { Ok = false, Error = "Not yet!" }
+		return { Ok = false, Error = "Not yet" }
 	end
 	claimed[player][index] = true
 	PlayerDataService.Set(player, "PlaytimeGot", claimedText(player))
@@ -131,14 +131,14 @@ end
 
 local function onClaim(player: Player, index: any)
 	if busy[player] or not RateLimit.Allow(player, "ClaimPlaytime") then
-		return { Ok = false, Error = "Slow down!" }
+		return { Ok = false, Error = "Too fast, wait a sec" }
 	end
 	busy[player] = true
 	local ok, result = pcall(claim, player, index)
 	busy[player] = nil
 	if not ok then
 		warn("[PlaytimeService] Claim failed: " .. tostring(result))
-		return { Ok = false, Error = "Something went wrong" }
+		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 	return result
 end

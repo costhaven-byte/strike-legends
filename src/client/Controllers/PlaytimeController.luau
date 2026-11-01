@@ -113,8 +113,8 @@ function PlaytimeController:Start()
 		win.Panel,
 		W,
 		H,
-		"FREE GIFTS",
-		("A GIFT WHEN YOU JOIN, THEN ONE EVERY %d MINUTES · NEW GIFTS EVERY DAY"):format(
+		"GIFTS",
+		("ONE NOW, THEN ONE EVERY %d MIN. NEW ONES EACH DAY"):format(
 			PLAYTIME.Rewards[2].Minutes - PLAYTIME.Rewards[1].Minutes
 		),
 		C.Pink
@@ -177,7 +177,7 @@ function PlaytimeController:Start()
 		local mark = RewardKit.Label(
 			face,
 			if reward.Minutes == 0
-				then "JOIN GIFT"
+				then "NOW"
 				elseif reward.Minutes >= 60 and reward.Minutes % 60 == 0 then ("%d HOUR%s"):format(
 					reward.Minutes // 60,
 					if reward.Minutes == 60 then "" else "S"
@@ -337,7 +337,7 @@ function PlaytimeController:Start()
 			giftsKit:Paint(if newState == "Done" then "Card" else "Pink")
 			if newState == "Done" then
 				giftsKit:SetIcon("Check", 30)
-				giftsKit:SetCaption("ALL!", HudKit.C.Lime)
+				giftsKit:SetCaption("CLAIM ALL", HudKit.C.Lime)
 			else
 				giftsKit:SetIcon("GiftPink")
 			end
@@ -395,7 +395,7 @@ function PlaytimeController:Start()
 		local ok, result = pcall(claimRemote.InvokeServer, claimRemote, index)
 		claiming = false
 		if not ok or type(result) ~= "table" or not result.Ok then
-			showToast(if ok and type(result) == "table" and result.Error then result.Error else "Something went wrong")
+			showToast(if ok and type(result) == "table" and result.Error then result.Error else "That didn't work. Try again")
 			return
 		end
 		refresh()
@@ -410,14 +410,14 @@ function PlaytimeController:Start()
 		CrateKit.Confetti(cover, tile.X + TILE_W / 2 - W / 2, tile.Y + TILE_H / 2 - H / 2, 24, 180, 0.6)
 		UiFx.Flash(color, 0.3, 0.4)
 		if result.Coins then
-			toast(("+%s COINS!"):format(Currency.Format(result.Coins)), "Coins", nil, nil, 2.6)
+			toast(("+%s COINS"):format(Currency.Format(result.Coins)), "Coins", nil, nil, 2.6)
 		elseif result.Potion then
 			local potion = potionById(result.Potion)
 			local name = if potion then potion.Name else "POTION"
 			toast(
 				if (result.Count or 1) > 1
-					then ("%dx %s ADDED TO YOUR POTIONS!"):format(result.Count, name)
-					else ("%s ADDED TO YOUR POTIONS!"):format(name),
+					then ("%dx %s IS IN YOUR ITEMS"):format(result.Count, name)
+					else ("%s IS IN YOUR ITEMS"):format(name),
 				"Potion",
 				result.Potion,
 				nil,

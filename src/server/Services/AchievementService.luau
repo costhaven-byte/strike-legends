@@ -133,15 +133,15 @@ end
 -- CLAIM: pays the next tier of one achievement if its goal is reached
 local function onClaim(player: Player, id: any)
 	if not RateLimit.Allow(player, "ClaimAchievement") then
-		return { Ok = false, Error = "Slow down!" }
+		return { Ok = false, Error = "Too fast, wait a sec" }
 	end
 	if not PlayerDataService.IsLoaded(player) then
-		return { Ok = false, Error = "Still loading" }
+		return { Ok = false, Error = "Hang on, still loading" }
 	end
 	local row = byId(id)
 	local claimed = claimedOf(player)
 	if not row or not claimed then
-		return { Ok = false, Error = "Something went wrong" }
+		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 	local done = claimed[row.Id] or 0
 	local tier = row.Tiers[done + 1]
@@ -150,7 +150,7 @@ local function onClaim(player: Player, id: any)
 	end
 	local value = AchievementService.Stats(player)[row.Stat] or 0
 	if value < tier.Goal then
-		return { Ok = false, Error = "Not yet!" }
+		return { Ok = false, Error = "Not yet" }
 	end
 	claimed[row.Id] = done + 1
 	local gems = if Config.Gems.Enabled then tier.Gems or 0 else 0
@@ -175,7 +175,7 @@ function AchievementService:Start()
 		local ok, result = pcall(onClaim, player, id)
 		if not ok then
 			warn("[AchievementService] Claim failed: " .. tostring(result))
-			return { Ok = false, Error = "Something went wrong" }
+			return { Ok = false, Error = "That didn't work. Try again" }
 		end
 		return result
 	end

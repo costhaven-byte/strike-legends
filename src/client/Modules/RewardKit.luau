@@ -533,7 +533,7 @@ export type PrizeCard = {
 function RewardKit.PrizeCard(gui: ScreenGui): PrizeCard
 	local W, H = 420, 400
 	local win = RewardKit.Window(gui, W, H)
-	local cover, close = RewardKit.Cover(win.Panel, W, H, "YOU WON!", nil, C.Gold)
+	local cover, close = RewardKit.Cover(win.Panel, W, H, "YOU GOT", nil, C.Gold)
 	local titleBox = cover:FindFirstChild("TitleBox") :: Frame
 	titleBox.Size = UDim2.fromOffset(W - 52, 54)
 	for _, child in titleBox:GetDescendants() do
@@ -557,7 +557,7 @@ function RewardKit.PrizeCard(gui: ScreenGui): PrizeCard
 	}, stage)
 	local name = RewardKit.Label(cover, "", UiKit.Head, 32, C.White, 3, 20, 252, W - 40, 40)
 	local sub = RewardKit.Label(cover, "", UiKit.Body, 15, C.Label, 0, 24, 292, W - 48, 22)
-	local ok = RewardKit.Button(cover, "AWESOME!", "Lime", 230, 62, 30)
+	local ok = RewardKit.Button(cover, "NICE", "Lime", 230, 62, 30)
 	ok.Holder.Position = UDim2.fromOffset((W - 230) / 2, H - 62 - 22)
 	ok.Activated:Connect(function()
 		win:Close()
@@ -572,14 +572,14 @@ function RewardKit.PrizeCard(gui: ScreenGui): PrizeCard
 		slot:ClearAllChildren()
 		for _, child in titleBox:GetDescendants() do
 			if child:IsA("TextLabel") then
-				child.Text = opts.Title or "YOU WON!"
+				child.Text = opts.Title or "YOU GOT"
 			end
 		end
 		name.Text = opts.Name or ""
 		name.TextColor3 = opts.NameColor or C.White
 		sub.Text = opts.Sub or ""
 		sub.TextColor3 = opts.SubColor or C.Label
-		ok:SetText(opts.Button or "AWESOME!")
+		ok:SetText(opts.Button or "NICE")
 		rays.ImageColor3 = opts.NameColor or C.Gold
 		if opts.Fill then
 			opts.Fill(slot)

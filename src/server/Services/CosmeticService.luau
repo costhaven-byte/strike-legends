@@ -60,7 +60,7 @@ end
 -- The LOOKS card's gem BUY button. Returns what the client shows.
 local function onBuy(player: Player, id: any)
 	if not PlayerDataService.IsLoaded(player) or not RateLimit.Allow(player, "BuyCosmetic") then
-		return { Ok = false, Error = "Try again" }
+		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 	local item = type(id) == "string" and Cosmetics.Get(id)
 	if not item or not item.Gems then
@@ -68,7 +68,7 @@ local function onBuy(player: Player, id: any)
 	end
 	local list = owned(player)
 	if not list then
-		return { Ok = false, Error = "Try again" }
+		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 	if list[item.Id] then
 		return { Ok = false, Error = "OWNED" }

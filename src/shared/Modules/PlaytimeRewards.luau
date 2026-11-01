@@ -28,6 +28,9 @@ function PlaytimeRewards.Resolve(index: number, progress: DailyRewards.Progress)
 	elseif reward.Potion then
 		out.Potion = reward.Potion
 		out.Count = row.Potions or 1
+	elseif reward.Egg and Config.CoreLoop.Enabled then
+		-- (core loop: no egg stand until Stage 5, so an egg gift pays coins)
+		out.Coins = CoreLadder.GiftCoins(Config.CoreLoop.Gifts.CrateMinutes, progress.BallStep, progress.BagLevel)
 	elseif reward.Egg then
 		out.Egg = if reward.Egg == "Zone" then row.Egg else reward.Egg
 	elseif reward.Crate and Config.CoreLoop.Enabled then

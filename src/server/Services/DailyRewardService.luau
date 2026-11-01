@@ -48,15 +48,15 @@ end
 
 local function claim(player: Player)
 	if not PlayerDataService.IsLoaded(player) then
-		return { Ok = false, Error = "Still loading" }
+		return { Ok = false, Error = "Hang on, still loading" }
 	end
 	-- The calendar unlocks once the first 3 minutes are done (stage 3, see OnboardingService)
 	if Config.Onboarding.Enabled and (tonumber(PlayerDataService.Get(player, "Onboarding")) or 3) < 3 then
-		return { Ok = false, Error = "Keep bowling!" }
+		return { Ok = false, Error = "Not ready yet" }
 	end
 	local day, claimable = getState(player)
 	if not claimable then
-		return { Ok = false, Error = "Come back tomorrow!" }
+		return { Ok = false, Error = "Already got today's. Come back tomorrow" }
 	end
 	local reward = DailyRewards.Resolve(day, {
 		PowerLevel = PlayerDataService.Get(player, "PowerLevel"),
@@ -97,14 +97,14 @@ end
 
 local function onClaim(player: Player)
 	if busy[player] or not RateLimit.Allow(player, "ClaimDaily") then
-		return { Ok = false, Error = "Slow down!" }
+		return { Ok = false, Error = "Too fast, wait a sec" }
 	end
 	busy[player] = true
 	local ok, result = pcall(claim, player)
 	busy[player] = nil
 	if not ok then
 		warn("[DailyRewardService] Claim failed: " .. tostring(result))
-		return { Ok = false, Error = "Something went wrong" }
+		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 	return result
 end

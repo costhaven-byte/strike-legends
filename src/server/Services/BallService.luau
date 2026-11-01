@@ -230,7 +230,7 @@ end
 -- (price: Balls.PolishGemPrice, from Config.Economy.Polish.GemPrice). Returns what the client shows.
 local function onBuyPolish(player: Player, ballId: any)
 	if not PlayerDataService.IsLoaded(player) or not RateLimit.Allow(player, "BuyPolish") then
-		return { Ok = false, Error = "Try again" }
+		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 	local ball = type(ballId) == "string" and Balls.Get(ballId)
 	if not ball or not getOwned(player)[ball.Id] then
@@ -238,7 +238,7 @@ local function onBuyPolish(player: Player, ballId: any)
 	end
 	local polish = PlayerDataService.Get(player, "Polish")
 	if not polish then
-		return { Ok = false, Error = "Try again" }
+		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 	local level = Balls.PolishLevel(polish[ball.Id])
 	local price = Balls.PolishGemPrice(ball, level)
@@ -384,7 +384,7 @@ local function openCrate(player: Player, crateId: any)
 		return { Ok = false, Error = "Unknown crate" }
 	end
 	if not PlayerDataService.IsLoaded(player) then
-		return { Ok = false, Error = "Still loading" }
+		return { Ok = false, Error = "Hang on, still loading" }
 	end
 	if Config.CoreLoop.Enabled then
 		return { Ok = false, Error = "Balls are in the shop now" } -- (Addendum 4 Stage 2: the ball ladder replaces crates)
@@ -400,7 +400,7 @@ local function openCrate(player: Player, crateId: any)
 		return { Ok = false, Error = "Not enough coins" }
 	end
 	if not RateLimit.Allow(player, "OpenCrate") then
-		return { Ok = false, Error = "Slow down!" }
+		return { Ok = false, Error = "Too fast, wait a sec" }
 	end
 
 	if useFree then
@@ -438,14 +438,14 @@ end
 
 local function onOpenCrate(player: Player, crateId: any)
 	if busy[player] then
-		return { Ok = false, Error = "Slow down!" }
+		return { Ok = false, Error = "Too fast, wait a sec" }
 	end
 	busy[player] = true
 	local ok, result = pcall(openCrate, player, crateId)
 	busy[player] = nil
 	if not ok then
 		warn("[BallService] Crate open failed: " .. tostring(result))
-		return { Ok = false, Error = "Something went wrong" }
+		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 	return result
 end

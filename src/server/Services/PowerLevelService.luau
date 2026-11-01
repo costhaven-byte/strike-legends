@@ -21,7 +21,7 @@ end
 -- Buys the next Power Level. Returns what the client shows.
 local function onBuy(player: Player)
 	if not PlayerDataService.IsLoaded(player) or not RateLimit.Allow(player, "BuyPowerLevel") then
-		return { Ok = false, Error = "Try again" }
+		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 	local level = currentLevel(player)
 	local nextRow = PowerLevels.Next(level)

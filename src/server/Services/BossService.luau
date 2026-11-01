@@ -1151,7 +1151,7 @@ local function board(player: Player)
 		return { Ok = false, Error = "Not now" }
 	end
 	if not RateLimit.Allow(player, "RideHelicopter") then
-		return { Ok = false, Error = "Slow down!" }
+		return { Ok = false, Error = "Too fast, wait a sec" }
 	end
 	if state:GetAttribute("State") ~= "Boarding" then
 		return { Ok = false, Error = "Boarding is closed" }
@@ -1199,7 +1199,7 @@ function BossService:Start()
 		local ok, result = pcall(board, player)
 		if not ok then
 			warn("[BossService] " .. tostring(result))
-			return { Ok = false, Error = "Something went wrong" }
+			return { Ok = false, Error = "That didn't work. Try again" }
 		end
 		return result
 	end

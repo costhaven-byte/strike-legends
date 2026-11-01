@@ -23,6 +23,25 @@ local UiFx = require(Modules:WaitForChild("UiFx"))
 local MultiplierController = require(script.Parent:WaitForChild("MultiplierController"))
 
 local PROFILE = Config.Profile
+-- Addendum 4 core loop: stats and achievements for parts the rooftop doesn't have are left out (Config.CoreLoop.HideProfile)
+if Config.CoreLoop.Enabled then
+	local hide = {}
+	for _, key in Config.CoreLoop.HideProfile do
+		hide[key] = true
+	end
+	local function keep(list, field)
+		local out = {}
+		for _, row in list do
+			if not hide[row[field]] then
+				table.insert(out, row)
+			end
+		end
+		return out
+	end
+	PROFILE = table.clone(PROFILE)
+	PROFILE.Stats = keep(Config.Profile.Stats, "Key")
+	PROFILE.Achievements = keep(Config.Profile.Achievements, "Stat")
+end
 local player = Players.LocalPlayer
 local C = UiKit.C
 local make = UiKit.Make
@@ -194,7 +213,7 @@ function ProfileController:Start()
 	note.TextWrapped = true
 	note.TextXAlignment = Enum.TextXAlignment.Left
 	note.TextYAlignment = Enum.TextYAlignment.Top
-	local cardButton = RewardKit.Button(boosts, "COIN DETAILS", "Gold", 260, 52, 22)
+	local cardButton = RewardKit.Button(boosts, "COIN BOOSTS", "Gold", 260, 52, 22)
 	cardButton.Holder.Position = UDim2.fromOffset(412 + 70, BODY_H - 58)
 	cardButton.Activated:Connect(function()
 		if MultiplierController.SetOpen then
@@ -396,7 +415,7 @@ function ProfileController:Start()
 			local stat = statRow(ach.Stat)
 			local goalText = formatStat(shown.Goal, stat and stat.Format)
 			r.Tier.Text = if maxed
-				then "ALL TIERS!"
+				then "ALL DONE"
 				else ("TIER %s OF %s"):format(
 					ROMAN[done + 1] or tostring(done + 1),
 					ROMAN[#ach.Tiers] or tostring(#ach.Tiers)
@@ -405,7 +424,7 @@ function ProfileController:Start()
 			r.Fill.Size = UDim2.fromScale(share, 1)
 			r.Fill.BackgroundColor3 = if maxed then C.Gold elseif ready then C.Lime else C.Cyan
 			r.Count.Text = if maxed
-				then "COMPLETE!"
+				then "DONE"
 				else ("%s / %s"):format(formatStat(math.min(value, shown.Goal), stat and stat.Format), goalText)
 			r.Gem.Visible = not maxed
 			r.GemText.Visible = not maxed
@@ -430,7 +449,7 @@ function ProfileController:Start()
 					if state == "Maxed" then
 						local paint = RewardKit.Paint.Gold
 						r.Button:Paint(paint[1], paint[2])
-						r.Button:SetText("DONE!")
+						r.Button:SetText("DONE")
 					else
 						local paint = RewardKit.Paint.Grey
 						r.Button:Paint(paint[1], paint[2])
@@ -471,7 +490,7 @@ function ProfileController:Start()
 		local ok, result = pcall(claimRemote.InvokeServer, claimRemote, id)
 		claiming = false
 		if not ok or type(result) ~= "table" or not result.Ok then
-			toast(if ok and type(result) == "table" and result.Error then result.Error else "Something went wrong")
+			toast(if ok and type(result) == "table" and result.Error then result.Error else "That didn't work. Try again")
 			return
 		end
 		Sfx.Play("Reveal")
@@ -484,7 +503,7 @@ function ProfileController:Start()
 		CrateKit.Confetti(cover, pos.X / scaleNow - W / 2, pos.Y / scaleNow - H / 2, 18, 140, 0.5)
 		toast(
 			if (result.Gems or 0) > 0
-				then ("%s %s! +%d GEMS"):format(r.Ach.Name, ROMAN[result.Tier] or tostring(result.Tier), result.Gems)
+				then ("%s %s: +%d GEMS"):format(r.Ach.Name, ROMAN[result.Tier] or tostring(result.Tier), result.Gems)
 				else ("%s %s!"):format(r.Ach.Name, ROMAN[result.Tier] or tostring(result.Tier)),
 			if (result.Gems or 0) > 0 then "Gems" else nil,
 			nil,

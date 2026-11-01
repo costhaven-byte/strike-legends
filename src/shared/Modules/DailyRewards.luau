@@ -60,7 +60,11 @@ function DailyRewards.Resolve(day: number, progress: Progress)
 	if reward.Gems then
 		out.Gems = math.floor(reward.Gems * (row.Gems or 1) + 0.5)
 	end
-	if reward.Egg then
+	if reward.Egg and Config.CoreLoop.Enabled then
+		-- (core loop: no egg stand until Stage 5, so an egg day pays coins)
+		out.Coins = (out.Coins or 0)
+			+ CoreLadder.GiftCoins(Config.CoreLoop.Gifts.CrateMinutes, progress.BallStep, progress.BagLevel)
+	elseif reward.Egg then
 		out.Egg = if reward.Egg == "Zone" then row.Egg else reward.Egg
 	end
 	if reward.Crate and Config.CoreLoop.Enabled then

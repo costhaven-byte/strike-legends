@@ -85,10 +85,10 @@ end
 
 local function startTrial(player: Player)
 	if not RateLimit.Allow(player, "StartTrial") then
-		return { Ok = false, Error = "Slow down!" }
+		return { Ok = false, Error = "Too fast, wait a sec" }
 	end
 	if not PlayerDataService.IsLoaded(player) then
-		return { Ok = false, Error = "Still loading" }
+		return { Ok = false, Error = "Hang on, still loading" }
 	end
 	if attempts[player] then
 		return { Ok = false, Error = "Trial already running" }
@@ -103,7 +103,7 @@ local function startTrial(player: Player)
 	local trialType = TRIALS.Types[trial.Type]
 	if not trialType then
 		warn("[TrialService] Unknown trial type: " .. tostring(trial.Type))
-		return { Ok = false, Error = "Something went wrong" }
+		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 
 	nextAttemptId += 1

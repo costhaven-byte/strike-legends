@@ -27,7 +27,7 @@ local function rebirth(player: Player)
 		return { Ok = false, Error = "Rebirth is coming soon" }
 	end
 	if not PlayerDataService.IsLoaded(player) or not RateLimit.Allow(player, "Rebirth") then
-		return { Ok = false, Error = "Try again" }
+		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 	if player:GetAttribute("TrialState") == "Active" then
 		return { Ok = false, Error = "Finish your rank trial first" }
@@ -66,7 +66,7 @@ function RebirthService:Start()
 		local ok, result = pcall(rebirth, player)
 		if not ok then
 			warn("[RebirthService] " .. tostring(result))
-			return { Ok = false, Error = "Something went wrong" }
+			return { Ok = false, Error = "That didn't work. Try again" }
 		end
 		return result
 	end

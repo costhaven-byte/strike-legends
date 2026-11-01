@@ -18,7 +18,7 @@ local function setSign(lane: Model, ownerName: string?)
 	local label = sign and sign:FindFirstChild("Owner", true)
 	if label then
 		local number = lane.Name:match("%d+") or "?"
-		label.Text = ("LANE %s · %s"):format(number, ownerName or "OPEN")
+		label.Text = ("LANE %s · %s"):format(number, ownerName or "FREE")
 	end
 end
 

@@ -215,7 +215,7 @@ local function hatch(player: Player, eggId: any)
 		return { Ok = false, Error = "Coming soon" }
 	end
 	if not PlayerDataService.IsLoaded(player) then
-		return { Ok = false, Error = "Still loading" }
+		return { Ok = false, Error = "Hang on, still loading" }
 	end
 	if not atEggStand(player, egg.Id) then
 		return { Ok = false, Error = "Hatch it at the egg stand" }
@@ -230,7 +230,7 @@ local function hatch(player: Player, eggId: any)
 		return { Ok = false, Error = "Not enough coins" }
 	end
 	if not RateLimit.Allow(player, "HatchEgg") then
-		return { Ok = false, Error = "Slow down!" }
+		return { Ok = false, Error = "Too fast, wait a sec" }
 	end
 
 	-- TRIPLE HATCH game pass: 3 at once when the player can pay for all 3 (free hatches go one at a time)
@@ -381,14 +381,14 @@ end
 
 local function onHatch(player: Player, eggId: any)
 	if busy[player] then
-		return { Ok = false, Error = "Slow down!" }
+		return { Ok = false, Error = "Too fast, wait a sec" }
 	end
 	busy[player] = true
 	local ok, result = pcall(hatch, player, eggId)
 	busy[player] = nil
 	if not ok then
 		warn("[MascotService] Hatch failed: " .. tostring(result))
-		return { Ok = false, Error = "Something went wrong" }
+		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 	return result
 end
@@ -446,7 +446,7 @@ end
 -- Merged copies leave their slots, and the Shiny goes into a free slot if there is one.
 local function onMerge(player: Player, mascotId: any)
 	if not PlayerDataService.IsLoaded(player) or not RateLimit.Allow(player, "EquipMascot") then
-		return { Ok = false, Error = "Try again" }
+		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 	if not atFusionMachine(player) then
 		return { Ok = false, Error = "Fuse pets at the PET FUSION machine" }

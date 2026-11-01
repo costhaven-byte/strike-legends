@@ -2828,7 +2828,7 @@ function CrateController:Start()
 		local ok, result = pcall(openCrate.InvokeServer, openCrate, crate.Id)
 		if not ok or not result or not result.Ok then
 			busy = false
-			task.spawn(showToast, if ok and result and result.Error then result.Error else "Try again")
+			task.spawn(showToast, if ok and result and result.Error then result.Error else "That didn't work. Try again")
 			return
 		end
 		local wasZone = shopZone

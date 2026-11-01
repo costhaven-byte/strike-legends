@@ -282,7 +282,7 @@ function ThrowController:Start()
 	local holdBlock = HudKit.Block(button, { Name = "Kit", Paint = "Pink", Radius = 16, Lip = 6 })
 	holdBlock.Holder.Size = UDim2.fromScale(1, 1)
 	HudKit.Press(holdBlock, true, button)
-	local holdLabel = HudKit.Text(holdBlock.Face, "HOLD!", HudKit.Head, 28, HudKit.C.White, 3)
+	local holdLabel = HudKit.Text(holdBlock.Face, if CORE_ON then "THROW" else "HOLD!", HudKit.Head, 28, HudKit.C.White, 3)
 	holdLabel.Position = UDim2.fromOffset(0, 2)
 	hint.FontFace = HudKit.Body
 	hint.TextScaled = false
@@ -820,7 +820,7 @@ function ThrowController:Start()
 		elseif newState == "Ready" then
 			charge = 0
 			setHint(readyHint())
-			setButton("HOLD!", "Ready")
+			setButton(if CORE_ON then "THROW" else "HOLD!", "Ready")
 			drawBar(0, "Idle", false)
 			lockFeet(false)
 		elseif newState == "Charging" then

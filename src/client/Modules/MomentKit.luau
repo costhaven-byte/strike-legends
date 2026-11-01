@@ -721,7 +721,7 @@ function MomentKit.RankUp(): ((number, number?, number) -> (), Frame)
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		Padding = UDim.new(0, 14),
 	}, chips)
-	local continue = RewardKit.Button(pop, "CONTINUE", "Lime", 300, 72, 36)
+	local continue = RewardKit.Button(pop, "OK", "Lime", 300, 72, 36)
 	continue.Holder.Position = UDim2.fromOffset((W - 300) / 2, 616)
 
 	local function chip(order: number, text: string, color: Color3, icon: string?)

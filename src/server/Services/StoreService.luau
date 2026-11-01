@@ -25,6 +25,7 @@ local Calendar = require(Shared.Modules.Calendar)
 local Store = require(Shared.Modules.Store)
 local Balls = require(Shared.Modules.Balls)
 local Zones = require(Shared.Modules.Zones)
+local CoreLadder = require(Shared.Modules.CoreLadder)
 local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
 local CosmeticService = require(script.Parent.CosmeticService)
@@ -105,6 +106,15 @@ local function grantProduct(player: Player, product)
 	end
 	if product.Ball then
 		BallService.GiveBall(player, product.Ball)
+	end
+	if product.CoreCoinMinutes and Config.CoreLoop.Enabled then
+		local coins = CoreLadder.GiftCoins(
+			product.CoreCoinMinutes,
+			PlayerDataService.Get(player, "BallStep"),
+			PlayerDataService.Get(player, "BagLevel")
+		)
+		PlayerDataService.Add(player, "Coins", coins)
+		Analytics.Currency(player, "Coins", coins, "IAP", product.Id)
 	end
 	if product.Cosmetic then
 		CosmeticService.Give(player, product.Cosmetic) -- a look (Config.Cosmetics), worn straight away

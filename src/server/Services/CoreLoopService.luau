@@ -17,6 +17,7 @@ local CoreLadder = require(Shared.Modules.CoreLadder)
 local Currency = require(Shared.Modules.Currency)
 local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
+local LeaderboardService = require(script.Parent.LeaderboardService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
 local SessionLog = require(script.Parent.Parent.Modules.SessionLog)
@@ -63,14 +64,14 @@ end
 -- Buys the next step of the ladder. kind must be what the shop sells next (the client shows the same order).
 local function buy(player: Player, kind: any)
 	if not PlayerDataService.IsLoaded(player) then
-		return { Ok = false, Error = "Still loading" }
+		return { Ok = false, Error = "Hang on, still loading" }
 	end
 	if not RateLimit.Allow(player, "CoreBuy", 0.3) then
-		return { Ok = false, Error = "Slow down" }
+		return { Ok = false, Error = "Too fast, wait a sec" }
 	end
 	local want, step, price = nextBuy(player)
 	if not want then
-		return { Ok = false, Error = "You have everything" }
+		return { Ok = false, Error = "You've got everything" }
 	end
 	if kind ~= want then
 		return { Ok = false, Error = if want == "Bag" then "Get the next bag first" else "Get the next ball first" }
@@ -137,6 +138,7 @@ local function sell(player: Player)
 	PlayerDataService.Set(player, "Bag", Currency.Zero())
 	PlayerDataService.Add(player, "Coins", bag)
 	PlayerDataService.Add(player, "CoreSells", 1)
+	LeaderboardService.RecordThrow(player, 0, bag) -- (COINS THIS WEEK counts sold coins)
 	Analytics.Currency(player, "Coins", bag, "Gameplay", "Sell")
 	SessionLog.Sell(player, bag, PlayerDataService.Get(player, "CoreSells") or 1)
 	soldRemote:FireClient(player, bag)
@@ -384,15 +386,18 @@ local function buildShop()
 	model.Parent = roof
 end
 
--- The rooftop crate kiosk sold balls by luck, which the ladder replaces: kept, but moved out of the world
+-- The rooftop crate kiosk sold balls by luck, which the ladder replaces, and the egg stand needs rebirths (Stage 5):
+-- kept, but moved out of the world (Config.CoreLoop.HiddenStations)
 local function hideCrateShop()
 	local roof = Workspace:FindFirstChild(CORE.Folder)
-	local kiosk = roof and roof:FindFirstChild("CrateShop", true)
-	if kiosk then
-		local store = ServerStorage:FindFirstChild("CoreLoopHidden") or Instance.new("Folder")
-		store.Name = "CoreLoopHidden"
-		store.Parent = ServerStorage
-		kiosk.Parent = store
+	for _, name in CORE.HiddenStations do
+		local station = roof and roof:FindFirstChild(name, true)
+		if station then
+			local store = ServerStorage:FindFirstChild("CoreLoopHidden") or Instance.new("Folder")
+			store.Name = "CoreLoopHidden"
+			store.Parent = ServerStorage
+			station.Parent = store
+		end
 	end
 end
 
@@ -505,7 +510,7 @@ function CoreLoopService:Start()
 		local ok, result = pcall(buy, player, kind)
 		if not ok then
 			warn("[CoreLoopService] Buy failed: " .. tostring(result))
-			return { Ok = false, Error = "Something went wrong" }
+			return { Ok = false, Error = "That didn't work. Try again" }
 		end
 		return result
 	end

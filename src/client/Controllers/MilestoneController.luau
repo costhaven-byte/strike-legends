@@ -157,7 +157,7 @@ function MilestoneController:Start()
 		Position = UDim2.fromOffset(8, 4),
 		Size = UDim2.fromOffset(46, 46),
 	}, preview.Face)
-	label(preview.Face, "NEXT LEVEL REWARD", UiKit.Head, 13, C.Cyan, 1.5, 60, 6, TRACKER_W - 72, 16)
+	label(preview.Face, "NEXT LEVEL", UiKit.Head, 13, C.Cyan, 1.5, 60, 6, TRACKER_W - 72, 16)
 	local previewText = label(preview.Face, "", UiKit.Head, 18, C.White, 2, 60, 24, TRACKER_W - 72, 24)
 
 	-- ===== Payout popup (centre): rays, a gold title with the ink drop, one row per reward; taps pass through =====
@@ -331,9 +331,9 @@ function MilestoneController:Start()
 		showing = true
 		local data = table.remove(queue, 1)
 		popupTitle.Text = if data.Kind == "Level"
-			then ("LEVEL %d REWARD!"):format(data.Level)
+			then ("LEVEL %d REWARD"):format(data.Level)
 			elseif data.Kind == "Boss" then "BOSS DEFEATED!"
-			elseif data.Kind == "Away" then "WELCOME BACK!"
+			elseif data.Kind == "Away" then "WELCOME BACK"
 			else "CHALLENGE DONE!"
 		RewardKit.Fit(popupTitle, 46, POP_W - 40, 56)
 		for _, child in rows:GetChildren() do
@@ -407,7 +407,7 @@ function MilestoneController:Start()
 			TextTransparency = 1,
 			TextStrokeTransparency = 1,
 			TextStrokeColor3 = Color3.new(0, 0, 0),
-			Text = ("Welcome back! You earned %s coins while away"):format(Currency.Format(coins)),
+			Text = ("You made %s coins while you were gone"):format(Currency.Format(coins)),
 			ZIndex = 50,
 		}, toastGui)
 		make("UITextSizeConstraint", { MaxTextSize = 20, MinTextSize = 12 }, text)

@@ -61,7 +61,7 @@ end
 
 local function spin(player: Player)
 	if not SPIN.Enabled or not PlayerDataService.IsLoaded(player) then
-		return { Ok = false, Error = "Something went wrong" }
+		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 	local zonesOpen = PlayerDataService.Get(player, "ZonesOpen")
 	if not Zones.Unlocked(zonesOpen, SPIN.Zone) then
@@ -71,7 +71,7 @@ local function spin(player: Player)
 		return { Ok = false, Error = "Walk up to the wheel!" }
 	end
 	if not isReady(player) then
-		return { Ok = false, Error = "Come back tomorrow!" }
+		return { Ok = false, Error = "Already got today's. Come back tomorrow" }
 	end
 
 	local index = roll()
@@ -111,14 +111,14 @@ end
 
 local function onSpin(player: Player)
 	if busy[player] or not RateLimit.Allow(player, "SpinWheel") then
-		return { Ok = false, Error = "Slow down!" }
+		return { Ok = false, Error = "Too fast, wait a sec" }
 	end
 	busy[player] = true
 	local ok, result = pcall(spin, player)
 	busy[player] = nil
 	if not ok then
 		warn("[SpinService] Spin failed: " .. tostring(result))
-		return { Ok = false, Error = "Something went wrong" }
+		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 	return result
 end

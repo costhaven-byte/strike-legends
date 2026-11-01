@@ -919,8 +919,8 @@ local function buildSet(set, diamondTemplate: BasePart?): ((number) -> ())?
 					setmetatable({
 						Name = step.Name,
 						ShowTag = "BALL " .. i,
-						ShowStats = ("%d PINS A THROW"):format(step.Pins),
-						ShowLocked = "Buy it at the ball shop",
+						ShowStats = ("ABOUT %d PINS A THROW"):format(step.Pins),
+						ShowLocked = "In the shop",
 					}, { __index = ball })
 				)
 			end

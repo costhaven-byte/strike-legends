@@ -19,7 +19,7 @@ local RankUpController = {}
 
 local function announce(data)
 	local rank = Progression.GetRank(data.Rank)
-	local message = ("%s reached %s!"):format(data.DisplayName, rank.Name)
+	local message = ("%s is now %s"):format(data.DisplayName, rank.Name)
 
 	-- This place still uses the older chat system, which has its own way to post a system message
 	if TextChatService.ChatVersion == Enum.ChatVersion.LegacyChatService then

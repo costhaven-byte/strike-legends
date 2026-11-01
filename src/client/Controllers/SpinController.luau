@@ -244,7 +244,7 @@ local function build()
 	local promptPart = newPart(folder, "PromptSpot", Vector3.one, WHITE, base * CFrame.new(0, -R + 1, -3))
 	promptPart.Transparency = 1
 	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = "SPIN!"
+	prompt.ActionText = "SPIN"
 	prompt.ObjectText = "DAILY SPIN"
 	prompt.HoldDuration = 0
 	prompt.MaxActivationDistance = SPIN.PromptRange
@@ -336,18 +336,18 @@ function SpinController:Start()
 	local function refresh()
 		local ready = player:GetAttribute("SpinReady") == true
 		if spinning then
-			status.Text = "GOOD LUCK!"
+			status.Text = ""
 			status.TextColor3 = GOLD
 		elseif ready then
-			status.Text = "FREE SPIN READY!"
+			status.Text = "FREE SPIN READY"
 			status.TextColor3 = LIME
 		else
 			local left = Calendar.SecondsUntilNextDay(math.floor(Workspace:GetServerTimeNow()))
-			status.Text = "NEXT FREE SPIN IN " .. Calendar.FormatCountdown(left)
+			status.Text = "NEXT SPIN IN " .. Calendar.FormatCountdown(left)
 			status.TextColor3 = CYAN
 		end
 		prompt.Enabled = not spinning and (ready or testRemote ~= nil)
-		prompt.ActionText = if ready or not testRemote then "SPIN!" else "TEST: SPIN AGAIN"
+		prompt.ActionText = if ready or not testRemote then "SPIN" else "TEST: SPIN AGAIN"
 	end
 	player:GetAttributeChangedSignal("SpinReady"):Connect(refresh)
 
@@ -442,7 +442,7 @@ function SpinController:Start()
 				Name = if potion then potion.Name else "POTION",
 				NameColor = slice.Color,
 				Sub = if potion
-					then ("x%d %s FOR %d:00  ·  IN YOUR ITEMS"):format(
+					then ("x%d %s FOR %d MIN, IN YOUR ITEMS"):format(
 						potion.Multiplier,
 						if potion.Boost == "XP" then "XP" else "COINS",
 						potion.Minutes
@@ -497,7 +497,7 @@ function SpinController:Start()
 		if not okCall or type(result) ~= "table" or not result.Ok then
 			spinning = false
 			refresh()
-			showToast(if okCall and type(result) == "table" and result.Error then result.Error else "Something went wrong")
+			showToast(if okCall and type(result) == "table" and result.Error then result.Error else "That didn't work. Try again")
 			return
 		end
 		local slice = SPIN.Slices[result.Slice]

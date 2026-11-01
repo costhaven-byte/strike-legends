@@ -114,6 +114,14 @@ Config.CoreLoop = {
 	-- and ball are left out on purpose, Stage 2 prices balls on pins per throw)
 	PinValue = 1,
 	Multipliers = { "Mascots", "Potion", "Rebirth", "Friends", "Passes", "RobuxBoost" },
+	-- Stage 3c: XP per throw = pins x XpPerPin x these (MultiplierService.Xp names; zone and streak left out), so levels,
+	-- level rewards and ranks move again. Ranks come with levels: no rank trials in the core loop.
+	XpPerPin = 1,
+	XpMultipliers = { "Potion", "Rebirth", "Passes", "XpBoost" },
+	-- Stage 3c: profile stats (Config.Profile.Stats Key) and achievements (their Stat) the rooftop can't move; hidden
+	-- Rooftop stations moved to ServerStorage.CoreLoopHidden (Stage 2 crate kiosk; Stage 3c egg stand, pets wait for Stage 5)
+	HiddenStations = { "CrateShop", "EggPad" },
+	HideProfile = { "Perfects", "BestStreak", "Eggs", "Crates", "Pets", "Rebirths", "BossWins", "Zones" },
 	-- Hold to keep throwing: seconds between throws = Cooldown - ThrowSpeedLevel x CooldownStep, never below
 	-- CooldownFloor (raise the floor if frame time suffers). ThrowSpeedLevel is saved; the upgrade shop is Stage 2.
 	Cooldown = 1.0,
@@ -3132,10 +3140,10 @@ Config.JoinIntro = {
 	LightSettle = 0.6,
 	FadeIn = 0.6,
 	Tips = { -- one at random on the title card
-		"TIP: Only PERFECT throws strike. Let go in the gold!",
-		"TIP: Strikes in a row make a streak, and streaks pay more.",
-		"TIP: Open crates to find stronger balls.",
-		"TIP: Rebirth to open new zones and pets.",
+		"TIP: Hold the throw button. You don't have to tap.",
+		"TIP: A full bag pays nothing. Sell before it fills.",
+		"TIP: Every new ball knocks down more pins.",
+		"TIP: A bigger bag means fewer walks to sell.",
 	},
 	FieldOfView = 70,
 	GlideBack = 1.4, -- seconds for the camera to crane back down behind you at the end (or after SKIP)
@@ -4136,7 +4144,7 @@ Config.Monetization = {
 			PassId = 2058239949,
 			Robux = 399,
 			Name = "2X COINS + 2X XP",
-			Text = "Every throw pays double coins AND double XP. Stacks with potions.",
+			Text = "Double coins and XP. Stacks with potions.",
 			Coins = 2,
 			Xp = 2,
 		},
@@ -4145,7 +4153,7 @@ Config.Monetization = {
 			PassId = 2061664560,
 			Robux = 799,
 			Name = "VIP",
-			Text = "+25% coins and XP, 25 free gems every day, a gold ball trail and a [VIP] chat tag.",
+			Text = "+25% coins and XP, 25 gems a day, gold trail, [VIP] chat tag.",
 			Coins = 1.25,
 			Xp = 1.25,
 			DailyGems = 25,
@@ -4156,7 +4164,9 @@ Config.Monetization = {
 			PassId = 2058863916,
 			Robux = 499,
 			Name = "AUTO BOWL",
-			Text = "An AUTO button: the game bowls for you and every throw is a STRIKE. No PERFECT x2, no streak.",
+			Text = if Config.CoreLoop.Enabled
+				then "An AUTO button: it throws for you while you stand on your lane."
+				else "An AUTO button: the game bowls for you and every throw is a STRIKE. No PERFECT x2, no streak.",
 		},
 		{
 			Id = "Lucky",
@@ -4179,7 +4189,7 @@ Config.Monetization = {
 			PassId = 2062270254,
 			Robux = 399,
 			Name = "TRIPLE HATCH",
-			Text = "Open 3 eggs or crates at once (when you can pay for 3).",
+			Text = "Hatch 3 eggs at once (if you can pay for 3).",
 			Hatch = 3,
 		},
 		{
@@ -4187,7 +4197,7 @@ Config.Monetization = {
 			PassId = 2057495968,
 			Robux = 399,
 			Name = "+2 PET SLOTS",
-			Text = "Two more pets follow you.",
+			Text = "2 more pets out at once.",
 			PetSlots = 2,
 		},
 	},
@@ -4200,9 +4210,13 @@ Config.Monetization = {
 			ProductId = 3723601057,
 			Robux = 199,
 			Name = "STARTER PACK",
-			Text = "Dumpster Diamond (Rare ball), 30 min of 2X COINS and 100 gems. Once only.",
+			-- (Addendum 4 core loop: you only throw shop balls, so the pack's ball becomes CoreCoinMinutes of ladder income)
+			Text = if Config.CoreLoop.Enabled
+				then "10 minutes of coins, 30 min of 2X COINS and 100 gems. Once only."
+				else "Dumpster Diamond (Rare ball), 30 min of 2X COINS and 100 gems. Once only.",
 			Once = true,
-			Ball = "DumpsterDiamond",
+			Ball = if Config.CoreLoop.Enabled then nil else "DumpsterDiamond",
+			CoreCoinMinutes = 10,
 			Boost = { Potion = "CoinSmall", Minutes = 30 },
 			Gems = 100,
 		},
@@ -4222,7 +4236,7 @@ Config.Monetization = {
 			ProductId = 3723601922,
 			Robux = 49,
 			Name = "2X COINS - 15 MIN",
-			Text = "Double coins for 15 minutes of play.",
+			Text = "Double coins for 15 min of play.",
 			Boost = { Potion = "CoinSmall", Minutes = 15 },
 		},
 		{ Id = "GemsSmall", ProductId = 3723602054, Robux = 99, Name = "60 GEMS", Text = "A handful of gems.", Gems = 60 },
@@ -4296,10 +4310,10 @@ Config.Cosmetics = {
 			Colors = { Color3.fromRGB(255, 240, 160), Color3.fromRGB(255, 200, 40) } },
 		-- Strike banners
 		{ Id = "BoomBanner", Kind = "Banner", Name = "BOOM! BANNER", Gems = 40, Word = "BOOM!",
-			Text = "BOOM! flies over your pins on every strike.",
+			Text = "BOOM! pops over your pins on every clear.",
 			Colors = { Color3.fromRGB(255, 60, 60), Color3.fromRGB(255, 230, 60) } },
 		{ Id = "EasyBanner", Kind = "Banner", Name = "TOO EASY BANNER", Gems = 120, Word = "TOO EASY",
-			Text = "Let the whole alley know.",
+			Text = "A name tag over your head.",
 			Colors = { Color3.fromRGB(40, 140, 255), Color3.fromRGB(255, 255, 255) } },
 		{ Id = "CrushedBanner", Kind = "Banner", Name = "CRUSHED BANNER", Gems = 300, Word = "CRUSHED!",
 			Text = "Pink and purple, loud and proud.",
@@ -4481,10 +4495,10 @@ Config.Spin = {
 	-- with a bobbing arrow floats over the wheel, seen through walls from MarkerRange studs; the first time a session you
 	-- come within ToastRange studs, a toast says so.
 	Marker = true,
-	MarkerText = "FREE SPIN!",
+	MarkerText = "FREE SPIN",
 	MarkerRange = 160,
 	ToastRange = 90,
-	ToastText = "FREE DAILY SPIN! FOLLOW THE ARROW",
+	ToastText = "FREE SPIN READY. FOLLOW THE ARROW",
 	Zone = 2, -- you need this zone open to use it (it stands inside the zone 2 building anyway)
 	Center = Vector3.new(51, 10.5, -73.5), -- the middle of the wheel
 	Facing = Vector3.new(0, 0, 1), -- the wheel's face looks this way (south, back toward the lobby)
@@ -4534,21 +4548,23 @@ Config.Leaderboards = {
 	Boards = {
 		{
 			Id = "Pins",
-			Title = "MOST LIFETIME PINS",
+			Title = "MOST PINS EVER",
 			Column = "PINS",
 			Stat = "LifetimePins",
 			Store = "LB_LifetimePins",
 		},
 		{
-			Id = "Streak",
-			Title = "BEST STRIKE STREAK",
-			Column = "STREAK",
-			Stat = "BestStreak",
-			Store = "LB_BestStreak",
+			-- Stage 3c: the core loop has no strike streaks (was BEST STRIKE STREAK, BestStreak, LB_BestStreak)
+			Id = "Streak", -- (the Studio panel is still named Streak)
+			Title = "MOST COINS EARNED",
+			Column = "COINS",
+			ShowCoin = true,
+			Stat = "LifetimeCoins",
+			Store = "LB_LifetimeCoins",
 		},
 		{
 			Id = "Weekly",
-			Title = "WEEKLY COINS",
+			Title = "COINS THIS WEEK",
 			Column = "COINS",
 			ShowCoin = true, -- coin icon next to the top 3 scores and your own
 			Stat = "WeeklyCoins",
@@ -5206,11 +5222,11 @@ Config.Economy.Sim = {
 Config.Settings = {
 	Enabled = true,
 	Options = {
-		{ Key = "Sfx", Name = "SOUND EFFECTS", Info = "Strikes, pins, buttons and every other sound" },
-		{ Key = "Music", Name = "MUSIC", Info = "Zone music and background sounds", Kind = "Slider", Default = 0.7 },
-		{ Key = "Vfx", Name = "EFFECTS", Info = "Ball trails, sparks, confetti and fireworks" },
-		{ Key = "Shake", Name = "SCREEN SHAKE", Info = "The camera shaking on big hits" },
-		{ Key = "OthersVfx", Name = "OTHER PLAYERS' EFFECTS", Info = "Turn off for less lag in full servers" },
+		{ Key = "Sfx", Name = "SOUND EFFECTS", Info = "Pins, coins, buttons" },
+		{ Key = "Music", Name = "MUSIC", Info = "Music and rooftop sounds", Kind = "Slider", Default = 0.7 },
+		{ Key = "Vfx", Name = "EFFECTS", Info = "Trails, sparks, confetti" },
+		{ Key = "Shake", Name = "SCREEN SHAKE", Info = "Camera shake on big hits" },
+		{ Key = "OthersVfx", Name = "OTHER PLAYERS' EFFECTS", Info = "Off = less lag in busy servers" },
 	},
 	SliderStep = 0.05, -- sliders move in 5% steps
 }
@@ -5220,9 +5236,9 @@ Config.Profile = {
 	-- The STATS page, in order. Format: "Number" (1,234 / 12.5K), "Time" (seconds -> 3h 20m)
 	Stats = {
 		{ Key = "Throws", Name = "THROWS", Icon = "Ball", Format = "Number" },
-		{ Key = "Strikes", Name = "STRIKES", Icon = "Pin", Format = "Number" },
+		{ Key = "Strikes", Name = "FULL CLEARS", Icon = "Pin", Format = "Number" },
 		{ Key = "Perfects", Name = "PERFECTS", Icon = "Xp", Format = "Number" },
-		{ Key = "Pins", Name = "PINS KNOCKED", Icon = "Pin", Format = "Number" },
+		{ Key = "Pins", Name = "PINS DOWN", Icon = "Pin", Format = "Number" },
 		{ Key = "BestStreak", Name = "BEST STREAK", Icon = "Flame", Format = "Number" },
 		{ Key = "Coins", Name = "COINS EARNED", Icon = "Coin", Format = "Number" },
 		{ Key = "Eggs", Name = "EGGS HATCHED", Icon = "Paw", Format = "Number" },
@@ -5239,7 +5255,7 @@ Config.Profile = {
 	Achievements = {
 		{ Id = "Throws", Name = "BOWLER", Stat = "Throws", Text = "Throw %s balls", Tiers = {
 			{ Goal = 100, Gems = 5 }, { Goal = 1000, Gems = 10 }, { Goal = 5000, Gems = 15 }, { Goal = 25000, Gems = 20 } } },
-		{ Id = "Strikes", Name = "STRIKE MACHINE", Stat = "Strikes", Text = "Bowl %s strikes", Tiers = {
+		{ Id = "Strikes", Name = "STRIKE MACHINE", Stat = "Strikes", Text = "Clear the lane %s times", Tiers = {
 			{ Goal = 25, Gems = 5 }, { Goal = 250, Gems = 10 }, { Goal = 2500, Gems = 15 }, { Goal = 10000, Gems = 20 } } },
 		{ Id = "Perfects", Name = "PERFECTIONIST", Stat = "Perfects", Text = "Hit %s PERFECTS", Tiers = {
 			{ Goal = 10, Gems = 5 }, { Goal = 100, Gems = 10 }, { Goal = 1000, Gems = 15 }, { Goal = 5000, Gems = 20 } } },

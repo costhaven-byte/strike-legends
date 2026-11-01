@@ -90,7 +90,7 @@ local function onPlayerAdded(player: Player)
 	if not data then
 		if SaveStore.Enabled or not RunService:IsStudio() then
 			-- Never start from zero when we could not read the save: that would overwrite real progress.
-			player:Kick("We couldn't load your save right now. Please rejoin - your progress is safe.")
+			player:Kick("Couldn't load your save. Rejoin, your progress is safe.")
 			return
 		end
 		warn("[PlayerDataService] Saving is OFF in Studio. Publish the place and turn on Studio API access.")

@@ -394,7 +394,7 @@ function TrialController:Start()
 			Sfx.Play("StreakUp", 0.8, 1.2)
 			showBanner("TRIAL START!", "Gold", goal.Text)
 		else
-			info.Text = (if ok and result and result.Error then result.Error else "Try again"):upper()
+			info.Text = (if ok and result and result.Error then result.Error else "That didn't work. Try again"):upper()
 			info.TextColor3 = C.Red
 			start:Shake()
 		end

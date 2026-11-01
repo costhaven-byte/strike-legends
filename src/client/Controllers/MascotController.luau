@@ -256,11 +256,11 @@ function MascotController:Start()
 		SortOrder = Enum.SortOrder.LayoutOrder,
 	}, slotRow)
 	local sideX = PAGE_W - 6 - 12 - SIDE_W
-	local totalCaption = RewardKit.Label(stripFace, "TOTAL PET BONUS", UiKit.Body, 13, K.Muted, 0, sideX, 6, SIDE_W, 18)
+	local totalCaption = RewardKit.Label(stripFace, "PET BONUS", UiKit.Body, 13, K.Muted, 0, sideX, 6, SIDE_W, 18)
 	totalCaption.Name = "TotalCaption"
 	local slotsTitle = RewardKit.Label(stripFace, "x1 COINS", UiKit.Head, 28, K.Gold, 2.5, sideX, 22, SIDE_W, 32)
 	slotsTitle.Name = "Total"
-	local best = RewardKit.Button(stripFace, "EQUIP BEST", "Lime", SIDE_W, 46, 22)
+	local best = RewardKit.Button(stripFace, "BEST ONES OUT", "Lime", SIDE_W, 46, 22)
 	best.Holder.Name = "EquipBest"
 	best.Holder.Position = UDim2.fromOffset(sideX, 54)
 	local bestButton = best.Holder
@@ -288,7 +288,9 @@ function MascotController:Start()
 	make("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 2) }, grid)
 	local noPets, noPetsHead, noPetsLine = emptyNote(right, "Paw", GRID_Y, PAGE_H - GRID_Y)
 	noPetsHead.Text = "NO PETS YET"
-	noPetsLine.Text = "HATCH THE NEON EGG AT THE EGG STAND"
+	noPetsLine.Text = if Config.CoreLoop.Enabled
+		then "PETS COME IN A LATER UPDATE" -- (Addendum 4: the rooftop egg stand waits for Stage 5)
+		else "HATCH THE NEON EGG AT THE EGG STAND"
 
 	type Tile = {
 		Frame: GuiObject,
@@ -377,7 +379,7 @@ function MascotController:Start()
 			20
 		)
 		bonus.Name = "Bonus"
-		local equip = RewardKit.Button(face, "EQUIP", "Lime", FACE_W - 12, 40, 20)
+		local equip = RewardKit.Button(face, "USE", "Lime", FACE_W - 12, 40, 20)
 		equip.Holder.Name = "Equip"
 		equip.Holder.Position = UDim2.fromOffset(6, FACE_H - 40 - 8)
 		equip.Activated:Connect(function()
@@ -501,7 +503,7 @@ function MascotController:Start()
 			end
 		end
 		if currentTab == "Pets" then
-			subLine.Text = ("%d / %d EQUIPPED  ·  %d / %d PETS FOUND"):format(#list, slots, kinds, kindsTotal)
+			subLine.Text = ("%d / %d OUT  ·  %d / %d FOUND"):format(#list, slots, kinds, kindsTotal)
 		end
 		slotsTitle.Text = ("%s COINS"):format(Mascots.BonusText(bonus))
 
@@ -516,7 +518,7 @@ function MascotController:Start()
 				tile.Tick.Visible = inUse > 0
 				local equip = tile.Equip
 				if inUse < have and #list < slots then
-					equip:SetText("EQUIP")
+					equip:SetText("USE")
 					equip:Paint(K.Lime, K.LimeLip, K.White)
 				elseif inUse > 0 then
 					equip:SetText("UNEQUIP")
@@ -575,8 +577,12 @@ function MascotController:Start()
 		local unlocked, why = eggState()
 		local locked = not unlocked
 		petsButton.Visible = true
-		lockedHead.Text = ("PETS UNLOCK IN %s"):format(Zones.Name(EGG.Zone or 1):upper())
-		lockedLine.Text = ("%s  ·  THEN HATCH THE NEON EGG AT THE EGG STAND"):format(tostring(why))
+		lockedHead.Text = if Config.CoreLoop.Enabled
+			then "NO PETS YET"
+			else ("PETS UNLOCK IN %s"):format(Zones.Name(EGG.Zone or 1):upper())
+		lockedLine.Text = if Config.CoreLoop.Enabled
+			then "PETS COME IN A LATER UPDATE"
+			else ("%s  ·  THEN HATCH THE NEON EGG AT THE EGG STAND"):format(tostring(why))
 		if locked == petsLocked then
 			return
 		end
@@ -738,11 +744,11 @@ function MascotController:Start()
 	stamp.Holder.AnchorPoint = Vector2.new(0.5, 0.5)
 	stamp.Holder.Position = UDim2.fromOffset(PLATE_W - 40, 4)
 	stamp.Holder.ZIndex = 4
-	local revealNew = RewardKit.Label(stamp.Face, "NEW!", UiKit.Head, 26, K.White, 2.5, 6, 2, 116, 36)
+	local revealNew = RewardKit.Label(stamp.Face, "NEW", UiKit.Head, 26, K.White, 2.5, 6, 2, 116, 36)
 	make("UIPadding", { PaddingTop = UDim.new(0, 3) }, revealNew)
 	HudKit.Fit(revealNew, 26) -- batch C3: "AUTO-DELETED" shrinks to fit the stamp
 
-	local doneKit = RewardKit.Button(cardHolder, "OK!", "Lime", 200, 62, 30)
+	local doneKit = RewardKit.Button(cardHolder, "OK", "Lime", 200, 62, 30)
 	local doneButton = doneKit.Holder
 	doneButton.Name = "Done"
 	-- Polish P2: AUTO HATCH (stand hatches only): keeps hatching while you can pay; tap it again, CLOSE or the screen to stop
@@ -1141,7 +1147,7 @@ function MascotController:Start()
 			return -- closed while waiting (the pet is still yours)
 		end
 		if not mascot then
-			stopAuto(if ok and result and result.Error then result.Error else "Try again")
+			stopAuto(if ok and result and result.Error then result.Error else "That didn't work. Try again")
 			return
 		end
 		local camera = context.Camera
@@ -1232,7 +1238,7 @@ function MascotController:Start()
 		if ok and result and result.Ok then
 			play(result)
 		else
-			showToast(if ok and result and result.Error then result.Error else "Try again")
+			showToast(if ok and result and result.Error then result.Error else "That didn't work. Try again")
 		end
 		hatching = false
 	end
@@ -1247,7 +1253,7 @@ function MascotController:Start()
 		local ok, result = pcall(mergeRemote.InvokeServer, mergeRemote, mascot.Id)
 		local shiny = ok and result and result.Ok and Mascots.Get(result.MascotId)
 		if not shiny then
-			showToast(if ok and result and result.Error then result.Error else "Try again")
+			showToast(if ok and result and result.Error then result.Error else "That didn't work. Try again")
 			merging = false
 			return
 		end

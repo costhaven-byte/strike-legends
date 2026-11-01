@@ -180,7 +180,7 @@ function DailyRewardController:Start()
 	local win = RewardKit.Window(calGui, W, H)
 	local popup = win.Screen
 	local cover, closeButton =
-		RewardKit.Cover(win.Panel, W, H, "DAILY REWARD", "COME BACK EVERY DAY FOR BIGGER REWARDS", C.Gold)
+		RewardKit.Cover(win.Panel, W, H, "DAILY REWARD", "IT GETS BIGGER EACH DAY YOU COME BACK", C.Gold)
 
 	-- Where each day's tile goes (design px on the cover)
 	local function spot(day: number): (number, number, number, number)
@@ -268,7 +268,7 @@ function DailyRewardController:Start()
 			tag.Holder.Position = UDim2.fromOffset(x + w - 82, y - 10)
 			tag.Holder.Rotation = 10
 			tag.Holder.ZIndex = 6
-			RewardKit.Label(tag.Face, "BIG ONE!", UiKit.Head, 15, C.White, 2, 4, 2, 82, 20)
+			RewardKit.Label(tag.Face, "BEST ONE", UiKit.Head, 15, C.White, 2, 4, 2, 82, 20)
 		end
 		local overlay = UiKit.Make("Frame", {
 			Name = "Claimed",
@@ -327,12 +327,12 @@ function DailyRewardController:Start()
 		}
 	end
 
-	local claimButton = RewardKit.Button(cover, "CLAIM DAY 1!", "Lime", 400, 62, 30)
+	local claimButton = RewardKit.Button(cover, "CLAIM", "Lime", 400, 62, 30)
 	claimButton.Holder.Position = UDim2.fromOffset((W - 400) / 2, 392)
 	local graceDays = Config.Daily.GraceDays or 0
 	local grace = RewardKit.Label(
 		cover,
-		("MISS A DAY? YOU GET %d GRACE DAY%s"):format(graceDays, if graceDays == 1 then "" else "S"),
+		(if graceDays == 1 then "MISS A DAY AND YOU KEEP YOUR STREAK ONCE" else ("MISS A DAY AND YOU KEEP YOUR STREAK %d TIMES"):format(graceDays)),
 		UiKit.Body,
 		13,
 		C.Muted,
@@ -394,11 +394,11 @@ function DailyRewardController:Start()
 			claimButton:SetText(errorText:upper())
 		elseif claimable then
 			paintClaim("Lime")
-			claimButton:SetText("CLAIM DAY " .. nextDay .. "!")
+			claimButton:SetText("CLAIM")
 		else
 			paintClaim("Grey")
 			local wait = Calendar.SecondsUntilNextDay(Workspace:GetServerTimeNow())
-			claimButton:SetText("COME BACK IN " .. Calendar.FormatCountdown(wait):upper())
+			claimButton:SetText("NEXT ONE IN " .. Calendar.FormatCountdown(wait):upper())
 		end
 	end
 
@@ -441,7 +441,7 @@ function DailyRewardController:Start()
 		busy = true
 		local ok, result = pcall(claimDaily.InvokeServer, claimDaily)
 		if not ok or not result or not result.Ok then
-			errorText = if ok and result and result.Error then result.Error else "Try again"
+			errorText = if ok and result and result.Error then result.Error else "That didn't work. Try again"
 			refresh()
 			claimButton:Shake()
 			task.delay(1.5, function()

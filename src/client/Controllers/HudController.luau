@@ -154,7 +154,7 @@ local function bindIncome(bar: Frame)
 		if value == nil then
 			return
 		end
-		label.Text = "+" .. formatNumber(value) .. "/min"
+		label.Text = "+" .. formatNumber(value) .. " a min"
 		if value > last and last > 0 then
 			scale.Scale = 1.2
 			TweenService
@@ -243,7 +243,7 @@ local function bindRankBar(rankBar: Frame)
 		local text
 		if nextRank and xp >= Progression.TierXP(index + 1) then
 			local state = player:GetAttribute("TrialState")
-			text = ("LV %d %s  ·  XP FULL  ·  %s"):format(
+			text = ("LV %d %s  ·  XP MAXED  ·  %s"):format(
 				level,
 				rank.Name:upper(),
 				if state == "Active"
@@ -268,7 +268,7 @@ local function bindRankBar(rankBar: Frame)
 			showingLevelUp = true
 			fillBlock:Paint("Gold")
 			fill.Size = UDim2.fromScale(1, 1)
-			label.Text = ("LEVEL UP! LV %d"):format(level)
+			label.Text = ("LEVEL %d!"):format(level)
 			HudKit.Fit(label, textSize + 2)
 			label.Position = labelHome + UDim2.fromOffset(0, 10)
 			label.TextTransparency = 1
@@ -427,7 +427,8 @@ local function bindStreak(panel: Frame)
 	local losing = false
 	local function fit()
 		local streak = player:GetAttribute("Streak") or 0
-		panel.Visible = not (Config.Ui.PhoneMenu.HideZeroStreak and HudKit.Phone() and streak == 0 and not losing)
+		panel.Visible = not Config.CoreLoop.Enabled -- (Addendum 4 core loop: no strike streaks)
+			and not (Config.Ui.PhoneMenu.HideZeroStreak and HudKit.Phone() and streak == 0 and not losing)
 	end
 	HudKit.OnLayout(fit)
 	local function show(streak: number)
@@ -441,7 +442,7 @@ local function bindStreak(panel: Frame)
 		local coinMultiplier = Progression.GetStreakMultiplier(streak)
 		local xpMultiplier = Progression.GetStreakXpMultiplier(streak)
 		multiplier.Text = if coinMultiplier == xpMultiplier
-			then ("x%g COINS & XP"):format(coinMultiplier)
+			then ("x%g COINS, x%g XP"):format(coinMultiplier, coinMultiplier)
 			else ("x%g COINS · x%g XP"):format(coinMultiplier, xpMultiplier)
 	end
 

@@ -69,7 +69,7 @@ local function setupPanel(board, panel: Frame, data: Folder, meColor: Color3)
 		end)
 		if not ok or not decoded then
 			loading.Visible = true
-			loading.Text = if raw then "Leaderboard unavailable" else "Loading..."
+			loading.Text = if raw then "Leaderboard is down right now" else "Loading..."
 			return
 		end
 		loading.Visible = false

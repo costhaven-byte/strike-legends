@@ -154,7 +154,7 @@ function CoreShopController:Start()
 	titleHolder.Size = UDim2.fromOffset(220, 52)
 	titleHolder.Position = UDim2.fromOffset(18, -26)
 	titleHolder.Rotation = -2
-	text(titleFace, "Shop", { Size = UDim2.new(1, -16, 0.8, 0), Position = UDim2.new(0, 8, 0.1, 0) })
+	text(titleFace, "Balls & Bags", { Size = UDim2.new(1, -16, 0.8, 0), Position = UDim2.new(0, 8, 0.1, 0) })
 	local closeHolder, closeFace = plate(face, "Close", CORAL, 8, 3)
 	closeHolder.Size = UDim2.fromOffset(48, 48)
 	closeHolder.Position = UDim2.new(1, -30, 0, -18)
@@ -279,10 +279,10 @@ function CoreShopController:Start()
 			ballCard.Header.Text = ("Ball %d of %d"):format(nextBall, #CORE.Balls)
 			ballCard.Name.Text = entry.Name
 			ballDot(ballCard.Art, entry.Ball, UDim2.fromScale(0.95, 0.95), UDim2.fromScale(0.5, 0.5))
-			ballCard.Line.Text = ("About %d pins a throw (now %d)"):format(entry.Pins, CORE.Balls[ballStep].Pins)
+			ballCard.Line.Text = ("About %d pins a throw (you get %d now)"):format(entry.Pins, CORE.Balls[ballStep].Pins)
 		else
 			local entry = CORE.Balls[ballStep]
-			ballCard.Header.Text = "Your ball"
+			ballCard.Header.Text = "Using it"
 			ballCard.Name.Text = entry.Name
 			ballDot(ballCard.Art, entry.Ball, UDim2.fromScale(0.95, 0.95), UDim2.fromScale(0.5, 0.5))
 			ballCard.Line.Text = ("About %d pins a throw"):format(entry.Pins)
@@ -293,11 +293,11 @@ function CoreShopController:Start()
 		if nextBag <= #CORE.BagSizes then
 			bagCard.Header.Text = ("Bag %d of %d"):format(nextBag, #CORE.BagSizes)
 			bagCard.Name.Text = ("Holds %s coins"):format(Currency.Format(CORE.BagSizes[nextBag]))
-			bagCard.Line.Text = ("Yours holds %s"):format(Currency.Format(CORE.BagSizes[bagLevel]))
+			bagCard.Line.Text = ("Yours: %s"):format(Currency.Format(CORE.BagSizes[bagLevel]))
 		else
-			bagCard.Header.Text = "Your bag"
+			bagCard.Header.Text = "Using it"
 			bagCard.Name.Text = ("Holds %s coins"):format(Currency.Format(CORE.BagSizes[bagLevel]))
-			bagCard.Line.Text = "Biggest bag"
+			bagCard.Line.Text = "Biggest bag there is"
 		end
 
 		-- Buttons: only the next step can be bought; the other card says what comes first
@@ -305,7 +305,7 @@ function CoreShopController:Start()
 			local c, cardKind, left = pair[1], pair[2], pair[3]
 			if not left then
 				c.ButtonFace.BackgroundColor3 = GREY
-				c.ButtonText.Text = "Got it all"
+				c.ButtonText.Text = "You've got everything"
 				c.Coin.Visible = false
 			elseif kind == cardKind then
 				local can = coins >= price

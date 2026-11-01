@@ -137,7 +137,7 @@ local function buildNote(): (string, string, Color3) -> ()
 		AnchorPoint = Vector2.new(0, 0.5),
 		Position = UDim2.new(0, 12, 0.5, 0),
 	})
-	local small = UiKit.Text(face, "YOU CAN NOW AFFORD", UiKit.Head, 17, C.Gold, 2)
+	local small = UiKit.Text(face, "YOU CAN BUY", UiKit.Head, 17, C.Gold, 2)
 	small.TextXAlignment = Enum.TextXAlignment.Left
 	small.Position = UDim2.fromOffset(68, 6)
 	small.Size = UDim2.new(1, -84, 0, 20)

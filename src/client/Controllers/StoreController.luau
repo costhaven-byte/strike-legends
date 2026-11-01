@@ -88,7 +88,7 @@ local ICONS = {
 	GemsSmall = "Gems60",
 	GemsMedium = "Gems300",
 	GemsLarge = "Gems1500",
-	StarterPack = "BallDumpster",
+	StarterPack = if Config.CoreLoop.Enabled then "Coin" else "BallDumpster", -- (core loop: the pack gives coins, no ball)
 }
 local GEM_ICON_SIZE = { GemsSmall = 56, GemsMedium = 68, GemsLarge = 84 }
 
@@ -936,7 +936,7 @@ function StoreController:Start()
 		if kind == "Ladder" then
 			local coins = item.Ladder == "Coins"
 			accentColor = if coins then C.Gold else C.Cyan
-			labelText, labelColor = "FOREVER - DOUBLES EVERY BUY", C.Pink
+			labelText, labelColor = "FOREVER. GOES UP EACH BUY", C.Pink
 			name = if coins then "COIN BOOST" else "XP BOOST"
 			iconName, iconSize = if coins then "BoostCoin" else "BoostXp", 58
 		elseif kind == "Pass" then
@@ -1095,8 +1095,8 @@ function StoreController:Start()
 				local now = Store.MultText(Store.LadderMult(item.Ladder, level))
 				accent.Text = if step then now .. " > " .. Store.MultText(step.Mult or 1) else now
 				desc.Text = if step
-					then ("Boosts your %s forever. Step %d of %d."):format(what, step.Step, #dotFrames)
-					else ("Your %s boost is at the top: %s. All done!"):format(what, now)
+					then ("Step %d of %d. Lasts forever."):format(step.Step, #dotFrames)
+					else ("%s boost maxed at %s."):format(what, now)
 				for i, dot in dotFrames do
 					local bought, nextOne = i <= level, i == level + 1
 					dot.Frame.BackgroundColor3 = if bought then accentColor else C.Card
@@ -1220,7 +1220,7 @@ function StoreController:Start()
 			Rotation = -14,
 			ImageTransparency = 0.86,
 		})
-		image(art, "BallDumpster", 130, {
+		image(art, if Config.CoreLoop.Enabled then "Coin" else "BallDumpster", 130, {
 			AnchorPoint = Vector2.new(1, 0),
 			Position = UDim2.new(1, 28, 0, -30),
 			Rotation = 22,
@@ -1261,7 +1261,7 @@ function StoreController:Start()
 		stroke(disc, C.Cyan, 3, 0.67)
 		image(
 			disc,
-			"BallDumpster",
+			if Config.CoreLoop.Enabled then "Coin" else "BallDumpster",
 			96,
 			{ AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), ZIndex = 5 }
 		)
@@ -1274,12 +1274,12 @@ function StoreController:Start()
 		}, body)
 		local chip = make("Frame", {
 			BackgroundColor3 = C.Lime,
-			Size = UDim2.fromOffset(textWidth("ONE TIME ONLY", 10, Enum.Font.GothamBlack) + 20, 18),
+			Size = UDim2.fromOffset(textWidth("ONCE ONLY", 10, Enum.Font.GothamBlack) + 20, 18),
 			ZIndex = 4,
 		}, right)
 		corner(chip, 8)
 		innerRing(chip, C.Ink, 2, 0, 8, 5)
-		local chipText = label(chip, "ONE TIME ONLY", BLACK, 10, C.Ink)
+		local chipText = label(chip, "ONCE ONLY", BLACK, 10, C.Ink)
 		chipText.Position = UDim2.fromOffset(0, 1)
 		local title = label(right, item.Name, HEAD, 30, C.Lime, 7)
 		title.TextXAlignment = Enum.TextXAlignment.Left
@@ -1536,7 +1536,7 @@ function StoreController:Start()
 		local function cardHeight(kind: string, item, width: number): number
 			local text = item.Text or ""
 			if kind == "Ladder" then
-				text = "Your coins boost is at the top: x2. All done!"
+				text = "Coins boost maxed at x2."
 			end
 			return math.max(150, 10 + 24 + 58 + 6 + textHeight(text, 12, width - 24) + 6 + 48 + 12)
 		end
@@ -1756,7 +1756,11 @@ function StoreController:Start()
 	}, popupBody)
 	local tileRefs = {}
 	for i, tile in
-		{ { "BallDumpster", "DUMPSTER DIAMOND" }, { "Boost15", "30 MIN 2X COINS" }, { "Gems60", "100 GEMS" } }
+		{
+			if Config.CoreLoop.Enabled then { "Coin", "10 MIN OF COINS" } else { "BallDumpster", "DUMPSTER DIAMOND" },
+			{ "Boost15", "30 MIN 2X COINS" },
+			{ "Gems60", "100 GEMS" },
+		}
 	do
 		local frame = make("Frame", {
 			BackgroundColor3 = C.Card,
@@ -2095,7 +2099,7 @@ function StoreController:Start()
 			else tostring(data.Title or "")
 		wallIcon.Image = AssetSlots.Image(if pass then (ICONS[pass.Id] or "Pass2x") else "BoostCoin")
 		wallName.Text = data.OfferName or (if pass then pass.Name:upper() else "COIN BOOST")
-		wallLine.Text = if pass then "Gets you there twice as fast. Forever." else "Gets you there faster. Forever."
+		wallLine.Text = if pass then "x2 coins, forever." else "Gets you there faster. Forever."
 		setWallPrice("Robux", formatRobux(robux))
 		fillWin = wallWin
 		return true
@@ -2303,7 +2307,7 @@ function StoreController:Start()
 		Position = UDim2.fromScale(0.5, 0.5),
 		ZIndex = 5,
 	})
-	local toastTitle = label(toastBody, "THANK YOU!", HEAD, 24, C.Lime, 6)
+	local toastTitle = label(toastBody, "THANKS!", HEAD, 24, C.Lime, 6)
 	toastTitle.TextXAlignment = Enum.TextXAlignment.Left
 	toastTitle.Position = UDim2.fromOffset(66, 10)
 	toastTitle.Size = UDim2.new(1, -80, 0, 24)
@@ -2414,7 +2418,7 @@ function StoreController:Start()
 			elseif string.sub(id, 1, 8) == "XpLadder" then "BoostXp"
 			else ICONS[id] or "Gift"
 		toastIcon.Image = AssetSlots.Image(iconName)
-		toastTitle.Text = if vip then tostring(info.Title) else "THANK YOU!"
+		toastTitle.Text = if vip then tostring(info.Title) else "THANKS!"
 		toastTitle.TextColor3 = if vip then C.Gold else C.Lime
 		toastRing.Color = if vip then C.Gold else C.Lime
 		toastLine.Text = tostring(info.Text or "")

@@ -883,6 +883,9 @@ local function watchBoard(lane: Model)
 	if not streakLabel or not rankLabel then
 		return
 	end
+	if Config.CoreLoop.Enabled and streakLabel.Parent and streakLabel.Parent:IsA("GuiObject") then
+		streakLabel.Parent.Visible = false -- (Addendum 4 core loop: no strike streaks)
+	end
 	local connections = {}
 	local function refresh(owner: Player?)
 		if not owner then

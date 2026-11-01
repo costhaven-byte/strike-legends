@@ -435,6 +435,12 @@ local function coreThrow(player: Player)
 	task.delay(result.RollTime, function()
 		if player.Parent then
 			LeaderboardService.RecordThrow(player, result.Count, 0)
+			local xpAll = MultiplierService.Xp(player, 0, LaneUtil.ZoneOf(lane))
+			local xpMultiplier = 1
+			for _, name in CORE.XpMultipliers do
+				xpMultiplier *= xpAll[name] or 1
+			end
+			ProgressionService.AddXP(player, math.floor(result.Count * CORE.XpPerPin * xpMultiplier + 0.5))
 			PlayerDataService.Add(player, "TotalThrows", 1)
 			if clear then
 				PlayerDataService.Add(player, "TotalStrikes", 1)
@@ -493,7 +499,10 @@ local function startAutoBowl(remotes: Folder)
 						and root
 						and LaneUtil.IsInThrowZone(lane, root.Position)
 						and Workspace:GetServerTimeNow() >= (lane:GetAttribute("ReadyAt") or 0)
-					if ready then
+					if ready and CORE.Enabled then
+						-- (Addendum 4 core loop, Stage 3c: AUTO keeps throwing at your normal speed; you still walk to sell)
+						task.spawn(coreThrow, player)
+					elseif ready then
 						autoNext[player] = now
 							+ (if Store.Owns(player, "AutoBowl") then AUTO.Interval else AUTO.FreeInterval)
 						task.spawn(

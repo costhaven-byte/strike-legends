@@ -292,7 +292,7 @@ end
 function PotionController.Use(potion)
 	local ok, result = pcall(useRemote.InvokeServer, useRemote, potion.Id)
 	if not ok or type(result) ~= "table" or not result.Ok then
-		showToast(if ok and type(result) == "table" and result.Error then result.Error else "Something went wrong")
+		showToast(if ok and type(result) == "table" and result.Error then result.Error else "That didn't work. Try again")
 		return
 	end
 	Sfx.Play("PowerUp")
@@ -316,7 +316,7 @@ function PotionController.BuildItems(page: Frame, toast: (string) -> (), w: numb
 	local C = RewardKit.C
 	local hint = RewardKit.Label(
 		page,
-		"DRINK ONE FOR A BOOST. TIMERS ONLY RUN WHILE YOU PLAY.",
+		"TIMERS ONLY RUN WHILE YOU PLAY",
 		UiKit.Body,
 		15,
 		C.Label,
