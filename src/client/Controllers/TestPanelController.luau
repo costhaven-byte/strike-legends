@@ -42,6 +42,7 @@ local SECTIONS = {
 			{ Text = "READY TO REBIRTH", Action = "Rebirth" },
 			{ Text = "FREE CRATE", Action = "Crate" },
 			{ Text = "FREE EGG", Action = "Egg" },
+			{ Text = "GIVE PET", Action = "Pet" }, -- (Addendum 5 B1: the next pet in the list, with its stats)
 			{ Text = "ALL POTIONS", Action = "Potions" },
 		},
 	},

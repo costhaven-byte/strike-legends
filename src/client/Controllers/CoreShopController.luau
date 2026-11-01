@@ -5,6 +5,7 @@
 -- Simulator shop look on the sunny kit (Modules/SunKit): rarity-coloured rows, 3D balls, chunky buy buttons that
 -- squash and bounce, a coin pill that counts up, confetti on a buy.
 -- The server (CoreLoopService, CoreBuy remote) checks the booth distance, the ladder and the coins; this only shows them.
+-- Addendum 5 B1: a PET SLOTS row under the two lists buys the next pet equip slot (Config.PetStats.SlotPrices).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -18,6 +19,7 @@ local AssetSlots = require(Shared.AssetSlots)
 local Balls = require(Shared.Modules.Balls)
 local CoreLadder = require(Shared.Modules.CoreLadder)
 local Currency = require(Shared.Modules.Currency)
+local Mascots = require(Shared.Modules.Mascots)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local BallView = require(Modules.BallView)
 local Sfx = require(Modules.Sfx)
@@ -55,7 +57,10 @@ local RARITY: { [string]: Color3 } = {}
 for _, row in Config.Rarities do
 	RARITY[row.Name] = row.Color
 end
-local function rarityOf(_kind: string, step: number): string
+local function rarityOf(kind: string, step: number): string
+	if kind == "PetSlot" then
+		return "Epic" -- (purple, like the PETS button)
+	end
 	local entry = CORE.Balls[math.clamp(step, 1, #CORE.Balls)]
 	return entry.Rarity or "Common"
 end
@@ -231,7 +236,7 @@ function CoreShopController:Start()
 	-- Two columns: BALLS (pins a throw) and BAGS (how many coins fit). Each is its own ladder.
 	local function column(name: string, title: string, sub: string, x: number)
 		local holder, colFace = plate(inner, name, CARD, 10, 4)
-		holder.Size = UDim2.new(0.5, -34, 1, -150)
+		holder.Size = UDim2.new(0.5, -34, 1, if Mascots.StatsOn() then -222 else -150) -- (B1: room for PET SLOTS)
 		holder.Position = UDim2.new(x, if x == 0 then 24 else 10, 0, 72)
 		text(colFace, title, {
 			Size = UDim2.new(0.5, 0, 0, 30),
@@ -346,13 +351,14 @@ function CoreShopController:Start()
 			new("ImageLabel", {
 				Name = "Bag",
 				BackgroundTransparency = 1,
-				Image = AssetSlots.Image("StoreBag"),
+				Image = AssetSlots.Image(if kind == "PetSlot" then "HudPaw" else "StoreBag"),
 				ScaleType = Enum.ScaleType.Fit,
 				Size = UDim2.fromScale(0.92, 0.92),
 				Position = UDim2.fromScale(0.04, 0.02),
 				ZIndex = 2,
 			}, icon)
 			text(icon, tostring(step), {
+				Name = "Number",
 				Size = UDim2.fromScale(0.5, 0.44),
 				Position = UDim2.fromScale(0.5, 0.56),
 				ZIndex = 3,
@@ -435,6 +441,18 @@ function CoreShopController:Start()
 	for step = 1, #CORE.BagSizes do
 		rows.Bag[step] = makeRow(bagList, "Bag", step)
 	end
+	-- Addendum 5 B1: one PET SLOTS row across the window, under the two lists (it always shows the next slot)
+	local petRow: Row? = nil
+	if Mascots.StatsOn() then
+		local petHolder = new("Frame", {
+			Name = "PetSlots",
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, -60, 0, ROW - 4),
+			Position = UDim2.new(0, 30, 1, -142),
+		}, inner)
+		petRow = makeRow(petHolder :: any, "PetSlot", 1)
+		rows.PetSlot = { petRow :: Row }
+	end
 
 	-- Footer: GO TO SHOP (price-list mode) or a short hint (at the booth)
 	local goHolder, goFace = plate(inner, "GoToShop", SKY, 14, 5)
@@ -516,6 +534,39 @@ function CoreShopController:Start()
 				row.Face.BackgroundColor3 = if state == "Using" then Color3.fromRGB(226, 243, 255) else PAPER
 			end
 		end
+		if petRow then
+			-- pet slots: start slots + bought (old saves' kept slots count as bought)
+			local start = Config.Economy.Mascots.StartSlots
+			local bought = math.max(player:GetAttribute("PetSlotsBought") or 0, (player:GetAttribute("PetSlotsKept") or 0) - start)
+			local price = Mascots.NextSlotPrice(bought)
+			local have = start + bought
+			local number = petRow.Icon:FindFirstChild("Number") :: TextLabel?
+			if number then
+				number.Text = tostring(if price then have + 1 else have)
+			end
+			local state
+			if not price then
+				state = "Owned"
+				petRow.Name.Text = "Pet slots"
+				petRow.Line.Text = ("All %d slots bought: %d pets out at once"):format(have, have)
+				paintBadge(petRow, CARD, "All yours", false)
+			else
+				petRow.Name.Text = ("Pet slot %d"):format(have + 1)
+				petRow.Line.Text = ("One more pet out at once (%d now)"):format(have)
+				local can = coins >= price
+				if atShop then
+					state = if can then "Buy" else "Saving"
+					paintBadge(petRow, if can then GREEN else GREY, Currency.Format(price), true)
+				else
+					state = "Next"
+					paintBadge(petRow, GOLD, Currency.Format(price), true)
+				end
+			end
+			petRow.State = state
+			local stroke = petRow.Face:FindFirstChildOfClass("UIStroke") :: UIStroke
+			stroke.Color = if state ~= "Owned" then K.Coral else INK
+			stroke.Thickness = if state ~= "Owned" then 4 else 3
+		end
 		if atShop then
 			stripText.Text = "You're at the shop. Tap a price to buy"
 			goHolder.Visible = false
@@ -538,7 +589,7 @@ function CoreShopController:Start()
 		end
 	end
 
-	for _, key in { "BallStep", "BagLevel", "Coins" } do
+	for _, key in { "BallStep", "BagLevel", "Coins", "PetSlotsBought", "PetSlotsKept" } do
 		player:GetAttributeChangedSignal(key):Connect(function()
 			if key == "Coins" then
 				countCoins()

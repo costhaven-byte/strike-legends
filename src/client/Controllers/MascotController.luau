@@ -6,6 +6,8 @@
 -- at zone 3's PET FUSION machine (the fusion window below). Pet bonuses show as multipliers (x2.5, Mascots.BonusText).
 -- Owner 2026-10-22: the panel has two tabs, PETS and ITEMS (the potions, PotionController.BuildItems). The button is
 -- always open; before the pets' zone the PETS tab shows where pets unlock and the button opens on ITEMS.
+-- Addendum 5 B1: pets show their stat boosts (Config.PetStats: "+50% COINS", "+20% PINS", one colour per stat) on
+-- every card, the slot strip shows the equipped total of all four stats, and the panel is open in the core loop.
 -- Built in code (not in Studio), so it lives in git. The server rolls every hatch (MascotService); this only shows it.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -261,13 +263,36 @@ function MascotController:Start()
 	totalCaption.Name = "TotalCaption"
 	local slotsTitle = RewardKit.Label(stripFace, "x1 COINS", UiKit.Head, 28, K.Gold, 2.5, sideX, 22, SIDE_W, 32)
 	slotsTitle.Name = "Total"
+	-- B1: the four stat totals in a 2 x 2 grid instead (+0% ones dim)
+	local totalLabels: { [string]: TextLabel } = {}
+	if Mascots.StatsOn() then
+		totalCaption.Text = "PET BOOSTS"
+		slotsTitle.Visible = false
+		for i, name in Config.PetStats.Order do
+			local col, rowIndex = (i - 1) % 2, math.floor((i - 1) / 2)
+			local label = RewardKit.Label(
+				stripFace,
+				"",
+				UiKit.Num,
+				14,
+				Config.PetStats.Types[name].Color,
+				1.5,
+				sideX + col * (SIDE_W / 2),
+				22 + rowIndex * 16,
+				SIDE_W / 2 - 4,
+				16
+			)
+			label.Name = "Total" .. name
+			totalLabels[name] = label
+		end
+	end
 	local best = RewardKit.Button(stripFace, "BEST ONES OUT", "Lime", SIDE_W, 46, 22)
 	best.Holder.Name = "EquipBest"
 	best.Holder.Position = UDim2.fromOffset(sideX, 54)
 	local bestButton = best.Holder
 
 	-- The pets you own (the others stay hidden)
-	local CARD_W, CARD_H, CARD_GAP = 142, 196, 12
+	local CARD_W, CARD_H, CARD_GAP = 142, if Mascots.StatsOn() then 214 else 196, 12 -- (B1: two stat lines)
 	local GRID_Y = STRIP_H + 12
 	local grid = make("ScrollingFrame", {
 		Name = "Grid",
@@ -289,7 +314,10 @@ function MascotController:Start()
 	make("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 2) }, grid)
 	local noPets, noPetsHead, noPetsLine = emptyNote(right, "Paw", GRID_Y, PAGE_H - GRID_Y)
 	noPetsHead.Text = "NO PETS YET"
-	noPetsLine.Text = if Config.CoreLoop.Enabled
+	noPetsLine.Text = if Mascots.StatsOn()
+		then "PETS BOOST YOUR COINS, PINS, BAG AND SPEED. EGGS ARE COMING TO THE SHOP"
+		elseif
+			Config.CoreLoop.Enabled
 		then "PETS COME IN A LATER UPDATE" -- (Addendum 4: the rooftop egg stand waits for Stage 5)
 		else "HATCH THE NEON EGG AT THE EGG STAND"
 
@@ -367,19 +395,27 @@ function MascotController:Start()
 		local name =
 			RewardKit.Label(face, string.upper(mascot.Name), UiKit.Head, 17, K.White, 2, 6, 94, FACE_W - 12, 22)
 		name.Name = "Name"
-		local bonus = RewardKit.Label(
-			face,
-			Mascots.BonusText(Mascots.Bonus(mascot)) .. " COINS",
-			UiKit.Num,
-			17,
-			K.Lime,
-			1.5,
-			6,
-			116,
-			FACE_W - 12,
-			20
-		)
+		local bonus =
+			RewardKit.Label(face, Mascots.BoostText(mascot), UiKit.Num, 17, K.Lime, 1.5, 6, 116, FACE_W - 12, 20)
 		bonus.Name = "Bonus"
+		-- B1: one line per stat in its colour ("+50% COINS" gold, "+20% PINS" pink, bag blue, speed green)
+		if Mascots.StatsOn() then
+			local lines = Mascots.StatLines(Mascots.Stats(mascot))
+			for i, line in lines do
+				local label = if i == 1
+					then bonus
+					else RewardKit.Label(face, "", UiKit.Num, 16, K.Lime, 1.5, 6, 0, FACE_W - 12, 19)
+				label.Name = if i == 1 then "Bonus" else "Bonus" .. i
+				label.Text = string.upper(line.Text)
+				label.TextColor3 = line.Color
+				label.Position = UDim2.fromOffset(6, 115 + (i - 1) * 19)
+				label.Size = UDim2.fromOffset(FACE_W - 12, 19)
+			end
+			if #lines == 0 then
+				bonus.Text = "NO BOOST"
+				bonus.TextColor3 = K.Muted
+			end
+		end
 		local equip = RewardKit.Button(face, "USE", "Lime", FACE_W - 12, 40, 20)
 		equip.Holder.Name = "Equip"
 		equip.Holder.Position = UDim2.fromOffset(6, FACE_H - 40 - 8)
@@ -507,6 +543,17 @@ function MascotController:Start()
 			subLine.Text = ("%d / %d OUT  ·  %d / %d FOUND"):format(#list, slots, kinds, kindsTotal)
 		end
 		slotsTitle.Text = ("%s COINS"):format(Mascots.BonusText(bonus))
+		if Mascots.StatsOn() then
+			local totals = Mascots.TotalStats(list)
+			for name, label in totalLabels do
+				local value = totals[name] or 0
+				label.Text = ("%s %s"):format(
+					Mascots.PercentText(value),
+					string.upper(Config.PetStats.Types[name].Label)
+				)
+				label.TextColor3 = if value > 0 then Config.PetStats.Types[name].Color else K.Muted
+			end
+		end
 
 		for _, tile in tiles do
 			local mascot = tile.Mascot
@@ -559,6 +606,9 @@ function MascotController:Start()
 		setTitle(if pets then "PETS" else "ITEMS", if pets then K.Pink else K.Cyan)
 		if pets then
 			subLine.Text = if petsLocked then "PETS FOLLOW YOU AND BOOST YOUR COINS" else ""
+			if Mascots.StatsOn() then
+				subLine.Text = "PETS FOLLOW YOU AND BOOST YOUR STATS"
+			end
 			refresh()
 		else
 			local potions = PotionController.Count()
@@ -576,7 +626,7 @@ function MascotController:Start()
 
 	local function refreshButton()
 		local unlocked, why = eggState()
-		local locked = not unlocked
+		local locked = not unlocked and not Mascots.StatsOn() -- (B1: open in the core loop; eggs come to the shop)
 		petsButton.Visible = true
 		lockedHead.Text = if Config.CoreLoop.Enabled
 			then "NO PETS YET"
@@ -997,6 +1047,18 @@ function MascotController:Start()
 		end
 		-- A1: the COINS bonus counts up from x1
 		local bonus = Mascots.Bonus(mascot)
+		if Mascots.StatsOn() then
+			-- B1: every stat counts up from +0% (bonus = 0..1 of the way)
+			local stats = Mascots.Stats(mascot)
+			bonus = 1
+			function info(u: number): string
+				local scaled = {}
+				for name, value in stats do
+					scaled[name] = value * u
+				end
+				return string.upper(Mascots.StatText(scaled))
+			end
+		end
 		local token = {}
 		cardToken = token
 		revealInfo.Text = info(0)
@@ -1307,10 +1369,12 @@ function MascotController:Start()
 		stageRays.Visible = true
 		UiFx.Pop(stageRays, 0.3, 0.4)
 		popCard({ Color = GOLD, Rarity = "SHINY", Name = string.upper(shiny.Name), Stamp = "SHINY!", StampColor = GOLD })
-		revealInfo.Text = ("%s COINS  ·  WAS %s"):format(
-			Mascots.BonusText(Mascots.Bonus(shiny)),
-			Mascots.BonusText(Mascots.Bonus(mascot))
-		)
+		revealInfo.Text = if Mascots.StatsOn()
+			then Mascots.BoostText(shiny) -- (B1: stats; every one x ShinyMultiplier)
+			else ("%s COINS  ·  WAS %s"):format(
+				Mascots.BonusText(Mascots.Bonus(shiny)),
+				Mascots.BonusText(Mascots.Bonus(mascot))
+			)
 		revealOdds.Text = if result.Equipped then "EQUIPPED!" else ""
 		for _, label in { revealName, revealInfo } do
 			UiFx.Pop(label, 1.5, 0.35)
@@ -1557,7 +1621,7 @@ function MascotController:Start()
 			local view = MascotView.Viewport(resultPet, MascotView.Mascot(shiny or picked, 2, false), 0.95)
 			view.ImageColor3 = if ready then Color3.new(1, 1, 1) else Color3.fromRGB(70, 70, 95) -- dark until ready
 			resultName.Text = ("SHINY %s"):format(string.upper(picked.Name))
-			resultBonus.Text = if shiny then Mascots.BonusText(Mascots.Bonus(shiny)) .. " COINS" else ""
+			resultBonus.Text = if shiny then Mascots.BoostText(shiny) else ""
 		else
 			resultName.Text = "SHINY ?"
 			resultBonus.Text = ""
@@ -1650,7 +1714,7 @@ function MascotController:Start()
 			local sum = 0
 			for _, id in list do
 				local mascot = Mascots.Get(id)
-				sum += if mascot then Mascots.Bonus(mascot) else 0
+				sum += if mascot then Mascots.Score(mascot) else 0 -- (B1: every stat counts)
 			end
 			return sum
 		end
@@ -1733,7 +1797,9 @@ function MascotController:Start()
 		testEgg = test
 	end
 
-	for _, key in { "Mascots", "EquippedMascots", "MascotSlots", "MascotBonus", "Coins", "RankLevel", "ZonesOpen" } do
+	for _, key in
+		{ "Mascots", "EquippedMascots", "MascotSlots", "MascotBonus", "MascotStats", "Coins", "RankLevel", "ZonesOpen" }
+	do
 		player:GetAttributeChangedSignal(key):Connect(function()
 			refreshButton()
 			if win:IsOpen() or key ~= "Coins" then

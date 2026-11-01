@@ -145,6 +145,8 @@ local function migrate(saved: any): { [string]: any }
 		-- v33 added Bag, BagLevel, ThrowSpeedLevel, CoreThrows and CoreSells (Addendum 4 core loop): they start at
 		-- their starting values, every older field stays as it was
 		-- v34 added BallStep (Addendum 4 Stage 2 ball ladder): it starts at 1, every older field stays as it was
+		-- v35 added PetSlotsBought (Addendum 5 B1 coin pet slots): it starts at 0; slots an old save had (PetSlotsKept)
+		-- still count, so nobody loses a slot
 		if version < 22 then
 			-- v22: the COIN BOOST became a doubling ladder (x2, x4, x8, x16). An old adding boost (coins x (1 +
 			-- RobuxBoost)) becomes the highest step it already reached or passed, so nobody loses what they paid for.

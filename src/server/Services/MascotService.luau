@@ -4,6 +4,7 @@
 -- on the egg odds boards, not kept when hatched; batch C3, Config.AutoDelete).
 -- Published to everyone as Player attributes (each client draws every player's mascots from them):
 --   Mascots "Pinny=2,Gus=1", EquippedMascots "Pinny,Gus", MascotSlots, MascotBonus (0.04 = +4% coins),
+--   MascotStats "Coins=0.5,Pins=0.2" (Addendum 5 B1: the equipped pets' stats added up, Config.PetStats),
 --   FreeEgg_<egg Id> (free hatches waiting), AutoDelete "Pinny,Gus" (X'd pets).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -41,7 +42,8 @@ local function slots(player: Player): number
 	return Mascots.Slots(
 		PlayerDataService.Get(player, "Rebirths") or 0,
 		Store.PetSlots(player),
-		PlayerDataService.Get(player, "PetSlotsKept") or 0
+		PlayerDataService.Get(player, "PetSlotsKept") or 0,
+		PlayerDataService.Get(player, "PetSlotsBought") or 0 -- (Addendum 5 B1: coin slots from the shop)
 	)
 end
 
@@ -115,12 +117,27 @@ local function publish(player: Player)
 	player:SetAttribute("Mascots", Mascots.EncodeOwned(getOwned(player)))
 	player:SetAttribute("EquippedMascots", Mascots.EncodeEquipped(equipped))
 	player:SetAttribute("MascotSlots", slots(player))
-	player:SetAttribute("MascotBonus", Mascots.TotalBonus(equipped))
+	local stats = Mascots.TotalStats(equipped)
+	player:SetAttribute("MascotBonus", stats.Coins or 0)
+	local parts = {}
+	for _, name in Config.PetStats.Order do
+		table.insert(parts, ("%s=%s"):format(name, tostring(stats[name] or 0)))
+	end
+	player:SetAttribute("MascotStats", table.concat(parts, ","))
 end
 
--- Coin multiplier from the equipped mascots: 1 + their bonuses added together
+-- Coin multiplier from the equipped mascots: 1 + their coin bonuses added together (B1: 1 + the Coins stat total,
+-- Config.PetStats.Stacking)
 function MascotService.GetMultiplier(player: Player): number
-	return 1 + Mascots.TotalBonus(getEquipped(player))
+	return 1 + (Mascots.TotalStats(getEquipped(player)).Coins or 0)
+end
+
+-- Addendum 5 B1 (for step C's rebirth): Config.PetStats.KeepPetSlots = false takes the bought slots away
+function MascotService.ResetForRebirth(player: Player)
+	if not Config.PetStats.KeepPetSlots and PlayerDataService.IsLoaded(player) then
+		PlayerDataService.Set(player, "PetSlotsBought", 0)
+		publish(player)
+	end
 end
 
 -- Rolls a rarity with the plan's odds, then a mascot of that rarity from this egg (all equally likely).
@@ -593,7 +610,7 @@ function MascotService:Start()
 	PlayerDataService.OnLoaded(function(player)
 		publish(player)
 		-- New slots open with rebirths (and the +2 PET SLOTS pass, Passes); RankLevel still locks eggs with a Rank
-		for _, key in { "Rebirths", "RankLevel", "Passes" } do
+		for _, key in { "Rebirths", "RankLevel", "Passes", "PetSlotsBought" } do
 			player:GetAttributeChangedSignal(key):Connect(function()
 				if PlayerDataService.IsLoaded(player) then
 					publish(player)

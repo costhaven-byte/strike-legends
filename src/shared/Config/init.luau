@@ -497,6 +497,7 @@ Config.StartingData = {
 	Bag = 0, -- coins from pins waiting in the bag; sold for Coins at the sell station
 	BagLevel = 1, -- Config.CoreLoop.BagSizes step (bag capacity)
 	BallStep = 1, -- Config.CoreLoop.Balls step: the ball you throw with (v34)
+	PetSlotsBought = 0, -- pet equip slots bought with coins at the shop (Config.PetStats.SlotPrices; v35)
 	ThrowSpeedLevel = 0, -- throw speed upgrades: each takes CooldownStep off the hold-to-throw cooldown
 	CoreThrows = 0, -- core loop throws ever (first and 10th throw are logged once per player)
 	CoreSells = 0, -- sells ever (the first is logged once per player)
@@ -507,7 +508,7 @@ Config.Data = {
 	-- "PlayerData_A4": every account starts from zero for the Addendum 4 loop (owner 2026-11-01). The old saves are
 	-- still in "PlayerData" (set it back to bring them back).
 	StoreName = "PlayerData_A4",
-	SchemaVersion = 34, -- v34 BallStep (Addendum 4 Stage 2 ball ladder; starts at 1, nothing to upgrade). v33 Bag, BagLevel, ThrowSpeedLevel, CoreThrows, CoreSells (Addendum 4 core loop; start at 0/1, every old field kept, nothing to upgrade). v32 BestLevel + BestRank (batch D1 rebirth resets levels; old saves start at their RankLevel / Rank). v31 AutoDelete (batch C3 X'd pets on the egg odds boards; starts empty, nothing to upgrade or delete). v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 35, -- v35 PetSlotsBought (Addendum 5 B1 coin pet slots; starts at 0, nothing to upgrade). v34 BallStep (Addendum 4 Stage 2 ball ladder; starts at 1, nothing to upgrade). v33 Bag, BagLevel, ThrowSpeedLevel, CoreThrows, CoreSells (Addendum 4 core loop; start at 0/1, every old field kept, nothing to upgrade). v32 BestLevel + BestRank (batch D1 rebirth resets levels; old saves start at their RankLevel / Rank). v31 AutoDelete (batch C3 X'd pets on the egg odds boards; starts empty, nothing to upgrade or delete). v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -3395,6 +3396,7 @@ Config.CrateShop = {
 Config.Mascots = {
 	{
 		Id = "Pinny",
+		Stats = { Coins = 0.25 }, -- Addendum 5 B1 (Config.PetStats)
 		Name = "Pinny",
 		Egg = "Alley",
 		Rarity = "Uncommon", -- Phase X: was Common (zone 2 starts at Uncommon); BaseBonus keeps its old +2%
@@ -3405,6 +3407,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Gus",
+		Stats = { Coins = 0.1 }, -- Addendum 5 B1 (Config.PetStats)
 		Name = "Gutter Gus",
 		Egg = nil, -- Phase X holding list: cut from the Neon Egg (6 pets now); owners keep it. Was Egg = "Alley"
 		BonusEgg = "Alley", -- its bonus stays the Neon Egg's (owners' pets don't change)
@@ -3415,6 +3418,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "LanePup",
+		Stats = { Speed = 0.1, Bag = 0.15 }, -- Addendum 5 B1 (Config.PetStats)
 		Name = "Lane Pup",
 		Egg = "Alley",
 		Rarity = "Uncommon",
@@ -3424,6 +3428,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Bumper",
+		Stats = { Bag = 0.3 }, -- Addendum 5 B1 (Config.PetStats)
 		Name = "Bumper",
 		Egg = nil, -- Phase X holding list: cut from the Neon Egg (6 pets now); owners keep it. Was Egg = "Alley"
 		BonusEgg = "Alley", -- its bonus stays the Neon Egg's (owners' pets don't change)
@@ -3434,6 +3439,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Strikey",
+		Stats = { Pins = 0.5 }, -- Addendum 5 B1 (Config.PetStats)
 		Name = "Strikey",
 		Egg = "Alley",
 		Rarity = "Rare",
@@ -3443,6 +3449,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Splitz",
+		Stats = { Coins = 0.3, Pins = 0.25 }, -- Addendum 5 B1 (Config.PetStats)
 		Name = "Splitz",
 		Egg = "Alley",
 		Rarity = "Rare",
@@ -3452,6 +3459,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Hambone",
+		Stats = { Coins = 1 }, -- Addendum 5 B1 (Config.PetStats)
 		Name = "Hambone",
 		Egg = "Alley",
 		Rarity = "Epic",
@@ -3461,6 +3469,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "NeonBat",
+		Stats = { Pins = 0.6, Speed = 0.25 }, -- Addendum 5 B1 (Config.PetStats)
 		Name = "Neon Bat",
 		Egg = "Alley",
 		Rarity = "Epic",
@@ -3470,6 +3479,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Kingpin",
+		Stats = { Pins = 2.5 }, -- Addendum 5 B1 (Config.PetStats)
 		Name = "Kingpin",
 		Egg = "Arcade", -- Phase X: moved from the Neon Egg to zone 3's Main Street Egg
 		Rarity = "Legendary",
@@ -3479,6 +3489,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Blaze",
+		Stats = { Coins = 1.5, Speed = 0.4 }, -- Addendum 5 B1 (Config.PetStats)
 		Name = "Blaze",
 		Egg = "Arcade", -- Phase X: moved from the Neon Egg to zone 3's Main Street Egg
 		Rarity = "Legendary",
@@ -3488,6 +3499,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Cosmo",
+		Stats = { Coins = 6, Pins = 3 }, -- Addendum 5 B1 (Config.PetStats)
 		Name = "Cosmo",
 		Egg = "Skyline", -- Phase X: moved from the Neon Egg to zone 4's Skyline Egg
 		Rarity = "Mythic",
@@ -3497,6 +3509,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Perfecto",
+		Stats = { Pins = 5, Speed = 0.6 }, -- Addendum 5 B1 (Config.PetStats)
 		Name = "Perfecto",
 		Egg = "Skyline", -- Phase X: moved from the Neon Egg to zone 4's Skyline Egg
 		Rarity = "Mythic",
@@ -3507,6 +3520,7 @@ Config.Mascots = {
 	-- Phase X: zone 3 (Main Street Egg) and zone 4 (Skyline Egg) pets (owner's designs since 2026-10-28/29)
 	{
 		Id = "WoodPup",
+		Stats = { Bag = 0.6 }, -- Addendum 5 B1 (Config.PetStats)
 		Name = "Wood Pup",
 		Egg = "Arcade",
 		Rarity = "Rare",
@@ -3516,6 +3530,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "ChromeBat",
+		Stats = { Bag = 1, Coins = 0.5 }, -- Addendum 5 B1 (Config.PetStats)
 		Name = "Chrome Bat",
 		Egg = "Arcade",
 		Rarity = "Epic",
@@ -3525,6 +3540,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "CloudBumper",
+		Stats = { Bag = 1.2, Speed = 0.2 }, -- Addendum 5 B1 (Config.PetStats)
 		Name = "Cloud Bumper",
 		Egg = "Skyline",
 		Rarity = "Epic",
@@ -3534,6 +3550,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "SunnyHam",
+		Stats = { Coins = 2, Bag = 1.5 }, -- Addendum 5 B1 (Config.PetStats)
 		Name = "Moony", -- was "Sunny" (owner 2026-10-27: zone 4 is at night); Id stays SunnyHam so owned pets keep working
 		Egg = "Skyline",
 		Rarity = "Legendary",
@@ -3544,6 +3561,7 @@ Config.Mascots = {
 	-- Boss-only pet (Config.Boss.Drop): no egg hatches it, only the Pin Titan drops it
 	{
 		Id = "TitanJr",
+		Stats = { Pins = 2, Coins = 1 }, -- Addendum 5 B1 (Config.PetStats)
 		Name = "Titan Jr.",
 		Egg = nil,
 		BonusEgg = "Skyline", -- its bonus counts like a Skyline Egg pet
@@ -5200,6 +5218,34 @@ for name, power in Config.RarityPower do
 		Config.Economy.Mascots.Bonus[name] = power.Pet
 	end
 end
+
+-- Addendum 5 B1: pets give STAT boosts (core loop only; Enabled = false = the old coins-only bonus above).
+-- Each pet row in Config.Mascots has Stats = { Coins = 0.5, Pins = 0.2 } (0.5 = +50%), one or two stats each.
+-- A Shiny has every stat x Config.Economy.Mascots.ShinyMultiplier.
+-- Stacking "Add" (the addendum's default): the same stat from every equipped pet adds up (+50% and +30% = +80%),
+--   and that total multiplies with the rest (rebirth, potions, passes): coins x (1 + Coins total) x rebirth ...
+-- Stacking "Multiply": each pet multiplies on its own (+50% and +30% = x1.5 x1.3 = +95%).
+--   Coins = coins per pin (in the coin multiplier, Mascots), Pins = pins per swing (the ball's pins x (1 + total)),
+--   Bag = bag size (the bag holds x (1 + total) coins; HUD and server use the same number), Speed = throws per
+--   second (seconds between throws / (1 + total), never under Config.CoreLoop.CooldownFloor).
+Config.PetStats = {
+	Enabled = true,
+	Stacking = "Add",
+	-- order the stats show in, their label, colour and how much EQUIP BEST counts 1.0 of each (Speed is capped
+	-- by the cooldown floor, so it counts a bit less)
+	Order = { "Coins", "Pins", "Bag", "Speed" },
+	Types = {
+		Coins = { Label = "Coins", Color = Color3.fromRGB(255, 205, 50), Best = 1 },
+		Pins = { Label = "Pins", Color = Color3.fromRGB(255, 120, 200), Best = 1 },
+		Bag = { Label = "Bag", Color = Color3.fromRGB(80, 200, 255), Best = 0.6 },
+		Speed = { Label = "Speed", Color = Color3.fromRGB(130, 235, 90), Best = 0.8 },
+	},
+	-- Equip slots: StartSlots (Config.Economy.Mascots) + slots bought with coins at the shop booth, one at a time,
+	-- in this price order (slot 4, 5, 6 ...). The +2 PET SLOTS pass adds on top. Old saves never lose a slot they had
+	-- (PetSlotsKept). Bought slots are saved (PetSlotsBought, v35).
+	SlotPrices = { 2500, 25000, 150000, 600000, 2500000 },
+	KeepPetSlots = true, -- rebirth keeps the bought slots (false = back to StartSlots on rebirth)
+}
 
 -- Ranks: XP to go from rank r to r+1 = Base * Growth^(r-1) up to rank LateFrom, then it grows by LateGrowth per
 -- rank up to EndFrom, then by EndGrowth (nil EndFrom = LateGrowth to the end).

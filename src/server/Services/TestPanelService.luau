@@ -9,6 +9,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Currency = require(Shared.Modules.Currency)
+local Mascots = require(Shared.Modules.Mascots)
 local Progression = require(Shared.Modules.Progression)
 local Rebirth = require(Shared.Modules.Rebirth)
 local Zones = require(Shared.Modules.Zones)
@@ -23,6 +24,8 @@ local PotionService = require(script.Parent.PotionService)
 local ProgressionService = require(script.Parent.ProgressionService)
 
 local TestPanelService = {}
+
+local nextPet: { [Player]: number } = {} -- GIVE PET goes down Config.Mascots one pet per press
 
 local function reply(ok: boolean, text: string)
 	return { Ok = ok, Text = text }
@@ -124,6 +127,19 @@ local ACTIONS: { [string]: (Player) -> any } = {
 			return reply(false, "No egg to give")
 		end
 		return reply(true, "+1 free hatch: use it at the " .. Zones.Name(pick.Zone or 2) .. " egg stand")
+	end,
+	-- Addendum 5 B1: one pet (the next one in Config.Mascots each press), straight into a free slot if there is one
+	Pet = function(player)
+		local index = (nextPet[player] or 0) % #Config.Mascots + 1
+		nextPet[player] = index
+		local mascot = Config.Mascots[index]
+		if MascotService.GiveMascot(player, mascot.Id) == nil then
+			return reply(false, "No pet to give")
+		end
+		return reply(
+			true,
+			("+1 %s (%s): %s. Open PETS"):format(mascot.Name, mascot.Rarity, Mascots.StatText(Mascots.Stats(mascot)))
+		)
 	end,
 	Potions = function(player)
 		for _, potion in Config.Potions.List do

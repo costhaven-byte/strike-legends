@@ -109,3 +109,59 @@ At the end: one combined morning playtest.
 **Studio-only edits:** a new ModuleScript `ServerScriptService.Server.Modules.SharedLane` was created in the Studio place (same as the repo file; Rojo would create it too). Save the place to keep it, or reconnect Rojo.
 
 **Placeholders:** none new (all parts from code, no new art).
+
+## Step 4 (B1): pet stats + pet slots (2026-11-01)
+**What changed**
+- Pets now give stat boosts of four kinds: **Coins** (coins per pin), **Pins** (pins per swing), **Bag** (how much the bag holds) and **Speed** (more throws per second). Each pet has one or two (table below, in `Config.Mascots` `Stats`).
+- Same-stat boosts from your equipped pets add up (+25% and +10% Coins = +35%), and that total multiplies with everything else (rebirth, potions, passes). `Config.PetStats.Stacking = "Add"` ("Multiply" = each pet multiplies on its own).
+- All on the server: Coins in the coin multiplier, Pins in the pins per swing (still only 40 pins fall on screen), Bag in the bag size (the HUD bag bar uses the same number), Speed shortens the time between throws but never below the 0.4 s floor.
+- Equip slots: 3 to start, 5 more bought with coins **only at the ball shop** (new PET SLOTS row at the bottom of the shop window: 2.5K, 25K, 150K, 600K, 2.5M). Rebirth keeps them (`KeepPetSlots = true`). The +2 PET SLOTS pass still adds on top. The "5 rebirths" slot is off while pet stats are on.
+- Stat labels: every pet card shows one coloured line per stat ("+50% COINS" gold, "+20% PINS" pink, "+30% BAG" blue, "+10% SPEED" green); the slot strip shows PET BOOSTS with all four totals; the hatch card counts the stats up; Shiny, fusion and spin-wheel pet cards show stats too. Locked slots show their coin price.
+- The PETS window is open on the roof now (it said "pets come later"). With no pets: "Pets boost your coins, pins, bag and speed. Eggs are coming to the shop" (step B2 adds the eggs).
+- TEST panel: new **GIVE PET** button (one pet each press, going down the pet list, with its stats in the message).
+- EQUIP BEST counts all stats (Bag x0.6 and Speed x0.8 weight, `Config.PetStats.Types` Best).
+
+| Pet | Rarity | Stats |
+|---|---|---|
+| Gutter Gus | Common | +10% Coins |
+| Pinny | Uncommon | +25% Coins |
+| Lane Pup | Uncommon | +15% Bag, +10% Speed |
+| Bumper | Uncommon | +30% Bag |
+| Strikey | Rare | +50% Pins |
+| Splitz | Rare | +30% Coins, +25% Pins |
+| Wood Pup | Rare | +60% Bag |
+| Hambone | Epic | +100% Coins |
+| Neon Bat | Epic | +60% Pins, +25% Speed |
+| Chrome Bat | Epic | +50% Coins, +100% Bag |
+| Cloud Bumper | Epic | +120% Bag, +20% Speed |
+| Kingpin | Legendary | +250% Pins |
+| Blaze | Legendary | +150% Coins, +40% Speed |
+| Moony | Legendary | +200% Coins, +150% Bag |
+| Titan Jr. | Legendary | +200% Pins, +100% Coins |
+| Cosmo | Mythic | +600% Coins, +300% Pins |
+| Perfecto | Mythic | +500% Pins, +60% Speed |
+Shiny = every stat x2.
+
+**Restore tag:** `restore-a5-B1-before`. **Commit:** (see below). **Save:** v35 adds `PetSlotsBought` (starts at 0); old saves keep every slot they had (`PetSlotsKept` counts as bought).
+
+**2-minute test**
+1. Play (TEST panel: START FROM ZERO). Note the bag size on the HUD (60). Open TEST > GIVE PET three times (Pinny, Gus, Lane Pup).
+2. Open PETS. Expected: three cards with coloured lines (+25% COINS, +10% COINS, +15% BAG / +10% SPEED); the strip says PET BOOSTS +35% COINS, +0% PINS, +15% BAG, +10% SPEED.
+3. Look at the HUD bag: 69 instead of 60. Hold THROW: throws come a bit faster, each pin pays ~35% more.
+4. GIVE PET twice more (Bumper, Strikey) and equip them. Expected: about 9 pins a throw instead of 6.
+5. TEST > COINS x10, tap BALLS > GO TO SHOP. Expected: a purple PET SLOTS row at the bottom ("Pet slot 4", 2.5K). Buy it: the PETS strip gets one more open slot.
+- Silent failures to watch for: bag bar still showing 60 with pets on, cards still saying "x1.25 COINS", the PET SLOTS row overlapping the GO TO SHOP button, the 2x2 totals cut off on a phone, buying a slot away from the shop.
+
+**Checked by numbers** (`screenshots/addendum5/B1/PLAYTEST_LOG.md`): no pets 6 pins / 2.5 coins a pin / 1.0 s / bag 60; +35% Coins +15% Bag +10% Speed -> 3.39 a pin, 0.909 s, bag 69; +50% Pins -> 8.9 pins; +155% Speed -> stops at the 0.4 s floor; EQUIP BEST (+900% Coins, +1250% Pins) -> 82 pins, 25 a pin, 0.625 s, bag 150. Slots bought only at the shop, for the exact prices, the 6th refused. No errors in Output. Studio's 3D view was still frozen: no screenshots, the look is NOT verified.
+
+**Choices made for you**
+- Stat sizes by rarity (Common ~+10%, Uncommon ~+25%, Rare ~+50%, Epic ~+100%, Legendary ~+250%, Mythic ~+600%); Speed smaller (max +60%) because the 0.4 s floor caps it at +150% total. All in Config; B2 may re-rate when eggs get their prices.
+- "+25% Speed" = 25% more throws (seconds between throws / 1.25), so stacking stays fair near the floor.
+- Bag stat makes the bag hold more coins (the bag counts coins, as since Stage 1).
+- Slot prices 2.5K / 25K / 150K / 600K / 2.5M (`Config.PetStats.SlotPrices`), max 8 coin slots (+2 with the pass). The old "+1 slot at 5 rebirths" is off while pet stats are on.
+- Pins boost is ready for step C: `CoreLoopService.PinsMultiplier` is where the rebirth pins bonus goes; `MascotService.ResetForRebirth` takes bought slots away only if `KeepPetSlots = false`.
+- Pet stats only run in the core loop (`Config.PetStats.Enabled`; off = the old coins-only bonus).
+
+**Studio-only edits:** none (scripts pushed into the open Studio; save the place or reconnect Rojo to keep them in the place file).
+
+**Placeholders:** none new (paw icon = the HUD paw image).

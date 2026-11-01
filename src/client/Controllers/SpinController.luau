@@ -313,9 +313,9 @@ function SpinController:Start()
 			Title = "SECRET PET!",
 			Name = string.upper(mascot.Name),
 			NameColor = Mascots.RarityColor(mascot.Rarity),
-			Sub = ("%s  ·  %s COINS%s"):format(
+			Sub = ("%s  ·  %s%s"):format(
 				string.upper(mascot.Rarity),
-				Mascots.BonusText(Mascots.Bonus(mascot)),
+				Mascots.BoostText(mascot),
 				if pet.Equipped then "  ·  EQUIPPED!" else ""
 			),
 			Big = true,

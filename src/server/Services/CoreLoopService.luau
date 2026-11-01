@@ -17,6 +17,7 @@ local AssetSlots = require(Shared.AssetSlots)
 local Balls = require(Shared.Modules.Balls)
 local CoreLadder = require(Shared.Modules.CoreLadder)
 local Currency = require(Shared.Modules.Currency)
+local Mascots = require(Shared.Modules.Mascots)
 local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
@@ -34,9 +35,23 @@ local CoreLoopService = {}
 local pending: { [Player]: number } = {}
 local soldRemote: RemoteEvent
 
--- How many coins the bag holds (Config.CoreLoop.BagSizes, by the saved BagLevel)
+-- Addendum 5 B1: the equipped pets' stats added up (Config.PetStats; { Coins, Pins, Bag, Speed }, 0.5 = +50%)
+function CoreLoopService.PetStats(player: Player): { [string]: number }
+	if not Mascots.StatsOn() then
+		return { Coins = 0, Pins = 0, Bag = 0, Speed = 0 }
+	end
+	return Mascots.TotalStats(PlayerDataService.Get(player, "EquippedMascots") or {})
+end
+
+-- How many coins the bag holds (Config.CoreLoop.BagSizes, by the saved BagLevel), x (1 + the pets' Bag stat)
 function CoreLoopService.BagSize(player: Player): number
-	return CORE.BagSizes[CoreLadder.BagLevel(PlayerDataService.Get(player, "BagLevel"))]
+	local size = CORE.BagSizes[CoreLadder.BagLevel(PlayerDataService.Get(player, "BagLevel"))]
+	return math.floor(size * (1 + CoreLoopService.PetStats(player).Bag) + 0.5)
+end
+
+-- Pins per swing multiplier: 1 + the pets' Pins stat (Addendum 5 B1). Step C multiplies the rebirth pins bonus in here.
+function CoreLoopService.PinsMultiplier(player: Player): number
+	return 1 + CoreLoopService.PetStats(player).Pins
 end
 
 -- The ball ladder step the player throws with (Config.CoreLoop.Balls)
@@ -44,9 +59,9 @@ function CoreLoopService.BallStep(player: Player): number
 	return CoreLadder.BallStep(PlayerDataService.Get(player, "BallStep"))
 end
 
--- Average pins per throw with the player's ball
+-- Average pins per throw with the player's ball (x the pets' Pins stat, PinsMultiplier)
 function CoreLoopService.PinsAverage(player: Player): number
-	return CORE.Balls[CoreLoopService.BallStep(player)].Pins
+	return CORE.Balls[CoreLoopService.BallStep(player)].Pins * CoreLoopService.PinsMultiplier(player)
 end
 
 -- The throw animation level: follows the ball step (Addendum 5 A1; it used to follow the rank level)
@@ -80,12 +95,37 @@ local function equipLadderBall(player: Player)
 	end
 end
 
--- Buys the next step of the ball or bag ladder (kind "Ball" / "Bag"), only at the shop booth
+-- Addendum 5 B1: buys the next pet equip slot with coins (Config.PetStats.SlotPrices). Slots an old save keeps
+-- (PetSlotsKept) count as bought, so every slot bought is a new one.
+local function buyPetSlot(player: Player)
+	if not Mascots.StatsOn() then
+		return { Ok = false, Error = "That didn't work. Try again" }
+	end
+	local start = Config.Economy.Mascots.StartSlots
+	local bought = math.max(
+		math.floor(tonumber(PlayerDataService.Get(player, "PetSlotsBought")) or 0),
+		(PlayerDataService.Get(player, "PetSlotsKept") or 0) - start
+	)
+	local price = Mascots.NextSlotPrice(bought)
+	if not price then
+		return { Ok = false, Error = "You've got every slot" }
+	end
+	if not PlayerDataService.Spend(player, "Coins", price) then
+		return { Ok = false, Error = "Not enough coins" }
+	end
+	PlayerDataService.Set(player, "PetSlotsBought", bought + 1)
+	Analytics.Currency(player, "Coins", -price, "Shop", ("PetSlot%d"):format(start + bought + 1))
+	Analytics.Purchase(player, "PetSlot", tostring(start + bought + 1))
+	SessionLog.Moment(player, ("Pet slot %d bought"):format(start + bought + 1))
+	return { Ok = true, Kind = "PetSlot", Step = start + bought + 1 }
+end
+
+-- Buys the next step of the ball or bag ladder (kind "Ball" / "Bag"; B1: or "PetSlot"), only at the shop booth
 local function buy(player: Player, kind: any)
 	if not PlayerDataService.IsLoaded(player) then
 		return { Ok = false, Error = "Hang on, still loading" }
 	end
-	if kind ~= "Ball" and kind ~= "Bag" then
+	if kind ~= "Ball" and kind ~= "Bag" and kind ~= "PetSlot" then
 		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 	if not RateLimit.Allow(player, "CoreBuy", 0.3) then
@@ -93,6 +133,9 @@ local function buy(player: Player, kind: any)
 	end
 	if not CoreLoopService.AtShop(player) then
 		return { Ok = false, Error = "Buy it at the shop" }
+	end
+	if kind == "PetSlot" then
+		return buyPetSlot(player)
 	end
 	local want = kind
 	local step, price = nextBuy(player, kind)
@@ -124,10 +167,12 @@ local function buy(player: Player, kind: any)
 	return { Ok = true, Kind = want, Step = step }
 end
 
--- Seconds between hold-to-throw throws (Cooldown, minus the saved throw speed upgrades, never below CooldownFloor)
+-- Seconds between hold-to-throw throws (Cooldown, minus the saved throw speed upgrades), divided by 1 + the pets'
+-- Speed stat (B1: +25% Speed = 25% more throws), never below CooldownFloor (the server's ThrowRate is under it too)
 function CoreLoopService.Cooldown(player: Player): number
 	local level = math.max(0, tonumber(PlayerDataService.Get(player, "ThrowSpeedLevel")) or 0)
-	return math.max(CORE.CooldownFloor, CORE.Cooldown - level * CORE.CooldownStep)
+	local seconds = (CORE.Cooldown - level * CORE.CooldownStep) / (1 + CoreLoopService.PetStats(player).Speed)
+	return math.max(CORE.CooldownFloor, math.floor(seconds * 1000 + 0.5) / 1000)
 end
 
 -- Promises up to `coins` to the bag and drops them in after `delay` seconds (when the ball reaches the pins).
@@ -578,15 +623,16 @@ function CoreLoopService:Start()
 	buildPlaza()
 	hideCrateShop()
 
-	-- The bag size and throw cooldown the HUD shows
+	-- The bag size and throw cooldown the HUD shows (B1: and the pins multiplier, PinsMultiplier)
 	local function publish(player: Player)
 		player:SetAttribute("BagSize", CoreLoopService.BagSize(player))
 		player:SetAttribute("ThrowCooldown", CoreLoopService.Cooldown(player))
+		player:SetAttribute("PinsMultiplier", CoreLoopService.PinsMultiplier(player))
 	end
 	PlayerDataService.OnLoaded(function(player)
 		equipLadderBall(player)
 		publish(player)
-		for _, key in { "BagLevel", "ThrowSpeedLevel" } do
+		for _, key in { "BagLevel", "ThrowSpeedLevel", "EquippedMascots" } do -- (B1: pets change bag + speed)
 			player:GetAttributeChangedSignal(key):Connect(function()
 				publish(player)
 			end)

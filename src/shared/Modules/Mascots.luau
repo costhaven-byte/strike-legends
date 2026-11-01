@@ -8,6 +8,7 @@ local Currency = require(script.Parent.Currency)
 local Zones = require(script.Parent.Zones)
 
 local ECONOMY = Config.Economy.Mascots
+local STATS = Config.PetStats
 
 local Mascots = {}
 
@@ -122,10 +123,114 @@ function Mascots.EggReady(eggId: string): boolean
 	return #Mascots.InEgg(eggId) > 0
 end
 
--- This mascot's bonus: its rarity's bonus x its egg's BonusScale (0.02 = +2% coins).
+-- Addendum 5 B1: pets give stat boosts (Config.PetStats) in the core loop
+function Mascots.StatsOn(): boolean
+	return Config.CoreLoop.Enabled and STATS.Enabled == true
+end
+
+-- This pet's stats { Coins = 0.5, Pins = 0.2 } (0.5 = +50%), Shiny = every stat x ShinyMultiplier.
+-- With stats off: { Coins = its old coin bonus }.
+function Mascots.Stats(mascot): { [string]: number }
+	if not Mascots.StatsOn() then
+		return { Coins = Mascots.Bonus(mascot) }
+	end
+	local stats = {}
+	local base = if mascot.Shiny then mascot.Base else mascot
+	for name, value in base.Stats or {} do
+		stats[name] = if mascot.Shiny then value * ECONOMY.ShinyMultiplier else value
+	end
+	return stats
+end
+
+-- Every stat of an equipped list (Config.PetStats.Stacking: "Add" adds the same stat up; "Multiply" multiplies each
+-- pet's 1 + value). Every stat in Config.PetStats.Order is in the result (0 = none).
+function Mascots.TotalStats(list: { string }): { [string]: number }
+	local multiply = STATS.Stacking == "Multiply"
+	local total = {}
+	for _, name in STATS.Order do
+		total[name] = if multiply then 1 else 0
+	end
+	for _, id in list do
+		local mascot = byId[id]
+		if mascot then
+			for name, value in Mascots.Stats(mascot) do
+				if multiply then
+					total[name] = (total[name] or 1) * (1 + value)
+				else
+					total[name] = (total[name] or 0) + value
+				end
+			end
+		end
+	end
+	if multiply then
+		for name, value in total do
+			total[name] = value - 1
+		end
+	end
+	return total
+end
+
+-- "+50%" (0.5), "+1.2K%" for huge ones (Currency format)
+function Mascots.PercentText(value: number): string
+	local percent = math.floor(value * 100 + 0.5)
+	return "+" .. (if percent >= 10000 then Currency.Format(percent) else tostring(percent)) .. "%"
+end
+
+-- The stat lines of a stats table, in Config.PetStats.Order: { { Name = "Coins", Text = "+50% Coins", Color } }
+function Mascots.StatLines(stats: { [string]: number }): { { Name: string, Text: string, Color: Color3 } }
+	local lines = {}
+	for _, name in STATS.Order do
+		local value = stats[name]
+		if value and value > 0 then
+			local kind = STATS.Types[name]
+			table.insert(lines, {
+				Name = name,
+				Text = Mascots.PercentText(value) .. " " .. kind.Label,
+				Color = kind.Color,
+			})
+		end
+	end
+	return lines
+end
+
+-- One line of text for a pet or a stats table: "+50% Coins  +20% Pins" (sep between)
+function Mascots.StatText(stats: { [string]: number }, sep: string?): string
+	local parts = {}
+	for _, line in Mascots.StatLines(stats) do
+		table.insert(parts, line.Text)
+	end
+	return if #parts > 0 then table.concat(parts, sep or "  ") else "NO BOOST"
+end
+
+-- What a pet gives, in capitals for the pet cards: "+50% COINS  +20% PINS" (stats off: "X1.5 COINS")
+function Mascots.BoostText(mascot, sep: string?): string
+	if Mascots.StatsOn() then
+		return string.upper(Mascots.StatText(Mascots.Stats(mascot), sep))
+	end
+	return Mascots.BonusText(Mascots.Bonus(mascot)) .. " COINS"
+end
+
+-- How good a pet is for EQUIP BEST: its stats added up, each x its Config.PetStats.Types Best weight
+function Mascots.Score(mascot): number
+	if not Mascots.StatsOn() then
+		return Mascots.Bonus(mascot)
+	end
+	local score = 0
+	for name, value in Mascots.Stats(mascot) do
+		local kind = STATS.Types[name]
+		score += value * (if kind then kind.Best else 1)
+	end
+	return score
+end
+
+-- This mascot's COIN bonus: its rarity's bonus x its egg's BonusScale (0.02 = +2% coins).
 -- Phase X: BaseBonus replaces the rarity's bonus (a re-rated pet keeps its old power) and BonusEgg the egg whose
 -- BonusScale counts (pets cut from an egg keep that egg's).
+-- Addendum 5 B1: with pet stats on it is the pet's Coins stat (0 when it has none).
 function Mascots.Bonus(mascot): number
+	if Mascots.StatsOn() then
+		return Mascots.Stats(mascot).Coins or 0
+	end
 	local egg = eggById[mascot.BonusEgg or mascot.Egg]
 	local bonus = (mascot.BaseBonus or ECONOMY.Bonus[mascot.Rarity] or 0) * (egg and egg.BonusScale or 1)
 	return if mascot.Shiny then bonus * ECONOMY.ShinyMultiplier else bonus
@@ -141,7 +246,12 @@ end
 -- Equip slots: StartSlots, +1 for each of SlotRebirths reached, never fewer than kept (save PetSlotsKept: what an
 -- old save had under the old rank-level rule), up to MaxSlots, plus extra (the +2 PET SLOTS game pass,
 -- Config.Monetization) on top of that
-function Mascots.Slots(rebirths: number, extra: number?, kept: number?): number
+-- Addendum 5 B1 (pet stats on): StartSlots + slots bought with coins (bought), no rebirth slots.
+function Mascots.Slots(rebirths: number, extra: number?, kept: number?, bought: number?): number
+	if Mascots.StatsOn() then
+		local count = ECONOMY.StartSlots + math.clamp(math.floor(bought or 0), 0, #STATS.SlotPrices)
+		return math.max(count, kept or 0) + (extra or 0)
+	end
 	local count = ECONOMY.StartSlots
 	for _, needed in ECONOMY.SlotRebirths do
 		if rebirths >= needed then
@@ -153,8 +263,17 @@ end
 
 -- Why each slot past the open ones is still locked ("5 REBIRTHS"), slot by slot; open = slots open without the
 -- pass. Rebirth slots an old save already has count as open.
+-- (Addendum 5 B1, pet stats on: every slot still to buy shows its coin price, "2.5K")
 function Mascots.SlotLocks(rebirths: number, open: number): { string }
 	local list = {}
+	if Mascots.StatsOn() then
+		for i, price in STATS.SlotPrices do
+			if ECONOMY.StartSlots + i > open then
+				table.insert(list, Currency.Format(price))
+			end
+		end
+		return list
+	end
 	local count = ECONOMY.StartSlots
 	for _, needed in ECONOMY.SlotRebirths do
 		count += 1
@@ -163,6 +282,11 @@ function Mascots.SlotLocks(rebirths: number, open: number): { string }
 		end
 	end
 	return list
+end
+
+-- Addendum 5 B1: the price of the next coin slot after `bought` slots, or nil when every slot is bought
+function Mascots.NextSlotPrice(bought: number?): number?
+	return STATS.SlotPrices[math.floor(bought or 0) + 1]
 end
 
 -- Can this player hatch the egg? Returns false and the reason ("LEVEL 3", "1 REBIRTH") when locked.
@@ -227,7 +351,7 @@ function Mascots.TotalBonus(list: { string }): number
 	return total
 end
 
--- The best mascots to equip from what's owned (biggest bonus first, rarer first on a tie), up to slots
+-- The best mascots to equip from what's owned (biggest bonus first, by Id on a tie), up to slots
 function Mascots.Best(owned: { [string]: number }, slots: number): { string }
 	local pool = {}
 	for id, count in owned do
@@ -239,7 +363,7 @@ function Mascots.Best(owned: { [string]: number }, slots: number): { string }
 		end
 	end
 	table.sort(pool, function(a, b)
-		local ba, bb = Mascots.Bonus(a), Mascots.Bonus(b)
+		local ba, bb = Mascots.Score(a), Mascots.Score(b) -- (B1: all stats count)
 		if ba ~= bb then
 			return ba > bb
 		end
