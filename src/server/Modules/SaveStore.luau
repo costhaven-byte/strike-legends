@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Progression = require(Shared.Modules.Progression)
+local CoreLadder = require(Shared.Modules.CoreLadder)
 local Currency = require(Shared.Modules.Currency)
 local Zones = require(Shared.Modules.Zones)
 
@@ -148,6 +149,16 @@ local function migrate(saved: any): { [string]: any }
 		-- v35 added PetSlotsBought (Addendum 5 B1 coin pet slots): it starts at 0; slots an old save had (PetSlotsKept)
 		-- still count, so nobody loses a slot
 		-- v36 added Pacing (Addendum 5 E pacing record): it starts empty, nothing to upgrade
+		if version < 37 then
+			-- v37 (Addendum 6 2.2): balls and bags are owned one by one now (buy any one above your best). Before,
+			-- they could only be bought in order, so an old save owns every ball and bag up to its best; it throws
+			-- with its best ball's look (CoreLook 0).
+			local ball = math.clamp(math.floor(tonumber(data.BallStep) or 1), 1, #Config.CoreLoop.Balls)
+			local bag = math.clamp(math.floor(tonumber(data.BagLevel) or 1), 1, #Config.CoreLoop.BagSizes)
+			data.CoreBallsOwned = 2 ^ ball - 1
+			data.CoreBagsOwned = 2 ^ bag - 1
+			data.CoreLook = 0
+		end
 		if version < 22 then
 			-- v22: the COIN BOOST became a doubling ladder (x2, x4, x8, x16). An old adding boost (coins x (1 +
 			-- RobuxBoost)) becomes the highest step it already reached or passed, so nobody loses what they paid for.
@@ -196,11 +207,21 @@ local function migrate(saved: any): { [string]: any }
 		end
 	end
 	-- Rebirths done always keep their zones open (also when a later update moves a zone's rebirth count)
-	data.ZonesOpen = math.max(math.floor(tonumber(data.ZonesOpen) or 1), Zones.ForRebirths(tonumber(data.Rebirths) or 0))
+	data.ZonesOpen =
+		math.max(math.floor(tonumber(data.ZonesOpen) or 1), Zones.ForRebirths(tonumber(data.Rebirths) or 0))
 	data.Rank = math.clamp(math.floor(tonumber(data.Rank) or 1), 1, #Config.Ranks)
 	-- Best-ever level and tier are never below the current ones (v32; also covers any later save)
 	data.BestLevel = math.max(math.floor(tonumber(data.BestLevel) or 1), math.floor(tonumber(data.RankLevel) or 1))
 	data.BestRank = math.clamp(math.max(math.floor(tonumber(data.BestRank) or 1), data.Rank), 1, #Config.Ranks)
+	-- Addendum 6 2.2: you always own the first ball / bag and your best one (v37; also covers any later save)
+	data.CoreBallsOwned = CoreLadder.WithStep(
+		CoreLadder.WithStep(tonumber(data.CoreBallsOwned) or 1, 1),
+		CoreLadder.BallStep(data.BallStep)
+	)
+	data.CoreBagsOwned = CoreLadder.WithStep(
+		CoreLadder.WithStep(tonumber(data.CoreBagsOwned) or 1, 1),
+		CoreLadder.BagLevel(data.BagLevel)
+	)
 	-- Money comes back through Currency, so a future number format can read old plain-number saves here
 	for _, key in Config.Numbers.Currencies do
 		data[key] = Currency.Decode(data[key])

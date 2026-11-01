@@ -86,16 +86,26 @@ function Rebirth.CoreBonus(rebirths: number?, kind: string): number
 	return per * math.max(0, math.floor(tonumber(rebirths) or 0))
 end
 
--- The tier row for a rebirth count ({ From, Name, Color }), nil before the first rebirth
+local ROMAN = { "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X" }
+
+-- Addendum 6 2.4: the rebirth rank for a rebirth count ({ Name, Color, Index }): Config.CoreLoop.Rebirth.Ranks[n + 1]
+-- (0 rebirths = the first, "Rookie"); past the list the last name gets II, III ... (then a number)
+function Rebirth.Rank(rebirths: number?): { [string]: any }
+	local done = math.max(0, math.floor(tonumber(rebirths) or 0))
+	local ranks = CORE_REBIRTH.Ranks
+	local index = done + 1
+	if index <= #ranks then
+		return { Name = ranks[index].Name, Color = ranks[index].Color, Index = index }
+	end
+	local last = ranks[#ranks]
+	local extra = index - #ranks
+	return { Name = ("%s %s"):format(last.Name, ROMAN[extra] or tostring(extra + 1)), Color = last.Color, Index = index }
+end
+
+-- The rank row from rebirth 1 on (its colour paints your pins' rings and throw spot), nil before the first rebirth
 function Rebirth.Tier(rebirths: number?): { [string]: any }?
 	local done = math.max(0, math.floor(tonumber(rebirths) or 0))
-	local found = nil
-	for _, row in CORE_REBIRTH.Tiers or {} do
-		if done >= row.From then
-			found = row
-		end
-	end
-	return found
+	return if done >= 1 then Rebirth.Rank(done) else nil
 end
 
 function Rebirth.XpMultiplier(rebirths: number?): number

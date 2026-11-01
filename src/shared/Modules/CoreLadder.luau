@@ -177,4 +177,73 @@ function CoreLadder.Name(kind: string, step: number): string
 	return if kind == "Ball" then CORE.Balls[step].Name else ("Bag %d"):format(step)
 end
 
+-- ===== Addendum 6 2.2: buy any ball or bag above your best (Config.CoreLoop.Ladders.BuyAny) =====
+-- Owned steps are saved as one number, a bit per step (step n = 2^(n-1)): CoreBallsOwned / CoreBagsOwned.
+
+-- How many steps a ladder has ("Ball" / "Bag")
+function CoreLadder.Count(kind: string): number
+	return if kind == "Ball" then #CORE.Balls else #CORE.BagSizes
+end
+
+function CoreLadder.Owns(mask: any, step: number): boolean
+	return math.floor((tonumber(mask) or 1) / 2 ^ (step - 1)) % 2 == 1
+end
+
+-- The mask with `step` owned too
+function CoreLadder.WithStep(mask: any, step: number): number
+	local value = math.max(0, math.floor(tonumber(mask) or 0))
+	return if CoreLadder.Owns(value, step) then value else value + 2 ^ (step - 1)
+end
+
+-- The zone a step belongs to (a Balls row's Zone, Ladders.BagZones for bags; none = zone 1)
+function CoreLadder.Zone(kind: string, step: number): number
+	if kind == "Ball" then
+		return CORE.Balls[step] and CORE.Balls[step].Zone or 1
+	end
+	return CORE.Ladders.BagZones and CORE.Ladders.BagZones[step] or 1
+end
+
+-- Is that step's zone open? zonesOpen = how many zones the player has opened (nil = 1, until Stage 3 adds zones)
+function CoreLadder.ZoneOpen(kind: string, step: number, zonesOpen: any): boolean
+	return CoreLadder.Zone(kind, step) <= math.max(1, math.floor(tonumber(zonesOpen) or 1))
+end
+
+-- The price of a step (rebirth-scaled)
+function CoreLadder.PriceOf(kind: string, step: number, rebirths: any): number
+	return if kind == "Ball" then CoreLadder.BallPrice(step, rebirths) else CoreLadder.BagPrice(step, rebirths)
+end
+
+-- What a step gives: pins a throw (ball) or pins it holds (bag)
+function CoreLadder.Stat(kind: string, step: number): number
+	return if kind == "Ball" then CORE.Balls[step].Pins else CORE.BagSizes[step]
+end
+
+-- "Buy Best": the highest step above your best you can pay for in an open zone (step, price), nil = none
+function CoreLadder.BuyBest(kind: string, best: any, coins: any, rebirths: any, zonesOpen: any): (number?, number)
+	local have = if kind == "Ball" then CoreLadder.BallStep(best) else CoreLadder.BagLevel(best)
+	local money = tonumber(coins) or 0
+	for step = CoreLadder.Count(kind), have + 1, -1 do
+		local price = CoreLadder.PriceOf(kind, step, rebirths)
+		if CoreLadder.ZoneOpen(kind, step, zonesOpen) and money >= price then
+			return step, price
+		end
+	end
+	return nil, 0
+end
+
+-- What the shop row of a step is for this player: "Best" (your best, pins come from it), "Owned" (below your best,
+-- bought), "Skipped" (below your best, never bought: for sale, look only), "Next" (the step right after your best),
+-- "Ahead" (further up, buyable too), "Locked" (its zone isn't open)
+function CoreLadder.State(kind: string, step: number, best: any, mask: any, zonesOpen: any): string
+	local have = if kind == "Ball" then CoreLadder.BallStep(best) else CoreLadder.BagLevel(best)
+	if step == have then
+		return "Best"
+	elseif step < have then
+		return if CoreLadder.Owns(mask, step) then "Owned" else "Skipped"
+	elseif not CoreLadder.ZoneOpen(kind, step, zonesOpen) then
+		return "Locked"
+	end
+	return if step == have + 1 then "Next" else "Ahead"
+end
+
 return CoreLadder

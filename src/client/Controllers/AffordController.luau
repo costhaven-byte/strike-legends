@@ -41,7 +41,7 @@ local function coreThings(list: { { [string]: any } })
 	if step and step > 2 then -- (ball 2 has the guide card)
 		table.insert(list, {
 			Key = "Ball" .. done .. step,
-			Name = Config.CoreLoop.Balls[step].Name:upper() .. " AT THE SHOP",
+			Name = "A NEW BALL AT THE SHOP", -- (Addendum 6 2.3: its name stays hidden until bought)
 			Price = price,
 			Icon = "Ball",
 			Color = K.Cyan,

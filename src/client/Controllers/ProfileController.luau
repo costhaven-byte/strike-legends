@@ -97,8 +97,8 @@ local function formatStat(value: number, format: string?): string
 	if format == "Time" then
 		return formatTime(value)
 	end
-	-- exact up to a million ("6,229"), short after ("12.5M")
-	return if value < 1e6 then Currency.FormatFull(value) else Currency.Format(value)
+	-- Addendum 6 2.5: the same short style as everywhere else ("6.22K", "12.5M"; was exact up to a million)
+	return Currency.Format(value)
 end
 
 local function statRow(key: string)

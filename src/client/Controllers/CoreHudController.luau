@@ -320,7 +320,7 @@ function CoreHudController:Start()
 		tutorLine.Text = if step == 1
 			then "Hold Throw to bowl"
 			elseif step == 2 then "That's enough. Tap Sell"
-			else ("%d coins. Buy the %s at the shop"):format(firstBall.Price, firstBall.Name)
+			else ("%s coins. Buy a new ball at the shop"):format(Currency.Format(firstBall.Price)) -- (A6 2.3: its name stays hidden until bought)
 		if step > 1 then
 			Sfx.Play("Click")
 			UiFx.Pop(tutor, 1.1, 0.18)

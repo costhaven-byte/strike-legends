@@ -67,21 +67,17 @@ local function coreRebirth(player: Player)
 	return { Ok = true, Rebirths = done + 1, Multiplier = Rebirth.CoreMultiplier(done + 1) }
 end
 
--- The REBIRTH tag over a player's head (everyone sees it): "REBIRTH 3" in the tier's colour, nothing before rebirth 1
+-- The rank tag over a player's head (everyone sees it). Addendum 6 2.4: the rebirth RANK name in its colour
+-- ("ROOKIE" before the first rebirth, then "AMATEUR", ...; Config.CoreLoop.Rebirth.Ranks), was "REBIRTH 3"
 local function updateTag(player: Player)
+	local done = player:GetAttribute("Rebirths") or 0
+	local rank = Rebirth.Rank(done)
+	player:SetAttribute("RebirthRank", rank.Name) -- (other screens can read it)
 	local head = player.Character and player.Character:FindFirstChild("Head")
 	if not head then
 		return
 	end
-	local done = player:GetAttribute("Rebirths") or 0
-	local tier = Rebirth.Tier(done)
 	local tag = head:FindFirstChild("RebirthTag") :: BillboardGui?
-	if not tier then
-		if tag then
-			tag:Destroy()
-		end
-		return
-	end
 	if not tag then
 		local gui = Instance.new("BillboardGui")
 		gui.Name = "RebirthTag"
@@ -104,8 +100,8 @@ local function updateTag(player: Player)
 		tag = gui
 	end
 	local label = (tag :: BillboardGui).Title :: TextLabel
-	label.Text = ("★ REBIRTH %d"):format(done)
-	label.TextColor3 = tier.Color
+	label.Text = if done >= 1 then ("★ %s"):format(rank.Name:upper()) else rank.Name:upper()
+	label.TextColor3 = rank.Color
 end
 
 -- Your throw spot's ring (front spots have one) in your rebirth tier's colour; back to its own colour when you leave

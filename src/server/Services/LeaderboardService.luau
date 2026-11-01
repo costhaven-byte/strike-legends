@@ -122,6 +122,47 @@ local function fetchNames(userIds: { number })
 	end
 end
 
+-- Addendum 6 2.4: the rebirths of players shown on the boards, so each row shows their rebirth rank (the MOST
+-- REBIRTHS board's own read fills it; others are read once from that board's store, then kept RankCache seconds)
+local RANK_CACHE = 600
+local rebirthsOf: { [number]: { Value: number, At: number } } = {}
+local function rebirthBoard()
+	for _, board in LB.Boards do
+		if board.Stat == "Rebirths" then
+			return board
+		end
+	end
+	return nil
+end
+
+local function fetchRebirths(userIds: { number }): { [string]: number }
+	local out = {}
+	local board = rebirthBoard()
+	for _, id in userIds do
+		local live = Players:GetPlayerByUserId(id)
+		if live and PlayerDataService.IsLoaded(live) then
+			out[tostring(id)] = PlayerDataService.Get(live, "Rebirths") or 0
+		else
+			local cached = rebirthsOf[id]
+			if board and (not cached or os.clock() - cached.At > RANK_CACHE) then
+				local store = getStore(board)
+				local ok, value = false, nil
+				if store then
+					ok, value = pcall(store.GetAsync, store, tostring(id))
+				end
+				if ok then
+					cached = { Value = tonumber(value) or 0, At = os.clock() }
+					rebirthsOf[id] = cached
+				end
+			end
+			if cached then
+				out[tostring(id)] = cached.Value
+			end
+		end
+	end
+	return out
+end
+
 local function refreshBoard(board)
 	local store = getStore(board)
 	if not store then
@@ -141,6 +182,9 @@ local function refreshBoard(board)
 		local userId = tonumber(item.key)
 		if userId then
 			table.insert(entries, { userId, item.value })
+			if board.Stat == "Rebirths" then
+				rebirthsOf[userId] = { Value = item.value, At = os.clock() }
+			end
 			if #topIds < LB.ShowTop then
 				table.insert(topIds, userId)
 			end
@@ -157,6 +201,7 @@ local function refreshBoard(board)
 		HttpService:JSONEncode({
 			Entries = entries, -- { {userId, score}, ... } best first
 			Names = topNames,
+			Rebirths = fetchRebirths(topIds), -- (Addendum 6 2.4: rank names next to the names)
 			Full = #page >= LB.FetchSize, -- more scores exist below the last entry
 			UpdatedAt = workspace:GetServerTimeNow(), -- for the "Updated 12s ago" label
 		})

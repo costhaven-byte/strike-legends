@@ -121,6 +121,15 @@ Config.CoreLoop = {
 	BagPrices = { 0, 240, 600, 990, 5200, 7400, 29000, 75000, 200000, 690000 },
 	Ladders = {
 		Independent = true, -- Addendum 5 A2: two ladders (false = Addendum 4's ball, bag, ball, bag order)
+		-- Addendum 6 2.2: buy ANY ball or bag above your best one that you can pay for, in an open zone (no need to
+		-- buy the one before). Pins per throw always come from the best ball you own, bag room from the best bag.
+		-- Balls / bags below your best that you never bought are "Skipped": still for sale at their normal price, for
+		-- the look only (owned balls can be equipped for their look; the pins stay the best ball's). false = only
+		-- the next one is for sale (Addendum 5).
+		BuyAny = true,
+		-- The zone a ball / bag belongs to: a Balls row's Zone (no Zone = 1), bags BagZones[level] (none = 1). Rows
+		-- of zones you haven't opened show in the shop greyed out with a lock. Today only zone 1 exists (Stage 3+).
+		BagZones = {},
 	},
 	-- Gifts in the core loop (owner 2026-11-01: scale to income): daily, playtime and level rewards pay CoreMinutes
 	-- (on each reward row; RewardMinutes when a row has none) of the income your ball + bag make now (ladder income,
@@ -141,6 +150,12 @@ Config.CoreLoop = {
 		Radius = 4.5,
 		BuySlack = 4, -- extra studs for lag (walking off while the buy is on its way)
 		Color = Color3.fromRGB(64, 160, 236), -- sky blue
+		-- Addendum 6 2.1: the shop window's tabs, left to right (CoreShopController builds one page per Id it
+		-- knows; Stage 8 adds "Gamepasses" here). The PET SLOTS row sits at the bottom of the Bags tab.
+		Tabs = { "Balls", "Bags", "Rebirth" },
+		RebirthTab = true, -- the HUD REBIRTH button opens the shop's Rebirth tab (false = the old rebirth window)
+		HoldSeconds = 1.5, -- Addendum 6 2.4: hold the REBIRTH button this long to rebirth
+		RevealSeconds = 1.6, -- Addendum 6 2.3: the reveal after buying a ball / bag (flash, colour, name, effect); under 2
 	},
 	-- Addendum 5 A2: the SELL and GO TO SHOP buttons teleport you onto the pad (once every Cooldown seconds)
 	Teleport = {
@@ -256,7 +271,7 @@ Config.CoreLoop = {
 	-- time. Sim (EconomySim.CoreRebirth, one of each egg, rebirth as soon as it's paid): run 1 = ladder 33 min + 6 min
 	-- saving (1.6M a minute at the top); after rebirth 1 the player is back at 1.6M a minute in ~6 min (17% of run 1)
 	-- and tops out at 4.2M; rebirth 2 / 3 / 4 / 5 at ~53 / 74 / 109 / 180 min (each run's ladder back to the last
-	-- top in 8-10 min); a player who never rebirths stays near 1.6M a minute (7.2M for the rebirther at 1 hour). Tiers: what each rebirth count changes in the world, from existing parts
+	-- top in 8-10 min); a player who never rebirths stays near 1.6M a minute (7.2M for the rebirther at 1 hour). Ranks (Addendum 6 2.4; were Tiers): what each rebirth count changes in the world, from existing parts
 	-- only: your own pins' rings, the ring of your throw spot (everyone sees it) and the REBIRTH tag over your head.
 	Rebirth = {
 		Enabled = true, -- false = no rebirth in the core loop (button hidden, server refuses)
@@ -269,14 +284,29 @@ Config.CoreLoop = {
 		Bonus = 1, -- coins: +100% a rebirth, added into the Add group of Boosts.Coins (Addendum 6 1.1)
 		PinBonus = 1, -- pins per swing: +100% a rebirth (Boosts.Pins; was the same Bonus before Addendum 6)
 		LadderPower = 1.6,
-		Tiers = {
-			{ From = 1, Name = "BRONZE", Color = Color3.fromRGB(222, 140, 70) },
-			{ From = 2, Name = "SILVER", Color = Color3.fromRGB(200, 222, 240) },
-			{ From = 3, Name = "GOLD", Color = Color3.fromRGB(255, 205, 60) },
-			{ From = 5, Name = "EMERALD", Color = Color3.fromRGB(70, 230, 130) },
-			{ From = 8, Name = "DIAMOND", Color = Color3.fromRGB(110, 225, 255) },
-			{ From = 12, Name = "RUBY", Color = Color3.fromRGB(255, 70, 100) },
-			{ From = 20, Name = "COSMIC", Color = Color3.fromRGB(190, 110, 255) },
+		-- Addendum 6 2.4: rebirth RANKS, the old Pro Tier names from GAME_DESIGN.md in order (Rookie = no rebirth yet,
+		-- rank n+1 = after rebirth n), then more in the same style. Past the list: the last name II, III ... The rank
+		-- shows in the shop's Rebirth tab, over your head and on the leaderboards; its colour paints your pins' rings
+		-- and your throw spot from rebirth 1 on. (Was Tiers BRONZE 1, SILVER 2, GOLD 3, EMERALD 5, DIAMOND 8,
+		-- RUBY 12, COSMIC 20.)
+		Ranks = {
+			{ Name = "Rookie", Color = Color3.fromRGB(235, 235, 240) },
+			{ Name = "Amateur", Color = Color3.fromRGB(222, 140, 70) },
+			{ Name = "Regular", Color = Color3.fromRGB(200, 222, 240) },
+			{ Name = "Club", Color = Color3.fromRGB(255, 205, 60) },
+			{ Name = "Semi-Pro", Color = Color3.fromRGB(70, 230, 130) },
+			{ Name = "Pro", Color = Color3.fromRGB(110, 225, 255) },
+			{ Name = "Elite", Color = Color3.fromRGB(84, 132, 255) },
+			{ Name = "Master", Color = Color3.fromRGB(190, 110, 255) },
+			{ Name = "Legend", Color = Color3.fromRGB(255, 70, 100) },
+			{ Name = "Hall of Famer", Color = Color3.fromRGB(255, 180, 40) },
+			{ Name = "Superstar", Color = Color3.fromRGB(255, 120, 200) },
+			{ Name = "Icon", Color = Color3.fromRGB(80, 240, 220) },
+			{ Name = "Champion", Color = Color3.fromRGB(255, 225, 90) },
+			{ Name = "World Champion", Color = Color3.fromRGB(255, 150, 60) },
+			{ Name = "Immortal", Color = Color3.fromRGB(170, 255, 120) },
+			{ Name = "Titan", Color = Color3.fromRGB(150, 170, 255) },
+			{ Name = "Bowling God", Color = Color3.fromRGB(255, 240, 160) },
 		},
 	},
 	-- Stage 3 first 30 seconds: until ball 2 is bought a card under the pin counter says Throw > Sell > Buy and beams
@@ -665,7 +695,12 @@ Config.StartingData = {
 	-- Addendum 4 core loop (Config.CoreLoop; v33)
 	Bag = 0, -- pins waiting in the bag (coins before Addendum 6, same field); sold for Coins at the sell station
 	BagLevel = 1, -- Config.CoreLoop.BagSizes step (bag capacity)
-	BallStep = 1, -- Config.CoreLoop.Balls step: the ball you throw with (v34)
+	BallStep = 1, -- Config.CoreLoop.Balls step: your BEST ball (pins per throw come from it) (v34)
+	-- Addendum 6 2.2 (v37): balls / bags owned, one bit per step (step n = 2^(n-1); 1 = only the first). Skipped
+	-- steps below your best have no bit. CoreLook = the ball step you throw for its look (0 = your best ball).
+	CoreBallsOwned = 1,
+	CoreBagsOwned = 1,
+	CoreLook = 0,
 	PetSlotsBought = 0, -- pet equip slots bought with coins at the shop (Config.PetStats.SlotPrices; v35)
 	ThrowSpeedLevel = 0, -- throw speed upgrades: each takes CooldownStep off the hold-to-throw cooldown
 	CoreThrows = 0, -- core loop throws ever (first and 10th throw are logged once per player)
@@ -678,7 +713,7 @@ Config.Data = {
 	-- "PlayerData_A4": every account starts from zero for the Addendum 4 loop (owner 2026-11-01). The old saves are
 	-- still in "PlayerData" (set it back to bring them back).
 	StoreName = "PlayerData_A4",
-	SchemaVersion = 36, -- v36 Pacing (Addendum 5 E pacing record; starts empty, nothing to upgrade). v35 PetSlotsBought (Addendum 5 B1 coin pet slots; starts at 0, nothing to upgrade). v34 BallStep (Addendum 4 Stage 2 ball ladder; starts at 1, nothing to upgrade). v33 Bag, BagLevel, ThrowSpeedLevel, CoreThrows, CoreSells (Addendum 4 core loop; start at 0/1, every old field kept, nothing to upgrade). v32 BestLevel + BestRank (batch D1 rebirth resets levels; old saves start at their RankLevel / Rank). v31 AutoDelete (batch C3 X'd pets on the egg odds boards; starts empty, nothing to upgrade or delete). v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 37, -- v37 CoreBallsOwned + CoreBagsOwned + CoreLook (Addendum 6 2.2 buy any ball / bag; old saves own every step up to their best, look = best). v36 Pacing (Addendum 5 E pacing record; starts empty, nothing to upgrade). v35 PetSlotsBought (Addendum 5 B1 coin pet slots; starts at 0, nothing to upgrade). v34 BallStep (Addendum 4 Stage 2 ball ladder; starts at 1, nothing to upgrade). v33 Bag, BagLevel, ThrowSpeedLevel, CoreThrows, CoreSells (Addendum 4 core loop; start at 0/1, every old field kept, nothing to upgrade). v32 BestLevel + BestRank (batch D1 rebirth resets levels; old saves start at their RankLevel / Rank). v31 AutoDelete (batch C3 X'd pets on the egg odds boards; starts empty, nothing to upgrade or delete). v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt

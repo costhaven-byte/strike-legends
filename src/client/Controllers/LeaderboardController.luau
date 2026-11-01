@@ -14,6 +14,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Currency = require(Shared.Modules.Currency)
 local Calendar = require(Shared.Modules.Calendar)
+local Rebirth = require(Shared.Modules.Rebirth)
 
 local player = Players.LocalPlayer
 
@@ -29,6 +30,11 @@ local lastUpdate = 0 -- server time of the newest board refresh
 -- 1234567 -> "1,234,567"
 -- Every number on screen uses the shared formatter (Config.Numbers)
 local formatNumber = Currency.Format
+
+-- Names go into rich text (the rank colour), so < > & in a name must not read as tags
+local function escape(text: string): string
+	return (text:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"))
+end
 
 local function headshot(userId: number): string
 	return ("rbxthumb://type=AvatarHeadShot&id=%d&w=150&h=150"):format(userId)
@@ -108,10 +114,27 @@ local function setupPanel(board, panel: Frame, data: Folder, meColor: Color3)
 		for i, row in rowFrames do
 			local entry = entries[i]
 			-- Empty places keep their frame so the board never looks broken
-			row.PlayerName.Text = if not entry
+			local shownName = if not entry
 				then "-"
 				elseif entry.Me then player.DisplayName
 				else decoded.Names[tostring(entry.UserId)] or "Player"
+			-- Addendum 6 2.4: the player's rebirth rank after the name, in the rank's colour
+			local rebirths = if not entry
+				then nil
+				elseif entry.Me then player:GetAttribute("Rebirths") or 0
+				else decoded.Rebirths and decoded.Rebirths[tostring(entry.UserId)]
+			if rebirths ~= nil and Rebirth.CoreOn() then
+				local rank = Rebirth.Rank(rebirths)
+				row.PlayerName.RichText = true
+				row.PlayerName.Text = ('%s <font color="#%s">· %s</font>'):format(
+					escape(shownName),
+					rank.Color:ToHex(),
+					escape(rank.Name)
+				)
+			else
+				row.PlayerName.RichText = true
+				row.PlayerName.Text = escape(shownName)
+			end
 			row.PlayerName.TextColor3 = if entry and entry.Me then meColor else NAME_COLOR
 			row.AvatarFrame.Avatar.Image = if entry then headshot(entry.UserId) else ""
 			setValue(row.Value, entry and entry.Score, board.ShowCoin == true and i <= 3)

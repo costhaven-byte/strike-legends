@@ -19,6 +19,7 @@ local Balls = require(Shared.Modules.Balls)
 local BallLook = require(Shared.Modules.BallLook)
 local Mascots = require(Shared.Modules.Mascots)
 local CoreLadder = require(Shared.Modules.CoreLadder)
+local Currency = require(Shared.Modules.Currency)
 local BallFx = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("BallFx"))
 local MascotView = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("MascotView"))
 
@@ -919,7 +920,7 @@ local function buildSet(set, diamondTemplate: BasePart?): ((number) -> ())?
 					setmetatable({
 						Name = step.Name,
 						ShowTag = "BALL " .. i,
-						ShowStats = ("ABOUT %d PINS A THROW"):format(step.Pins),
+						ShowStats = ("ABOUT %s PINS A THROW"):format(Currency.Format(step.Pins)),
 						ShowLocked = "In the shop",
 					}, { __index = ball })
 				)
@@ -960,13 +961,14 @@ local function buildSet(set, diamondTemplate: BasePart?): ((number) -> ())?
 	-- LOCKED / OWNED, from the balls the server says you own
 	local function refreshOwned()
 		local owned = Balls.DecodeOwned(player:GetAttribute("OwnedBalls"))
-		local step = CoreLadder.BallStep(player:GetAttribute("BallStep"))
+		-- (Addendum 6 2.2: ladder balls are owned one by one; skipped ones stay ???)
+		local mask = player:GetAttribute("CoreBallsOwned")
 		for i, case in built do
-			case.Refresh(if ladder then i <= step else owned[case.Id] == true)
+			case.Refresh(if ladder then CoreLadder.Owns(mask, i) else owned[case.Id] == true)
 		end
 	end
 	player:GetAttributeChangedSignal("OwnedBalls"):Connect(refreshOwned)
-	player:GetAttributeChangedSignal("BallStep"):Connect(refreshOwned)
+	player:GetAttributeChangedSignal("CoreBallsOwned"):Connect(refreshOwned)
 	refreshOwned()
 
 	-- The pet shelf: this zone egg's pets

@@ -196,10 +196,9 @@ local function celebration(): (number, number?) -> ()
 		if Rebirth.CoreOn() then
 			-- Addendum 5 step C: coins and pins, and the tier the rebirth reached
 			chip(chips, coins .. " PINS", C.Pink, "Pin", 28, 56).LayoutOrder = 2
-			local tier = Rebirth.Tier(done)
-			if tier then
-				chip(chips, tier.Name .. " TIER", tier.Color, "Rebirth", 28, 56).LayoutOrder = 3
-			end
+			-- (Addendum 6 2.4: the rank name the rebirth reached)
+			local rank = Rebirth.Rank(done)
+			chip(chips, rank.Name:upper(), rank.Color, "Rebirth", 28, 56).LayoutOrder = 3
 		else
 			local xp = Currency.FormatMultiplier(Rebirth.XpMultiplier(done))
 			chip(chips, xp .. " XP", C.Cyan, "Xp", 28, 56).LayoutOrder = 2
@@ -470,6 +469,7 @@ local function startCore()
 	notYet.Holder.Position = UDim2.fromOffset(24 + 300 + 12, H - 66 - 24)
 
 	local party = celebration()
+	RebirthController.Party = party -- (Addendum 6 2.4: the shop's Rebirth tab plays the same moment)
 	local confirmUntil = 0
 	local busy = false
 	local stopConfirmPulse: (() -> ())? = nil
@@ -515,7 +515,7 @@ local function startCore()
 		tierSwatch.Visible = shown ~= nil
 		if shown then
 			tierSwatch.BackgroundColor3 = shown.Color
-			tierLine.Text = if newTier then ("%s TIER!"):format(shown.Name) else ("%s TIER"):format(shown.Name)
+			tierLine.Text = if newTier then ("%s!"):format(shown.Name:upper()) else shown.Name:upper()
 			tierLine.TextColor3 = shown.Color
 			tierNote.Text = if newTier
 				then "New colour on your pins, your throw spot and the tag over your head"
@@ -566,6 +566,14 @@ local function startCore()
 	end
 
 	button.Activated:Connect(function()
+		if CORE.Shop.RebirthTab then
+			-- Addendum 6 2.4: the REBIRTH button opens the shop's Rebirth tab (hold to rebirth there)
+			local shop = require(script.Parent.CoreShopController) :: any
+			if shop.SetOpen then
+				shop.SetOpen(true, "Rebirth")
+			end
+			return
+		end
 		setOpen(not win:IsOpen())
 	end)
 	closeX.Activated:Connect(function()

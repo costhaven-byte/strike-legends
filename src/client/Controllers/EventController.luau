@@ -553,16 +553,27 @@ function EventController:Start()
 		-- the next ball and the next bag; bought only at the shop booth)
 		if Config.CoreLoop.Enabled then
 			local coins = player:GetAttribute("Coins") or 0
-			local kind, step, price =
-				CoreLadder.Next(player:GetAttribute("BallStep"), player:GetAttribute("BagLevel"), player:GetAttribute("Rebirths"))
+			local kind, step, price = CoreLadder.Next(
+				player:GetAttribute("BallStep"),
+				player:GetAttribute("BagLevel"),
+				player:GetAttribute("Rebirths")
+			)
 			if kind then
-				local name = CoreLadder.Name(kind, step)
+				-- Addendum 6 2.3 / 2.5: unbought balls and bags have no name yet ("???"), so the bar shows what it
+				-- gives: "Next ball: +17 pins a throw  500 / 950"
+				local have = if kind == "Ball"
+					then CoreLadder.BallStep(player:GetAttribute("BallStep"))
+					else CoreLadder.BagLevel(player:GetAttribute("BagLevel"))
+				local gain = Currency.Format(CoreLadder.Stat(kind, step) - CoreLadder.Stat(kind, have))
+				local name = if kind == "Ball"
+					then ("Next ball (+%s pins a throw)"):format(gain)
+					else ("Next bag (+%s pins room)"):format(gain)
 				options = {
 					{
 						Progress = math.min(coins / math.max(price, 1), 1),
 						Text = if coins >= price
 							then ("%s: buy it at the shop"):format(name)
-							else ("Next: %s  %s / %s"):format(name, short(coins), short(price)),
+							else ("%s  %s / %s"):format(name, short(coins), short(price)),
 						Color = GOLD,
 						Icon = "Ball",
 					},
@@ -845,7 +856,14 @@ function EventController:Start()
 			end
 			if (data.ModifierGems or 0) > 0 then
 				local gems = data.ModifierGems
-				showPopup(("+%d BONUS GEM%s"):format(gems, if gems == 1 then "" else "S"), K.Cyan, nil, false, nil, "Gem")
+				showPopup(
+					("+%d BONUS GEM%s"):format(gems, if gems == 1 then "" else "S"),
+					K.Cyan,
+					nil,
+					false,
+					nil,
+					"Gem"
+				)
 				Sfx.Play("Coin", 1.5)
 			end
 		end)

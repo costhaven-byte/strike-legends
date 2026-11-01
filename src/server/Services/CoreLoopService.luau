@@ -90,9 +90,24 @@ function CoreLoopService.AtShop(player: Player): boolean
 		and offset.Y < 10
 end
 
--- Owns and equips the ladder ball of the player's step (model, trail and look come from Config.Balls)
+-- Addendum 6 2.2: the owned-steps mask of a ladder ("Ball" / "Bag"; CoreLadder.Owns reads it)
+local function ownedMask(player: Player, kind: string): number
+	return tonumber(PlayerDataService.Get(player, if kind == "Ball" then "CoreBallsOwned" else "CoreBagsOwned")) or 1
+end
+
+-- The ball step whose look you throw: the saved CoreLook if you own it, else your best ball (Addendum 6 2.2)
+function CoreLoopService.LookStep(player: Player): number
+	local look = math.floor(tonumber(PlayerDataService.Get(player, "CoreLook")) or 0)
+	if look >= 1 and look <= #CORE.Balls and CoreLadder.Owns(ownedMask(player, "Ball"), look) then
+		return look
+	end
+	return CoreLoopService.BallStep(player)
+end
+
+-- Owns and equips the ladder ball you throw for its look (model, trail, signature effect come from Config.Balls).
+-- Addendum 6 2.2: that is the equipped look (CoreLook), not always the best ball; pins always use the best ball.
 local function equipLadderBall(player: Player)
-	local id = CORE.Balls[CoreLoopService.BallStep(player)].Ball
+	local id = CORE.Balls[CoreLoopService.LookStep(player)].Ball
 	BallService.GiveBall(player, id) -- (already owned = nothing changes)
 	if PlayerDataService.Get(player, "EquippedBall") ~= id then
 		PlayerDataService.Set(player, "EquippedBall", id)
@@ -125,8 +140,11 @@ local function buyPetSlot(player: Player)
 	return { Ok = true, Kind = "PetSlot", Step = start + bought + 1 }
 end
 
--- Buys the next step of the ball or bag ladder (kind "Ball" / "Bag"; B1: or "PetSlot"), only at the shop booth
-local function buy(player: Player, kind: any)
+-- Buys a step of the ball or bag ladder (kind "Ball" / "Bag"; B1: or "PetSlot"), only at the shop booth.
+-- Addendum 6 2.2: `step` = any step above your best you can pay for in an open zone (it becomes your best; steps in
+-- between stay Skipped), a Skipped step below your best (look only: a ball is equipped for its look, your pins don't
+-- change), or "Best" = the highest step you can pay for. nil = the next one (old clients).
+local function buy(player: Player, kind: any, step: any)
 	if not PlayerDataService.IsLoaded(player) then
 		return { Ok = false, Error = "Hang on, still loading" }
 	end
@@ -143,37 +161,93 @@ local function buy(player: Player, kind: any)
 		return buyPetSlot(player)
 	end
 	local want = kind
-	local step, price = nextBuy(player, kind)
-	if not step then
-		local all = if kind == "Ball"
-			then CoreLadder.NextBall(PlayerDataService.Get(player, "BallStep")) == nil
-			else CoreLadder.NextBag(PlayerDataService.Get(player, "BagLevel")) == nil
-		return {
-			Ok = false,
-			Error = if all
-				then "You've got them all"
-				elseif kind == "Bag" then "Get the next ball first"
-				else "Get the next bag first",
-		}
+	local bestKey = if kind == "Ball" then "BallStep" else "BagLevel"
+	local best = if kind == "Ball"
+		then CoreLadder.BallStep(PlayerDataService.Get(player, bestKey))
+		else CoreLadder.BagLevel(PlayerDataService.Get(player, bestKey))
+	local rebirths = PlayerDataService.Get(player, "Rebirths") -- (step C: prices rise each rebirth)
+	local zonesOpen = PlayerDataService.Get(player, "CoreZonesOpen") -- (nil = zone 1 only, until Stage 3)
+	local mask = ownedMask(player, kind)
+	local count = CoreLadder.Count(kind)
+	if not CORE.Ladders.BuyAny then
+		step = nil -- (Addendum 5: only the next one is for sale)
 	end
+	if step == "Best" then
+		local found = CoreLadder.BuyBest(kind, best, PlayerDataService.Get(player, "Coins"), rebirths, zonesOpen)
+		if not found then
+			return { Ok = false, Error = if best >= count then "You've got them all" else "Not enough coins" }
+		end
+		step = found
+	elseif step == nil then
+		local nextStep = nextBuy(player, kind)
+		if not nextStep then
+			local all = best >= count
+			return {
+				Ok = false,
+				Error = if all
+					then "You've got them all"
+					elseif kind == "Bag" then "Get the next ball first"
+					else "Get the next bag first",
+			}
+		end
+		step = nextStep
+	end
+	step = math.floor(tonumber(step) or 0)
+	if step < 1 or step > count then
+		return { Ok = false, Error = "That didn't work. Try again" }
+	end
+	if CoreLadder.Owns(mask, step) or step == best then
+		return { Ok = false, Error = "You own it" }
+	end
+	if not CoreLadder.ZoneOpen(kind, step, zonesOpen) then
+		return { Ok = false, Error = ("Open zone %d first"):format(CoreLadder.Zone(kind, step)) }
+	end
+	local price = CoreLadder.PriceOf(kind, step, rebirths)
 	if not PlayerDataService.Spend(player, "Coins", price) then
 		return { Ok = false, Error = "Not enough coins" }
 	end
+	local upgrade = step > best -- (false = a Skipped one, bought for its look)
+	PlayerDataService.Set(
+		player,
+		if kind == "Ball" then "CoreBallsOwned" else "CoreBagsOwned",
+		CoreLadder.WithStep(mask, step)
+	)
 	Analytics.Currency(player, "Coins", -price, "Shop", ("Core%s%d"):format(want, step))
 	if want == "Ball" then
-		PlayerDataService.Set(player, "BallStep", step)
+		if upgrade then
+			PlayerDataService.Set(player, "BallStep", step)
+			PlayerDataService.Set(player, "CoreLook", 0) -- (a new best ball: throw it)
+			Pacing.Ball(player, step)
+		else
+			PlayerDataService.Set(player, "CoreLook", step) -- (bought for its look: wear it)
+		end
 		equipLadderBall(player)
 		local id = CORE.Balls[step].Ball
 		Analytics.Purchase(player, "Ball", id)
-		SessionLog.BallBought(player, id, "Shop")
-		Pacing.Ball(player, step)
+		SessionLog.BallBought(player, id, if upgrade then "Shop" else "ShopLook")
 	else
-		PlayerDataService.Set(player, "BagLevel", step)
+		if upgrade then
+			PlayerDataService.Set(player, "BagLevel", step)
+			Pacing.Bag(player, step)
+		end
 		Analytics.Purchase(player, "Bag", tostring(step))
-		SessionLog.Moment(player, ("Bag %d bought"):format(step))
-		Pacing.Bag(player, step)
+		SessionLog.Moment(player, ("Bag %d bought%s"):format(step, if upgrade then "" else " (skipped one)"))
 	end
-	return { Ok = true, Kind = want, Step = step }
+	return { Ok = true, Kind = want, Step = step, Upgrade = upgrade }
+end
+
+-- Addendum 6 2.2: wear an owned ball for its look (anywhere; it isn't a buy). Pins stay your best ball's.
+local function equipLook(player: Player, step: any)
+	if not PlayerDataService.IsLoaded(player) or not RateLimit.Allow(player, "CoreEquip", 0.3) then
+		return { Ok = false, Error = "Too fast, wait a sec" }
+	end
+	step = math.floor(tonumber(step) or 0)
+	if step < 1 or step > #CORE.Balls or not CoreLadder.Owns(ownedMask(player, "Ball"), step) then
+		return { Ok = false, Error = "You don't own that one" }
+	end
+	PlayerDataService.Set(player, "CoreLook", if step == CoreLoopService.BallStep(player) then 0 else step)
+	equipLadderBall(player)
+	return { Ok = true, Step = step }
 end
 
 -- Seconds between hold-to-throw throws (Cooldown, minus the saved throw speed upgrades), divided by 1 + the pets'
@@ -225,6 +299,9 @@ function CoreLoopService.ResetForRebirth(player: Player)
 	PlayerDataService.Set(player, "Bag", Currency.Zero())
 	PlayerDataService.Set(player, "BagLevel", 1)
 	PlayerDataService.Set(player, "BallStep", 1)
+	PlayerDataService.Set(player, "CoreBallsOwned", 1) -- (Addendum 6 2.2: every ball and bag bought goes too)
+	PlayerDataService.Set(player, "CoreBagsOwned", 1)
+	PlayerDataService.Set(player, "CoreLook", 0)
 	PlayerDataService.Set(player, "ThrowSpeedLevel", 0)
 	equipLadderBall(player)
 end
@@ -782,8 +859,8 @@ function CoreLoopService:Start()
 
 	local buyRemote = Instance.new("RemoteFunction")
 	buyRemote.Name = "CoreBuy"
-	buyRemote.OnServerInvoke = function(player, kind)
-		local ok, result = pcall(buy, player, kind)
+	buyRemote.OnServerInvoke = function(player, kind, step)
+		local ok, result = pcall(buy, player, kind, step)
 		if not ok then
 			warn("[CoreLoopService] Buy failed: " .. tostring(result))
 			return { Ok = false, Error = "That didn't work. Try again" }
@@ -791,6 +868,18 @@ function CoreLoopService:Start()
 		return result
 	end
 	buyRemote.Parent = soldRemote.Parent
+
+	local equipRemote = Instance.new("RemoteFunction")
+	equipRemote.Name = "CoreEquip"
+	equipRemote.OnServerInvoke = function(player, step)
+		local ok, result = pcall(equipLook, player, step)
+		if not ok then
+			warn("[CoreLoopService] Equip failed: " .. tostring(result))
+			return { Ok = false, Error = "That didn't work. Try again" }
+		end
+		return result
+	end
+	equipRemote.Parent = soldRemote.Parent
 
 	-- Addendum 5 A2: SELL / GO TO SHOP teleport you onto that pad (the pad loop below sells; the shop opens itself)
 	local goRemote = Instance.new("RemoteEvent")
