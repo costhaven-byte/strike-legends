@@ -284,3 +284,34 @@
 - Some effect pictures are "frozen" copies of the effect at its key moment, because the picture tool kept landing after the effect had ended (scorpion, echo).
 - Sounds: still borrowed (whoosh, thud, boss hit, power-up). Desert sounds (wind, rattle, roar) would need new sound slots (placeholder).
 - **Placeholders still in use:** the map is simple part art (tagged "ZoneArt"). The Skyline Egg stand is still the old cloud/night design and doesn't match the canyon. Zone 4's balls still use the old ball models (only their effects are new). Borrowed sounds.
+
+## Stage 7: Rebirth pacing (2026-11-02, code tag `restore-a6-s7-before`)
+
+### What I found
+- The old pacing tool only knew one zone, so I built a new one that plays all four zones, gates, eggs, pets and rebirths (`tools/pacing_sim.py`). Stage 9 will use it too.
+- **With the old rebirth numbers, rebirthing as soon as you could was a trap.** Rebirth was so cheap that you rebirthed every ~20 minutes and never got past the start of Zone 2. A player who waited got all the way to Zone 4. That breaks rule 4.
+- **"Cost x3 each rebirth" can't work with four zones.** Each new zone makes about 100 times more money than the one before (pins sell for x6 and the balls are bigger). A price that only triples gets cheap very fast, so rebirths could never come "deeper into the zones". So I set each rebirth's price by **where** it should come, as the addendum asks. The x3 rule is used after that (rebirth 8 on).
+- **The +50% coins / +25% pins starting boost was too small.** With it, waiting 20 minutes before rebirthing was faster than rebirthing straight away. The addendum says: raise the boost, don't lower the price. So I raised it.
+
+### What changed (numbers only, all in the config)
+- **Boost per rebirth: +200% coins and +100% pins** (was +100% / +100%). After rebirth 1 you earn x3 coins and x2 pins.
+- **Rebirth prices:** 5.4M, 450M, 88B, 2T, 7.1Qa, 60Qa, 400Qa, then x3 each.
+- **Shop prices after a rebirth rise less:** balls, bags and gates cost x1.6 after rebirth 1, x2.0 after 2, x2.3 after 3 (before: x3.0, x5.8, x9.2).
+
+### What the sim shows (a player who rebirths as soon as they can)
+| Rebirth | Comes at (played) | Where | Addendum target |
+|---|---|---|---|
+| 1 | ~35 min | Zone 1 done, first balls of Zone 2 (price = ~4.5 min of income when Zone 1 is done) | end of Zone 1, 4-5 min of income |
+| 2 | ~56 min | Zone 2, ball 7 | middle of Zone 2 |
+| 3 | ~1h11 | Zone 3, ball 5 | start of Zone 3 |
+| 4 | ~1h20 | Zone 3, ball 9 | end of Zone 3 |
+| 5-7 | 1h28 to 1h37 | Zone 4 | later ones in Zone 4 |
+
+- **Getting back to where you were (rule 2):** 23% of the run before after rebirth 1, then 44%, 53%, 59%, 47%, 47%. So about half, except the first comeback, which is faster (pets plus x3 coins). I left that, it makes the first rebirth feel great.
+- **Rebirth now vs wait (rule 4, 6 pet-luck seeds):** rebirthing at once reaches rebirths 1 to 4 first (for example rebirth 4 at 1h10 vs 1h18 for someone who waits 20 minutes each time), and is level (within a minute) at rebirths 5 to 7. From rebirth 8 on, a player who waits 20 minutes is about 4 to 28 minutes ahead.
+
+### Not verified / for Stage 9
+- **Zone 4 pets are very strong.** Once a player has a few Skyline Egg pets, Zone 4 takes only minutes and rebirths 5 to 8 come minutes apart. Then the x3 price takes over and rebirth 10, 11... get slow (a wall at about 2 hours). That's why waiting wins at rebirth 8+. This is an egg and pet strength problem, not a rebirth one. Stage 9 (pacing pass) will fix it, then I'll re-check rule 4.
+- The sim's player buys the cheapest thing first and hatches each egg 3 times per run. Real players will differ.
+- Checked in Studio (Play test): the game uses the new prices and boosts (rebirths 0 to 9 printed), and the shop's Rebirth tab shows "+200% coins, +100% pins a throw" and "5.4M coins" (`screenshots/addendum6-stage7-rebirth-tab.jpg`). I didn't play a whole run by hand.
+- **Placeholders still in use:** none new.

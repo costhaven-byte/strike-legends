@@ -415,28 +415,34 @@ Config.CoreLoop = {
 	-- Addendum 5 step C: REBIRTH, bought with coins only at the ball shop (server distance check, like every buy),
 	-- whenever you can pay; never forced. It resets coins, the bag (its coins and its level), the ball ladder and the
 	-- throw speed upgrades; it keeps pets (all of them, equipped, Shiny), pet slots (Config.PetStats.KeepPetSlots)
-	-- and the rebirth count. Each rebirth adds Bonus to the rebirth multiplier (1 + Bonus x rebirths), which
-	-- multiplies BOTH the pins per swing (CoreLoopService.PinsMultiplier) AND the coins a sell pays (the bag's coins
-	-- x the multiplier, so the bag's size doesn't cap it). Price n = Prices[n], then the last one x Growth each.
-	-- Tuned with print(require(game.ServerStorage.Tools.EconomySim).CoreRebirth()).
-	-- The ball and bag prices are x (rebirth multiplier) ^ LadderPower after a rebirth (x3.0 after rebirth 1, x5.8
-	-- after 2, x9.2 after 3 ...): your pets come with you, so without this the ladder would take 2 minutes the second
-	-- time. Sim (EconomySim.CoreRebirth, one of each egg, rebirth as soon as it's paid): run 1 = ladder 33 min + 6 min
-	-- saving (1.6M a minute at the top); after rebirth 1 the player is back at 1.6M a minute in ~6 min (17% of run 1)
-	-- and tops out at 4.2M; rebirth 2 / 3 / 4 / 5 at ~53 / 74 / 109 / 180 min (each run's ladder back to the last
-	-- top in 8-10 min); a player who never rebirths stays near 1.6M a minute (7.2M for the rebirther at 1 hour). Ranks (Addendum 6 2.4; were Tiers): what each rebirth count changes in the world, from existing parts
+	-- and the rebirth count. Each rebirth adds Bonus to the coin boost and PinBonus to the pin boost (Addendum 6
+	-- 1.1 Boosts: the Add group, with the pets). Price n = Prices[n], then the last one x Growth each.
+	-- Addendum 6 Stage 7 numbers and the sim below (the Addendum 5 notes on EconomySim.CoreRebirth were for one zone).
+	-- Ranks (Addendum 6 2.4; were Tiers): what each rebirth count changes in the world, from existing parts
 	-- only: your own pins' rings, the ring of your throw spot (everyone sees it) and the REBIRTH tag over your head.
 	Rebirth = {
 		Enabled = true, -- false = no rebirth in the core loop (button hidden, server refuses)
-		-- Addendum 5 E (pacing pass): x3 every rebirth made rebirth 5 a 2-hour save and rebirth 7 a 13-hour one,
-		-- because income only grows about x(n+1)/n per rebirth once the bag fills in a throw (PACING_REPORT.md). Now
-		-- x2.5 / x2.4 / x2 / x1.8 / x1.7, then x1.5 each: rebirths at ~43 min, 55 min, 1h11, 1h31, 1h57, 2h46, 4h09
-		-- (EconomySim.CorePacing). Was Prices { 10000000 }, Growth 3.
-		Prices = { 10000000, 25000000, 60000000, 120000000, 220000000, 380000000 }, -- rebirth 1, 2, 3... (then the last one x Growth each)
-		Growth = 1.5,
-		Bonus = 1, -- coins: +100% a rebirth, added into the Add group of Boosts.Coins (Addendum 6 1.1)
-		PinBonus = 1, -- pins per swing: +100% a rebirth (Boosts.Pins; was the same Bonus before Addendum 6)
-		LadderPower = 1.6,
+		-- Addendum 6 Stage 7 (rebirth pacing, tuned with tools/pacing_sim.py, the four-zone sim; run
+		-- python tools/pacing_sim.py): the four zones grow income ~x100 or more a zone, so a price that only
+		-- grows x3 a rebirth trapped players who rebirth as soon as they can in zone 2 for good (rebirth every
+		-- ~20 min, never deeper; waiting got much further). Prices are now set by WHERE each rebirth should come
+		-- (addendum 7.3), each about 4-5 minutes of the income you have when you get there:
+		--   1 = Zone 1 ladder done (5.4M, ~4.5 min of income then; sim: rebirth at ~35 min, in zone 2's first balls)
+		--   2 = middle of Zone 2 (sim ~56 min), 3 = start of Zone 3 (~1h11), 4 = end of Zone 3 (~1h20),
+		--   5-7 = Zone 4, then x Growth (3, as the addendum says) each.
+		-- Was Prices { 10M, 25M, 60M, 120M, 220M, 380M }, Growth 1.5 (Addendum 5 E).
+		Prices = { 5400000, 450000000, 88000000000, 2000000000000, 7100000000000000, 60000000000000000, 400000000000000000 }, -- rebirth 1, 2, 3... (then the last one x Growth each)
+		Growth = 3,
+		-- Stage 7 boost: the addendum's starting point (+50% coins, +25% pins) lost to waiting (a player who waited
+		-- 20 min after a rebirth was ready got further than one who rebirthed at once), so it is raised (7.4: raise the
+		-- boost, never lower the price) until rebirthing at once is as fast or faster: +200% coins, +100% pins a rebirth.
+		-- After rebirth n: coins x (1 + 2n + pets ...), pins x (1 + n + pets ...). Was 1 / 1 (Addendum 6 Stage 1).
+		Bonus = 2, -- coins: +200% a rebirth, added into the Add group of Boosts.Coins (Addendum 6 1.1)
+		PinBonus = 1, -- pins per swing: +100% a rebirth (Boosts.Pins)
+		-- Ball, bag and gate prices x (1 + Bonus x rebirths) ^ LadderPower after a rebirth (x1.6 after 1, x2.0 after 2,
+		-- x2.3 after 3 ...), so the climb back takes about half the run before (7.2; sim: 23% after rebirth 1, then
+		-- 44-59%). Was 1.6 (Addendum 5 C).
+		LadderPower = 0.4,
 		-- Addendum 6 2.4: rebirth RANKS, the old Pro Tier names from GAME_DESIGN.md in order (Rookie = no rebirth yet,
 		-- rank n+1 = after rebirth n), then more in the same style. Past the list: the last name II, III ... The rank
 		-- shows in the shop's Rebirth tab, over your head and on the leaderboards; its colour paints your pins' rings
