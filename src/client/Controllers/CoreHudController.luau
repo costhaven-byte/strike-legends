@@ -16,10 +16,12 @@ local AssetSlots = require(Shared.AssetSlots)
 local Currency = require(Shared.Modules.Currency)
 local CoreLadder = require(Shared.Modules.CoreLadder)
 local Mascots = require(Shared.Modules.Mascots)
+local Balls = require(Shared.Modules.Balls)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local HudKit = require(Modules.HudKit)
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
+local BallView = require(Modules.BallView)
 
 local CORE = Config.CoreLoop
 local player = Players.LocalPlayer
@@ -55,6 +57,174 @@ local function place(object: GuiObject, key: string)
 	end)
 end
 
+-- ===== UI overhaul V2 (Config.Ui.HudV2, owner's board B1/B2) =====
+local V2 = HudKit.V2
+local Kit = if V2 then require(Modules.SlKit) else nil
+
+-- The NEXT GOAL card (right side): a gold header plate, the next ball spinning in 3D in a well (a dark silhouette
+-- until bought, like the shop; the next bag or the rebirth shows its icon), what it gives, and coins / price.
+local function buildGoalCard(gui: ScreenGui)
+	local kit = Kit :: any
+	local holder = new("Frame", { Name = "NextGoal", BackgroundTransparency = 1, ZIndex = 2 }, gui)
+	local card = HudKit.Block(holder, {
+		Name = "Card",
+		Paint = { kit.C.Window, kit.C.Ink, kit.C.WindowStrip },
+		Ink = kit.C.Ink,
+		Strip = 3,
+		Radius = 20,
+		Lip = 6,
+		Shine = 0,
+	})
+	card.Holder.Size = UDim2.fromScale(1, 1)
+	local plate = HudKit.Block(holder, {
+		Name = "Header",
+		Paint = { kit.C.Header, kit.C.HeaderLip, kit.C.HeaderStrip },
+		Ink = kit.C.Ink,
+		Strip = 3,
+		Radius = 14,
+		Lip = 5,
+		Shine = 0,
+	})
+	plate.Holder.AnchorPoint = Vector2.new(0.5, 0.5)
+	plate.Holder.ZIndex = 8
+	local title = kit.Text(plate.Face, "NEXT GOAL", 24, kit.C.White, { ZIndex = 12 })
+	local well = new("Frame", {
+		Name = "Well",
+		BackgroundColor3 = kit.Paints.Blue[2],
+		BorderSizePixel = 0,
+		ZIndex = 6,
+	}, card.Face)
+	local wellCorner = new("UICorner", {}, well)
+	local wellStroke = HudKit.Outline(well, kit.C.Ink, 3)
+	local slot = new("Frame", {
+		Name = "Slot",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(0.86, 0.86),
+		SizeConstraint = Enum.SizeConstraint.RelativeYY,
+		BackgroundTransparency = 1,
+		ZIndex = 7,
+	}, well)
+	local image = kit.Image(slot, "hud_rebirth", 10, { Size = UDim2.fromScale(1, 1), ZIndex = 7, Visible = false })
+	local gainRow = new("Frame", { Name = "Gain", BackgroundTransparency = 1, ZIndex = 6 }, card.Face)
+	new("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		VerticalAlignment = Enum.VerticalAlignment.Center,
+		Padding = UDim.new(0, 6),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}, gainRow)
+	local gainIcon = kit.Image(gainRow, "cur_pin", 36, { LayoutOrder = 1, ZIndex = 7 })
+	local gainText = kit.Text(gainRow, "", 28, kit.C.Value, {
+		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromScale(0, 1),
+		LayoutOrder = 2,
+		ZIndex = 7,
+	})
+	local bar = kit.ProgressBar(card.Face, { Size = UDim2.fromOffset(250, 42) })
+	bar.Holder.AnchorPoint = Vector2.new(0.5, 1)
+	bar.Holder.ZIndex = 6
+
+	HudKit.OnLayout(function(phone)
+		local _, size = HudKit.Spot("Goal", phone)
+		local h = (size :: UDim2).Y.Offset
+		card:SetRadius(if phone then 12 else 20)
+		card:SetLip(if phone then 4 else 6)
+		plate.Holder.Size = UDim2.fromOffset(if phone then 96 else 160, if phone then 26 else 46)
+		plate.Holder.Position = UDim2.new(0.5, 0, 0, if phone then 2 else 4)
+		plate:SetRadius(if phone then 9 else 14)
+		plate:SetLip(if phone then 3 else 5)
+		title.TextSize = if phone then 13 else 24;
+		(title:FindFirstChildOfClass("UIStroke") :: UIStroke).Thickness = if phone then 1.5 else 2.5
+		local pad = if phone then 8 else 14
+		local top = if phone then 18 else 34
+		local wellH = math.floor(h * (if phone then 0.4 else 0.48))
+		well.Position = UDim2.fromOffset(pad, top)
+		well.Size = UDim2.new(1, -pad * 2, 0, wellH)
+		wellCorner.CornerRadius = UDim.new(0, if phone then 8 else 14)
+		wellStroke.Thickness = if phone then 2 else 3
+		local gainH = if phone then 18 else 36
+		gainRow.Position = UDim2.fromOffset(0, top + wellH + (if phone then 3 else 8))
+		gainRow.Size = UDim2.new(1, 0, 0, gainH)
+		gainIcon.Size = UDim2.fromOffset(gainH, gainH)
+		gainText.TextSize = if phone then 15 else 28
+		local barH = if phone then 24 else 42
+		bar.Holder.Size = UDim2.new(1, -pad * 2, 0, barH)
+		bar.Holder.Position = UDim2.new(0.5, 0, 1, -(if phone then 10 else 16))
+		bar.Label.TextSize = if phone then 12 else 20
+	end)
+	place(holder, "Goal")
+
+	local Rebirth = require(Shared.Modules.Rebirth)
+	local shownKey = ""
+	local view: ViewportFrame? = nil
+	local function refresh()
+		local coins = tonumber(player:GetAttribute("Coins")) or 0
+		local rebirths = player:GetAttribute("Rebirths")
+		local kind, step, price =
+			CoreLadder.Next(player:GetAttribute("BallStep"), player:GetAttribute("BagLevel"), rebirths)
+		local key, gain = "Done", ""
+		if kind then
+			local have = if kind == "Ball"
+				then CoreLadder.BallStep(player:GetAttribute("BallStep"))
+				else CoreLadder.BagLevel(player:GetAttribute("BagLevel"))
+			local more = Currency.Format(CoreLadder.Stat(kind, step) - CoreLadder.Stat(kind, have))
+			key = kind .. step
+			gain = if kind == "Ball" then "+" .. more .. " PINS" else "+" .. more .. " SPACE"
+		elseif Rebirth.CoreOn() then
+			key, gain, price = "Rebirth", "REBIRTH", Rebirth.CorePrice(rebirths)
+		else
+			price = 0
+		end
+		if key ~= shownKey then
+			local first = shownKey == ""
+			shownKey = key
+			if view then
+				view:Destroy()
+				view = nil
+			end
+			image.Visible = false
+			local ball = if kind == "Ball" then Balls.Get(CORE.Balls[step].Ball) else nil
+			if ball then
+				view = BallView.New(ball, { Spin = true, Locked = true, Margin = 1.05 })
+				local v = view :: ViewportFrame
+				v.Size = UDim2.fromScale(1, 1)
+				v.ZIndex = 7
+				v.Parent = slot
+			elseif kind == "Bag" then
+				image.Image = kit.Icon(("bag_%02d"):format(math.clamp(step, 1, 10)))
+				image.ImageColor3 = Color3.fromRGB(28, 22, 48) -- (a silhouette until bought, like the shop)
+				image.Visible = true
+			else
+				image.Image = kit.Icon(if key == "Rebirth" then "hud_rebirth" else "ui_tick")
+				image.ImageColor3 = Color3.new(1, 1, 1)
+				image.Visible = true
+			end
+			gainIcon.Visible = kind == "Ball"
+			if not first then
+				kit.Pulse(holder, 1.06, 0.24)
+			end
+		end
+		gainText.Text = if key == "Done" then "ALL BOUGHT!" else gain
+		gainText.TextColor3 = if key == "Rebirth" then kit.C.Header else kit.C.Value
+		local ready = price > 0 and Currency.CanAfford(coins, price)
+		bar:Set(
+			math.min(coins, price),
+			math.max(price, 1),
+			if key == "Done"
+				then "DONE!"
+				elseif ready then "GO TO SHOP!"
+				else Currency.Format(coins) .. "/" .. Currency.Format(price)
+		)
+		bar.BarFill.BackgroundColor3 = if ready then kit.C.Header else kit.Paints.Green[1]
+		card:SetGlow(if ready then kit.C.Header else nil)
+	end
+	for _, attribute in { "Coins", "BallStep", "BagLevel", "Rebirths" } do
+		player:GetAttributeChangedSignal(attribute):Connect(refresh)
+	end
+	refresh()
+end
+
 function CoreHudController:Start()
 	if not CORE.Enabled then
 		return
@@ -72,19 +242,47 @@ function CoreHudController:Start()
 	}, nil)
 
 	-- ===== Pin counter: the real pins of your last throw (big-number format), counts up as your pins fall =====
-	local counter, counterFace = plate(gui, "PinCounter", PANEL, 8)
-	place(counter, "PinCounter")
-	local counterText = text(counterFace, "0", {
-		Size = UDim2.new(1, -16, 0.68, 0),
-		Position = UDim2.new(0, 8, 0.06, 0),
-		TextColor3 = INK,
-	})
-	local counterNote = text(counterFace, "Pins down", {
-		Body = true,
-		Size = UDim2.new(1, -16, 0.26, 0),
-		Position = UDim2.new(0, 8, 0.7, 0),
-		TextColor3 = MUTED,
-	})
+	local counter: Frame, counterText: TextLabel, counterNote: TextLabel
+	if Kit then
+		-- V2: no panel; the pin, a big white number and PINS DOWN under it, right on the sky (board B1)
+		counter = new("Frame", { Name = "PinCounter", BackgroundTransparency = 1 }, gui)
+		local pin = Kit.Image(counter, "cur_pin", 56, { AnchorPoint = Vector2.new(0, 0.5), ZIndex = 3 })
+		counterText = Kit.Text(counter, "0", 48, WHITE, { TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 4 })
+		counterNote = Kit.Text(counter, "PINS DOWN", 15, WHITE, { TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 4 })
+		counterNote.FontFace = Kit.Font
+		HudKit.OnLayout(function(phone)
+			local iconSize = if phone then 30 else 56
+			pin.Size = UDim2.fromOffset(iconSize, iconSize)
+			pin.Position = UDim2.new(0, if phone then 0 else 8, 0.5, 0)
+			local left = iconSize + (if phone then 4 else 16)
+			counterText.TextSize = if phone then 26 else 48
+			counterText.Position = UDim2.fromOffset(left, if phone then 1 else 4)
+			counterText.Size = UDim2.new(1, -left, 0, if phone then 28 else 50);
+			(counterText:FindFirstChildOfClass("UIStroke") :: UIStroke).Thickness = if phone then 2 else 3
+			counterNote.TextSize = if phone then 9 else 15
+			counterNote.Position = UDim2.fromOffset(left + 1, if phone then 29 else 54)
+			counterNote.Size = UDim2.new(1, -left, 0, if phone then 11 else 18);
+			(counterNote:FindFirstChildOfClass("UIStroke") :: UIStroke).Thickness = if phone then 1.5 else 2
+		end)
+		place(counter, "PinCounter")
+	else
+		local counterFace
+		counter, counterFace = plate(gui, "PinCounter", PANEL, 8)
+		place(counter, "PinCounter")
+		counterText = text(counterFace, "0", {
+			Size = UDim2.new(1, -16, 0.68, 0),
+			Position = UDim2.new(0, 8, 0.06, 0),
+			TextColor3 = INK,
+		})
+		counterNote = text(counterFace, "Pins down", {
+			Body = true,
+			Size = UDim2.new(1, -16, 0.26, 0),
+			Position = UDim2.new(0, 8, 0.7, 0),
+			TextColor3 = MUTED,
+		})
+	end
+	local NOTE_PINS = if Kit then "PINS DOWN" else "Pins down"
+	local NOTE_FULL = if Kit then "BAG FULL!" else "Bag full, sell"
 	local counterScale = new("UIScale", {}, counter)
 	-- LUCKY! badge: a tilted gold tag on the counter's top-right corner, pops in on a high luck roll
 	local lucky, luckyFace = plate(counter, "Lucky", GOLD, 8)
@@ -114,13 +312,23 @@ function CoreHudController:Start()
 	local function showCount(count: number, isLucky: boolean, full: boolean)
 		counterRun += 1
 		local run = counterRun
-		SunKit.Recolor(counterText, if isLucky then K.SunLip else INK)
-		counterNote.Text = if full then "Bag full, sell" else "Pins down"
-		counterNote.TextColor3 = if full then K.CoralLip else MUTED
-		-- Addendum 5 D: bigger throws punch the counter harder
-		counterScale.Scale = (if isLucky then 1.2 else 1.08)
-			+ Config.CoreLoop.BallEffects.CounterGrow * BallSignature.Strength(count)
-		TweenService:Create(counterScale, TweenInfo.new(0.18, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+		counterNote.Text = if full then NOTE_FULL else NOTE_PINS
+		if Kit then
+			-- V2 (board M "Pins down"): pops 1 -> 1.35 -> 1 and flashes gold, 0.32 s overshoot
+			counterText.TextColor3 = Kit.C.Header
+			TweenService:Create(counterText, TweenInfo.new(0.32), { TextColor3 = WHITE }):Play()
+			counterNote.TextColor3 = if full then Kit.Paints.Red[1] else WHITE
+			counterScale.Scale = (if isLucky then 1.45 else 1.35)
+				+ Config.CoreLoop.BallEffects.CounterGrow * BallSignature.Strength(count)
+			TweenService:Create(counterScale, TweenInfo.new(0.32, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+		else
+			SunKit.Recolor(counterText, if isLucky then K.SunLip else INK)
+			counterNote.TextColor3 = if full then K.CoralLip else MUTED
+			-- Addendum 5 D: bigger throws punch the counter harder
+			counterScale.Scale = (if isLucky then 1.2 else 1.08)
+				+ Config.CoreLoop.BallEffects.CounterGrow * BallSignature.Strength(count)
+			TweenService:Create(counterScale, TweenInfo.new(0.18, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+		end
 		if isLucky then
 			popLucky()
 		end
@@ -138,46 +346,143 @@ function CoreHudController:Start()
 	end
 
 	-- ===== Bag bar + SELL =====
-	local bag, bagFace = plate(gui, "Bag", PANEL, 6)
-	place(bag, "Bag")
-	new("ImageLabel", {
-		Name = "Icon",
-		BackgroundTransparency = 1,
-		Image = AssetSlots.Image("StoreBag"),
-		ScaleType = Enum.ScaleType.Fit,
-		SizeConstraint = Enum.SizeConstraint.RelativeYY,
-		Size = UDim2.fromScale(0.9, 0.9),
-		Position = UDim2.fromScale(0.02, 0.05),
-	}, bagFace)
-	local track = new("Frame", {
-		Name = "Track",
-		BackgroundColor3 = TRACK,
-		BorderSizePixel = 0,
-		Position = UDim2.new(0.26, 0, 0.22, 0),
-		Size = UDim2.new(0.7, 0, 0.56, 0),
-		ClipsDescendants = true,
-	}, bagFace)
-	new("UICorner", { CornerRadius = UDim.new(0, 4) }, track)
-	new("UIStroke", { Color = INK, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, track)
-	local fill = new("Frame", {
-		Name = "Fill",
-		BackgroundColor3 = GREEN,
-		BorderSizePixel = 0,
-		Size = UDim2.fromScale(0, 1),
-	}, track)
-	new("UICorner", { CornerRadius = UDim.new(0, 4) }, fill)
-	local bagText = text(track, "0/0", { Size = UDim2.new(1, -8, 0.86, 0), Position = UDim2.new(0, 4, 0.07, 0) })
+	local bag, bagFace, fill, bagText
+	local bagBar: any = nil
+	if Kit then
+		-- V2: the bag (its look follows your bag level) over the left end of the kit's progress bar
+		bag = new("Frame", { Name = "Bag", BackgroundTransparency = 1 }, gui)
+		bagFace = bag
+		bagBar = Kit.ProgressBar(bag, {})
+		Kit.Image(bag, "bag_01", 92, { Name = "Icon", AnchorPoint = Vector2.new(0, 0.5), ZIndex = 10 })
+		HudKit.OnLayout(function(phone)
+			local _, size = HudKit.Spot("Bag", phone)
+			local h = (size :: UDim2).Y.Offset
+			local icon = bag:FindFirstChild("Icon") :: ImageLabel
+			icon.Size = UDim2.fromOffset(math.floor(h * 1.3), math.floor(h * 1.3))
+			icon.Position = UDim2.new(0, -math.floor(h * 0.2), 0.5, -math.floor(h * 0.08))
+			local barH = math.floor(h * 0.62)
+			local left = math.floor(h * 0.6)
+			bagBar.Holder.AnchorPoint = Vector2.new(0, 0.5)
+			bagBar.Holder.Position = UDim2.new(0, left, 0.5, 2)
+			bagBar.Holder.Size = UDim2.new(1, -left, 0, barH)
+			bagBar.Label.TextSize = if phone then 13 else 22
+			bagBar.Label.Position = UDim2.fromOffset(math.floor(h * 0.2), 0)
+			bagBar.Label.Size = UDim2.new(1, -math.floor(h * 0.2), 1, 0)
+		end)
+		place(bag, "Bag")
+	else
+		bag, bagFace = plate(gui, "Bag", PANEL, 6)
+		place(bag, "Bag")
+		new("ImageLabel", {
+			Name = "Icon",
+			BackgroundTransparency = 1,
+			Image = AssetSlots.Image("StoreBag"),
+			ScaleType = Enum.ScaleType.Fit,
+			SizeConstraint = Enum.SizeConstraint.RelativeYY,
+			Size = UDim2.fromScale(0.9, 0.9),
+			Position = UDim2.fromScale(0.02, 0.05),
+		}, bagFace)
+		local track = new("Frame", {
+			Name = "Track",
+			BackgroundColor3 = TRACK,
+			BorderSizePixel = 0,
+			Position = UDim2.new(0.26, 0, 0.22, 0),
+			Size = UDim2.new(0.7, 0, 0.56, 0),
+			ClipsDescendants = true,
+		}, bagFace)
+		new("UICorner", { CornerRadius = UDim.new(0, 4) }, track)
+		new("UIStroke", { Color = INK, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, track)
+		fill = new("Frame", {
+			Name = "Fill",
+			BackgroundColor3 = GREEN,
+			BorderSizePixel = 0,
+			Size = UDim2.fromScale(0, 1),
+		}, track)
+		new("UICorner", { CornerRadius = UDim.new(0, 4) }, fill)
+		bagText = text(track, "0/0", { Size = UDim2.new(1, -8, 0.86, 0), Position = UDim2.new(0, 4, 0.07, 0) })
+	end
 
-	local sell, sellFace = plate(gui, "Sell", CORAL, 12)
-	place(sell, "Sell")
-	local sellButton = new("TextButton", {
-		Name = "Button",
-		BackgroundTransparency = 1,
-		Text = "",
-		Size = UDim2.fromScale(1, 1),
-	}, sellFace)
-	text(sellFace, "Sell", { Size = UDim2.new(0.8, 0, 0.52, 0), Position = UDim2.new(0.1, 0, 0.24, 0) })
+	local sell, sellFace, sellButton
+	if Kit then
+		-- V2: a big green SELL with a coin (button XL, board B1); the face sinks on press
+		sell = new("Frame", { Name = "Sell", BackgroundTransparency = 1 }, gui)
+		sellFace = sell
+		local block = HudKit.Block(sell, {
+			Name = "Body",
+			Paint = Kit.Paints.Green,
+			Ink = Kit.C.Ink,
+			Strip = 3,
+			Radius = 22,
+			Lip = 6,
+			Shine = 0,
+		})
+		block.Holder.Size = UDim2.fromScale(1, 1)
+		local row = new("Frame", { Name = "Row", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, -6), ZIndex = 5 }, block.Face)
+		new("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			HorizontalAlignment = Enum.HorizontalAlignment.Center,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+			Padding = UDim.new(0, 8),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}, row)
+		local coin = Kit.Image(row, "cur_coin", 56, { LayoutOrder = 1, ZIndex = 6 })
+		local word = Kit.Text(row, "SELL", 44, WHITE, {
+			AutomaticSize = Enum.AutomaticSize.X,
+			Size = UDim2.fromScale(0, 1),
+			LayoutOrder = 2,
+			ZIndex = 6,
+		})
+		sellButton = new("TextButton", {
+			Name = "Button",
+			BackgroundTransparency = 1,
+			Text = "",
+			Size = UDim2.fromScale(1, 1),
+			ZIndex = 9,
+		}, sell)
+		sellButton:SetAttribute("OwnPress", true)
+		HudKit.Press(block, true, sellButton)
+		HudKit.OnLayout(function(phone)
+			block:SetRadius(if phone then 12 else 22)
+			block:SetLip(if phone then 4 else 6)
+			local iconSize = if phone then 28 else 56
+			coin.Size = UDim2.fromOffset(iconSize, iconSize)
+			word.TextSize = if phone then 24 else 44;
+			(word:FindFirstChildOfClass("UIStroke") :: UIStroke).Thickness = if phone then 2 else 3
+		end)
+		place(sell, "Sell")
+	else
+		sell, sellFace = plate(gui, "Sell", CORAL, 12)
+		place(sell, "Sell")
+		sellButton = new("TextButton", {
+			Name = "Button",
+			BackgroundTransparency = 1,
+			Text = "",
+			Size = UDim2.fromScale(1, 1),
+		}, sellFace)
+		text(sellFace, "Sell", { Size = UDim2.new(0.8, 0, 0.52, 0), Position = UDim2.new(0.1, 0, 0.24, 0) })
+	end
 	local sellScale = new("UIScale", {}, sell)
+
+	-- V2: the one-time SELL HERE! bubble over SELL (board M "Hint bubble": a new player's bag at 80%+, bobs, gone
+	-- after the first sell) and the NEXT GOAL card
+	local hint: Frame? = nil
+	local hintBubble: Frame? = nil
+	local soldOnce = false
+	if Kit then
+		hint = new("Frame", { Name = "SellHint", BackgroundTransparency = 1, Visible = false, ZIndex = 20 }, gui)
+		place(hint :: Frame, "Sell")
+		local hintScale = new("UIScale", {}, hint)
+		HudKit.OnLayout(function(phone)
+			hintScale.Scale = if phone then 0.6 else 1
+		end)
+		hintBubble = Kit.Bubble(nil, { Text = "SELL HERE!", Side = "Bottom", Bob = false })
+		local b = hintBubble :: Frame
+		b.AnchorPoint = Vector2.new(0.5, 1)
+		b.Position = UDim2.new(0.5, 0, 0, -12)
+		b.Parent = hint
+		Kit.Bob(b, 8, 0.8)
+		buildGoalCard(gui)
+	end
 
 	-- ===== BAG FULL, SELL prompt: a slightly tilted coral card =====
 	local prompt, promptFace = plate(gui, "BagFull", CORAL, 4)
@@ -373,19 +678,26 @@ function CoreHudController:Start()
 		local amount = player:GetAttribute("Bag") or 0
 		local size = math.max(player:GetAttribute("BagSize") or CORE.BagSizes[1], 1)
 		local share = math.clamp(amount / size, 0, 1)
-		TweenService:Create(fill, TweenInfo.new(0.15), { Size = UDim2.fromScale(share, 1) }):Play()
-		fill.BackgroundColor3 = if share >= 1 then CORAL else GREEN
-		bagText.Text = Currency.Format(amount) .. "/" .. Currency.Format(size)
+		if bagBar then
+			-- V2: green, orange from 80%, red FULL! (board A progress bar); the bag icon follows your bag level
+			bagBar:Set(amount, size, if share >= 1 then "FULL!" else Currency.Format(amount) .. "/" .. Currency.Format(size) .. " PINS", amount > lastBag)
+			local icon = bag:FindFirstChild("Icon") :: ImageLabel
+			icon.Image = (Kit :: any).Icon(("bag_%02d"):format(math.clamp(CoreLadder.BagLevel(player:GetAttribute("BagLevel")), 1, 10)))
+		else
+			TweenService:Create(fill, TweenInfo.new(0.15), { Size = UDim2.fromScale(share, 1) }):Play()
+			fill.BackgroundColor3 = if share >= 1 then CORAL else GREEN
+			bagText.Text = Currency.Format(amount) .. "/" .. Currency.Format(size)
+		end
 		if amount > lastBag then
 			UiFx.Pop(bag, 1.04, 0.12)
 		end
-		if share < 1 and counterNote.Text == "Bag full, sell" then
-			counterNote.Text = "Pins down"
-			counterNote.TextColor3 = MUTED
+		if share < 1 and counterNote.Text == NOTE_FULL then
+			counterNote.Text = NOTE_PINS
+			counterNote.TextColor3 = if Kit then WHITE else MUTED
 		end
 		lastBag = amount
 	end
-	for _, key in { "Bag", "BagSize" } do
+	for _, key in { "Bag", "BagSize", "BagLevel" } do
 		player:GetAttributeChangedSignal(key):Connect(refreshBag)
 	end
 	refreshBag()
@@ -402,10 +714,11 @@ function CoreHudController:Start()
 		flying += 1
 		local phone = HudKit.Phone()
 		local base = gui.AbsolutePosition
-		local from = counter.AbsolutePosition
+		local fit = HudKit.LayerScale(gui) -- (screen pixels -> this layer's, when V2 shrinks it)
+		local from = (counter.AbsolutePosition
 			+ Vector2.new(counter.AbsoluteSize.X / 2, counter.AbsoluteSize.Y + 6)
-			- base
-		local to = bagIcon.AbsolutePosition + bagIcon.AbsoluteSize / 2 - base
+			- base) / fit
+		local to = (bagIcon.AbsolutePosition + bagIcon.AbsoluteSize / 2 - base) / fit
 		local tag = text(gui, "+" .. Currency.Format(paid), {
 			Name = "Gain",
 			AnchorPoint = Vector2.new(0.5, 0.5),
@@ -449,6 +762,7 @@ function CoreHudController:Start()
 	-- Sold at the station: coins fly up from the bag
 	remotes:WaitForChild("CoreSold").OnClientEvent:Connect(function(amount, multiplier, _sources)
 		guideUntil = 0
+		soldOnce = true
 		Sfx.Play("Coin", 1, 1.4)
 		Sfx.Play("SpinWin", 1.2, 0.6)
 		UiFx.Flash(GREEN, 0.15, 0.25)
@@ -535,11 +849,27 @@ function CoreHudController:Start()
 			tutorLine.Text = "That's it. Keep throwing for the next one"
 			UiFx.Pop(tutor, 1.12, 0.2)
 		end
-		tutor.Visible = step > 0 or (tutorDoneAt ~= nil and os.clock() - tutorDoneAt < GUIDE.DoneSeconds)
+		-- (V2: no banner; the SELL HERE! bubble, the bouncing SELL / SHOP and the beams do the guiding)
+		tutor.Visible = not Kit and (step > 0 or (tutorDoneAt ~= nil and os.clock() - tutorDoneAt < GUIDE.DoneSeconds))
 		if tutor.Visible then
 			tutor.Rotation = -1.5
 		end
-		prompt.Visible = full and not tutor.Visible
+		prompt.Visible = full and not tutor.Visible and not Kit
+		if hint then
+			-- a new player only (before ball 2, no rebirths), until they sell once
+			local want = not soldOnce
+				and amount / math.max(size, 1) >= 0.8
+				and (tonumber(player:GetAttribute("BallStep")) or 1) < 2
+				and (tonumber(player:GetAttribute("Rebirths")) or 0) == 0
+			if want and not hint.Visible then
+				hint.Visible = true
+				local s = (Kit :: any).ScaleOf(hintBubble :: Frame)
+				s.Scale = 0.6;
+				(Kit :: any).Tween(s, 0.3, "Over", { Scale = 1 })
+			elseif not want and hint.Visible then
+				hint.Visible = false
+			end
+		end
 		if full then
 			prompt.Rotation = -2 + math.sin(os.clock() * 4) * 1.2
 		end

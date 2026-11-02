@@ -265,7 +265,16 @@ local function startCore()
 	gui.Parent = playerGui
 
 	-- ===== The big gold button (left column, under BALLS / PETS / STORE) =====
-	local block = HudKit.Block(gui, { Name = "RebirthButton", Paint = "Gold", Button = true, Radius = 16, Lip = 6 })
+	local v2Kit = if HudKit.V2 then require(Modules:WaitForChild("SlKit")) else nil
+	local block = HudKit.Block(gui, {
+		Name = "RebirthButton",
+		Paint = if v2Kit then v2Kit.Paints.Gold else "Gold",
+		Ink = if v2Kit then v2Kit.C.Ink else nil,
+		Strip = if v2Kit then 3 else nil,
+		Button = true,
+		Radius = 16,
+		Lip = 6,
+	})
 	local button = block.Holder :: TextButton
 	local face = block.Face
 	local icon = HudKit.Image(face, "Rebirth", 40, {
@@ -311,7 +320,44 @@ local function startCore()
 	fill.Parent = track
 	HudKit.Corner(fill, 3)
 
+	-- V2 (board B1): white star, REBIRTH, and a white bar in a navy track with the percent on it
+	local pct: TextLabel? = nil
+	local trackStroke: UIStroke? = nil
+	if v2Kit then
+		icon.Image = v2Kit.Icon("ui_star")
+		title.FontFace = v2Kit.Font;
+		(title:FindFirstChildOfClass("UIStroke") :: UIStroke).Color = v2Kit.C.Ink
+		preview.Visible = false
+		track.BackgroundColor3 = v2Kit.C.TileLip
+		track.BackgroundTransparency = 0
+		trackStroke = HudKit.Outline(track, v2Kit.C.Ink, 3)
+		pct = HudKit.Text(track, "", v2Kit.Font, 14, K.White, 2);
+		((pct :: TextLabel):FindFirstChildOfClass("UIStroke") :: UIStroke).Color = v2Kit.C.Ink;
+		(pct :: TextLabel).ZIndex = 7
+		fill.BackgroundColor3 = Color3.new(1, 1, 1)
+	end
+
 	HudKit.OnLayout(function(isPhone)
+		if v2Kit then
+			block:SetRadius(if isPhone then 11 else 16)
+			block:SetLip(if isPhone then 4 else 6)
+			local iconSize = if isPhone then 34 else 58
+			icon.Size = UDim2.fromOffset(iconSize, iconSize)
+			icon.Position = UDim2.new(0, if isPhone then 2 else 4, 0.5, 0)
+			local left = iconSize + (if isPhone then 4 else 6)
+			title.Position = UDim2.fromOffset(left, if isPhone then 2 else 6)
+			title.Size = UDim2.new(1, -left - 4, 0, if isPhone then 18 else 32)
+			HudKit.Fit(title, if isPhone then 17 else 30)
+			track.AnchorPoint = Vector2.new(0, 1)
+			track.Position = UDim2.new(0, left, 1, if isPhone then -5 else -9)
+			track.Size = UDim2.new(1, -left - (if isPhone then 8 else 12), 0, if isPhone then 10 else 22);
+			(trackStroke :: UIStroke).Thickness = if isPhone then 2 else 3
+			for _, round in { track:FindFirstChildOfClass("UICorner"), fill:FindFirstChildOfClass("UICorner") } do
+				(round :: UICorner).CornerRadius = UDim.new(0, if isPhone then 5 else 11)
+			end;
+			(pct :: TextLabel).Visible = not isPhone
+			return
+		end
 		block:SetRadius(if isPhone then 12 else 16)
 		block:SetLip(if isPhone then 5 else 6)
 		icon.Size = UDim2.fromOffset(if isPhone then 28 else 42, if isPhone then 28 else 42)
@@ -347,7 +393,7 @@ local function startCore()
 			return
 		end
 		readyShown = ready
-		block:SetGlow(if ready then K.Lime else nil)
+		block:SetGlow(if ready then (if v2Kit then v2Kit.C.Header else K.Lime) else nil)
 		dot.Visible = ready
 		if ready then
 			block.GlowRing.Transparency = 0.2
@@ -501,6 +547,9 @@ local function startCore()
 		-- the button
 		preview.Text = ("%s  ›  %s"):format(nowText, afterText)
 		local coins = tonumber(player:GetAttribute("Coins")) or 0
+		if pct then
+			pct.Text = ("%d%%"):format(math.floor(math.clamp(coins / math.max(price, 1), 0, 1) * 100))
+		end
 		TweenService:Create(fill, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
 			Size = UDim2.fromScale(math.clamp(coins / math.max(price, 1), 0, 1), 1),
 		}):Play()

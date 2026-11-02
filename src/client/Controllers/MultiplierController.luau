@@ -141,9 +141,24 @@ function MultiplierController:Start()
 
 	-- ===== The badge: gold pill right of the coin counter =====
 	-- Phones: the visible pill is 34 tall, the tap area 44 (HUD Kit)
-	local badgeBlock = HudKit.Block(hud, { Name = "Multiplier", Button = true, Paint = "Gold", Radius = 22, Lip = 5 })
+	local v2Kit = if HudKit.V2 then require(Modules:WaitForChild("SlKit")) else nil
+	local badgeBlock = HudKit.Block(hud, {
+		Name = "Multiplier",
+		Button = true,
+		Paint = if v2Kit then { v2Kit.C.Header, v2Kit.C.HeaderLip, v2Kit.C.HeaderStrip } else "Gold",
+		Ink = if v2Kit then v2Kit.C.Ink else nil,
+		Strip = if v2Kit then 3 else nil,
+		Radius = 22,
+		Lip = 5,
+	})
 	local badge = badgeBlock.Holder :: TextButton
-	local badgeText = HudKit.Text(badgeBlock.Face, "", HudKit.Num, 22, K.White, 2.5)
+	local badgeText = HudKit.Text(badgeBlock.Face, "", if v2Kit then v2Kit.Font else HudKit.Num, 22, K.White, 2.5)
+	if v2Kit then
+		-- V2: the gold xN chip leans on the coin pill's top-right corner (board B1)
+		badge.Rotation = 5
+		badgeText.ZIndex = 6;
+		(badgeText:FindFirstChildOfClass("UIStroke") :: UIStroke).Color = v2Kit.C.Ink
+	end
 	badgeText.Name = "Total"
 	local hit = Instance.new("TextButton")
 	hit.Name = "HitArea"
@@ -695,6 +710,14 @@ function MultiplierController:Start()
 			label.Position = UDim2.fromScale(0.08, 0.15)
 			label.Size = UDim2.fromScale(0.84, 0.7)
 			HudKit.OnLayout(function(phone)
+				if v2Kit then
+					-- V2: right of the gem pill
+					local position, size = HudKit.Spot("Gems", phone)
+					local h = (size :: UDim2).Y.Offset
+					auto.Position = position + UDim2.fromOffset((size :: UDim2).X.Offset + (if phone then 6 else 12), math.floor(h * 0.12))
+					auto.Size = UDim2.fromOffset(if phone then 58 else 100, math.floor(h * 0.76))
+					return
+				end
 				local position, size = HudKit.Spot("Multiplier", phone)
 				local h = (size :: UDim2).Y.Offset
 				auto.Position = position + UDim2.fromOffset(0, h + 6)
@@ -711,7 +734,13 @@ function MultiplierController:Start()
 				auto.Visible = allowed()
 				local on = player:GetAttribute("AutoBowl") == true
 				label.Text = if on then "AUTO ON" else "AUTO"
-				auto.BackgroundColor3 = if on then (if SUNNY then K.Lime else Color3.fromRGB(40, 90, 30)) else CARD
+				auto.BackgroundColor3 = if v2Kit
+					then (if on then v2Kit.Paints.Green[1] else v2Kit.Paints.Blue[1])
+					elseif on then (if SUNNY then K.Lime else Color3.fromRGB(40, 90, 30))
+					else CARD
+				if v2Kit then
+					label.TextColor3 = K.White
+				end
 			end
 			-- Opened by a rebirth this session: the button pops in with a gold FREE! tag for a while
 			local wasAllowed = allowed()

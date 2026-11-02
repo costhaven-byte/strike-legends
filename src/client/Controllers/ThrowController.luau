@@ -280,11 +280,29 @@ function ThrowController:Start()
 	button.Text = ""
 	button.AnchorPoint = Vector2.new(0.5, 1)
 	button.Position = UDim2.fromScale(0.5, 1)
-	local holdBlock = HudKit.Block(button, { Name = "Kit", Paint = "Pink", Radius = 16, Lip = 6 })
+	-- V2 HUD (Config.Ui.HudV2, board B1/B2): a big green THROW with HOLD under it (XL button); bottom-right on phones
+	local v2Kit = if HudKit.V2 then require(Modules.SlKit) else nil
+	local holdPaint: any = if v2Kit then v2Kit.Paints.Green else "Pink"
+	local holdBlock = HudKit.Block(button, {
+		Name = "Kit",
+		Paint = holdPaint,
+		Ink = if v2Kit then v2Kit.C.Ink else nil,
+		Strip = if v2Kit then 3 else nil,
+		Radius = 16,
+		Lip = 6,
+	})
 	holdBlock.Holder.Size = UDim2.fromScale(1, 1)
 	HudKit.Press(holdBlock, true, button)
 	local holdLabel = HudKit.Text(holdBlock.Face, if CORE_ON then "THROW" else "HOLD!", HudKit.Head, 28, HudKit.C.White, 3)
 	holdLabel.Position = UDim2.fromOffset(0, 2)
+	local holdSub: TextLabel? = nil
+	if v2Kit then
+		holdLabel.FontFace = v2Kit.Font;
+		(holdLabel:FindFirstChildOfClass("UIStroke") :: UIStroke).Color = v2Kit.C.Ink
+		holdSub = HudKit.Text(holdBlock.Face, if CORE_ON then "HOLD" else "", v2Kit.Font, 15, HudKit.C.White, 2);
+		(holdSub :: TextLabel).ZIndex = 5;
+		((holdSub :: TextLabel):FindFirstChildOfClass("UIStroke") :: UIStroke).Color = v2Kit.C.Ink
+	end
 	hint.FontFace = HudKit.Body
 	hint.TextScaled = false
 	hint.RichText = true
@@ -303,6 +321,25 @@ function ThrowController:Start()
 		holdBlock:SetRadius(if phone then 14 else 16)
 		holdBlock:SetLip(if phone then 5 else 6)
 		holdSize = if phone then 22 else 28
+		if v2Kit then
+			-- the design's spot: centred 32 px off the bottom (computer), its centre 92 px from the right (phone)
+			local h = (size :: UDim2).Y.Offset
+			panel.Position = if phone then UDim2.new(1, -92, 1, -14) else UDim2.new(0.5, 0, 1, -32)
+			holdBlock:SetRadius(if phone then 14 else 24)
+			holdSize = if phone then 26 else 52
+			holdLabel.Position = UDim2.fromOffset(0, if phone then -6 else -12)
+			local sub = holdSub :: TextLabel
+			sub.TextSize = if phone then 9 else 15
+			sub.Position = UDim2.new(0, 0, 0, if phone then 13 else 26);
+			(holdLabel:FindFirstChildOfClass("UIStroke") :: UIStroke).Thickness = if phone then 2 else 3
+			hint.AnchorPoint = Vector2.new(0.5, 1)
+			hint.Position = UDim2.new(0.5, 0, 1, -(h + 8))
+			hint.Size = UDim2.fromOffset(if phone then 420 else 700, if phone then 12 else 20)
+			hint.TextSize = if phone then 10 else 17
+			hintStroke.Thickness = if phone then 1.5 else 2
+			holdLabel.TextSize = if holdLabel.Text == "ROLLING..." then holdSize - 6 else holdSize
+			return
+		end
 		holdLabel.TextSize = if holdLabel.Text == "ROLLING..." then holdSize - 6 else holdSize
 		-- wider than the panel, so the line never wraps
 		hint.AnchorPoint = Vector2.new(0.5, 0)
@@ -322,8 +359,11 @@ function ThrowController:Start()
 	local function setButton(text: string, look: string)
 		holdLabel.Text = text
 		holdLabel.TextSize = if look == "Rolling" then holdSize - 6 else holdSize
-		holdBlock:Paint(if look == "Rolling" then "Grey" else "Pink")
-		holdBlock:SetGlow(if look == "Held" then HudKit.C.Pink else nil)
+		holdBlock:Paint(if look == "Rolling" then (if v2Kit then v2Kit.Paints.Disabled else "Grey") else holdPaint)
+		holdBlock:SetGlow(if look == "Held" and not v2Kit then HudKit.C.Pink else nil)
+		if holdSub then
+			holdSub.Visible = look == "Ready"
+		end
 		if look == "Ready" then
 			holdScale.Scale = 1
 			idlePulse:Play()

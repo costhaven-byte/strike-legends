@@ -34,6 +34,122 @@ local KIND_LOOKS = {
 
 local PotionController = {}
 
+-- V2 HUD (Config.Ui.HudV2, board B1): each running potion is a round timer: the potion on a navy disc, a ring in
+-- its colour that empties clockwise as the time runs out, the time under it.
+local V2_KIT = if HudKit.V2 then require(Modules:WaitForChild("SlKit")) else nil
+local V2_ICONS = { CoinSmall = "potion_coin", CoinBig = "potion_coin_mega", XpSmall = "potion_xp", XpBig = "potion_xp_mega" }
+
+-- A pie in one half of the disc (side -1 = left, 1 = right) whose visible part turns with its gradient
+local function pieHalf(parent: Frame, side: number, color: Color3): UIGradient
+	local clip = Instance.new("Frame")
+	clip.Name = if side < 0 then "Left" else "Right"
+	clip.BackgroundTransparency = 1
+	clip.ClipsDescendants = true
+	clip.Position = UDim2.fromScale(if side < 0 then 0 else 0.5, 0)
+	clip.Size = UDim2.fromScale(0.5, 1)
+	clip.ZIndex = 3
+	clip.Parent = parent
+	local disc = Instance.new("Frame")
+	disc.BackgroundColor3 = color
+	disc.BorderSizePixel = 0
+	disc.Position = UDim2.fromScale(if side < 0 then 0 else -1, 0)
+	disc.Size = UDim2.fromScale(2, 1)
+	disc.ZIndex = 3
+	disc.Parent = clip
+	HudKit.Corner(disc, 999)
+	local gradient = Instance.new("UIGradient")
+	-- a hard half: the side the rotation points away from shows (no blend: it's a mask, not a colour fade)
+	gradient.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.5, 0),
+		NumberSequenceKeypoint.new(0.501, 1),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	gradient.Parent = disc
+	return gradient
+end
+
+local function buildChipV2(potion, parent: Frame, index: number)
+	local kit = V2_KIT :: any
+	local color = if potion.Boost == "XP" then kit.C.Value else kit.C.Header
+	local chip = Instance.new("Frame")
+	chip.Name = potion.Id
+	chip.LayoutOrder = index
+	chip.BackgroundTransparency = 1
+	chip.Visible = false
+	chip.Parent = parent
+	local scale = Instance.new("UIScale")
+	scale.Parent = chip
+	local inner = Instance.new("Frame")
+	inner.Name = "Inner"
+	inner.BackgroundTransparency = 1
+	inner.Size = UDim2.fromScale(1, 1)
+	inner.Parent = chip
+	local ring = Instance.new("Frame")
+	ring.Name = "Ring"
+	ring.AnchorPoint = Vector2.new(0.5, 0)
+	ring.Position = UDim2.fromScale(0.5, 0)
+	ring.BackgroundColor3 = kit.C.TileLip
+	ring.ZIndex = 2
+	ring.Parent = inner
+	HudKit.Corner(ring, 999)
+	local outline = HudKit.Outline(ring, kit.C.Ink, 3)
+	local ringScale = Instance.new("UIScale")
+	ringScale.Parent = ring
+	local right = pieHalf(ring, 1, color)
+	local left = pieHalf(ring, -1, color)
+	local hole = Instance.new("Frame")
+	hole.Name = "Hole"
+	hole.AnchorPoint = Vector2.new(0.5, 0.5)
+	hole.Position = UDim2.fromScale(0.5, 0.5)
+	hole.BackgroundColor3 = kit.C.Window
+	hole.ZIndex = 4
+	hole.Parent = ring
+	HudKit.Corner(hole, 999)
+	local icon = kit.Image(ring, V2_ICONS[potion.Id] or "potion_coin", 40, {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		ZIndex = 5,
+	})
+	local time = HudKit.Text(inner, "", kit.Font, 14, K.White, 2)
+	time.Name = "Time"
+	time.AnchorPoint = Vector2.new(0.5, 1)
+	time.Position = UDim2.fromScale(0.5, 1)
+	time.ZIndex = 6;
+	(time:FindFirstChildOfClass("UIStroke") :: UIStroke).Color = kit.C.Ink
+	local bar = Instance.new("Frame") -- (unused in V2; refresh still sizes it)
+	bar.Name = "Bar"
+	bar.Visible = false
+	bar.Parent = inner
+	local pulse = TweenService:Create(
+		ringScale,
+		TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		{ Scale = 1.06 }
+	)
+	local parts = {
+		Chip = chip,
+		Inner = inner,
+		Scale = scale,
+		-- the old card's handles that refresh uses: the outline (red in the last 10 s) and the breathing scale
+		Block = { Outline = outline, Scale = ringScale },
+		Icon = icon,
+		Time = time,
+		Bar = bar,
+		Pulse = pulse,
+		Ending = false,
+		Ring = ring,
+		Hole = hole,
+	}
+	-- share of the time left (1 = full ring), clockwise from the top
+	function parts.SetProgress(share: number)
+		local p = math.clamp(share, 0, 1)
+		right.Rotation = math.min(p, 0.5) * 360
+		left.Rotation = 180 + math.clamp(p - 0.5, 0, 0.5) * 360
+	end
+	parts.SetProgress(1)
+	return parts
+end
+
 local function decode(value: any): { [string]: number }
 	local values = {}
 	if type(value) == "string" then
@@ -275,9 +391,12 @@ local function refresh()
 				local ending = on and left <= 10
 				chip.Time.Text = if on then clock(left) else "WAIT"
 				chip.Time.TextColor3 = if ending then K.Red elseif on then K.White else GREY
-				chip.Block.Outline.Color = if ending then K.Red else K.Ink
+				chip.Block.Outline.Color = if ending then K.Red elseif V2_KIT then V2_KIT.C.Ink else K.Ink
 				chip.Icon.ImageTransparency = if on then 0 else 0.5
 				chip.Bar.Size = UDim2.new(math.clamp(left / (potion.Minutes * 60), 0, 1), 0, 0, chip.Bar.Size.Y.Offset)
+				if chip.SetProgress then
+					chip.SetProgress(left / (potion.Minutes * 60))
+				end
 				-- Last 10 s: the card breathes (1 <-> 1.04, 0.5 s)
 				if ending and chip.Pulse.PlaybackState ~= Enum.PlaybackState.Playing then
 					chip.Pulse:Play()
@@ -442,6 +561,10 @@ function PotionController:Start()
 	list.Parent = timers
 
 	for index, potion in POTIONS.List do
+		if V2_KIT then
+			chips[potion.Id] = buildChipV2(potion, timers, index)
+			continue
+		end
 		local look = KIND_LOOKS[potion.Boost] or KIND_LOOKS.Coins
 		local chip = Instance.new("Frame")
 		chip.Name = potion.Id
@@ -498,6 +621,26 @@ function PotionController:Start()
 
 	-- Computer 200x52 (name and time side by side), phone 100x38 (name over time)
 	local function arrange(phone: boolean)
+		if V2_KIT then
+			-- 60 px discs 16 apart, the time under (phone 34 / 9)
+			local d = if phone then 34 else 60
+			local textSize = if phone then 11 else 15
+			list.Padding = UDim.new(0, if phone then 9 else 16)
+			timers.Size = UDim2.fromOffset(0, d + textSize + 4)
+			for _, chip in chips do
+				chip.Chip.Size = UDim2.fromOffset(d, d + textSize + 4)
+				chip.Ring.Size = UDim2.fromOffset(d, d)
+				local band = if phone then 4 else 7
+				chip.Hole.Size = UDim2.fromOffset(d - band * 2, d - band * 2)
+				chip.Icon.Size = UDim2.fromOffset(math.floor(d * 0.6), math.floor(d * 0.6))
+				chip.Block.Outline.Thickness = if phone then 2 else 3
+				chip.Time.TextSize = textSize
+				chip.Time.Size = UDim2.new(1, 16, 0, textSize + 2)
+			end
+			timers.AnchorPoint = Vector2.zero
+			timers.Position = HudKit.Spot("Potions", phone)
+			return
+		end
 		list.Padding = UDim.new(0, if phone then 6 else 12)
 		timers.Size = UDim2.fromOffset(0, if phone then 38 else 52)
 		for _, chip in chips do

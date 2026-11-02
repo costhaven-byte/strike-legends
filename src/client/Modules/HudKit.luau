@@ -21,6 +21,13 @@ local player = Players.LocalPlayer
 
 local HudKit = {}
 
+-- UI overhaul V2 (UI_OVERHAUL_PLAN.md step V2, Config.Ui.HudV2): the owner's new HUD ('Strike Legends UI.html' B1 +
+-- B2): new spots (V2_LAYOUT below) and navy tile buttons with the new icons (HudKit.Square). Other screens keep
+-- the kit as it was.
+local V2 = Config.Ui.HudV2 == true
+HudKit.V2 = V2
+local SlKit = if V2 then require(script.Parent:WaitForChild("SlKit")) else nil
+
 local function hex(value: string): Color3
 	return Color3.fromHex(value)
 end
@@ -160,6 +167,43 @@ HudKit.Layout = {
 	BagFull = { Pc = { 700, 160, 520, 66, "C", "T" }, Phone = { 297, 84, 250, 40, "C", "T" } },
 }
 
+-- V2 spots, measured off the owner's B1 (computer 1920x1080) and B2 (phone 844x390) mockups. Coins + gems
+-- top-left with the xN chip on the coin pill's corner; a 2-wide button grid (3-wide on phones) with REBIRTH under
+-- it; GIFTS / SETTINGS / PASSES top-right; PINS DOWN top-centre; NEXT GOAL card on the right; potions, bag + SELL
+-- bottom-left; THROW bottom-centre (bottom-right on phones). Phones show every button (no MORE menu).
+local V2_LAYOUT = {
+	Boosts = { Pc = { 372, 82, nil, nil, "L", "T" }, Phone = { 222, 92, nil, nil, "L", "T" } }, -- (quick-buy pills, not in the design: right of the coins)
+	Coins = { Pc = { 28, 72, 320, 70, "L", "T" }, Phone = { 40, 44, 166, 44, "L", "T" } },
+	Multiplier = { Pc = { 256, 56, 100, 46, "L", "T" }, Phone = { 148, 33, 64, 28, "L", "T" } },
+	Income = { Pc = { 106, 112, 200, 22, "L", "T" }, Phone = { 82, 70, 110, 14, "L", "T" } },
+	Gems = { Pc = { 28, 156, 270, 60, "L", "T" }, Phone = { 218, 46, 112, 40, "L", "T" } },
+	Balls = { Pc = { 24, 244, 96, 96, "L", "T" }, Phone = { 40, 104, 46, 46, "L", "T" } },
+	Pets = { Pc = { 140, 244, 96, 96, "L", "T" }, Phone = { 100, 104, 46, 46, "L", "T" } },
+	Store = { Pc = { 24, 364, 96, 96, "L", "T" }, Phone = { 160, 104, 46, 46, "L", "T" } },
+	Daily = { Pc = { 140, 364, 96, 96, "L", "T" }, Phone = { 40, 166, 46, 46, "L", "T" } },
+	Profile = { Pc = { 24, 484, 96, 96, "L", "T" }, Phone = { 100, 166, 46, 46, "L", "T" } },
+	Teleport = { Pc = { 140, 484, 96, 96, "L", "T" }, Phone = { 160, 166, 46, 46, "L", "T" } },
+	Power = { Pc = { 24, 620, 212, 88, "L", "T" }, Phone = { 40, 228, 166, 46, "L", "T" } },
+	CoreRebirth = { Pc = { 24, 620, 212, 88, "L", "T" }, Phone = { 40, 228, 166, 46, "L", "T" } },
+	Gifts = { Pc = { 1616, 24, 80, 80, "R", "T" }, Phone = { 672, 40, 44, 44, "R", "T" } },
+	Settings = { Pc = { 1716, 24, 80, 80, "R", "T" }, Phone = { 728, 40, 44, 44, "R", "T" } },
+	Passes = { Pc = { 1816, 24, 80, 80, "R", "T" }, Phone = { 784, 40, 44, 44, "R", "T" } },
+	More = { Pc = { 1816, 24, 80, 80, "R", "T" }, Phone = { 784, 40, 44, 44, "R", "T" } },
+	PinCounter = { Pc = { 840, 14, 240, 80, "C", "T" }, Phone = { 372, 38, 100, 46, "C", "T" } },
+	Goal = { Pc = { 1610, 300, 286, 320, "R", "T" }, Phone = { 672, 100, 156, 136, "R", "T" } },
+	Modifier = { Pc = { 1650, 236, 246, 42, "R", "T" }, Phone = { 652, 242, 176, 30, "R", "T" } },
+	Streak = { Pc = { 1776, 640, 120, 120, "R", "T" }, Phone = { 688, 242, 140, 46, "R", "T" } },
+	Potions = { Pc = { 24, 864, nil, 80, "L", "B" }, Phone = { 218, 276, nil, 48, "L", "B" } },
+	Bag = { Pc = { 28, 956, 440, 96, "L", "B" }, Phone = { 218, 330, 212, 46, "L", "B" } },
+	Sell = { Pc = { 474, 956, 200, 96, "L", "B" }, Phone = { 436, 326, 108, 50, "L", "B" } },
+	Hold = { Pc = { 790, 928, 340, 120, "C", "B" }, Phone = { 676, 310, 152, 66, "R", "B" } },
+}
+if V2 then
+	for key, row in V2_LAYOUT do
+		HudKit.Layout[key] = row
+	end
+end
+
 -- Phones held sideways (short screens) get the phone layout
 local hudGui: ScreenGui? = nil
 local function hud(): ScreenGui
@@ -174,8 +218,119 @@ function HudKit.Phone(): boolean
 	return size.Y > 0 and size.Y < Config.Ui.CompactHeight
 end
 
+-- ===== V2: shorter computer screens =====
+-- The V2 computer HUD is drawn for a 1080-tall screen. On a shorter one (a laptop, a small window) every HUD layer
+-- shrinks by the same amount (a UIScale "HudFit" on the ScreenGui), so it all still fits and keeps to its corners.
+-- Phones have their own layout (scale 1). Layers that also hold big windows (pets, profile, gifts) don't shrink:
+-- their HUD buttons live in the shared HudV2Layer instead, and the SHOP button frame scales on its own.
+local FIT_GUIS = {
+	HUD = true,
+	CoreHUD = true,
+	StoreUI = true,
+	DailyUI = true,
+	SettingsUI = true,
+	PassesButtonUI = true,
+	RebirthUI = true,
+	PotionUI = true,
+	ThrowUI = true,
+	EventUI = true,
+	TeleportUI = true,
+	HudV2Layer = true,
+}
+local FIT_MIN = 0.5
+
+-- How much the HUD is shrunk right now (1 = the design's size)
+function HudKit.HudScale(): number
+	if not V2 or HudKit.Phone() then
+		return 1
+	end
+	local height = hud().AbsoluteSize.Y
+	local designHeight = SCREENS.Pc.H - SCREENS.Pc.Bar
+	return if height > 0 then math.clamp(height / designHeight, FIT_MIN, 1) else 1
+end
+
+local fitScales: { UIScale } = {}
+local function fitGui(gui: Instance)
+	if not (gui:IsA("ScreenGui") and FIT_GUIS[gui.Name]) or gui:FindFirstChild("HudFit") then
+		return
+	end
+	local scale = Instance.new("UIScale")
+	scale.Name = "HudFit"
+	scale.Scale = HudKit.HudScale()
+	scale.Parent = gui
+	table.insert(fitScales, scale)
+end
+local fitStarted = false
+local function startFit()
+	if fitStarted or not V2 then
+		return
+	end
+	fitStarted = true
+	task.spawn(function()
+		local playerGui = player:WaitForChild("PlayerGui")
+		for _, gui in playerGui:GetChildren() do
+			fitGui(gui)
+		end
+		playerGui.ChildAdded:Connect(fitGui)
+		hud():GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+			task.defer(function()
+				local value = HudKit.HudScale()
+				for _, scale in fitScales do
+					scale.Scale = value
+				end
+			end)
+		end)
+	end)
+end
+
+-- The shrink a HUD piece's own layer has (to turn screen pixels into that layer's pixels)
+function HudKit.LayerScale(object: Instance): number
+	local gui = object:FindFirstAncestorOfClass("ScreenGui")
+	local scale = gui and gui:FindFirstChild("HudFit") :: UIScale?
+	return if scale then scale.Scale else 1
+end
+
+-- The shared layer for V2 HUD buttons whose own ScreenGui also holds a window
+local layerGui: ScreenGui? = nil
+function HudKit.Layer(): ScreenGui
+	if not layerGui then
+		local gui = Instance.new("ScreenGui")
+		gui.Name = "HudV2Layer"
+		gui.ResetOnSpawn = false
+		gui.DisplayOrder = 5
+		gui.IgnoreGuiInset = hud().IgnoreGuiInset
+		gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+		gui.Parent = player:WaitForChild("PlayerGui")
+		layerGui = gui
+		startFit()
+	end
+	return layerGui :: ScreenGui
+end
+
+-- A HUD piece in a layer that doesn't shrink (the SHOP button frame): it shrinks itself, from its corner spot
+function HudKit.FitFrame(object: GuiObject, key: string)
+	if not V2 then
+		return
+	end
+	local scale = (object:FindFirstChild("HudFit") or Instance.new("UIScale")) :: UIScale
+	scale.Name = "HudFit"
+	scale.Parent = object
+	local function place()
+		local fit = HudKit.HudScale()
+		local position = HudKit.Spot(key)
+		object.Position =
+			UDim2.new(position.X.Scale, position.X.Offset * fit, position.Y.Scale, position.Y.Offset * fit)
+		scale.Scale = fit
+	end
+	place()
+	hud():GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+		task.defer(place)
+	end)
+end
+
 -- Calls fn(phone) now and every time the screen switches between the computer and phone layouts
 function HudKit.OnLayout(fn: (boolean) -> ())
+	startFit()
 	local last = HudKit.Phone()
 	fn(last)
 	hud():GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
@@ -267,10 +422,12 @@ local function tuckOne(object: GuiObject, on: boolean)
 		local screen = hud().AbsoluteSize
 		local position, size = object.AbsolutePosition, object.AbsoluteSize
 		local middle = position.X + size.X / 2
+		-- (screen pixels -> the piece's layer pixels when V2 shrinks that layer)
+		local fit = HudKit.LayerScale(object)
 		local offset = if middle < screen.X / 3
-			then UDim2.fromOffset(-(position.X + size.X + 30), 0)
-			elseif middle > screen.X * 2 / 3 then UDim2.fromOffset(screen.X - position.X + 30, 0)
-			else UDim2.fromOffset(0, -(position.Y + size.Y + 80))
+			then UDim2.fromOffset(-(position.X + size.X + 30) / fit, 0)
+			elseif middle > screen.X * 2 / 3 then UDim2.fromOffset((screen.X - position.X + 30) / fit, 0)
+			else UDim2.fromOffset(0, -(position.Y + size.Y + 80) / fit)
 		local home = object.Position
 		state = { Home = home, Away = home + offset }
 		tuckState[object] = state
@@ -672,7 +829,7 @@ function HudKit.Block(parent: Instance?, opts: { [string]: any }): Block
 		ZIndex = holder.ZIndex,
 	}, holder)
 	local corner = HudKit.Corner(lipFrame, radius - o)
-	local outline = HudKit.Outline(lipFrame, C.Ink, o)
+	local outline = HudKit.Outline(lipFrame, opts.Ink or C.Ink, o)
 	local faceFrame = make("Frame", {
 		Name = "Face",
 		BackgroundColor3 = face,
@@ -680,6 +837,24 @@ function HudKit.Block(parent: Instance?, opts: { [string]: any }): Block
 		ZIndex = holder.ZIndex + 1,
 	}, lipFrame)
 	local faceCorner = HudKit.Corner(faceFrame, radius - o)
+	-- V2 top strip (opts.Strip px): the face shows its lighter third colour, a fill in the face colour sits under it
+	local stripFill: Frame? = nil
+	local stripCorner: UICorner? = nil
+	local function stripColor(paint: any, faceColor: Color3): Color3
+		return if type(paint) == "table" and paint[3] then paint[3] else faceColor:Lerp(C.White, 0.35)
+	end
+	if opts.Strip then
+		faceFrame.BackgroundColor3 = stripColor(opts.Paint, face)
+		stripFill = make("Frame", {
+			Name = "StripFill",
+			BackgroundColor3 = face,
+			BorderSizePixel = 0,
+			Position = UDim2.fromOffset(0, opts.Strip),
+			Size = UDim2.new(1, 0, 1, -opts.Strip),
+			ZIndex = holder.ZIndex + 1,
+		}, faceFrame)
+		stripCorner = HudKit.Corner(stripFill :: Frame, radius - o)
+	end
 	-- Top highlight: a white band at the top of the face
 	local shine = make("Frame", {
 		Name = "Shine",
@@ -753,15 +928,20 @@ function HudKit.Block(parent: Instance?, opts: { [string]: any }): Block
 
 	function block.Paint(_self: Block, paint: any)
 		local f, l = paintColors(paint)
-		faceFrame.BackgroundColor3 = f
 		lipFrame.BackgroundColor3 = l
+		if stripFill then
+			stripFill.BackgroundColor3 = f
+			faceFrame.BackgroundColor3 = stripColor(paint, f)
+		else
+			faceFrame.BackgroundColor3 = f
+		end
 	end
 	function block.SetLip(self: Block, px: number)
 		self.LipHeight = px
 		layoutFace()
 	end
 	function block.SetRadius(_self: Block, r: number)
-		for _, c in { corner, faceCorner, shineCorner } do
+		for _, c in { corner, faceCorner, shineCorner, stripCorner } do
 			c.CornerRadius = UDim.new(0, r - o)
 		end
 		glowCorner.CornerRadius = UDim.new(0, r)
@@ -833,7 +1013,212 @@ export type Square = Block & {
 	Resize: (Square, boolean) -> (),
 }
 
+-- ===== V2 tile button (board B1/B2): navy tile, 3 px ink outline, darker lip, lighter top strip, the new icon
+-- on top and a white outlined caption across the bottom edge. Size = its layout spot (96 computer, 46 phone,
+-- top-right 80 / 44). Same methods as the old square, so every caller keeps working. =====
+local V2_TILE = if V2 then { SlKit.C.Tile, SlKit.C.TileLip, SlKit.C.TileStrip } else nil
+local V2_GREY = if V2 then SlKit.Paints.Disabled else nil
+-- the HUD's old icon names -> the new sheet; a button's own icon comes from its key
+local V2_ICONS = {
+	Ball = "hud_shop",
+	Paw = "hud_pets",
+	StoreBag = "hud_store",
+	GiftDaily = "hud_daily",
+	Xp = "hud_profile",
+	Portal = "hud_teleport",
+	GiftPink = "hud_gifts",
+	Store = "hud_passes",
+	Rebirth = "hud_rebirth",
+	Lock = "ui_lock",
+	Check = "ui_tick",
+}
+local V2_KEY_ICONS = {
+	Balls = "hud_shop",
+	Pets = "hud_pets",
+	Store = "hud_store",
+	Daily = "hud_daily",
+	Profile = "hud_profile",
+	Teleport = "hud_teleport",
+	Gifts = "hud_gifts",
+	Settings = "hud_settings",
+	Passes = "hud_passes",
+	Rebirth = "hud_rebirth",
+}
+
+local function v2Square(parent: Instance?, opts: { [string]: any }): Square
+	local key = opts.Key or opts.SizeKey
+	startFit()
+	if parent and parent:IsA("ScreenGui") and not FIT_GUIS[parent.Name] then
+		parent = HudKit.Layer() -- (its own layer also holds a window, which must not shrink)
+	end
+	local kitC = (SlKit :: any).C
+	local block = HudKit.Block(nil, {
+		Name = opts.Name,
+		Button = opts.Button ~= false,
+		Paint = V2_TILE,
+		Ink = kitC.Ink,
+		Strip = 3,
+		Radius = 16,
+		Lip = 6,
+	}) :: any
+	local face = block.Face
+	local holder = block.Holder
+	local slot = make("Frame", {
+		Name = "Slot",
+		AnchorPoint = Vector2.new(0.5, 0),
+		BackgroundTransparency = 1,
+		ZIndex = 4,
+	}, face)
+	local icon = make("ImageLabel", {
+		Name = "Icon",
+		BackgroundTransparency = 1,
+		ScaleType = Enum.ScaleType.Fit,
+		Size = UDim2.fromScale(1, 1),
+		ZIndex = 4,
+	}, slot)
+	local caption = make("TextLabel", {
+		Name = "Caption",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundTransparency = 1,
+		FontFace = (SlKit :: any).Font,
+		Text = opts.Caption or "",
+		TextColor3 = C.White,
+		ZIndex = 7,
+	}, holder)
+	local captionStroke = make("UIStroke", { Color = kitC.Ink, LineJoinMode = Enum.LineJoinMode.Round }, caption)
+	-- red dot (news) and count badge (a number), past the top-right corner
+	local dot = make("Frame", {
+		Name = "Dot",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundColor3 = (SlKit :: any).Paints.Red[1],
+		Visible = false,
+		ZIndex = 8,
+	}, holder)
+	HudKit.Corner(dot, 40)
+	local dotStroke = HudKit.Outline(dot, kitC.Ink, 3)
+	local badge = make("Frame", {
+		Name = "Badge",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundColor3 = (SlKit :: any).Paints.Red[1],
+		Visible = false,
+		ZIndex = 8,
+	}, holder)
+	HudKit.Corner(badge, 40)
+	local badgeStroke = HudKit.Outline(badge, kitC.Ink, 3)
+	local badgeText = HudKit.Text(badge, "", (SlKit :: any).Font, 20, C.White, 0)
+	badgeText.ZIndex = 9
+	-- ready ring: solid gold, 4 px, standing 6 px off the button (board M "Ready (any)")
+	local glow = block.Glow :: Frame
+	local glowRing = block.GlowRing :: UIStroke
+
+	block.Icon = icon
+	block.Slot = slot
+	block.Caption = caption
+	block.CaptionStroke = captionStroke
+	block.Dot = dot
+	block.Badge = badge
+	block.BadgeText = badgeText
+	local iconName = V2_KEY_ICONS[key] or V2_ICONS[opts.Icon] or "hud_shop"
+
+	function block.Resize(self: Square, phone: boolean)
+		local row = key and HudKit.Layout[key] and HudKit.Layout[key][if phone then "Phone" else "Pc"]
+		local w = if row and row[3] then row[3] else (if phone then 46 else 96)
+		local h = if row and row[4] then row[4] else w
+		holder.Size = UDim2.fromOffset(w, h)
+		local small = h < 60
+		self:SetRadius(if small then 11 else 16)
+		self:SetLip(if small then 4 else 6)
+		local iconSize = math.floor(h * (if small then 0.64 else 0.7))
+		slot.Size = UDim2.fromOffset(iconSize, iconSize)
+		slot.Position = UDim2.new(0.5, 0, 0, if small then 1 else 3)
+		local textSize = if small then 11 else (if h < 90 then 18 else 20)
+		caption.TextSize = textSize
+		caption.Size = UDim2.new(1, 24, 0, textSize + 4)
+		caption.Position = UDim2.new(0.5, 0, 1, if small then -3 else -6)
+		captionStroke.Thickness = if small then 1.5 else 2.5
+		local dotSize = if small then 14 else 26
+		dot.Size = UDim2.fromOffset(dotSize, dotSize)
+		dot.Position = UDim2.new(1, if small then -4 else -12, 0, if small then 4 else 10)
+		dotStroke.Thickness = if small then 2 else 3
+		local badgeSize = if small then 20 else 38
+		badge.Size = UDim2.fromOffset(badgeSize, badgeSize)
+		badge.Position = UDim2.new(1, if small then -4 else -14, 0, if small then 4 else 10)
+		badgeStroke.Thickness = if small then 2 else 3
+		badgeText.TextSize = if small then 12 else 22
+		local ring = if small then 4 else 6
+		glow.Position = UDim2.fromOffset(-ring, -ring)
+		glow.Size = UDim2.new(1, ring * 2, 1, ring * 2)
+		glowRing.Thickness = if small then 3 else 4
+		glowRing.Transparency = 0
+		local glowCorner = glow:FindFirstChildOfClass("UICorner")
+		if glowCorner then
+			glowCorner.CornerRadius = UDim.new(0, (if small then 11 else 16) + ring)
+		end
+	end
+	function block.SetIcon(self: Square, name: string?, _size: number?)
+		local v2 = if name == nil then V2_KEY_ICONS[key] else V2_ICONS[name :: string]
+		if name == "Close" and key == "Settings" then
+			v2 = "hud_settings"
+		end
+		-- (an old-kit icon with no new version shows as it is)
+		icon.Image = if v2 then (SlKit :: any).Icon(v2) else HudKit.Icon(name :: string)
+	end
+	-- Callers' small caption sizes were for the old 56 px buttons; V2 keeps one size (only the colour carries)
+	function block.SetCaption(self: Square, text: string, color: Color3?, _font: Font?, _size: number?)
+		caption.Text = text
+		caption.TextColor3 = color or C.White
+		self:Resize(HudKit.Phone())
+	end
+	local basePaint = block.Paint
+	function block.Paint(self: Square, paint: any)
+		basePaint(self, if paint == "Grey" then V2_GREY else V2_TILE)
+	end
+	local baseGlow = block.SetGlow
+	function block.SetGlow(self: Square, color: Color3?)
+		baseGlow(self, if color then kitC.Header else nil)
+	end
+	function block.SetDot(_self: Square, on: boolean)
+		if on and not dot.Visible then
+			(SlKit :: any).PopIn(dot, 0.25)
+		end
+		dot.Visible = on
+	end
+	function block.SetBadge(_self: Square, count: number?)
+		local on = count ~= nil and count > 0
+		if on and not badge.Visible then
+			(SlKit :: any).PopIn(badge, 0.25)
+		elseif on and badgeText.Text ~= tostring(count) then
+			(SlKit :: any).Pulse(badge, 1.2, 0.12)
+		end
+		badge.Visible = on
+		badgeText.Text = if on then (if (count :: number) > 99 then "99+" else tostring(count)) else ""
+	end
+	icon.Image = (SlKit :: any).Icon(iconName)
+	if opts.Icon == "Close" and key == "More" then
+		icon.Image = ""
+	end
+
+	if opts.Key then
+		HudKit.OnLayout(function(phone)
+			block:Resize(phone)
+			local position = HudKit.Spot(opts.Key, phone)
+			holder.AnchorPoint = Vector2.zero
+			holder.Position = position
+		end)
+		HudKit.Tuckable(holder, opts.Key)
+	else
+		HudKit.OnLayout(function(phone)
+			block:Resize(phone)
+		end)
+	end
+	holder.Parent = parent
+	return block
+end
+
 function HudKit.Square(parent: Instance?, opts: { [string]: any }): Square
+	if V2 then
+		return v2Square(parent, opts)
+	end
 	local block = HudKit.Block(nil, {
 		Name = opts.Name,
 		Button = opts.Button ~= false,
@@ -987,6 +1372,7 @@ function HudKit.Adopt(button: GuiButton, opts: { [string]: any }): Square
 	end
 	local kit = HudKit.Square(button, {
 		Name = "Kit",
+		SizeKey = opts.Key,
 		Button = false,
 		Paint = opts.Paint,
 		Icon = opts.Icon,

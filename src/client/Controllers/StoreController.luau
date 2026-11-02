@@ -587,6 +587,16 @@ function StoreController:Start()
 		if buttonParts.Holder then
 			buttonParts.Holder:Destroy()
 		end
+		if HudKit.V2 then
+			-- V2 HUD: a navy tile like the other buttons (HudKit.Square places and sizes itself)
+			local kit = HudKit.Square(gui, { Name = "StoreButton", Icon = "StoreBag", Caption = "STORE", Key = "Store" })
+			kit:SetDot(not seenStore)
+			buttonParts = { Holder = kit.Holder, Icon = kit.Icon, Dot = kit.Dot };
+			(kit.Holder :: TextButton).Activated:Connect(function()
+				StoreController.Toggle()
+			end)
+			return
+		end
 		local phone = compact()
 		local holder, face, body = chunky(gui, {
 			Name = "StoreButton",
@@ -2369,9 +2379,7 @@ function StoreController:Start()
 
 	-- Under the level bar, top centre
 	local function toastTarget(): number
-		return rankBar.AbsolutePosition.Y
-			- gui.AbsolutePosition.Y
-			+ rankBar.AbsoluteSize.Y
+		return (rankBar.AbsolutePosition.Y - gui.AbsolutePosition.Y + rankBar.AbsoluteSize.Y) / HudKit.LayerScale(gui)
 			+ (if compact() then 8 else 20)
 	end
 
@@ -2547,10 +2555,16 @@ function StoreController:Start()
 
 	local function layout()
 		local phone = compact()
-		if buttonParts.Holder == nil or (buttonParts.Holder.Size.X.Offset == 44) ~= phone then
-			buildButton()
+		if HudKit.V2 then
+			if buttonParts.Holder == nil then
+				buildButton()
+			end
+		else
+			if buttonParts.Holder == nil or (buttonParts.Holder.Size.X.Offset == 44) ~= phone then
+				buildButton()
+			end
+			placeButton()
 		end
-		placeButton()
 		if pillPhone ~= phone then
 			buildPills()
 			refreshPills(false)

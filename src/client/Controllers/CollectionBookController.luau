@@ -160,7 +160,8 @@ function CollectionBookController:Start()
 	local menu = ballsButton.Parent :: Frame
 	local ballsKit =
 		HudKit.Adopt(ballsButton, { Paint = "Cyan", Icon = "Ball", Caption = if Config.CoreLoop.Enabled then "SHOP" else "BALLS", Key = "Balls", Place = false })
-	ballsKit.Icon.Visible = false
+	ballsKit.Icon.Visible = HudKit.V2 -- (V2 HUD: the design's SHOP icon instead of the spinning equipped ball)
+	swatch.Visible = not HudKit.V2
 	swatch.Parent = ballsKit.Slot
 	swatch.AnchorPoint = Vector2.zero
 	swatch.Position = UDim2.fromOffset(0, 0)
@@ -177,6 +178,7 @@ function CollectionBookController:Start()
 		menu.Position = position
 		menu.Size = size :: UDim2
 	end)
+	HudKit.FitFrame(menu, "Balls") -- (V2: shrinks with the HUD on short screens; BallsUI also holds the book)
 	HudKit.Tuckable(menu, "Balls")
 	swatch.BackgroundTransparency = 1
 	local buttonView = Instance.new("ViewportFrame")

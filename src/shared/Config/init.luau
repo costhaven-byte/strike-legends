@@ -1180,6 +1180,10 @@ Config.Ui = {
 	-- Addendum 4 Stage 3d: the sunny look (Modules/SunKit palette + 2 fonts, no gloss, light panels with dark text).
 	-- false = the old night HUD Kit colours and fonts come back.
 	Sunny = true,
+	-- UI overhaul V2 (UI_OVERHAUL_PLAN.md, owner's 'Strike Legends UI.html' B1/B2): the new HUD (navy tile buttons,
+	-- coin/gem pills, PINS DOWN, NEXT GOAL card, round potion timers, bag bar + SELL, green THROW) in the design's
+	-- spots. false = the sunny HUD comes back as it was.
+	HudV2 = true,
 	-- Tuck while bowling (owner 2026-10-28: on phones the HUD hid the lane): from the moment you start a throw, these
 	-- HUD pieces slide off the nearest screen edge; IdleSeconds after your last throw they slide back (Time = slide
 	-- seconds). Coins, the level bar, POWER, the streak and the goal bar always stay, except POWER tucks too once it
@@ -1202,7 +1206,7 @@ Config.Ui = {
 	-- card still opens from PROFILE.
 	MultiplierBadge = true, -- (Addendum 6 1.1: back on: the HUD shows the total coin multiplier, tap = breakdown)
 	PhoneMenu = {
-		Enabled = true,
+		Enabled = false, -- (V2 HUD: phones show every button, as designed; true = fold them into MORE again)
 		Keys = { "Daily", "Gifts", "Teleport", "Profile", "Settings" },
 		Aside = { "Modifier", "Goal" },
 		Gap = 52, -- px between buttons in the open column

@@ -55,8 +55,74 @@ local function bump(scale: UIScale)
 		:Play()
 end
 
+-- V2 counter pill (board A "Counter pills", HUD B1/B2): navy pill with the ink outline, lip and top strip, the big
+-- coin / gem icon hanging off its left end, the number in white. The coins/min line sits inside the coin pill
+-- (Income spot). Gems are earned only, so the design's green + is left out.
+local function buildCounterV2(pill: Frame, key: string)
+	local SlKit = require(Modules.SlKit)
+	for _, child in pill:GetChildren() do
+		if child.Name ~= "Amount" and not child:IsA("UIScale") then
+			child:Destroy()
+		end
+	end
+	pill.BackgroundTransparency = 1
+	pill.LayoutOrder = 0
+	local block = HudKit.Block(pill, {
+		Name = "Pill",
+		Paint = { SlKit.C.Window, SlKit.C.Ink, SlKit.C.WindowStrip },
+		Ink = SlKit.C.Ink,
+		Strip = 3,
+		Shine = 0,
+	})
+	local icon = SlKit.Image(pill, if key == "Coins" then "cur_coin" else "cur_gem", 64, { ZIndex = 6 })
+	icon.AnchorPoint = Vector2.new(0, 0.5)
+	local label = pill:WaitForChild("Amount") :: TextLabel
+	label.BackgroundTransparency = 1
+	label.FontFace = SlKit.Font
+	label.TextScaled = false
+	label.TextColor3 = K.White
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.TextYAlignment = Enum.TextYAlignment.Center
+	label.AnchorPoint = Vector2.zero
+	label.ZIndex = 6
+	for _, child in label:GetChildren() do
+		if child:IsA("UIStroke") or child:IsA("UITextSizeConstraint") then
+			child:Destroy()
+		end
+	end
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = SlKit.C.Ink
+	stroke.LineJoinMode = Enum.LineJoinMode.Round
+	stroke.Parent = label
+	HudKit.OnLayout(function(phone)
+		local _, size = HudKit.Spot(key, phone)
+		local w, h = (size :: UDim2).X.Offset, (size :: UDim2).Y.Offset
+		local iconSize = h
+		local bodyH = math.floor(h * 0.86)
+		local left = math.floor(iconSize * 0.42)
+		block.Holder.Position = UDim2.fromOffset(left, math.floor((h - bodyH) / 2))
+		block.Holder.Size = UDim2.fromOffset(w - left, bodyH)
+		block:SetRadius(bodyH / 2)
+		block:SetLip(if phone then 4 else 6)
+		icon.Size = UDim2.fromOffset(iconSize, iconSize)
+		icon.Position = UDim2.new(0, 0, 0.5, -1)
+		-- coins: the number rides high, the coins/min line under it
+		local textSize = if phone then (if key == "Coins" then 20 else 19) else (if key == "Coins" then 32 else 30)
+		local textLeft = iconSize + (if phone then 4 else 10)
+		label.TextSize = textSize
+		label.Position = UDim2.fromOffset(textLeft, if key == "Coins" then (if phone then 2 else 6) else 0)
+		label.Size = UDim2.new(1, -textLeft - 8, 0, if key == "Coins" then textSize + 4 else h - (if phone then 4 else 6))
+		stroke.Thickness = if phone then 2 else 3
+	end)
+	HudKit.Place(pill, key)
+end
+
 -- Draws a counter (HudKit look) into the Studio frame, keeping its Icon, Amount and UIScale
 local function buildCounter(pill: Frame, key: string)
+	if HudKit.V2 then
+		buildCounterV2(pill, key)
+		return
+	end
 	local spec = COUNTERS[key]
 	for _, child in pill:GetChildren() do
 		if child.Name ~= "Amount" and not child:IsA("UIScale") then
@@ -144,7 +210,20 @@ local function bindIncome(bar: Frame)
 	local stroke = label:FindFirstChildOfClass("UIStroke") :: UIStroke
 	local scale = Instance.new("UIScale")
 	scale.Parent = holder
+	local v2Kit = if HudKit.V2 then require(Modules.SlKit) else nil
+	if v2Kit then
+		-- V2: "+95K/min" in the kit's value green, inside the coin pill
+		label.FontFace = v2Kit.Font
+		label.TextColor3 = v2Kit.C.Value
+		stroke.Color = v2Kit.C.Ink
+		label.ZIndex = 8
+	end
 	HudKit.OnLayout(function(phone)
+		if v2Kit then
+			label.TextSize = if phone then 12 else 18
+			stroke.Thickness = if phone then 1.5 else 2
+			return
+		end
 		label.TextSize = if phone then 15 else 24
 		stroke.Thickness = if phone then 1.5 else 2.5
 	end)
@@ -156,7 +235,7 @@ local function bindIncome(bar: Frame)
 		if value == nil then
 			return
 		end
-		label.Text = "+" .. formatNumber(value) .. " a min"
+		label.Text = "+" .. formatNumber(value) .. (if v2Kit then "/min" else " a min")
 		if value > last and last > 0 then
 			scale.Scale = 1.2
 			TweenService

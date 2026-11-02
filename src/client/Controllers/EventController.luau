@@ -209,6 +209,13 @@ function EventController:Start()
 	local bar = gui:WaitForChild("AlmostBar") :: Frame
 	local barScale = bar:WaitForChild("UIScale") :: UIScale
 	local pillRing, pillIcon, goalIcon, setGoalReady = kitPieces(pill, bar)
+	if HudKit.V2 and Config.CoreLoop.Enabled then
+		-- V2 HUD: the NEXT GOAL card (CoreHudController) replaces the goal bar
+		bar.Visible = false
+		bar:GetPropertyChangedSignal("Visible"):Connect(function()
+			bar.Visible = false
+		end)
+	end
 	-- The old Studio popup text and modifier banner stay in EventUI but are never shown: the kit's lane popup and
 	-- slam banner (MomentKit, UI pass batch 3) replace them
 	gui:WaitForChild("Popup").Visible = false
