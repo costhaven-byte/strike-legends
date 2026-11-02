@@ -21,6 +21,8 @@
 -- Addendum 6 Stage 8: the Gamepasses tab (Config.CoreLoop.Shop.Gamepasses = which Config.Monetization passes, in
 --   order): a card per pass with its icon, words and a Robux BUY button (StoreBuy, works anywhere) or OWNED. A pass with
 --   no Creator Hub ID yet is hidden in the live game. The small HUD PASSES button (HudKit spot "Passes") opens it.
+-- UI overhaul V3 (Config.Ui.ShopV2): the Balls and Bags tabs open the new window (Modules/ShopV2); this controller
+--   keeps the stall check, GO TO SHOP and the Rebirth / Gamepasses tabs (old window until V4).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -40,11 +42,13 @@ local Store = require(Shared.Modules.Store)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local BallView = require(Modules.BallView)
 local HudKit = require(Modules.HudKit)
+local ShopV2 = require(Modules.ShopV2)
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
 
 local CORE = Config.CoreLoop
 local SHOP = CORE.Shop
+local V2 = Config.Ui.ShopV2 == true
 local player = Players.LocalPlayer
 
 local CoreShopController = {}
@@ -1379,6 +1383,10 @@ function CoreShopController:Start()
 	end
 
 	function CoreShopController.ShowTab(id: string)
+		if V2 and (id == "Balls" or id == "Bags") and CoreShopController.SetOpen then
+			CoreShopController.SetOpen(true, id)
+			return
+		end
 		if not PAGES[id] then
 			return
 		end
@@ -1687,7 +1695,7 @@ function CoreShopController:Start()
 
 	-- Open / close (tab = open on that tab: "Balls", "Bags", "Rebirth")
 	local open = false
-	local function setOpen(on: boolean, tab: string?)
+	local function setOldOpen(on: boolean, tab: string?)
 		if tab and PAGES[tab] then
 			currentTab = tab
 		end
@@ -1712,6 +1720,20 @@ function CoreShopController:Start()
 			holdFrom = nil
 			UiFx.Close(window)
 		end
+	end
+	-- V3: Balls / Bags open the new window, the other tabs this one (only one of the two is open at a time)
+	local function setOpen(on: boolean, tab: string?)
+		if V2 then
+			local want = tab or currentTab
+			if on and (want == "Balls" or want == "Bags") then
+				currentTab = want
+				setOldOpen(false)
+				ShopV2.SetOpen(true, want)
+				return
+			end
+			ShopV2.SetOpen(false)
+		end
+		setOldOpen(on, tab)
 	end
 	CoreShopController.SetOpen = setOpen
 	closeButton.Activated:Connect(function()
@@ -1738,13 +1760,40 @@ function CoreShopController:Start()
 		goRemote:FireServer("Shop")
 	end)
 
+	-- V3: the new Balls / Bags window (it hands REBIRTH and PASSES back here)
+	if V2 then
+		local tabIds = {}
+		for id in PAGES do
+			table.insert(tabIds, id)
+		end
+		ShopV2.Start({
+			Buy = buyRemote,
+			Equip = equipRemote,
+			AtShop = function()
+				return atShop
+			end,
+			GoToShop = function()
+				Sfx.Play("Teleport", 1.1, 0.6)
+				UiFx.Flash(WHITE, 0.25, 0.25)
+				goRemote:FireServer("Shop")
+			end,
+			OpenOther = function(tab: string)
+				setOpen(true, tab)
+			end,
+			OnTab = function(tab: string)
+				currentTab = tab
+			end,
+			Tabs = tabIds,
+		})
+	end
+
 	-- The BALLS button opens the price list on the Balls tab (the old Ball Book stays shut in the core loop)
 	task.spawn(function()
 		local ballsUi = playerGui:WaitForChild("BallsUI", 30)
 		local button = ballsUi and ballsUi:WaitForChild("Menu", 10):WaitForChild("BallsButton", 10) :: GuiButton?
 		if button then
 			button.Activated:Connect(function()
-				if open and currentTab == "Balls" then
+				if (open and currentTab == "Balls") or (V2 and ShopV2.IsOpen() and ShopV2.Tab() == "Balls") then
 					setOpen(false)
 				else
 					setOpen(true, "Balls")
@@ -1811,13 +1860,15 @@ function CoreShopController:Start()
 				if here and rebirthWindow and rebirthWindow:GetAttribute("Open") then
 					continue
 				elseif here then
-					if open then
+					if V2 and ShopV2.IsOpen() then
+						ShopV2.Refresh()
+					elseif open then
 						refresh()
 						UiFx.Pop(window, 1.04, 0.2)
 					else
 						setOpen(true)
 					end
-				elseif open then
+				elseif open or (V2 and ShopV2.IsOpen()) then
 					setOpen(false)
 				end
 			end

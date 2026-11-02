@@ -1184,6 +1184,13 @@ Config.Ui = {
 	-- coin/gem pills, PINS DOWN, NEXT GOAL card, round potion timers, bag bar + SELL, green THROW) in the design's
 	-- spots. false = the sunny HUD comes back as it was.
 	HudV2 = true,
+	-- UI overhaul V3 (owner's 'Strike Legends Screens.html' 1a/1b): the SHOP window's BALLS and BAGS tabs in the new
+	-- look (left tab column, zone switcher, card grid, BUY BEST, buy reveal). REBIRTH and PASSES still open the old
+	-- window until V4. false = the old shop window for every tab.
+	ShopV2 = true,
+	-- How many steps past your NEXT ball / bag show their real look and name; further ones are "???" silhouettes
+	-- (the design: 3). 0 = only the NEXT one shows; skipped and owned ones always show.
+	ShopV2Ahead = 3,
 	-- Tuck while bowling (owner 2026-10-28: on phones the HUD hid the lane): from the moment you start a throw, these
 	-- HUD pieces slide off the nearest screen edge; IdleSeconds after your last throw they slide back (Time = slide
 	-- seconds). Coins, the level bar, POWER, the streak and the goal bar always stay, except POWER tucks too once it
