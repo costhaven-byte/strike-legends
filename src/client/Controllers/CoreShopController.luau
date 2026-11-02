@@ -21,8 +21,8 @@
 -- Addendum 6 Stage 8: the Gamepasses tab (Config.CoreLoop.Shop.Gamepasses = which Config.Monetization passes, in
 --   order): a card per pass with its icon, words and a Robux BUY button (StoreBuy, works anywhere) or OWNED. A pass with
 --   no Creator Hub ID yet is hidden in the live game. The small HUD PASSES button (HudKit spot "Passes") opens it.
--- UI overhaul V3 (Config.Ui.ShopV2): the Balls and Bags tabs open the new window (Modules/ShopV2); this controller
---   keeps the stall check, GO TO SHOP and the Rebirth / Gamepasses tabs (old window until V4).
+-- UI overhaul V3 / V4 (Config.Ui.ShopV2): every tab opens the new window (Modules/ShopV2); this controller keeps the
+--   stall check, GO TO SHOP and the remotes. The old window below is only used with ShopV2 = false.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -982,9 +982,7 @@ function CoreShopController:Start()
 					if owned then
 						have += 1
 					end
-					card.BadgeText.Text = if owned
-						then "OWNED"
-						else ROBUX_GLYPH .. " " .. tostring(card.Pass.Robux)
+					card.BadgeText.Text = if owned then "OWNED" else ROBUX_GLYPH .. " " .. tostring(card.Pass.Robux)
 					card.BadgeText.FontFace = if owned then SunKit.Display else Font.fromEnum(Enum.Font.BuilderSansBold)
 					SunKit.Paint(card.Badge, if owned then GREY else GREEN, SunKit.Lip(if owned then GREY else GREEN))
 					local stroke = card.Face:FindFirstChildOfClass("UIStroke") :: UIStroke
@@ -1383,7 +1381,7 @@ function CoreShopController:Start()
 	end
 
 	function CoreShopController.ShowTab(id: string)
-		if V2 and (id == "Balls" or id == "Bags") and CoreShopController.SetOpen then
+		if V2 and CoreShopController.SetOpen then
 			CoreShopController.SetOpen(true, id)
 			return
 		end
@@ -1721,17 +1719,16 @@ function CoreShopController:Start()
 			UiFx.Close(window)
 		end
 	end
-	-- V3: Balls / Bags open the new window, the other tabs this one (only one of the two is open at a time)
+	-- V3 / V4: with Config.Ui.ShopV2 every tab opens the new window (the old one stays shut)
 	local function setOpen(on: boolean, tab: string?)
 		if V2 then
 			local want = tab or currentTab
-			if on and (want == "Balls" or want == "Bags") then
+			if PAGES[want] or want == "Balls" or want == "Bags" then
 				currentTab = want
-				setOldOpen(false)
-				ShopV2.SetOpen(true, want)
-				return
 			end
-			ShopV2.SetOpen(false)
+			setOldOpen(false)
+			ShopV2.SetOpen(on, if on then currentTab else nil)
+			return
 		end
 		setOldOpen(on, tab)
 	end
@@ -1760,7 +1757,7 @@ function CoreShopController:Start()
 		goRemote:FireServer("Shop")
 	end)
 
-	-- V3: the new Balls / Bags window (it hands REBIRTH and PASSES back here)
+	-- V3 / V4: the new window (BALLS, BAGS, REBIRTH, PASSES)
 	if V2 then
 		local tabIds = {}
 		for id in PAGES do
@@ -1769,6 +1766,14 @@ function CoreShopController:Start()
 		ShopV2.Start({
 			Buy = buyRemote,
 			Equip = equipRemote,
+			Rebirth = rebirthRemote,
+			StoreBuy = remotes:WaitForChild("StoreBuy", 10),
+			Party = function(rebirths: number)
+				local party = (require(script.Parent.RebirthController) :: any).Party
+				if party then
+					party(rebirths, nil)
+				end
+			end,
 			AtShop = function()
 				return atShop
 			end,
@@ -1776,9 +1781,6 @@ function CoreShopController:Start()
 				Sfx.Play("Teleport", 1.1, 0.6)
 				UiFx.Flash(WHITE, 0.25, 0.25)
 				goRemote:FireServer("Shop")
-			end,
-			OpenOther = function(tab: string)
-				setOpen(true, tab)
 			end,
 			OnTab = function(tab: string)
 				currentTab = tab
@@ -1813,12 +1815,15 @@ function CoreShopController:Start()
 				DisplayOrder = if ballsUi then ballsUi.DisplayOrder else 5,
 				IgnoreGuiInset = if ballsUi then ballsUi.IgnoreGuiInset else false,
 			}, nil)
-			local kit = HudKit.Square(buttonGui, { Name = "PassesButton", Paint = "Gold", Icon = "Store", Key = "Passes" })
+			local kit =
+				HudKit.Square(buttonGui, { Name = "PassesButton", Paint = "Gold", Icon = "Store", Key = "Passes" })
 			kit.Icon.Image = AssetSlots.Image("Pass2x")
 			kit:SetCaption("PASSES", nil, nil, 10)
 			local button = kit.Holder :: TextButton
 			button.Activated:Connect(function()
-				if open and currentTab == "Gamepasses" then
+				if
+					(open and currentTab == "Gamepasses") or (V2 and ShopV2.IsOpen() and ShopV2.Tab() == "Gamepasses")
+				then
 					setOpen(false)
 				else
 					setOpen(true, "Gamepasses")
@@ -1835,7 +1840,7 @@ function CoreShopController:Start()
 			setOpen(gui:GetAttribute("TestOpen") == true, gui:GetAttribute("TestTab"))
 		end)
 		gui:GetAttributeChangedSignal("TestTab"):Connect(function()
-			if open then
+			if open or (V2 and ShopV2.IsOpen()) then
 				CoreShopController.ShowTab(gui:GetAttribute("TestTab"))
 			end
 		end)

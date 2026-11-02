@@ -10,7 +10,9 @@
 -- price list: BUY BEST becomes GO TO SHOP and a buy tap nudges it (the server only sells at the stall).
 -- Buying plays the reveal over the card (1.6 s): white flash, colour floods in, rays spin, ring burst, name drops in,
 -- NEW! stamp. The PET SLOT card (Addendum 5 B1) sits after the bags of every zone.
--- CoreShopController owns the stall check, the remotes and the old window; REBIRTH and PASSES hand back to it (V4).
+-- V4: the REBIRTH tab (rank badge now > next, x COINS / x PINS, RESETS / KEEPS, coins bar, HOLD TO REBIRTH / GO TO
+-- SHOP) and the PASSES tab (8 pass cards, Robux price or OWNED) live here too.
+-- CoreShopController owns the stall check and the remotes (the old window stays for Config.Ui.ShopV2 = false).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -23,6 +25,7 @@ local Balls = require(Shared.Modules.Balls)
 local CoreLadder = require(Shared.Modules.CoreLadder)
 local Currency = require(Shared.Modules.Currency)
 local Mascots = require(Shared.Modules.Mascots)
+local Rebirth = require(Shared.Modules.Rebirth)
 local Store = require(Shared.Modules.Store)
 local BallView = require(script.Parent.BallView)
 local SlKit = require(script.Parent.SlKit)
@@ -43,6 +46,7 @@ local NIGHT = hex("0B1A33")
 local DEEP = hex("0F2747") -- the well
 local GOLD_TEXT = hex("FFC93A")
 local SOFT = hex("7C8AA8")
+local ROBUX_GLYPH = utf8.char(0xE002)
 
 local ShopV2 = {}
 
@@ -217,8 +221,8 @@ type Card = {
 	RevealUntil: number?,
 }
 
--- ctx (from CoreShopController): Buy / Equip (RemoteFunctions), AtShop() -> bool, GoToShop(), OpenOther(tab) for
--- REBIRTH / PASSES (the old window until V4), OnTab(tab) (keeps the old window's tab in step), Tabs (ids it has)
+-- ctx (from CoreShopController): Buy / Equip / Rebirth (RemoteFunctions), StoreBuy (RemoteEvent?), AtShop() -> bool,
+-- GoToShop(), Party(rebirths) (the REBIRTH! moment), OnTab(tab) (keeps the controller's tab in step), Tabs (ids it has)
 function ShopV2.Start(ctx: { [string]: any })
 	local playerGui = player:WaitForChild("PlayerGui")
 	local AHEAD = math.max(0, math.floor(tonumber(Config.Ui.ShopV2Ahead) or 3))
@@ -1052,10 +1056,645 @@ function ShopV2.Start(ctx: { [string]: any })
 		end
 	end
 
+	-- A panel of one colour with lighter rays behind its contents (CanvasGroup keeps the round corners), ink edge
+	local function rayPanel(
+		parent: Instance,
+		name: string,
+		size: UDim2,
+		position: UDim2,
+		raySize: number,
+		centre: Vector2
+	)
+		local holder =
+			make("Frame", { Name = name, BackgroundTransparency = 1, Size = size, Position = position }, parent)
+		local art = make("CanvasGroup", {
+			Name = "Art",
+			BackgroundColor3 = PAINT.Gold[1],
+			BorderSizePixel = 0,
+			Size = UDim2.fromScale(1, 1),
+			ZIndex = 1,
+		}, holder)
+		corner(art, 16)
+		local rays = SlKit.Image(art, "bg_rays", 0, {
+			Name = "Rays",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(centre.X, centre.Y),
+			Size = UDim2.fromOffset(raySize, raySize),
+			ImageColor3 = PAINT.Gold[3],
+			ZIndex = 1,
+		})
+		local edge = make(
+			"Frame",
+			{ Name = "Edge", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 8 },
+			holder
+		)
+		corner(edge, 16)
+		stroke(edge, INK, 3)
+		return holder, art, rays
+	end
+	-- Text size that fits `words` in `width` (Fredoka One capitals are ~0.62 em wide)
+	local function fitSize(words: string, width: number, biggest: number): number
+		return math.clamp(math.floor(width / (math.max(#words, 1) * 0.62)), 14, biggest)
+	end
+
+	-- ===== V4: the REBIRTH tab (design 2a desktop / 2b phone / 2c away from the shop) =====
+	-- Rank badge now > next (rank_01..17 = Config.CoreLoop.Rebirth.Ranks in order; past the list the last badge),
+	-- the two boosts after this rebirth (x COINS / x PINS = 1 + Bonus / PinBonus x rebirths, the rebirth part of
+	-- Boosts), RESETS / KEEPS rows, the coins bar and HOLD TO REBIRTH (gold, bouncing + pulse ring when you can pay at
+	-- the shop; dark + padlock when not; blue GO TO SHOP away from the stall). Holding fills it in SHOP.HoldSeconds,
+	-- then the server rebirths and RebirthController plays the REBIRTH! moment.
+	local REBIRTH = CORE.Rebirth
+	local PAD = 20
+	local INNER_W = W - (24 + TAB_W + 20) - 24 - PAD * 2 -- 958
+	local INNER_H = H - 96 - PAD * 2 -- 624
+	local BOTTOM_H = 106
+	local TOP_H = INNER_H - 22 - BOTTOM_H -- 496
+	local RANK_W = 420
+	local rebirthPage = make("Frame", {
+		Name = "RebirthPage",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(PAD, PAD),
+		Size = UDim2.fromOffset(INNER_W, INNER_H),
+		Visible = false,
+	}, well)
+
+	-- rank now > next
+	local rankPanel, rankArt, rankRays = rayPanel(
+		rebirthPage,
+		"Rank",
+		UDim2.fromOffset(RANK_W, TOP_H),
+		UDim2.fromOffset(0, 0),
+		900,
+		Vector2.new(0.42, 0.5)
+	)
+	local rankNowIcon = SlKit.Image(rankPanel, "rank_01", 200, {
+		Name = "NowBadge",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromOffset(122, TOP_H / 2 - 30),
+		ZIndex = 4,
+	})
+	local rankNowName = text(rankPanel, "", 30, WHITE, {
+		Name = "NowName",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.fromOffset(122, TOP_H / 2 + 76),
+		Size = UDim2.fromOffset(236, 40),
+		ZIndex = 4,
+	})
+	SlKit.Image(rankPanel, "ui_arrow", 62, {
+		Name = "Arrow",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromOffset(262, TOP_H / 2 - 30),
+		ZIndex = 4,
+	})
+	local rankNextIcon = SlKit.Image(rankPanel, "rank_02", 118, {
+		Name = "NextBadge",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromOffset(345, TOP_H / 2 - 18),
+		ZIndex = 4,
+	})
+	local rankNextName = text(rankPanel, "", 24, WHITE, {
+		Name = "NextName",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.fromOffset(345, TOP_H / 2 + 46),
+		Size = UDim2.fromOffset(140, 34),
+		ZIndex = 4,
+	})
+
+	-- what you get: two gold tiles
+	local RIGHT_X = RANK_W + 20
+	local RIGHT_W = INNER_W - RIGHT_X
+	local TILE_W = (RIGHT_W - 16) / 2
+	local rewardText: { [string]: TextLabel } = {}
+	for i, def in { { Id = "Coins", Icon = "cur_coin" }, { Id = "Pins", Icon = "cur_pin" } } do
+		local tile = rayPanel(
+			rebirthPage,
+			"Get" .. def.Id,
+			UDim2.fromOffset(TILE_W, 190),
+			UDim2.fromOffset(RIGHT_X + (i - 1) * (TILE_W + 16), 0),
+			520,
+			Vector2.new(0.5, 0.42)
+		)
+		SlKit.Image(tile, def.Icon, 108, {
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 0, 22),
+			ZIndex = 4,
+		})
+		rewardText[def.Id] = text(tile, "", 34, WHITE, {
+			Name = "Amount",
+			Position = UDim2.fromOffset(0, 128),
+			Size = UDim2.new(1, 0, 0, 44),
+			ZIndex = 4,
+		})
+	end
+
+	-- RESETS (red) / KEEPS (green): a word + the icons of what goes / stays
+	local function iconRow(name: string, y: number, paint: { Color3 }, words: string): Frame
+		local block = SlKit.Block(rebirthPage, {
+			Name = name,
+			Size = UDim2.fromOffset(RIGHT_W, 78),
+			Radius = 16,
+			Paint = paint,
+			Lip = 0,
+		})
+		block.Holder.Position = UDim2.fromOffset(RIGHT_X, y)
+		text(block.Content, words, 24, WHITE, {
+			Name = "Word",
+			Position = UDim2.fromOffset(16, 0),
+			Size = UDim2.new(0, 116, 1, 0),
+			TextXAlignment = Enum.TextXAlignment.Left,
+		})
+		local icons = make("Frame", {
+			Name = "Icons",
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(16 + 116 + 12, 0),
+			Size = UDim2.new(1, -150, 1, 0),
+			ZIndex = 6,
+		}, block.Content)
+		make("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+			Padding = UDim.new(0, 12),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}, icons)
+		return icons
+	end
+	local resets = iconRow("Resets", 190 + 14, PAINT.Red, "RESETS")
+	SlKit.Image(resets, "cur_coin", 56, { LayoutOrder = 1 })
+	do -- (no ball icon in the sheet: the first ball in 3D, like the BALLS tab)
+		local box = make(
+			"Frame",
+			{ Name = "Ball", BackgroundTransparency = 1, Size = UDim2.fromOffset(56, 56), LayoutOrder = 2 },
+			resets
+		)
+		local ball = Balls.Get(CORE.Balls[1].Ball)
+		if ball then
+			local view = BallView.New(ball, { Margin = 1.0 })
+			view.Size = UDim2.fromScale(1, 1)
+			view.ZIndex = 6
+			view.Parent = box
+		end
+	end
+	SlKit.Image(resets, "bag_01", 56, { LayoutOrder = 3 })
+	SlKit.Image(resets, "hud_teleport", 56, { LayoutOrder = 4 }) -- zones
+	SlKit.Image(resets, "cur_pin", 56, { LayoutOrder = 5 })
+	local keeps = iconRow("Keeps", 190 + 14 + 78 + 14, PAINT.Green, "KEEPS")
+	SlKit.Image(keeps, "hud_pets", 56, { LayoutOrder = 1 })
+	SlKit.Image(keeps, "hud_passes", 56, { LayoutOrder = 2 })
+	local keepRank = SlKit.Image(keeps, "rank_01", 56, { LayoutOrder = 3 })
+
+	-- the coins bar (coin hanging off its left end)
+	local BTN_W = 420
+	local barX = 30
+	local barW = INNER_W - BTN_W - 24 - barX
+	local bar = make("CanvasGroup", {
+		Name = "CoinsBar",
+		BackgroundColor3 = NIGHT,
+		BorderSizePixel = 0,
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.fromOffset(barX, TOP_H + 22 + BOTTOM_H / 2),
+		Size = UDim2.fromOffset(barW, 64),
+	}, rebirthPage)
+	corner(bar, 32)
+	local barFill = make("Frame", {
+		Name = "Fill",
+		BackgroundColor3 = PAINT.Gold[1],
+		BorderSizePixel = 0,
+		Size = UDim2.fromScale(0, 1),
+	}, bar)
+	make("Frame", {
+		Name = "Strip",
+		BackgroundColor3 = PAINT.Gold[3],
+		BorderSizePixel = 0,
+		Size = UDim2.new(1, 0, 0, 3),
+	}, barFill)
+	local barText = text(bar, "", 30, WHITE, { Name = "Amount", ZIndex = 4 })
+	local barEdge = make("Frame", {
+		Name = "Edge",
+		BackgroundTransparency = 1,
+		AnchorPoint = bar.AnchorPoint,
+		Position = bar.Position,
+		Size = bar.Size,
+		ZIndex = 2,
+	}, rebirthPage)
+	corner(barEdge, 32)
+	stroke(barEdge, INK, 3)
+	SlKit.Image(rebirthPage, "cur_coin", 84, {
+		Name = "BarCoin",
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.fromOffset(barX - 36, TOP_H + 22 + BOTTOM_H / 2),
+		ZIndex = 9,
+	})
+
+	-- HOLD TO REBIRTH / GO TO SHOP (a wrapper bobs so shakes and the press don't fight it)
+	local holdWrap = make("Frame", {
+		Name = "HoldWrap",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.fromOffset(INNER_W, TOP_H + 22 + BOTTOM_H / 2),
+		Size = UDim2.fromOffset(BTN_W, 106),
+	}, rebirthPage)
+	local holdRing = make("Frame", {
+		Name = "ReadyRing",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(-11, -11),
+		Size = UDim2.new(1, 22, 1, 16),
+		ZIndex = 0,
+		Visible = false,
+	}, holdWrap)
+	corner(holdRing, 28)
+	local holdRingStroke = stroke(holdRing, PAINT.Gold[3], 6)
+	TweenService
+		:Create(holdRingStroke, TweenInfo.new(0.55, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+			Transparency = 0.8,
+		})
+		:Play()
+	local hold = SlKit.Block(holdWrap, {
+		Name = "HoldRebirth",
+		Button = true,
+		Size = UDim2.fromScale(1, 1),
+		Radius = 18,
+		Paint = PAINT.Gold,
+	})
+	local holdClip = make("CanvasGroup", {
+		Name = "Clip",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1, 1),
+		ZIndex = 1,
+	}, hold.Content)
+	corner(holdClip, 15)
+	local holdFill = make("Frame", {
+		Name = "HoldFill",
+		BackgroundColor3 = hex("FFF1B0"),
+		BorderSizePixel = 0,
+		Size = UDim2.fromScale(0, 1),
+	}, holdClip)
+	make("Frame", {
+		Name = "Edge",
+		BackgroundColor3 = INK,
+		BorderSizePixel = 0,
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.fromScale(1, 0),
+		Size = UDim2.new(0, 3, 1, 0),
+	}, holdFill)
+	local holdRow = hrow(hold.Content, 10)
+	holdRow.ZIndex = 6
+	local holdIcon = SlKit.Image(holdRow, "hud_rebirth", 60, { LayoutOrder = 1 })
+	local holdText = word(holdRow, "HOLD TO REBIRTH", 32)
+
+	local holdFrom: number? = nil
+	local holdState = "Locked" -- Ready / Locked / Away
+	local errorUntil = 0
+	local stopBob: (() -> ())? = nil
+	local rebirthBusy = false
+
+	local function rebirthInfo()
+		local done = player:GetAttribute("Rebirths") or 0
+		local price = Rebirth.CorePrice(done)
+		return done, price, Currency.CanAfford(player:GetAttribute("Coins"), price)
+	end
+	local function rankIcon(index: number): string
+		return ("rank_%02d"):format(math.clamp(index, 1, 17))
+	end
+	local function fillRebirth()
+		local done, price, can = rebirthInfo()
+		local now, after = Rebirth.Rank(done), Rebirth.Rank(done + 1)
+		-- (near-white ranks like Rookie / Regular get the design's silver panel so the white words still read)
+		local _, saturation = now.Color:ToHSV()
+		local panel = if saturation < 0.25 then hex("B8C2CC") else now.Color
+		rankArt.BackgroundColor3 = panel
+		rankRays.ImageColor3 = if saturation < 0.25 then hex("D6DDE4") else panel:Lerp(WHITE, 0.4)
+		rankNowIcon.Image = SlKit.Icon(rankIcon(now.Index))
+		rankNextIcon.Image = SlKit.Icon(rankIcon(after.Index))
+		keepRank.Image = rankNowIcon.Image
+		local nowName, nextName = string.upper(now.Name), string.upper(after.Name)
+		rankNowName.Text = nowName
+		rankNowName.TextSize = fitSize(nowName, 236, 30)
+		rankNextName.Text = nextName
+		rankNextName.TextSize = fitSize(nextName, 150, 24)
+		local function times(per: number): string
+			return Currency.FormatMultiplier(1 + per * (done + 1))
+		end
+		rewardText.Coins.Text = times(REBIRTH.Bonus) .. " COINS"
+		rewardText.Pins.Text = times(REBIRTH.PinBonus or REBIRTH.Bonus) .. " PINS"
+		local coins = tonumber(player:GetAttribute("Coins")) or 0
+		barFill.Size = UDim2.fromScale(math.clamp(coins / math.max(price, 1), 0, 1), 1)
+		barText.Text = ("%s / %s"):format(Currency.Format(math.min(coins, price)), Currency.Format(price))
+		local here = ctx.AtShop()
+		holdState = if not here then "Away" elseif can then "Ready" else "Locked"
+		if os.clock() < errorUntil then
+			return
+		end
+		if holdState == "Away" then
+			hold:Paint(PAINT.Blue)
+			holdIcon.Image = SlKit.Icon("hud_shop")
+			holdText.Text = "GO TO SHOP"
+		elseif holdState == "Ready" then
+			hold:Paint(PAINT.Gold)
+			holdIcon.Image = SlKit.Icon("hud_rebirth")
+			holdText.Text = "HOLD TO REBIRTH"
+		else
+			hold:Paint(PAINT.Dark)
+			holdIcon.Image = SlKit.Icon("ui_lock")
+			holdText.Text = "HOLD TO REBIRTH"
+		end
+		local ready = holdState == "Ready" and not holdFrom
+		holdRing.Visible = ready
+		if ready and not stopBob then
+			stopBob = SlKit.Bob(holdWrap, 6, 1.0)
+		elseif not ready and stopBob then
+			stopBob()
+			stopBob = nil
+		end
+	end
+
+	local function endHold()
+		holdFrom = nil
+		SlKit.Tween(holdFill, 0.2, "Soft", { Size = UDim2.fromScale(0, 1) })
+		fillRebirth()
+	end
+	local function rebirthNow()
+		local done = rebirthInfo()
+		rebirthBusy = true
+		local ok, result = pcall(ctx.Rebirth.InvokeServer, ctx.Rebirth)
+		rebirthBusy = false
+		holdFrom = nil
+		holdFill.Size = UDim2.fromScale(0, 1)
+		if ok and type(result) == "table" and result.Ok then
+			ShopV2.SetOpen(false)
+			if ctx.Party then
+				task.delay(0.25, ctx.Party, done + 1, nil)
+			end
+		else
+			Sfx.Play("Error", 1, 0.6)
+			SlKit.Shake(hold.Holder, 8, 0, 0.3)
+			holdText.Text = if ok
+					and type(result) == "table"
+					and result.Error
+				then string.upper(tostring(result.Error))
+				else "TRY AGAIN"
+			holdText.TextSize = fitSize(holdText.Text, BTN_W - 110, 32)
+			errorUntil = os.clock() + 2
+			task.delay(2, function()
+				holdText.TextSize = 32
+				fillRebirth()
+			end)
+		end
+	end
+	local function isPress(input: InputObject): boolean
+		return input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch
+	end
+	hold.Holder.InputBegan:Connect(function(input)
+		if not isPress(input) or rebirthBusy or holdState == "Away" then
+			return
+		end
+		if holdState ~= "Ready" then
+			Sfx.Play("Error", 1, 0.5)
+			SlKit.Shake(hold.Holder, 8, 0, 0.3)
+			return
+		end
+		holdFrom = os.clock()
+		fillRebirth()
+	end)
+	hold.Holder.InputEnded:Connect(function(input)
+		if holdFrom and isPress(input) then
+			endHold()
+		end
+	end)
+	hold.Holder.MouseLeave:Connect(function()
+		if holdFrom then
+			endHold()
+		end
+	end)
+	local lastRebirthGo = 0
+	hold.Holder.Activated:Connect(function()
+		if holdState == "Away" and os.clock() - lastRebirthGo >= CORE.Teleport.Cooldown then
+			lastRebirthGo = os.clock()
+			ctx.GoToShop()
+		end
+	end)
+	RunService.RenderStepped:Connect(function()
+		if not holdFrom then
+			return
+		end
+		local t = (os.clock() - holdFrom) / (SHOP.HoldSeconds or 1.5)
+		holdFill.Size = UDim2.fromScale(math.clamp(t, 0, 1), 1)
+		if t >= 1 then
+			holdFrom = nil
+			task.spawn(rebirthNow)
+		end
+	end)
+
+	-- ===== V4: the PASSES tab (design 3a / 3b): 4-wide cards, pass art on its colour + rays, name, Robux price
+	-- (green) or OWNED (navy + tick). Tap a card = Roblox's buy prompt (StoreBuy). Passes without a Creator Hub ID
+	-- only show in Studio (Store.Ready), with a NO ID YET chip.
+	local PASS_ORDER =
+		{ "DoubleCoins", "DoublePins", "VIP", "AutoBowl", "Lucky", "SuperLucky", "PetSlots", "TripleHatch" }
+	local PASS_LOOK: { [string]: { string } } = {
+		DoubleCoins = { "FFC93A", "FFE07A", "pass_2x_coins" },
+		DoublePins = { "4BE07A", "8BF0A8", "pass_2x_pins" },
+		VIP = { "FF4FA3", "FF8CC4", "pass_vip" },
+		AutoBowl = { "3AA8FF", "7CC6FF", "pass_auto_bowl" },
+		Lucky = { "4BE07A", "8BF0A8", "pass_lucky" },
+		SuperLucky = { "FFC93A", "FFE07A", "pass_super_lucky" },
+		PetSlots = { "FF4F8B", "FF8DB4", "pass_pet_slots" },
+		TripleHatch = { "FF9F1C", "FFC46B", "pass_triple_hatch" },
+	}
+	local PASS_ART = 196
+	local passPage = make("ScrollingFrame", {
+		Name = "PassesPage",
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Size = UDim2.fromScale(1, 1),
+		ScrollBarThickness = 8,
+		ScrollBarImageColor3 = C.TileStrip,
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+		CanvasSize = UDim2.fromOffset(0, 0),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		Visible = false,
+	}, well)
+	make("UIGridLayout", {
+		CellSize = UDim2.fromOffset(220, PASS_ART + 3 + 10 + 30 + 8 + 62 + 16 + 6),
+		CellPadding = UDim2.fromOffset(18, 24),
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}, passPage)
+	make("UIPadding", {
+		PaddingTop = UDim.new(0, 22),
+		PaddingBottom = UDim.new(0, 30),
+		PaddingLeft = UDim.new(0, 18),
+		PaddingRight = UDim.new(0, 18),
+	}, passPage)
+	type PassCard = {
+		Id: string,
+		Block: any,
+		Tick: ImageLabel,
+		Button: any,
+		Glyph: TextLabel,
+		TickIcon: ImageLabel,
+		Label: TextLabel,
+	}
+	local passCards: { PassCard } = {}
+	local passIds = {}
+	for _, id in PASS_ORDER do
+		if table.find(SHOP.Gamepasses or {}, id) then
+			table.insert(passIds, id)
+		end
+	end
+	for _, id in SHOP.Gamepasses or {} do
+		if not table.find(passIds, id) then
+			table.insert(passIds, id)
+		end
+	end
+	for order, id in passIds do
+		local pass = Store.Pass(id)
+		if not Store.Ready(pass) then
+			continue -- (no Creator Hub ID yet: hidden in the live game)
+		end
+		local look = PASS_LOOK[id] or PASS_LOOK.DoubleCoins
+		local block = SlKit.Block(passPage, {
+			Name = "Pass_" .. id,
+			Button = true,
+			Size = UDim2.fromScale(1, 1),
+			Radius = 16,
+			Paint = PAINT.Tile,
+		})
+		block.Holder.LayoutOrder = order
+		local content = block.Content
+		local art = make("CanvasGroup", {
+			Name = "Art",
+			BackgroundColor3 = hex(look[1]),
+			BorderSizePixel = 0,
+			Size = UDim2.new(1, 0, 0, PASS_ART + 14),
+			ZIndex = 1,
+		}, content)
+		corner(art, 13)
+		SlKit.Image(art, "bg_rays", 0, {
+			Name = "Rays",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(0.5, 0, 0, PASS_ART / 2),
+			Size = UDim2.fromOffset(380, 380),
+			ImageColor3 = hex(look[2]),
+			ZIndex = 1,
+		})
+		make("Frame", {
+			Name = "Under",
+			BackgroundColor3 = C.Tile,
+			BorderSizePixel = 0,
+			Position = UDim2.fromOffset(0, PASS_ART),
+			Size = UDim2.new(1, 0, 0, 16),
+			ZIndex = 2,
+		}, content)
+		make("Frame", {
+			Name = "Line",
+			BackgroundColor3 = INK,
+			BorderSizePixel = 0,
+			Position = UDim2.fromOffset(0, PASS_ART),
+			Size = UDim2.new(1, 0, 0, 3),
+			ZIndex = 3,
+		}, content)
+		SlKit.Image(content, look[3], 164, {
+			Name = "PassArt",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(0.5, 0, 0, PASS_ART / 2),
+			ZIndex = 4,
+		})
+		local tick = SlKit.Image(content, "ui_tick", 52, {
+			Name = "Tick",
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -6, 0, 6),
+			ZIndex = 6,
+			Visible = false,
+		})
+		if (tonumber(pass.PassId) or 0) <= 0 then
+			local note = chip(content, "NO ID YET", PAINT.Red[1], false)
+			note.Position = UDim2.fromOffset(8, 8)
+			note.ZIndex = 6
+			note.Visible = true
+		end
+		local name = string.upper(pass.Name or id)
+		text(content, name, fitSize(name, 196, 24), WHITE, {
+			Name = "PassName",
+			Position = UDim2.fromOffset(8, PASS_ART + 13),
+			Size = UDim2.new(1, -16, 0, 30),
+			ZIndex = 5,
+		})
+		local button = SlKit.Block(content, {
+			Name = "Buy",
+			Size = UDim2.new(1, -24, 0, 62),
+			Radius = 14,
+			Paint = PAINT.Green,
+		})
+		button.Holder.Position = UDim2.fromOffset(12, PASS_ART + 13 + 38)
+		button.Holder.ZIndex = 5
+		local row = hrow(button.Content, 6)
+		-- (the Robux glyph only draws in Builder Sans)
+		local glyph = text(row, ROBUX_GLYPH, 30, WHITE, {
+			Name = "Robux",
+			FontFace = Font.fromEnum(Enum.Font.BuilderSansBold),
+			AutomaticSize = Enum.AutomaticSize.X,
+			Size = UDim2.fromScale(0, 1),
+			LayoutOrder = 1,
+		})
+		local tickIcon = SlKit.Image(row, "ui_tick", 36, { LayoutOrder = 1, Visible = false })
+		local label = word(row, tostring(pass.Robux), 26)
+		table.insert(passCards, {
+			Id = id,
+			Block = block,
+			Tick = tick,
+			Button = button,
+			Glyph = glyph,
+			TickIcon = tickIcon,
+			Label = label,
+		})
+		block.Holder.Activated:Connect(function()
+			if Store.Owns(player, id) then
+				return
+			end
+			if not ctx.StoreBuy then
+				Sfx.Play("Error", 1, 0.6)
+				SlKit.Shake(block.Holder, 8, 0, 0.3)
+				return
+			end
+			ctx.StoreBuy:FireServer(id)
+		end)
+	end
+	local function fillPasses()
+		for _, card in passCards do
+			local owned = Store.Owns(player, card.Id)
+			card.Tick.Visible = owned
+			card.Button:Paint(if owned then PAINT.Navy else PAINT.Green)
+			card.Glyph.Visible = not owned
+			card.TickIcon.Visible = owned
+			card.Label.Text = if owned then "OWNED" else tostring(Store.Pass(card.Id).Robux)
+		end
+	end
+
 	function refresh()
 		local kind = kindOf(currentTab)
 		for id, tab in tabs do
 			tab.Block:Paint(if id == currentTab then PAINT.Gold else PAINT.Tile)
+		end
+		-- (V4: REBIRTH / PASSES swap the zone row, grid and footer for their own page)
+		local ladder = currentTab == "Balls" or currentTab == "Bags"
+		zoneRow.Visible = ladder
+		grid.Visible = ladder
+		footer.Visible = ladder
+		rebirthPage.Visible = currentTab == "Rebirth"
+		passPage.Visible = currentTab == "Gamepasses"
+		if currentTab == "Gamepasses" then
+			passesSeen = true
+		end
+		if not ladder then
+			if currentTab == "Rebirth" then
+				fillRebirth()
+			else
+				fillPasses()
+			end
+			setDot("Balls", ups("Ball"))
+			setDot("Bags", ups("Bag"))
+			setDot("Gamepasses", passesLeft())
+			fillTabBall()
+			return
 		end
 		local zones = CoreLadder.ZonesOpen(player:GetAttribute("CoreZonesOpen"))
 		for zone, tile in zoneTiles do
@@ -1137,23 +1776,23 @@ function ShopV2.Start(ctx: { [string]: any })
 	end
 
 	function setTab(id: string)
-		if id == "Rebirth" or id == "Gamepasses" then
-			if id == "Gamepasses" then
-				passesSeen = true
-			end
-			ShopV2.SetOpen(false)
-			ctx.OpenOther(id)
-			return
-		end
 		if id ~= currentTab then
+			if holdFrom then
+				endHold()
+			end
 			currentTab = id
-			focusZone(kindOf(id))
+			local ladder = id == "Balls" or id == "Bags"
+			if ladder then
+				focusZone(kindOf(id))
+			end
 			if ctx.OnTab then
 				ctx.OnTab(id)
 			end
 			refresh()
-			UiFx.Pop(grid, 1.02, 0.15)
-			task.defer(scrollToFocus)
+			UiFx.Pop(if ladder then grid elseif id == "Rebirth" then rebirthPage else passPage, 1.02, 0.15)
+			if ladder then
+				task.defer(scrollToFocus)
+			end
 		end
 	end
 
@@ -1513,13 +2152,16 @@ function ShopV2.Start(ctx: { [string]: any })
 	-- ===== Open / close =====
 	local open = false
 	function ShopV2.SetOpen(on: boolean, tab: string?)
-		if tab == "Balls" or tab == "Bags" then
+		if tab and tabs[tab] then
 			if tab ~= currentTab or not open then
 				currentTab = tab
 				focusZone(kindOf(tab))
 			end
 		elseif on and not open then
 			focusZone(kindOf(currentTab))
+		end
+		if not on and holdFrom then
+			endHold()
 		end
 		if on == open then
 			if on then
