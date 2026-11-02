@@ -1299,11 +1299,14 @@ function SlKit.Bubble(parent: Instance?, opts: { [string]: any }): Frame
 		Position = UDim2.fromOffset(18, 0),
 		ZIndex = 36,
 	})
+	-- TextBounds comes back shrunk under a UIScale (HUD fit, phone), so it is divided by the holder's own scale
 	local function fit()
 		holder.AutomaticSize = Enum.AutomaticSize.None
-		holder.Size = UDim2.fromOffset(text.TextBounds.X + 36 + 6, height + 6)
+		local scale = if holder.AbsoluteSize.Y > 0 then holder.AbsoluteSize.Y / (height + 6) else 1
+		holder.Size = UDim2.fromOffset(text.TextBounds.X / scale + 36 + 6, height + 6)
 	end
 	text:GetPropertyChangedSignal("TextBounds"):Connect(fit)
+	holder:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 	fit()
 	-- Arrow: a turned square in the bubble's colour, half hidden behind it
 	local side = opts.Side or "Bottom"
