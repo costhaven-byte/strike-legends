@@ -181,6 +181,7 @@ local function closeButton(parent: Instance, size: number)
 	end
 	return close
 end
+PetsV2.CloseButton = closeButton
 
 local function owned(): { [string]: number }
 	return Mascots.DecodeOwned(player:GetAttribute("Mascots"))
@@ -222,6 +223,186 @@ type PotCard = {
 	Glow: Frame,
 }
 
+-- One pet card (180 x 232): rarity rays + the pet in 3D, name, stat chips, "x3" copies, equipped tick, new number,
+-- Shiny star + sparkles, Mythic / Shiny stripes round the edge. Also used by the FUSE PETS window (Modules/EggV2).
+function PetsV2.Card(parent: Instance?, mascot): { [string]: any }
+	local rarity = RARITY[mascot.Rarity] or RARITY.Common
+	local block = SlKit.Block(parent, {
+		Name = mascot.Id,
+		Button = true,
+		Size = UDim2.fromOffset(CARD_W, CARD_H),
+		Radius = 16,
+		Paint = PAINT.Card,
+	})
+	local holder = block.Holder :: GuiButton
+	local content = block.Content
+	-- Mythic / Shiny: hard stripes sliding round the edge, outside the card
+	if mascot.Shiny or mascot.Rarity == "Mythic" then
+		local edge = make("Frame", {
+			Name = "Edge",
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(-5, -5),
+			Size = UDim2.new(1, 10, 1, 10),
+			ZIndex = 0,
+		}, holder)
+		corner(edge, 21)
+		slideStripes(
+			stroke(edge, WHITE, 6),
+			if mascot.Rarity == "Mythic" then RAINBOW else GOLD_BANDS,
+			if mascot.Rarity == "Mythic" then 2 else 3
+		)
+		local inkEdge = make("Frame", {
+			Name = "InkEdge",
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(-9, -9),
+			Size = UDim2.new(1, 18, 1, 18),
+			ZIndex = 0,
+		}, holder)
+		corner(inkEdge, 24)
+		stroke(inkEdge, INK, 3)
+	end
+	-- the rarity colour as an inner ring
+	local ring = make("Frame", {
+		Name = "Ring",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1, 1),
+		ZIndex = 7,
+	}, content)
+	corner(ring, 13)
+	stroke(ring, rarity[2], 3)
+	-- art: rarity colour + light rays (CanvasGroup keeps the round top corners)
+	local art = make("CanvasGroup", {
+		Name = "Art",
+		BackgroundColor3 = rarity[2],
+		BorderSizePixel = 0,
+		Position = UDim2.fromOffset(3, 3),
+		Size = UDim2.new(1, -6, 0, 137),
+		ZIndex = 4,
+	}, content)
+	corner(art, 12)
+	SlKit.Image(art, "bg_rays", 0, {
+		Name = "Rays",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(300, 300),
+		ImageColor3 = rarity[1],
+		ZIndex = 4,
+	})
+	local pet = make("Frame", {
+		Name = "Pet",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromOffset(CARD_W / 2, 70),
+		Size = UDim2.fromOffset(124, 124),
+		ZIndex = 5,
+	}, content)
+	MascotView.Viewport(pet, MascotView.Mascot(mascot, 2, false), 0.95)
+	-- name + stat chips
+	local name = text(content, mascot.Name, 20, WHITE, {
+		Name = "PetName",
+		Position = UDim2.fromOffset(6, 146),
+		Size = UDim2.new(1, -12, 0, 24),
+		ZIndex = 8,
+	})
+	HudKit.Fit(name, 20)
+	local chips = make("Frame", {
+		Name = "Stats",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(8, 178),
+		Size = UDim2.new(1, -16, 0, 32),
+		ZIndex = 8,
+	}, content)
+	make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		Padding = UDim.new(0, 5),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}, chips)
+	local stats = Mascots.Stats(mascot)
+	local shown = {}
+	for _, stat in Config.PetStats.Order do
+		if (stats[stat] or 0) > 0 and STAT[stat] and #shown < 2 then
+			table.insert(shown, stat)
+		end
+	end
+	for order, stat in shown do
+		local chipRow = darkChip(chips, 32)
+		local chip = chipRow.Parent :: Frame
+		chip.LayoutOrder = order
+		chip.Size = UDim2.new(if #shown == 1 then 1 else 0.5, if #shown == 1 then 0 else -3, 0, 32)
+		SlKit.Image(chipRow, STAT[stat][1], 22, { LayoutOrder = 1, ZIndex = 9 })
+		local value = word(chipRow, Mascots.PercentText(stats[stat]), 16, STAT[stat][2])
+		;(value:FindFirstChildOfClass("UIStroke") :: UIStroke).Thickness = 1.5
+	end
+	if #shown == 0 then
+		local chipRow = darkChip(chips, 32)
+		;(chipRow.Parent :: Frame).Size = UDim2.fromScale(1, 1)
+		word(chipRow, "NO BOOST", 16, hex("9FB3D1"))
+	end
+	-- "x3" copies, top left
+	local count = text(content, "", 22, WHITE, {
+		Name = "Count",
+		Position = UDim2.fromOffset(10, 9),
+		Size = UDim2.fromOffset(60, 24),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 9,
+	})
+	-- equipped tick, top right (half outside)
+	local tick = SlKit.Image(holder, "ui_tick", 52, {
+		Name = "Tick",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, 14, 0, -14),
+		ZIndex = 20,
+		Visible = false,
+	})
+	-- new copies: red number, top right
+	local new = make("Frame", {
+		Name = "New",
+		BackgroundColor3 = PAINT.Red[1],
+		BorderSizePixel = 0,
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, 10, 0, -10),
+		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromOffset(32, 32),
+		ZIndex = 20,
+		Visible = false,
+	}, holder)
+	corner(new, 16)
+	stroke(new, INK, 3)
+	make("UISizeConstraint", { MinSize = Vector2.new(32, 32) }, new)
+	make("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) }, new)
+	local newText = text(new, "1", 16, WHITE, {
+		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromScale(0, 1),
+		ZIndex = 21,
+	})
+	-- Shiny: a gold star on top + sparkles round the card (the crown is on the 3D pet)
+	if mascot.Shiny then
+		SlKit.Image(holder, "ui_star", 56, {
+			Name = "Star",
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 0, -30),
+			Rotation = -8,
+			ZIndex = 20,
+		})
+		for _, spot in { { -12, 96, 28 }, { CARD_W - 12, 30, 22 }, { CARD_W - 14, CARD_H - 70, 26 } } do
+			SlKit.Image(holder, "ui_sparkle", spot[3], {
+				Name = "Sparkle",
+				Position = UDim2.fromOffset(spot[1], spot[2]),
+				ZIndex = 20,
+			})
+		end
+	end
+	return {
+		Block = block,
+		Holder = holder,
+		Content = content,
+		Count = count,
+		Tick = tick,
+		New = new,
+		NewText = newText,
+	}
+end
 -- ctx (from MascotController): Equip(id, on), EquipBest(), FuseText, LockTexts(slots) -> { string },
 -- Locked() -> (head, line)? (pets not open yet), GoToEggs (fn or nil), Potions (PotionController), TestEgg /
 -- TestPotions (Studio fns or nil), OnClose()
@@ -645,127 +826,9 @@ function PetsV2.Start(ctx: { [string]: any })
 	local petCards: { [string]: PetCard } = {}
 	local seen: { [string]: number } = owned() -- copies already seen; more than this = new (this session)
 	local function makePetCard(mascot): PetCard
-		local rarity = RARITY[mascot.Rarity] or RARITY.Common
-		local block = SlKit.Block(grid, {
-			Name = mascot.Id,
-			Button = true,
-			Size = UDim2.fromOffset(CARD_W, CARD_H),
-			Radius = 16,
-			Paint = PAINT.Card,
-		})
-		local holder = block.Holder :: GuiButton
-		local content = block.Content
-		-- Mythic / Shiny: hard stripes sliding round the edge, outside the card
-		if mascot.Shiny or mascot.Rarity == "Mythic" then
-			local edge = make("Frame", {
-				Name = "Edge",
-				BackgroundTransparency = 1,
-				Position = UDim2.fromOffset(-5, -5),
-				Size = UDim2.new(1, 10, 1, 10),
-				ZIndex = 0,
-			}, holder)
-			corner(edge, 21)
-			slideStripes(
-				stroke(edge, WHITE, 6),
-				if mascot.Rarity == "Mythic" then RAINBOW else GOLD_BANDS,
-				if mascot.Rarity == "Mythic" then 2 else 3
-			)
-			local inkEdge = make("Frame", {
-				Name = "InkEdge",
-				BackgroundTransparency = 1,
-				Position = UDim2.fromOffset(-9, -9),
-				Size = UDim2.new(1, 18, 1, 18),
-				ZIndex = 0,
-			}, holder)
-			corner(inkEdge, 24)
-			stroke(inkEdge, INK, 3)
-		end
-		-- the rarity colour as an inner ring
-		local ring = make("Frame", {
-			Name = "Ring",
-			BackgroundTransparency = 1,
-			Size = UDim2.fromScale(1, 1),
-			ZIndex = 7,
-		}, content)
-		corner(ring, 13)
-		stroke(ring, rarity[2], 3)
-		-- art: rarity colour + light rays (CanvasGroup keeps the round top corners)
-		local art = make("CanvasGroup", {
-			Name = "Art",
-			BackgroundColor3 = rarity[2],
-			BorderSizePixel = 0,
-			Position = UDim2.fromOffset(3, 3),
-			Size = UDim2.new(1, -6, 0, 137),
-			ZIndex = 4,
-		}, content)
-		corner(art, 12)
-		SlKit.Image(art, "bg_rays", 0, {
-			Name = "Rays",
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.fromOffset(300, 300),
-			ImageColor3 = rarity[1],
-			ZIndex = 4,
-		})
-		local pet = make("Frame", {
-			Name = "Pet",
-			BackgroundTransparency = 1,
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromOffset(CARD_W / 2, 70),
-			Size = UDim2.fromOffset(124, 124),
-			ZIndex = 5,
-		}, content)
-		MascotView.Viewport(pet, MascotView.Mascot(mascot, 2, false), 0.95)
-		-- name + stat chips
-		local name = text(content, mascot.Name, 20, WHITE, {
-			Name = "PetName",
-			Position = UDim2.fromOffset(6, 146),
-			Size = UDim2.new(1, -12, 0, 24),
-			ZIndex = 8,
-		})
-		HudKit.Fit(name, 20)
-		local chips = make("Frame", {
-			Name = "Stats",
-			BackgroundTransparency = 1,
-			Position = UDim2.fromOffset(8, 178),
-			Size = UDim2.new(1, -16, 0, 32),
-			ZIndex = 8,
-		}, content)
-		make("UIListLayout", {
-			FillDirection = Enum.FillDirection.Horizontal,
-			HorizontalAlignment = Enum.HorizontalAlignment.Center,
-			Padding = UDim.new(0, 5),
-			SortOrder = Enum.SortOrder.LayoutOrder,
-		}, chips)
-		local stats = Mascots.Stats(mascot)
-		local shown = {}
-		for _, stat in Config.PetStats.Order do
-			if (stats[stat] or 0) > 0 and STAT[stat] and #shown < 2 then
-				table.insert(shown, stat)
-			end
-		end
-		for order, stat in shown do
-			local chipRow = darkChip(chips, 32)
-			local chip = chipRow.Parent :: Frame
-			chip.LayoutOrder = order
-			chip.Size = UDim2.new(if #shown == 1 then 1 else 0.5, if #shown == 1 then 0 else -3, 0, 32)
-			SlKit.Image(chipRow, STAT[stat][1], 22, { LayoutOrder = 1, ZIndex = 9 })
-			local value = word(chipRow, Mascots.PercentText(stats[stat]), 16, STAT[stat][2])
-			;(value:FindFirstChildOfClass("UIStroke") :: UIStroke).Thickness = 1.5
-		end
-		if #shown == 0 then
-			local chipRow = darkChip(chips, 32)
-			;(chipRow.Parent :: Frame).Size = UDim2.fromScale(1, 1)
-			word(chipRow, "NO BOOST", 16, hex("9FB3D1"))
-		end
-		-- "x3" copies, top left
-		local count = text(content, "", 22, WHITE, {
-			Name = "Count",
-			Position = UDim2.fromOffset(10, 9),
-			Size = UDim2.fromOffset(60, 24),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			ZIndex = 9,
-		})
+		local card = PetsV2.Card(grid, mascot)
+		local block, holder, content, count = card.Block, card.Holder :: GuiButton, card.Content, card.Count
+		local tick, new, newText = card.Tick, card.New, card.NewText
 		-- FUSE! once you have enough copies for a Shiny (tap = where to fuse)
 		local fuse: GuiButton? = nil
 		if Mascots.CoreEggsOn() and Mascots.MergeCost(mascot) then
@@ -784,52 +847,6 @@ function PetsV2.Start(ctx: { [string]: any })
 				toast(ctx.FuseText)
 			end)
 			fuse = f.Holder :: GuiButton
-		end
-		-- equipped tick, top right (half outside)
-		local tick = SlKit.Image(holder, "ui_tick", 52, {
-			Name = "Tick",
-			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, 14, 0, -14),
-			ZIndex = 20,
-			Visible = false,
-		})
-		-- new copies: red number, top right
-		local new = make("Frame", {
-			Name = "New",
-			BackgroundColor3 = PAINT.Red[1],
-			BorderSizePixel = 0,
-			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, 10, 0, -10),
-			AutomaticSize = Enum.AutomaticSize.X,
-			Size = UDim2.fromOffset(32, 32),
-			ZIndex = 20,
-			Visible = false,
-		}, holder)
-		corner(new, 16)
-		stroke(new, INK, 3)
-		make("UISizeConstraint", { MinSize = Vector2.new(32, 32) }, new)
-		make("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) }, new)
-		local newText = text(new, "1", 16, WHITE, {
-			AutomaticSize = Enum.AutomaticSize.X,
-			Size = UDim2.fromScale(0, 1),
-			ZIndex = 21,
-		})
-		-- Shiny: a gold star on top + sparkles round the card (the crown is on the 3D pet)
-		if mascot.Shiny then
-			SlKit.Image(holder, "ui_star", 56, {
-				Name = "Star",
-				AnchorPoint = Vector2.new(0.5, 0),
-				Position = UDim2.new(0.5, 0, 0, -30),
-				Rotation = -8,
-				ZIndex = 20,
-			})
-			for _, spot in { { -12, 96, 28 }, { CARD_W - 12, 30, 22 }, { CARD_W - 14, CARD_H - 70, 26 } } do
-				SlKit.Image(holder, "ui_sparkle", spot[3], {
-					Name = "Sparkle",
-					Position = UDim2.fromOffset(spot[1], spot[2]),
-					ZIndex = 20,
-				})
-			end
 		end
 		holder.Activated:Connect(function()
 			local mine = owned()[mascot.Id] or 0

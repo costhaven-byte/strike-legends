@@ -1195,6 +1195,10 @@ Config.Ui = {
 	-- tabs, BEST / RARITY / NEW sort, slot strip with total boosts + EQUIP BEST, pet cards, potion cards).
 	-- false = the old pets panel comes back.
 	PetsV2 = true,
+	-- UI overhaul V6 (owner's 'Strike Legends Pets UI.html' D4-D6): the egg odds board over every egg stand (price,
+	-- odds, auto-delete X, HATCH / AUTO / x3; sizes in Config.EggBoard) and the FUSE PETS window in the new look.
+	-- false = the old odds bubbles + price line and the old PET FUSION window come back.
+	EggV2 = true,
 	-- Tuck while bowling (owner 2026-10-28: on phones the HUD hid the lane): from the moment you start a throw, these
 	-- HUD pieces slide off the nearest screen edge; IdleSeconds after your last throw they slide back (Time = slide
 	-- seconds). Coins, the level bar, POWER, the streak and the goal bar always stay, except POWER tucks too once it
@@ -4096,6 +4100,17 @@ Config.EggOdds = {
 	Spin = 30, -- degrees per second the pets turn in their bubbles (0 = still)
 }
 
+-- UI overhaul V6 (Config.Ui.EggV2): the new egg board, one per stand, in studs so it is the same size on every screen
+-- (Modules/EggV2). It shows when you walk near and hides while a hatch plays.
+Config.EggBoard = {
+	Width = 12, -- studs wide (the design's 720 x 440 board; height follows)
+	Height = 8.8, -- studs from the egg's middle up to the board's bottom edge (its pointer)
+	ShowDistance = 16, -- studs (flat) from the stand: closer = the board pops up (inside the server's HatchRange 18)
+	HideDistance = 18, -- further = it hides (the gap stops flicker at the edge)
+	PetFill = 0.8, -- how much of its round slot the pet fills
+	Spin = 30, -- degrees per second the pets turn (0 = still)
+}
+
 -- Batch C3 (final changes 11b): tap a pet on an egg's odds board to X it out; X'd pets you hatch are auto-deleted
 -- (not kept; the hatch card still shows them with an AUTO-DELETED stamp and they count as eggs hatched). Tap again
 -- to undo. One list per player across all eggs, saved (AutoDelete), the server owns it (MascotService).
@@ -4140,7 +4155,7 @@ Config.AreaSigns = {
 -- Addendum 5 B2: signs over the roof's egg row and fusion machine (Config.CoreLoop.Eggs)
 if Config.CoreLoop.Enabled and Config.CoreLoop.Eggs.Enabled then
 	local roof = Config.CoreLoop.Folder
-	table.insert(Config.AreaSigns.Signs, { Text = "PET EGGS", Paint = "Pink", Icon = "Paw", Path = { roof, "EggRow" }, Lift = 4 })
+	table.insert(Config.AreaSigns.Signs, { Text = "PET EGGS", Paint = "Pink", Icon = "Paw", Path = { roof, "EggRow" }, Lift = if Config.Ui.EggV2 then 8 else 4 }) -- (V6: clears the taller egg board)
 	table.insert(Config.AreaSigns.Signs, { Text = "FUSION", Paint = "Purple", Icon = "Paw", Path = { roof, Config.CoreLoop.Eggs.Fusion.Name } })
 end
 -- Addendum 5 F: the roof's own crate kiosk and egg pad are moved away in the core loop (CoreLoop.HiddenStations), so

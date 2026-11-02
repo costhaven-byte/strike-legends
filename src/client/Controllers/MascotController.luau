@@ -35,12 +35,14 @@ local RewardKit = require(Modules:WaitForChild("RewardKit"))
 local UiKit = require(Modules:WaitForChild("UiKit"))
 local CrateKit = require(Modules:WaitForChild("CrateKit"))
 local PetsV2 = require(Modules:WaitForChild("PetsV2"))
+local EggV2 = require(Modules:WaitForChild("EggV2"))
 
 local player = Players.LocalPlayer
 
 local FX = Config.MascotFx
 local ECONOMY = Config.Economy.Mascots
 local PETS_V2 = Config.Ui.PetsV2 == true -- (UI overhaul V5: the new PETS window, Modules/PetsV2)
+local EGG_V2 = Config.Ui.EggV2 == true -- (UI overhaul V6: the new egg boards + FUSE PETS window, Modules/EggV2)
 local EGG = Config.Economy.Eggs[1] -- the Neon Egg (Id "Alley"); zone 3 and 4 eggs hatch at their own stands (Phase X)
 EGG = Mascots.GetEgg(EGG.Id) or EGG -- (Addendum 5 B2: on the roof, the egg ladder's first egg and its price)
 
@@ -1787,11 +1789,25 @@ function MascotController:Start()
 			refreshFusion(false)
 		end
 	end)
+	-- UI overhaul V6: the FUSE PETS window in the new look (Modules/EggV2); the one above stays for EggV2 = false
+	local fuseV2 = if EGG_V2
+		then EggV2.Fusion({
+			Fusable = fusable,
+			Owned = owned,
+			Fuse = function(mascot)
+				task.spawn(doMerge, mascot)
+			end,
+		})
+		else nil
 	MascotController.OpenFusion = function()
-		if fusionWin:IsOpen() or overlay.Visible then
+		if fusionWin:IsOpen() or overlay.Visible or (fuseV2 and fuseV2.IsOpen()) then
 			return
 		end
 		closePanel()
+		if fuseV2 then
+			fuseV2.Open()
+			return
+		end
 		refreshFusion(true)
 		fusionWin:Open()
 	end
@@ -2078,223 +2094,301 @@ function MascotController:Start()
 		player:GetAttributeChangedSignal("FreeEgg_" .. egg.Id):Connect(refreshStand)
 		refreshStand()
 
-		-- Polish P3: odds bubbles over the stand (Config.EggOdds): each pet this egg hatches, turning in 3D, with its
-		-- chance (same maths as the server's roll, LUCKY passes included). They fade in when you walk near.
-		local ODDS_FX = Config.EggOdds
-		local pets = Mascots.InEgg(egg.Id)
-		local oddsBoard = Instance.new("BillboardGui")
-		oddsBoard.Name = "EggOdds"
-		local perRow = math.min(#pets, ODDS_FX.PerRow)
-		local rows = math.ceil(#pets / ODDS_FX.PerRow)
-		local cardW, cardH = ODDS_FX.CardSize, ODDS_FX.CardSize * 1.3
-		local boardW = perRow * cardW + (perRow - 1) * ODDS_FX.Gap
-		-- batch C3: tap a pet to X it out (Config.AutoDelete); a hint line goes under the bubbles
-		local AUTO_DELETE = Config.AutoDelete
-		local hintH = if AUTO_DELETE.Enabled then 0.5 else 0
-		local boardH = rows * cardH + (rows - 1) * ODDS_FX.Gap + 0.8 + hintH -- + the LUCKY line on top
-		oddsBoard.Size = UDim2.fromScale(boardW, boardH) -- scale = studs, so it is the same size on every screen
-		oddsBoard.StudsOffset = Vector3.new(0, ODDS_FX.Height + boardH / 2, 0) -- bottom edge at Height
-		oddsBoard.LightInfluence = 0
-		oddsBoard.Active = true -- the pet bubbles take taps (batch C3)
-
-		oddsBoard.Enabled = false
-		-- Final changes 11a: pinned to the stand from PlayerGui. Pet viewports on a billboard parented in the Workspace
-		-- often don't draw (Roblox bug), so players saw empty cards.
-		oddsBoard.Adornee = shell
-		oddsBoard.ResetOnSpawn = false
-		oddsBoard.Parent = player:WaitForChild("PlayerGui")
-
-		-- Everything that fades, with its fully-shown transparency
-		local fading: { { any } } = {}
-		local function fadeWith(instance: Instance, property: string)
-			table.insert(fading, { instance, property, (instance :: any)[property] })
-		end
-		local luckLine = text(oddsBoard, "Luck", FONT, LIME, UDim2.new(), UDim2.fromScale(1, 0.8 / boardH))
-		luckLine.TextScaled = true
-		fadeWith(luckLine, "TextTransparency")
-		local luckStroke = luckLine:FindFirstChildOfClass("UIStroke")
-		if luckStroke then
-			fadeWith(luckStroke, "Transparency")
-		end
-
-		table.sort(pets, function(first, second)
-			local a, b = Mascots.RarityIndex(first.Rarity), Mascots.RarityIndex(second.Rarity)
-			if a ~= b then
-				return a < b
-			end
-			return first.Id < second.Id
-		end)
-		local percents: { [any]: TextLabel } = {}
-		local spinners: { Model } = {}
-		local crosses: { [string]: TextLabel } = {}
-		local markedForDelete: { [string]: boolean } = {}
-		for index, mascot in pets do
-			local column = (index - 1) % ODDS_FX.PerRow
-			local line = (index - 1) // ODDS_FX.PerRow
-			local inRow = if line == rows - 1 then #pets - line * ODDS_FX.PerRow else perRow
-			local rowStart = (boardW - (inRow * cardW + (inRow - 1) * ODDS_FX.Gap)) / 2 -- last row is centred
-			local color = Mascots.RarityColor(mascot.Rarity)
-			local card = Instance.new("Frame")
-			card.Name = mascot.Id
-			card.BackgroundColor3 = CARD
-			card.BackgroundTransparency = 0.25
-			card.Position = UDim2.fromScale(
-				(rowStart + column * (cardW + ODDS_FX.Gap)) / boardW,
-				(0.8 + line * (cardH + ODDS_FX.Gap)) / boardH
-			)
-			card.Size = UDim2.fromScale(cardW / boardW, cardH / boardH)
-			card.Parent = oddsBoard
-			fadeWith(card, "BackgroundTransparency")
-			local round = Instance.new("UICorner")
-			round.CornerRadius = UDim.new(0.18, 0)
-			round.Parent = card
-			local rim = Instance.new("UIStroke")
-			rim.Color = color
-			rim.Thickness = 3
-			rim.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-			rim.Parent = card
-			fadeWith(rim, "Transparency")
-			local holder = Instance.new("Frame")
-			holder.Name = "Pet"
-			holder.BackgroundTransparency = 1
-			holder.Size = UDim2.fromScale(1, cardW / cardH)
-			holder.Parent = card
-			local model = MascotView.Mascot(mascot, 2, false)
-			local view = MascotView.Viewport(holder, model, ODDS_FX.PetFill)
-			fadeWith(view, "ImageTransparency")
-			table.insert(spinners, model)
-			local percent = text(
-				card,
-				"Chance",
-				FONT,
-				color,
-				UDim2.fromScale(0.04, cardW / cardH - 0.06),
-				UDim2.fromScale(0.92, 1 - cardW / cardH + 0.02)
-			)
-			percent.TextScaled = true
-			fadeWith(percent, "TextTransparency")
-			local percentStroke = percent:FindFirstChildOfClass("UIStroke")
-			if percentStroke then
-				fadeWith(percentStroke, "Transparency")
-			end
-			percents[mascot] = percent
-
-			-- batch C3: a big red X over the bubble while this pet is X'd; tapping the bubble toggles it
-			if AUTO_DELETE.Enabled then
-				local cross = text(card, "AutoDeleteX", FONT, AUTO_DELETE.XColor, UDim2.new(), UDim2.fromScale(1, 1))
-				cross.Text = "X"
-				cross.ZIndex = 5
-				cross.Visible = false
-				local crossStroke = cross:FindFirstChildOfClass("UIStroke")
-				if crossStroke then
-					crossStroke.Thickness = 3
-					fadeWith(crossStroke, "Transparency")
-				end
-				fadeWith(cross, "TextTransparency")
-				crosses[mascot.Id] = cross
-				local tap = Instance.new("TextButton")
-				tap.Name = "Tap"
-				tap.BackgroundTransparency = 1
-				tap.Text = ""
-				tap.Size = UDim2.fromScale(1, 1)
-				tap.ZIndex = 6
-				tap.Parent = card
-				tap.Activated:Connect(function()
-					if Mascots.RarityIndex(mascot.Rarity) > Mascots.RarityIndex(AUTO_DELETE.MaxRarity) then
-						showToast(AUTO_DELETE.TooRare:format(string.upper(mascot.Rarity)))
+		-- UI overhaul V6 (Config.Ui.EggV2): one board in the new look (Modules/EggV2) with the price, the odds, the
+		-- auto-delete X's and HATCH / AUTO / x3. The hold-E prompt stays (no UI of its own): E presses HATCH.
+		if EGG_V2 then
+			prompt.Style = Enum.ProximityPromptStyle.Custom
+			local storeBuy = remotes:FindFirstChild("StoreBuy") :: RemoteEvent?
+			local boardV2 = EggV2.Board({
+				Egg = egg,
+				Shell = shell,
+				Base = base,
+				Pets = (function()
+					local list = Mascots.InEgg(egg.Id)
+					table.sort(list, function(first, second)
+						local a, b = Mascots.RarityIndex(first.Rarity), Mascots.RarityIndex(second.Rarity)
+						if a ~= b then
+							return a < b
+						end
+						return first.Id < second.Id
+					end)
+					return list
+				end)(),
+				Prompt = prompt,
+				State = function()
+					local unlocked, why, affordable = eggState(egg)
+					return unlocked, why, freeEggs(egg), affordable
+				end,
+				Odds = function()
+					local luck = Store.Luck(player)
+					local odds = Store.LuckyOdds(Mascots.EggOdds(egg.Id), luck, Mascots.LuckFrom(egg.Id))
+					local chances = {}
+					for _, mascot in Mascots.InEgg(egg.Id) do
+						chances[mascot] = Mascots.Chance(egg.Id, mascot, odds)
+					end
+					return chances
+				end,
+				LuckText = function()
+					local luck = Store.Luck(player)
+					return if luck > 1 then ("LUCKY x%s ODDS"):format((("%.1f"):format(luck):gsub("%.0$", ""))) else ""
+				end,
+				Busy = function()
+					return standBusy or overlay.Visible
+				end,
+				Hatch = function()
+					task.spawn(doHatch, egg)
+				end,
+				Auto = function()
+					if autoHatch then
+						stopAuto()
 						return
 					end
-					local on = not markedForDelete[mascot.Id]
-					markedForDelete[mascot.Id] = if on then true else nil
-					cross.Visible = on -- straight away; the server's AutoDelete attribute confirms it
-					Sfx.Play("Click")
-					autoDeleteRemote:FireServer(mascot.Id, on)
-				end)
-			end
-		end
-		if AUTO_DELETE.Enabled then
-			local hint = text(
-				oddsBoard,
-				"AutoDeleteHint",
-				FONT,
-				Color3.new(1, 1, 1),
-				UDim2.fromScale(0, 1 - hintH / boardH),
-				UDim2.fromScale(1, hintH / boardH)
-			)
-			hint.Text = AUTO_DELETE.Hint
-			fadeWith(hint, "TextTransparency")
-			local hintStroke = hint:FindFirstChildOfClass("UIStroke")
-			if hintStroke then
-				fadeWith(hintStroke, "Transparency")
-			end
-			local function refreshCrosses()
-				markedForDelete = {}
-				for id in string.gmatch(player:GetAttribute("AutoDelete") or "", "[^,]+") do
-					markedForDelete[id] = true
-				end
-				for id, cross in crosses do
-					cross.Visible = markedForDelete[id] == true
-				end
-			end
-			player:GetAttributeChangedSignal("AutoDelete"):Connect(refreshCrosses)
-			refreshCrosses()
-		end
+					local unlocked, _, affordable = eggState(egg)
+					if unlocked and affordable then
+						autoHatch = true
+						paintAuto()
+					end
+					task.spawn(doHatch, egg)
+				end,
+				AutoOn = function()
+					return autoHatch
+				end,
+				TripleOwned = function()
+					return Store.Owns(player, "TripleHatch")
+				end,
+				BuyTriple = function()
+					if storeBuy then
+						storeBuy:FireServer("TripleHatch")
+					else
+						showToast("THE STORE IS CLOSED")
+					end
+				end,
+				Toast = showToast,
+				AutoDeleteRemote = if Config.AutoDelete.Enabled then autoDeleteRemote else nil,
+			})
+			-- the little price line over the egg only shows while the board is away
+			RunService.Heartbeat:Connect(function()
+				board.Enabled = not boardV2.Shown()
+			end)
+		else
+			-- Polish P3: odds bubbles over the stand (Config.EggOdds): each pet this egg hatches, turning in 3D, with its
+			-- chance (same maths as the server's roll, LUCKY passes included). They fade in when you walk near.
+			local ODDS_FX = Config.EggOdds
+			local pets = Mascots.InEgg(egg.Id)
+			local oddsBoard = Instance.new("BillboardGui")
+			oddsBoard.Name = "EggOdds"
+			local perRow = math.min(#pets, ODDS_FX.PerRow)
+			local rows = math.ceil(#pets / ODDS_FX.PerRow)
+			local cardW, cardH = ODDS_FX.CardSize, ODDS_FX.CardSize * 1.3
+			local boardW = perRow * cardW + (perRow - 1) * ODDS_FX.Gap
+			-- batch C3: tap a pet to X it out (Config.AutoDelete); a hint line goes under the bubbles
+			local AUTO_DELETE = Config.AutoDelete
+			local hintH = if AUTO_DELETE.Enabled then 0.5 else 0
+			local boardH = rows * cardH + (rows - 1) * ODDS_FX.Gap + 0.8 + hintH -- + the LUCKY line on top
+			oddsBoard.Size = UDim2.fromScale(boardW, boardH) -- scale = studs, so it is the same size on every screen
+			oddsBoard.StudsOffset = Vector3.new(0, ODDS_FX.Height + boardH / 2, 0) -- bottom edge at Height
+			oddsBoard.LightInfluence = 0
+			oddsBoard.Active = true -- the pet bubbles take taps (batch C3)
 
-		-- "40%", "2.5%", "0.25%", "0.01%": always short enough for a bubble
-		local function percentText(chance: number): string
-			local value = chance * 100
-			local shown = if value >= 10
-				then ("%d"):format(math.floor(value + 0.5))
-				elseif value >= 1 then ("%.1f"):format(value)
-				elseif value >= 0.01 then ("%.2f"):format(value)
-				else ("%.3f"):format(value)
-			shown = shown:gsub("(%.%d-)0+$", "%1"):gsub("%.$", "")
-			return shown .. "%"
-		end
-		local function refreshOdds()
-			local luck = Store.Luck(player)
-			local odds = Store.LuckyOdds(Mascots.EggOdds(egg.Id), luck, Mascots.LuckFrom(egg.Id)) -- (B2: each roof egg has its own odds)
-			for mascot, label in percents do
-				label.Text = percentText(Mascots.Chance(egg.Id, mascot, odds))
-			end
-			luckLine.Text = if luck > 1 then ("LUCKY x%s ODDS"):format((("%.1f"):format(luck):gsub("%.0$", ""))) else ""
-		end
-		player:GetAttributeChangedSignal("Passes"):Connect(refreshOdds)
-		refreshOdds()
+			oddsBoard.Enabled = false
+			-- Final changes 11a: pinned to the stand from PlayerGui. Pet viewports on a billboard parented in the Workspace
+			-- often don't draw (Roblox bug), so players saw empty cards.
+			oddsBoard.Adornee = shell
+			oddsBoard.ResetOnSpawn = false
+			oddsBoard.Parent = player:WaitForChild("PlayerGui")
 
-		local function setAlpha(alpha: number)
-			for _, entry in fading do
-				local shown = entry[3]
-				entry[1][entry[2]] = shown + (1 - shown) * (1 - alpha)
+			-- Everything that fades, with its fully-shown transparency
+			local fading: { { any } } = {}
+			local function fadeWith(instance: Instance, property: string)
+				table.insert(fading, { instance, property, (instance :: any)[property] })
 			end
-			oddsBoard.Enabled = alpha > 0.001
-		end
-		setAlpha(0)
-		local alpha = 0
-		local showing = false
-		local spin = 0
-		RunService.RenderStepped:Connect(function(dt)
-			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-			local distance = if root then ((root.Position - base) * Vector3.new(1, 0, 1)).Magnitude else math.huge
-			if distance <= ODDS_FX.ShowDistance then
-				showing = true
-			elseif distance > ODDS_FX.HideDistance then
-				showing = false
+			local luckLine = text(oddsBoard, "Luck", FONT, LIME, UDim2.new(), UDim2.fromScale(1, 0.8 / boardH))
+			luckLine.TextScaled = true
+			fadeWith(luckLine, "TextTransparency")
+			local luckStroke = luckLine:FindFirstChildOfClass("UIStroke")
+			if luckStroke then
+				fadeWith(luckStroke, "Transparency")
 			end
-			local target = if showing and not standBusy then 1 else 0
-			if alpha ~= target then
-				local step = dt / math.max(ODDS_FX.FadeTime, 0.01)
-				alpha = if target > alpha then math.min(target, alpha + step) else math.max(target, alpha - step)
-				setAlpha(alpha)
-			end
-			if alpha > 0 and ODDS_FX.Spin ~= 0 then
-				spin += math.rad(ODDS_FX.Spin) * dt
-				local turn = CFrame.Angles(0, spin, 0)
-				for _, model in spinners do
-					model:PivotTo(turn)
+
+			table.sort(pets, function(first, second)
+				local a, b = Mascots.RarityIndex(first.Rarity), Mascots.RarityIndex(second.Rarity)
+				if a ~= b then
+					return a < b
+				end
+				return first.Id < second.Id
+			end)
+			local percents: { [any]: TextLabel } = {}
+			local spinners: { Model } = {}
+			local crosses: { [string]: TextLabel } = {}
+			local markedForDelete: { [string]: boolean } = {}
+			for index, mascot in pets do
+				local column = (index - 1) % ODDS_FX.PerRow
+				local line = (index - 1) // ODDS_FX.PerRow
+				local inRow = if line == rows - 1 then #pets - line * ODDS_FX.PerRow else perRow
+				local rowStart = (boardW - (inRow * cardW + (inRow - 1) * ODDS_FX.Gap)) / 2 -- last row is centred
+				local color = Mascots.RarityColor(mascot.Rarity)
+				local card = Instance.new("Frame")
+				card.Name = mascot.Id
+				card.BackgroundColor3 = CARD
+				card.BackgroundTransparency = 0.25
+				card.Position = UDim2.fromScale(
+					(rowStart + column * (cardW + ODDS_FX.Gap)) / boardW,
+					(0.8 + line * (cardH + ODDS_FX.Gap)) / boardH
+				)
+				card.Size = UDim2.fromScale(cardW / boardW, cardH / boardH)
+				card.Parent = oddsBoard
+				fadeWith(card, "BackgroundTransparency")
+				local round = Instance.new("UICorner")
+				round.CornerRadius = UDim.new(0.18, 0)
+				round.Parent = card
+				local rim = Instance.new("UIStroke")
+				rim.Color = color
+				rim.Thickness = 3
+				rim.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+				rim.Parent = card
+				fadeWith(rim, "Transparency")
+				local holder = Instance.new("Frame")
+				holder.Name = "Pet"
+				holder.BackgroundTransparency = 1
+				holder.Size = UDim2.fromScale(1, cardW / cardH)
+				holder.Parent = card
+				local model = MascotView.Mascot(mascot, 2, false)
+				local view = MascotView.Viewport(holder, model, ODDS_FX.PetFill)
+				fadeWith(view, "ImageTransparency")
+				table.insert(spinners, model)
+				local percent = text(
+					card,
+					"Chance",
+					FONT,
+					color,
+					UDim2.fromScale(0.04, cardW / cardH - 0.06),
+					UDim2.fromScale(0.92, 1 - cardW / cardH + 0.02)
+				)
+				percent.TextScaled = true
+				fadeWith(percent, "TextTransparency")
+				local percentStroke = percent:FindFirstChildOfClass("UIStroke")
+				if percentStroke then
+					fadeWith(percentStroke, "Transparency")
+				end
+				percents[mascot] = percent
+
+				-- batch C3: a big red X over the bubble while this pet is X'd; tapping the bubble toggles it
+				if AUTO_DELETE.Enabled then
+					local cross = text(card, "AutoDeleteX", FONT, AUTO_DELETE.XColor, UDim2.new(), UDim2.fromScale(1, 1))
+					cross.Text = "X"
+					cross.ZIndex = 5
+					cross.Visible = false
+					local crossStroke = cross:FindFirstChildOfClass("UIStroke")
+					if crossStroke then
+						crossStroke.Thickness = 3
+						fadeWith(crossStroke, "Transparency")
+					end
+					fadeWith(cross, "TextTransparency")
+					crosses[mascot.Id] = cross
+					local tap = Instance.new("TextButton")
+					tap.Name = "Tap"
+					tap.BackgroundTransparency = 1
+					tap.Text = ""
+					tap.Size = UDim2.fromScale(1, 1)
+					tap.ZIndex = 6
+					tap.Parent = card
+					tap.Activated:Connect(function()
+						if Mascots.RarityIndex(mascot.Rarity) > Mascots.RarityIndex(AUTO_DELETE.MaxRarity) then
+							showToast(AUTO_DELETE.TooRare:format(string.upper(mascot.Rarity)))
+							return
+						end
+						local on = not markedForDelete[mascot.Id]
+						markedForDelete[mascot.Id] = if on then true else nil
+						cross.Visible = on -- straight away; the server's AutoDelete attribute confirms it
+						Sfx.Play("Click")
+						autoDeleteRemote:FireServer(mascot.Id, on)
+					end)
 				end
 			end
-		end)
+			if AUTO_DELETE.Enabled then
+				local hint = text(
+					oddsBoard,
+					"AutoDeleteHint",
+					FONT,
+					Color3.new(1, 1, 1),
+					UDim2.fromScale(0, 1 - hintH / boardH),
+					UDim2.fromScale(1, hintH / boardH)
+				)
+				hint.Text = AUTO_DELETE.Hint
+				fadeWith(hint, "TextTransparency")
+				local hintStroke = hint:FindFirstChildOfClass("UIStroke")
+				if hintStroke then
+					fadeWith(hintStroke, "Transparency")
+				end
+				local function refreshCrosses()
+					markedForDelete = {}
+					for id in string.gmatch(player:GetAttribute("AutoDelete") or "", "[^,]+") do
+						markedForDelete[id] = true
+					end
+					for id, cross in crosses do
+						cross.Visible = markedForDelete[id] == true
+					end
+				end
+				player:GetAttributeChangedSignal("AutoDelete"):Connect(refreshCrosses)
+				refreshCrosses()
+			end
+
+			-- "40%", "2.5%", "0.25%", "0.01%": always short enough for a bubble
+			local function percentText(chance: number): string
+				local value = chance * 100
+				local shown = if value >= 10
+					then ("%d"):format(math.floor(value + 0.5))
+					elseif value >= 1 then ("%.1f"):format(value)
+					elseif value >= 0.01 then ("%.2f"):format(value)
+					else ("%.3f"):format(value)
+				shown = shown:gsub("(%.%d-)0+$", "%1"):gsub("%.$", "")
+				return shown .. "%"
+			end
+			local function refreshOdds()
+				local luck = Store.Luck(player)
+				local odds = Store.LuckyOdds(Mascots.EggOdds(egg.Id), luck, Mascots.LuckFrom(egg.Id)) -- (B2: each roof egg has its own odds)
+				for mascot, label in percents do
+					label.Text = percentText(Mascots.Chance(egg.Id, mascot, odds))
+				end
+				luckLine.Text = if luck > 1 then ("LUCKY x%s ODDS"):format((("%.1f"):format(luck):gsub("%.0$", ""))) else ""
+			end
+			player:GetAttributeChangedSignal("Passes"):Connect(refreshOdds)
+			refreshOdds()
+
+			local function setAlpha(alpha: number)
+				for _, entry in fading do
+					local shown = entry[3]
+					entry[1][entry[2]] = shown + (1 - shown) * (1 - alpha)
+				end
+				oddsBoard.Enabled = alpha > 0.001
+			end
+			setAlpha(0)
+			local alpha = 0
+			local showing = false
+			local spin = 0
+			RunService.RenderStepped:Connect(function(dt)
+				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+				local distance = if root then ((root.Position - base) * Vector3.new(1, 0, 1)).Magnitude else math.huge
+				if distance <= ODDS_FX.ShowDistance then
+					showing = true
+				elseif distance > ODDS_FX.HideDistance then
+					showing = false
+				end
+				local target = if showing and not standBusy then 1 else 0
+				if alpha ~= target then
+					local step = dt / math.max(ODDS_FX.FadeTime, 0.01)
+					alpha = if target > alpha then math.min(target, alpha + step) else math.max(target, alpha - step)
+					setAlpha(alpha)
+				end
+				if alpha > 0 and ODDS_FX.Spin ~= 0 then
+					spin += math.rad(ODDS_FX.Spin) * dt
+					local turn = CFrame.Angles(0, spin, 0)
+					for _, model in spinners do
+						model:PivotTo(turn)
+					end
+				end
+			end)
+		end
 
 		-- Idle (hatch storyboard frame 1): the core pulses slowly while the camera is near
 		local rig = PetIdle.Rig(standEgg, "Egg_" .. egg.Id, 1)
