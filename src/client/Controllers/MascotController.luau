@@ -9,6 +9,7 @@
 -- Addendum 5 B1: pets show their stat boosts (Config.PetStats: "+50% COINS", "+20% PINS", one colour per stat) on
 -- every card, the slot strip shows the equipped total of all four stats, and the panel is open in the core loop.
 -- Built in code (not in Studio), so it lives in git. The server rolls every hatch (MascotService); this only shows it.
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -33,11 +34,13 @@ local HudKit = require(Modules:WaitForChild("HudKit"))
 local RewardKit = require(Modules:WaitForChild("RewardKit"))
 local UiKit = require(Modules:WaitForChild("UiKit"))
 local CrateKit = require(Modules:WaitForChild("CrateKit"))
+local PetsV2 = require(Modules:WaitForChild("PetsV2"))
 
 local player = Players.LocalPlayer
 
 local FX = Config.MascotFx
 local ECONOMY = Config.Economy.Mascots
+local PETS_V2 = Config.Ui.PetsV2 == true -- (UI overhaul V5: the new PETS window, Modules/PetsV2)
 local EGG = Config.Economy.Eggs[1] -- the Neon Egg (Id "Alley"); zone 3 and 4 eggs hatch at their own stands (Phase X)
 EGG = Mascots.GetEgg(EGG.Id) or EGG -- (Addendum 5 B2: on the roof, the egg ladder's first egg and its price)
 
@@ -191,6 +194,10 @@ function MascotController:Start()
 	local function setTitle(value: string, color: Color3)
 		titleFront.Text = value
 		titleFront.TextColor3 = color
+	end
+	-- (V5: the new window closes too; set below once it's started)
+	local closePanel = function()
+		win:Close()
 	end
 
 	-- Tabs: PETS and ITEMS, left of the X (the open one pink, the other dark)
@@ -1243,7 +1250,7 @@ function MascotController:Start()
 			end
 		end
 		petsButton.Visible = false
-		win:Close()
+		closePanel()
 		cardLayout(true)
 		overlay.BackgroundTransparency = 1
 		setGlow(GOLD, 0)
@@ -1784,7 +1791,7 @@ function MascotController:Start()
 		if fusionWin:IsOpen() or overlay.Visible then
 			return
 		end
-		win:Close()
+		closePanel()
 		refreshFusion(true)
 		fusionWin:Open()
 	end
@@ -1831,10 +1838,17 @@ function MascotController:Start()
 	end
 	refreshHint()
 	RunService.RenderStepped:Connect(function()
-		local show = hintWanted and gui.Enabled and win:IsOpen() and right.Visible and bestButton.Visible
+		local target = if PETS_V2 then PetsV2.BestButton() else bestButton
+		local panelOpen = if PETS_V2
+			then PetsV2.IsOpen() and PetsV2.Tab() == "Pets"
+			else gui.Enabled and win:IsOpen() and right.Visible
+		local show = hintWanted and panelOpen and target.Visible and not target:GetAttribute("KitDisabled")
 		hand.Visible = show
 		if show then
-			local pos, size = bestButton.AbsolutePosition, bestButton.AbsoluteSize
+			local pos, size = target.AbsolutePosition, target.AbsoluteSize
+			if PETS_V2 then
+				pos += GuiService:GetGuiInset() -- (the new window's gui ignores the top bar inset; this hand's sits under it)
+			end
 			local push = math.abs(math.sin(os.clock() * 5)) * HINT.Bob
 			hand.Position = UDim2.fromOffset(pos.X - 2 + push, pos.Y + size.Y / 2)
 		end
@@ -1874,6 +1888,10 @@ function MascotController:Start()
 		RewardKit.Stagger(shown, 0.03, 0.12)
 	end
 	local function openPanel(tab: string)
+		if PETS_V2 then
+			PetsV2.SetOpen(true, if petsLocked then "Items" else tab)
+			return
+		end
 		showTab(tab)
 		win:Open()
 		if tab == "Pets" and not petsLocked then
@@ -1881,8 +1899,8 @@ function MascotController:Start()
 		end
 	end
 	petsButton.Activated:Connect(function()
-		if win:IsOpen() then
-			win:Close()
+		if win:IsOpen() or (PETS_V2 and PetsV2.IsOpen()) then
+			closePanel()
 		else
 			openPanel(if petsLocked then "Items" else currentTab)
 		end
@@ -1893,6 +1911,52 @@ function MascotController:Start()
 	-- Opens the panel on the pets
 	MascotController.OpenPets = function()
 		openPanel(if petsLocked then "Items" else "Pets")
+	end
+
+	-- UI overhaul V5 (Config.Ui.PetsV2): the PETS button opens the new window (Modules/PetsV2); this controller keeps
+	-- the remotes, hatching, fusion and the EQUIP BEST hand. The old window above is only used with PetsV2 = false.
+	if PETS_V2 then
+		local testPotions = remotes:FindFirstChild("TestPotions") :: RemoteEvent?
+		PetsV2.Start({
+			Equip = function(id: string, on: boolean)
+				equipRemote:FireServer(id, on)
+			end,
+			EquipBest = function()
+				hintWanted = false -- the server saves it; hide the hand right away
+				Sfx.Play("PetEquip")
+				bestRemote:FireServer()
+			end,
+			FuseText = ("%d COPIES = 1 SHINY! FUSE THEM AT THE FUSION MACHINE"):format(ECONOMY.ShinyMerge),
+			LockTexts = lockTexts,
+			Locked = function(): (string?, string?)
+				if petsLocked then
+					return lockedHead.Text, lockedLine.Text
+				end
+				return nil, nil
+			end,
+			GoToEggs = if Mascots.CoreEggsOn() and goRemote
+				then function()
+					Sfx.Play("Click")
+					goRemote:FireServer("Eggs")
+				end
+				else nil,
+			Potions = PotionController,
+			TestEgg = if remotes:FindFirstChild("TestEgg")
+				then function()
+					(remotes:FindFirstChild("TestEgg") :: RemoteEvent):FireServer()
+				end
+				else nil,
+			TestPotions = if testPotions
+				then function()
+					testPotions:FireServer()
+				end
+				else nil,
+		})
+		hand.Parent = PetsV2.Gui()
+		closePanel = function()
+			win:Close()
+			PetsV2.SetOpen(false)
+		end
 	end
 
 	-- Studio only: get to the egg's level and its price in coins (the server ignores this in the live game)

@@ -163,7 +163,7 @@ end
 -- Stripes for the Mythic ring (design: hard 12 px bands sliding along). Returns stop().
 local function slideStripes(target: UIStroke): () -> ()
 	local keys = {}
-	local n = #STRIPES * 3
+	local n = #STRIPES * 2 -- (a ColorSequence holds at most 20 points = 10 bands)
 	for i = 0, n - 1 do
 		local color = STRIPES[(i % #STRIPES) + 1]
 		table.insert(keys, ColorSequenceKeypoint.new(i / n, color))
@@ -174,7 +174,7 @@ local function slideStripes(target: UIStroke): () -> ()
 	local tween = TweenService:Create(
 		gradient,
 		TweenInfo.new(1.2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
-		{ Offset = Vector2.new(1 / 3, 0) }
+		{ Offset = Vector2.new(1 / 2, 0) }
 	)
 	tween:Play()
 	return function()

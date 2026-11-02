@@ -1191,6 +1191,10 @@ Config.Ui = {
 	-- How many steps past your NEXT ball / bag show their real look and name; further ones are "???" silhouettes
 	-- (the design: 3). 0 = only the NEXT one shows; skipped and owned ones always show.
 	ShopV2Ahead = 3,
+	-- UI overhaul V5 (owner's 'Strike Legends Pets UI.html' D1-D3): the PETS window in the new look (PETS / ITEMS
+	-- tabs, BEST / RARITY / NEW sort, slot strip with total boosts + EQUIP BEST, pet cards, potion cards).
+	-- false = the old pets panel comes back.
+	PetsV2 = true,
 	-- Tuck while bowling (owner 2026-10-28: on phones the HUD hid the lane): from the moment you start a throw, these
 	-- HUD pieces slide off the nearest screen edge; IdleSeconds after your last throw they slide back (Time = slide
 	-- seconds). Coins, the level bar, POWER, the streak and the goal bar always stay, except POWER tucks too once it

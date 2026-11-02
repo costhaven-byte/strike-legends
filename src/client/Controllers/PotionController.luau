@@ -331,6 +331,16 @@ function PotionController.Count(): number
 	return total
 end
 
+-- For the V5 ITEMS tab (Modules/PetsV2): potions to drink and seconds left, by Id; which timers run; "15:00"
+function PotionController.Owned(): { [string]: number }
+	return decode(player:GetAttribute("Potions"))
+end
+function PotionController.Boosts(): { [string]: number }
+	return decode(player:GetAttribute("Boosts"))
+end
+PotionController.Running = running
+PotionController.Clock = clock
+
 local function refresh()
 	local owned = decode(player:GetAttribute("Potions"))
 	local boosts = decode(player:GetAttribute("Boosts"))
