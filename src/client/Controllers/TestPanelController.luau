@@ -60,6 +60,13 @@ local SECTIONS = {
 			{ Text = "BOOSTS", Action = "Boosts" }, -- (Addendum 6 1.1: prints every coin + pin multiplier source)
 		},
 	},
+	{
+		-- UI overhaul v2 (UI_OVERHAUL_PLAN.md): client-only previews, no server call
+		Title = "UI OVERHAUL V2",
+		Buttons = {
+			{ Text = "UI KIT V2", Local = "SlKitPreview" },
+		},
+	},
 }
 
 -- Addendum 6 Stage 8: one toggle per game pass (Config.Monetization.Passes); green = on for this test
@@ -212,6 +219,12 @@ function TestPanelController:Start()
 				player:GetAttributeChangedSignal("Passes"):Connect(paint)
 			end
 			button.Activated:Connect(function()
+				if info.Local then
+					local modules = script.Parent.Parent:WaitForChild("Modules")
+					require(modules:WaitForChild(info.Local)).Toggle()
+					panel.Visible = false
+					return
+				end
 				if busy then
 					return
 				end
