@@ -84,36 +84,40 @@ Config.CoreLoop = {
 		-- Numbers: pins x1.7 a ball from ball 10 of the zone before; price = income with the ball before (pins x the
 		-- zone's PinValue x 84 throws a minute, zone 1's late pace with pets) x Zone 1's gaps (3, 2, 2, 2, 2, 5, 5, 5, 5, 5
 		-- min). Stage 9 tunes them from the pacing sim.
+		-- Addendum 6 Stage 9 (pacing pass, python tools/pacing_sim.py stage9): balls 12-40 re-priced for the income a
+		-- player who rebirths as soon as they can really has when each ball is new to them (rebirths and pets
+		-- included), so every zone's new balls come ~1.5-5 min apart like zone 1's. Before, zone 3's came every
+		-- ~30 s and the whole zone 4 ladder took ~2 min. Zone 1 and zone 2 ball 1 unchanged.
 		{ Ball = "Ocean", Name = "Seashell Spinner", Fx = "Shell", Pins = 5400, Price = 4800000, Rarity = "Uncommon", Zone = 2 },
-		{ Ball = "Sunset", Name = "Beach Ball", Fx = "BeachBall", Pins = 9200, Price = 5400000, Rarity = "Uncommon", Zone = 2 },
-		{ Ball = "Electric", Name = "Kite Flyer", Fx = "Kite", Pins = 16000, Price = 9300000, Rarity = "Uncommon", Zone = 2 },
-		{ Ball = "Toxic", Name = "Tide Turner", Fx = "Tide", Pins = 27000, Price = 16000000, Rarity = "Rare", Zone = 2 },
-		{ Ball = "Magma", Name = "Coral Crusher", Fx = "Coral", Pins = 45000, Price = 27000000, Rarity = "Rare", Zone = 2 },
-		{ Ball = "Galaxy", Name = "Surf Rider", Fx = "Surf", Pins = 77000, Price = 110000000, Rarity = "Rare", Zone = 2 },
-		{ Ball = "Thunder", Name = "Sunset Splash", Fx = "Splash", Pins = 130000, Price = 190000000, Rarity = "Epic", Zone = 2 },
-		{ Ball = "Plasma", Name = "Pier Pounder", Fx = "Pound", Pins = 220000, Price = 330000000, Rarity = "Epic", Zone = 2 },
-		{ Ball = "Nebula", Name = "Tsunami", Fx = "Tsunami", Pins = 380000, Price = 550000000, Rarity = "Epic", Zone = 2 },
-		{ Ball = "Golden", Name = "Lighthouse Beam", Fx = "Lighthouse", Pins = 650000, Price = 960000000, Rarity = "Legendary", Zone = 2 },
-		{ Ball = "LeagueBlack", Name = "Vine Swinger", Fx = "Vine", Pins = 1100000, Price = 5900000000, Rarity = "Rare", Zone = 3, Placeholder = true },
-		{ Ball = "CherrySwirl", Name = "Coconut", Fx = "Coconut", Pins = 1900000, Price = 6700000000, Rarity = "Rare", Zone = 3, Placeholder = true },
-		{ Ball = "BlueMarble", Name = "Toucan Roll", Fx = "Toucan", Pins = 3200000, Price = 11000000000, Rarity = "Rare", Zone = 3, Placeholder = true },
-		{ Ball = "Phantom", Name = "Leaf Storm", Fx = "LeafStorm", Pins = 5400000, Price = 19000000000, Rarity = "Epic", Zone = 3, Placeholder = true },
-		{ Ball = "PearlPro", Name = "Waterfall", Fx = "Waterfall", Pins = 9200000, Price = 33000000000, Rarity = "Epic", Zone = 3, Placeholder = true },
-		{ Ball = "TigerSwirl", Name = "Jaguar", Fx = "Jaguar", Pins = 16000000, Price = 140000000000, Rarity = "Epic", Zone = 3, Placeholder = true },
-		{ Ball = "Inferno", Name = "Rope Bridge", Fx = "Bridge", Pins = 27000000, Price = 240000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
-		{ Ball = "Championship", Name = "Temple Stone", Fx = "Temple", Pins = 45000000, Price = 410000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
-		{ Ball = "Dragon", Name = "Monsoon", Fx = "Monsoon", Pins = 77000000, Price = 680000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
-		{ Ball = "Void", Name = "Jungle King", Fx = "JungleKing", Pins = 130000000, Price = 1200000000000, Rarity = "Mythic", Zone = 3, Placeholder = true },
-		{ Ball = "Hubcap", Name = "Dust Devil", Fx = "DustDevil", Pins = 220000000, Price = 7100000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
-		{ Ball = "DumpsterDiamond", Name = "Cactus Roller", Fx = "Cactus", Pins = 380000000, Price = 8000000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
-		{ Ball = "DuctTape", Name = "Mesa Smash", Fx = "Mesa", Pins = 640000000, Price = 14000000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
-		{ Ball = "RustBucket", Name = "Sandstorm", Fx = "Sandstorm", Pins = 1100000000, Price = 23000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
-		{ Ball = "Rookie", Name = "Oasis Spring", Fx = "Oasis", Pins = 1800000000, Price = 40000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
-		{ Ball = "Crystal", Name = "Scorpion", Fx = "Scorpion", Pins = 3100000000, Price = 160000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
-		{ Ball = "Perfect300", Name = "Sun Disc", Fx = "SunDisc", Pins = 5300000000, Price = 280000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
-		{ Ball = "Lightning", Name = "Canyon Echo", Fx = "Echo", Pins = 9100000000, Price = 480000000000000, Rarity = "Mythic", Zone = 4, Placeholder = true },
-		{ Ball = "SolidGold", Name = "Mirage", Fx = "Mirage", Pins = 15000000000, Price = 830000000000000, Rarity = "Mythic", Zone = 4, Placeholder = true },
-		{ Ball = "Supernova", Name = "Golden Sphinx", Fx = "Sphinx", Pins = 26000000000, Price = 1400000000000000, Rarity = "Mythic", Zone = 4, Placeholder = true },
+		{ Ball = "Sunset", Name = "Beach Ball", Fx = "BeachBall", Pins = 9200, Price = 9300000, Rarity = "Uncommon", Zone = 2 },
+		{ Ball = "Electric", Name = "Kite Flyer", Fx = "Kite", Pins = 16000, Price = 15000000, Rarity = "Uncommon", Zone = 2 },
+		{ Ball = "Toxic", Name = "Tide Turner", Fx = "Tide", Pins = 27000, Price = 23000000, Rarity = "Rare", Zone = 2 },
+		{ Ball = "Magma", Name = "Coral Crusher", Fx = "Coral", Pins = 45000, Price = 61000000, Rarity = "Rare", Zone = 2 },
+		{ Ball = "Galaxy", Name = "Surf Rider", Fx = "Surf", Pins = 77000, Price = 220000000, Rarity = "Rare", Zone = 2 },
+		{ Ball = "Thunder", Name = "Sunset Splash", Fx = "Splash", Pins = 130000, Price = 320000000, Rarity = "Epic", Zone = 2 },
+		{ Ball = "Plasma", Name = "Pier Pounder", Fx = "Pound", Pins = 220000, Price = 2900000000, Rarity = "Epic", Zone = 2 },
+		{ Ball = "Nebula", Name = "Tsunami", Fx = "Tsunami", Pins = 380000, Price = 4300000000, Rarity = "Epic", Zone = 2 },
+		{ Ball = "Golden", Name = "Lighthouse Beam", Fx = "Lighthouse", Pins = 650000, Price = 8200000000, Rarity = "Legendary", Zone = 2 },
+		{ Ball = "LeagueBlack", Name = "Vine Swinger", Fx = "Vine", Pins = 1100000, Price = 28000000000, Rarity = "Rare", Zone = 3, Placeholder = true },
+		{ Ball = "CherrySwirl", Name = "Coconut", Fx = "Coconut", Pins = 1900000, Price = 35000000000, Rarity = "Rare", Zone = 3, Placeholder = true },
+		{ Ball = "BlueMarble", Name = "Toucan Roll", Fx = "Toucan", Pins = 3200000, Price = 76000000000, Rarity = "Rare", Zone = 3, Placeholder = true },
+		{ Ball = "Phantom", Name = "Leaf Storm", Fx = "LeafStorm", Pins = 5400000, Price = 140000000000, Rarity = "Epic", Zone = 3, Placeholder = true },
+		{ Ball = "PearlPro", Name = "Waterfall", Fx = "Waterfall", Pins = 9200000, Price = 180000000000, Rarity = "Epic", Zone = 3, Placeholder = true },
+		{ Ball = "TigerSwirl", Name = "Jaguar", Fx = "Jaguar", Pins = 16000000, Price = 850000000000, Rarity = "Epic", Zone = 3, Placeholder = true },
+		{ Ball = "Inferno", Name = "Rope Bridge", Fx = "Bridge", Pins = 27000000, Price = 1500000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
+		{ Ball = "Championship", Name = "Temple Stone", Fx = "Temple", Pins = 45000000, Price = 4500000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
+		{ Ball = "Dragon", Name = "Monsoon", Fx = "Monsoon", Pins = 77000000, Price = 9100000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
+		{ Ball = "Void", Name = "Jungle King", Fx = "JungleKing", Pins = 130000000, Price = 19000000000000, Rarity = "Mythic", Zone = 3, Placeholder = true },
+		{ Ball = "Hubcap", Name = "Dust Devil", Fx = "DustDevil", Pins = 220000000, Price = 110000000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
+		{ Ball = "DumpsterDiamond", Name = "Cactus Roller", Fx = "Cactus", Pins = 380000000, Price = 140000000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
+		{ Ball = "DuctTape", Name = "Mesa Smash", Fx = "Mesa", Pins = 640000000, Price = 230000000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
+		{ Ball = "RustBucket", Name = "Sandstorm", Fx = "Sandstorm", Pins = 1100000000, Price = 570000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
+		{ Ball = "Rookie", Name = "Oasis Spring", Fx = "Oasis", Pins = 1800000000, Price = 980000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
+		{ Ball = "Crystal", Name = "Scorpion", Fx = "Scorpion", Pins = 3100000000, Price = 2000000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
+		{ Ball = "Perfect300", Name = "Sun Disc", Fx = "SunDisc", Pins = 5300000000, Price = 6600000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
+		{ Ball = "Lightning", Name = "Canyon Echo", Fx = "Echo", Pins = 9100000000, Price = 15000000000000000, Rarity = "Mythic", Zone = 4, Placeholder = true },
+		{ Ball = "SolidGold", Name = "Mirage", Fx = "Mirage", Pins = 15000000000, Price = 25000000000000000, Rarity = "Mythic", Zone = 4, Placeholder = true },
+		{ Ball = "Supernova", Name = "Golden Sphinx", Fx = "Sphinx", Pins = 26000000000, Price = 41000000000000000, Rarity = "Mythic", Zone = 4, Placeholder = true },
 	},
 	-- Addendum 5 D: each ladder ball's own signature effect (Fx on its row above; client Modules/BallSignature).
 	-- Visual and feel only, never a number. Strength 0..1 grows with the REAL pin count of the throw on a log scale:
@@ -185,13 +189,14 @@ Config.CoreLoop = {
 	-- between two balls (bag 2 ~1 min, bags 3-4 ~2 min apart, then ~5 min apart, bag 10 ~3 min after ball 10).
 	-- A small bag caps your income (a throw that doesn't fit pays only what fits), so bags matter as much as balls.
 	-- Addendum 6 Stage 3: bags 11-40 = zones 2-4 (Ladders.BagZones); each holds ~40 throws of its zone's ball, its price
-	-- lands ~40% of the way to the next ball. PLACEHOLDER numbers until the Stage 9 pacing pass.
+	-- lands ~40% of the way to the next ball. Addendum 6 Stage 9: bags 12-40 re-priced with the balls (same share of the
+	-- way between two balls as before; bags 1-11 unchanged).
 	BagSizes = { 60, 140, 300, 700, 1600, 3700, 8700, 21000, 50000, 130000,
 		220000, 370000, 640000, 1100000, 1800000, 3100000, 5200000, 8800000, 15000000, 26000000, 44000000, 76000000, 130000000, 220000000, 370000000, 640000000, 1100000000, 1800000000, 3100000000, 5200000000, 8800000000, 15000000000, 26000000000, 44000000000, 72000000000, 120000000000, 210000000000, 360000000000, 600000000000, 1000000000000 },
 	-- Addendum 5 E: bags 6-10 re-priced with balls 6-10 (still ~40% of the way between two balls). Was 11K, 24K,
 	-- 54K, 120K, 420K.
 	BagPrices = { 0, 240, 600, 990, 5200, 7400, 29000, 75000, 200000, 690000,
-		5000000, 6700000, 12000000, 20000000, 47000000, 140000000, 240000000, 400000000, 690000000, 1300000000, 6200000000, 8200000000, 14000000000, 24000000000, 59000000000, 170000000000, 300000000000, 500000000000, 850000000000, 1600000000000, 7400000000000, 10000000000000, 17000000000000, 29000000000000, 70000000000000, 200000000000000, 350000000000000, 600000000000000, 1000000000000000, 1900000000000000 },
+		5000000, 11000000, 18000000, 36000000, 100000000, 260000000, 920000000, 3300000000, 5600000000, 8200000000, 31000000000, 49000000000, 99000000000, 150000000000, 330000000000, 1000000000000, 2500000000000, 6100000000000, 12000000000000, 25000000000000, 120000000000000, 170000000000000, 340000000000000, 710000000000000, 1200000000000000, 3400000000000000, 9400000000000000, 18000000000000000, 30000000000000000, 56000000000000000 },
 	Ladders = {
 		Independent = true, -- Addendum 5 A2: two ladders (false = Addendum 4's ball, bag, ball, bag order)
 		-- Addendum 6 2.2: buy ANY ball or bag above your best one that you can pay for, in an open zone (no need to
@@ -283,6 +288,9 @@ Config.CoreLoop = {
 		-- (its original 6 pets, Uncommon to Epic); zone 3 = the Main Street Egg (Rare to Legendary), zone 4 = the Skyline
 		-- Egg (Epic to Mythic). The Volcano Egg is out of the list (its pets went to zones 3/4; owners keep every pet).
 		-- Prices: zone 1 ~minute 3-5 (ball 4-5 income); zones 2-4 ~4 min of income with that zone's ball 2.
+		-- Addendum 6 Stage 9: zones 2-4 x their ball 2's re-price, zone 3 x3 and zone 4 x6 more on top (egg prices
+		-- don't grow with rebirths, so later hatches were almost free and zone 4 pets snowballed). A hatch costs
+		-- ~1 min of income the first time you reach each egg. Was Neon 19M, Main Street 23B, Skyline 28T.
 		List = {
 			{
 				Id = "Speckled", -- the Speckled Egg (zone 1 starter)
@@ -299,7 +307,7 @@ Config.CoreLoop = {
 			{
 				Id = "Alley", -- the Neon Egg
 				Zone = 2,
-				Price = 19000000,
+				Price = 33000000,
 				From = { "Hub", "EggPad" },
 				At = Vector3.new(26, 848.65, -3438),
 				Turn = -90,
@@ -310,7 +318,7 @@ Config.CoreLoop = {
 			{
 				Id = "Arcade", -- the Main Street Egg
 				Zone = 3,
-				Price = 23000000000,
+				Price = 360000000000,
 				From = { "MainStreetLanes", "EggPad" },
 				At = Vector3.new(26, 848.65, -3438),
 				Turn = 180,
@@ -320,7 +328,7 @@ Config.CoreLoop = {
 			{
 				Id = "Skyline", -- the Skyline Egg
 				Zone = 4,
-				Price = 28000000000000,
+				Price = 2900000000000000,
 				From = { "SkylineLanes", "EggPad" },
 				At = Vector3.new(26, 848.65, -3438),
 				Turn = 90,
@@ -383,7 +391,7 @@ Config.CoreLoop = {
 				Folder = "JungleFalls",
 				Offset = Vector3.new(2500, -800, 8000),
 				PinValue = 36,
-				Price = 190000000,
+				Price = 320000000,
 				-- Stage 5: the real map (server/Modules/ZoneMaps "Jungle"): a grass valley, a waterfall pool and Terrain
 				-- cliffs past the pit (four falls, high rope bridges), a river with a rope bridge to a temple ruin
 				Map = "Jungle",
@@ -396,7 +404,7 @@ Config.CoreLoop = {
 				Folder = "CanyonOasis",
 				Offset = Vector3.new(5000, -800, 8000),
 				PinValue = 216,
-				Price = 240000000000,
+				Price = 1500000000000,
 				-- Stage 6: the real map (server/Modules/ZoneMaps "Canyon"): a sandy canyon floor, a turquoise lake past
 				-- the pit with a huge stone arch and hoodoos, banded red Terrain walls with a gap to far buttes, a palm
 				-- oasis pond with market tents and a golden sphinx to the east, adobe houses, saguaros, hot-air balloons
@@ -437,7 +445,11 @@ Config.CoreLoop = {
 		--   2 = middle of Zone 2 (sim ~56 min), 3 = start of Zone 3 (~1h11), 4 = end of Zone 3 (~1h20),
 		--   5-7 = Zone 4, then x Growth (3, as the addendum says) each.
 		-- Was Prices { 10M, 25M, 60M, 120M, 220M, 380M }, Growth 1.5 (Addendum 5 E).
-		Prices = { 5400000, 450000000, 88000000000, 2000000000000, 7100000000000000, 60000000000000000, 400000000000000000 }, -- rebirth 1, 2, 3... (then the last one x Growth each)
+		-- Addendum 6 Stage 9 (pacing pass, with the re-priced zones 2-4): each rebirth from 2 on costs a bit less than
+		-- the next ball at its spot, so it comes there and takes ~2-3 min to save: 2 = after zone 2 ball 7 (sim ~1h01),
+		-- 3 = zone 3 ball 2 (~1h28), 4 = zone 3 ball 10 (~2h12), 5 = zone 4 ball 3 (~2h52), 6 = zone 4 ball 6 (~3h32),
+		-- 7 = zone 4 done (~4h20). Was 5.4M, 450M, 88B, 2T, 7.1Qa, 60Qa, 400Qa.
+		Prices = { 5400000, 3800000000, 120000000000, 200000000000000, 1200000000000000, 14000000000000000, 220000000000000000 }, -- rebirth 1, 2, 3... (then the last one x Growth each)
 		Growth = 3,
 		-- Stage 7 boost: the addendum's starting point (+50% coins, +25% pins) lost to waiting (a player who waited
 		-- 20 min after a rebirth was ready got further than one who rebirthed at once), so it is raised (7.4: raise the
@@ -3870,7 +3882,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Kingpin",
-		Stats = { Pins = 2.5 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
+		Stats = { Pins = 1.2 }, -- Addendum 6 Stage 9 (pacing pass): was Pins = 2.5
 		Name = "Kingpin",
 		Egg = "Arcade", -- Phase X: moved from the Neon Egg to zone 3's Main Street Egg
 		Rarity = "Legendary",
@@ -3880,7 +3892,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Blaze",
-		Stats = { Coins = 4, Speed = 0.4 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
+		Stats = { Coins = 1.5, Speed = 0.3 }, -- Addendum 6 Stage 9 (pacing pass): was Coins = 4, Speed = 0.4
 		Name = "Blaze",
 		Egg = "Arcade", -- Phase X: moved from the Neon Egg to zone 3's Main Street Egg
 		Rarity = "Legendary",
@@ -3890,7 +3902,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Cosmo",
-		Stats = { Coins = 12, Pins = 6 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
+		Stats = { Coins = 3, Pins = 2 }, -- Addendum 6 Stage 9 (pacing pass): was Coins = 12, Pins = 6
 		Name = "Cosmo",
 		Egg = "Skyline", -- Phase X: moved from the Neon Egg to zone 4's Skyline Egg
 		Rarity = "Mythic",
@@ -3900,7 +3912,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Perfecto",
-		Stats = { Pins = 10, Speed = 0.6 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
+		Stats = { Pins = 3, Speed = 0.5 }, -- Addendum 6 Stage 9 (pacing pass): was Pins = 10, Speed = 0.6
 		Name = "Perfecto",
 		Egg = "Skyline", -- Phase X: moved from the Neon Egg to zone 4's Skyline Egg
 		Rarity = "Mythic",
@@ -3911,7 +3923,7 @@ Config.Mascots = {
 	-- Phase X: zone 3 (Main Street Egg) and zone 4 (Skyline Egg) pets (owner's designs since 2026-10-28/29)
 	{
 		Id = "WoodPup",
-		Stats = { Bag = 0.6, Coins = 0.15 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
+		Stats = { Bag = 0.3, Coins = 0.15 }, -- Addendum 6 Stage 9 (pacing pass): was Bag = 0.6, Coins = 0.15
 		Name = "Wood Pup",
 		Egg = "Arcade",
 		Rarity = "Rare",
@@ -3921,7 +3933,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "ChromeBat",
-		Stats = { Coins = 1.2, Bag = 1 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
+		Stats = { Coins = 0.6, Bag = 0.4 }, -- Addendum 6 Stage 9 (pacing pass): was Coins = 1.2, Bag = 1
 		Name = "Chrome Bat",
 		Egg = "Arcade",
 		Rarity = "Epic",
@@ -3931,7 +3943,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "CloudBumper",
-		Stats = { Pins = 0.8, Bag = 1.5 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
+		Stats = { Pins = 0.6, Bag = 0.5 }, -- Addendum 6 Stage 9 (pacing pass): was Pins = 0.8, Bag = 1.5
 		Name = "Cloud Bumper",
 		Egg = "Skyline",
 		Rarity = "Epic",
@@ -3941,7 +3953,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "SunnyHam",
-		Stats = { Coins = 2.5, Bag = 2 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
+		Stats = { Coins = 1.5, Bag = 0.7 }, -- Addendum 6 Stage 9 (pacing pass): was Coins = 2.5, Bag = 2
 		Name = "Moony", -- was "Sunny" (owner 2026-10-27: zone 4 is at night); Id stays SunnyHam so owned pets keep working
 		Egg = "Skyline",
 		Rarity = "Legendary",

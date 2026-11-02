@@ -1,121 +1,158 @@
-# Pacing report (Addendum 5 step E, 2026-11-01)
+# Pacing report (Addendum 6 Stage 9, 2026-11-02)
 
-How fast the new loop goes, where it breaks, and what I changed. Numbers come from the economy simulator
-(`EconomySim.CorePacing` in Studio, plus a Python copy with the same rules that ran 20 different pet-luck seeds; the
-tables show the middle result). The simulator plays the real rules: two ladders, pet slots, the four roof eggs, pets
-with 4 stats, EQUIP BEST, Shiny merges, the bag cap, a 6-second sell trip, rebirth x2/x3/x4... on pins AND on the
-sell, and ladder prices x (multiplier)^1.6 after a rebirth.
+A pretend playthrough of the whole game (zones 1 to 4, gates, eggs, pets, rebirths), worked out by the pacing
+simulator, not played in real time. It reads the real numbers straight from the game's config. Re-run it any time
+with `python tools/pacing_sim.py stage9` (about a minute).
 
-Two pretend players:
-- **Rebirther**: always buys the cheapest next thing (ball, bag, pet slot, next egg), hatches the Volcano Egg 3 extra
-  times each run, then saves and rebirths as soon as it can pay.
-- **Never rebirths**: same start, never rebirths, and after the ladders keeps hatching the Volcano Egg.
+**The pretend player:** brand new, no game passes, no potions, no friends. They always buy the cheapest useful thing
+next (next ball, next bag, gate, pet slot, or an egg), hatch each zone's egg 3 times a run, keep their best pets out,
+and rebirth the moment a rebirth is the next thing to buy. A sell trip counts as 6 seconds. Pet luck changes the
+times, so every number is the middle result of 9 different pet-luck runs (the range is shown where it helps).
 
-## Where you can read the real players' pacing (new in this step)
-- **Output window**: when a player leaves, `[Pacing] <name>: ...` prints every run: when each ball, bag, egg and pet
-  slot came (minutes of play into the run), when the rebirth came, the income (coins a minute) at the top of the run,
-  5 minutes in, just before the rebirth, and how long the next run took to get back to that income. Each buy also
-  prints one line as it happens (`[Pacing] Selim: Ball3 at 2:58 into run 0`).
-- **Studio TEST panel > EVENTS > PACING**: prints the same report any time.
-- **Saved with the player** (`Pacing`, save v36, newest 8 runs), so a run over several sessions still adds up (the clock
-  is total play time).
-- **Creator Dashboard (Analytics)**: custom event `Pacing` (value = seconds into the run; labels = Ball3 / Bag2 / Slot4 /
-  Egg_Alley / Rebirth1 / BackToIncome, R<rebirths>, minutes played in total), `PacingIncome` (coins a minute just
-  before each rebirth), and a funnel called **Run** (step 1 run start, steps 2-10 balls 2-10, step 11 rebirth; one
-  funnel pass per run), so you can see where players stop climbing.
+"Run" = how many rebirths the player has done by then (run 0 = before the first rebirth).
+"New-ball gap" = minutes from the last time the player got a ball they'd never had, to the next one (after a
+rebirth, counted from the moment they are back at their best ball). This is the number that says whether a zone
+"feels like zone 1".
 
-## The table (after my changes)
+## The tables (after the Stage 9 changes)
 
-**First run (new player), minutes of play:**
+**Zone 1, Skyline Rooftop** (unchanged, all in run 0)
 
-| Ball | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
-|---|---|---|---|---|---|---|---|---|---|
-| reached at | 0:13 | 3:05 | 5:08 | 7:00 | 11:14 | 15:20 | 20:18 | 25:15 | 30:04 |
-| gap | | 2.9 | 2.0 | 1.9 | 4.2 | 4.1 | 5.0 | 5.0 | 4.8 |
+| | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Ball at | start | 0:13 | 2:12 | 6:51 | 8:27 | 12:06 | 15:47 | 18:14 | 19:14 | 21:06 |
+| Bag at | start | 1:01 | 3:12 | 7:30 | 10:47 | 13:10 | 17:51 | 18:37 | 20:01 | 22:21 |
+| New-ball gap (min) | - | 0.2 | 2.0 | 4.6 | 1.6 | 3.6 | 3.7 | 2.5 | 1.0 | 1.8 |
 
-| Bag | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
-|---|---|---|---|---|---|---|---|---|---|
-| reached at | 1:01 | 4:01 | 5:54 | 9:46 | 13:18 | 18:27 | 22:14 | 27:21 | 33:23 |
+(Balls 8-10 come fast because the zone 2 gate opens at 17:15 and pins sell for 6x there.)
 
-Eggs: Neon 1:58, Main Street 12:21, Skyline 23:44, Volcano 36:19. Pet slots 4-8: 7:53, 16:47, 26:09, 31:36, 38:02.
+**Zone 2, Sunset Boardwalk** (ball 1 in run 0, balls 2-7 in run 1, balls 8-10 in run 2)
 
-**Rebirths:**
+| | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Ball at | 27:56 | 43:04 | 45:20 | 49:29 | 51:04 | 54:13 | 57:39 | 1:16 | 1:17 | 1:19 |
+| Bag at | 30:26 | 44:07 | 46:16 | 50:09 | 52:11 | 55:54 | 59:52 | 1:16 | 1:18 | 1:20 |
+| New-ball gap (min) | 6.8 | 2.0 | 2.1 | 4.4 | 2.1 | 4.1 | 4.5 | 2.2 | 1.7 | 1.9 |
 
-| | Run length (ladders + eggs) | Top income | Save for the rebirth | Rebirth at (played) | Back to the last run's top |
-|---|---|---|---|---|---|
-| Run 0 (new player) | 40:09 | 2.98M/min | 3:21 for 10M | **43:31** (rebirth 1) | - |
-| Run 1 (x2) | 7:09 | 6.59M/min | 3:47 for 25M | **55:22** (rebirth 2) | 15% of run 0's time |
-| Run 2 (x3) | 8:28 | 10.1M/min | 5:58 for 60M | **1:10:54** (rebirth 3) | 19% |
-| Run 3 (x4) | 9:49 | 13.0M/min | 9:15 for 120M | 1:29:56 | 22% |
-| Run 4 (x5) | 11:31 | 16.2M/min | 13:34 for 220M | 1:55:00 | 26% |
-| Run 5 (x6) | 12:46 | 17.5M/min | 21:56 for 380M | 2:29:11 | 31% |
-| Run 6 (x7) | 15:41 | 18.2M/min | 31:20 for 570M | 3:15:40 | 35% |
-| Run 7 (x8) | 18:51 | 20.8M/min | 41:07 for 855M | 4:15:39 | 40% |
+**Zone 3, Jungle Falls** (balls 1-2 in run 2, balls 3-10 in run 3)
 
-Income before / after each rebirth: run 0 tops at 2.98M a minute; right after rebirth 1 you earn a few hundred coins a
-minute again (ball 1, bag 1), are back at 2.98M after ~6 minutes, and finish run 1 at 6.59M. Each later run does the
-same at a higher level.
+| | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Ball at | 1:22 | 1:25 | 1:46 | 1:48 | 1:53 | 1:56 | 2:01 | 2:04 | 2:06 | 2:08 |
+| Bag at | 1:23 | 1:26 | 1:47 | 1:49 | 1:54 | 1:58 | 2:03 | 2:05 | 2:06 | 2:09 |
+| New-ball gap (min) | 2.7 | 3.0 | 2.2 | 2.5 | 4.2 | 3.5 | 4.3 | 2.9 | 1.5 | 1.8 |
 
-**Rebirther vs never rebirths (best coins a minute so far):**
+**Zone 4, Canyon Oasis** (balls 1-3 in run 4, 4-6 in run 5, 7-10 in run 6)
 
-| Minute | 15 | 30 | 45 | 60 | 90 | 120 | 180 | 240 |
-|---|---|---|---|---|---|---|---|---|
-| Rebirther | 7.8K | 169K | 2.94M | 6.59M | 13.5M | 16.9M | 22.7M | 23.6M |
-| Never rebirths | 10.8K | 218K | 3.22M | 2.59M | 1.3M | 1.3M | 1.3M | 1.3M |
+| | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Ball at | 2:41 | 2:45 | 2:48 | 3:18 | 3:21 | 3:27 | 3:55 | 4:00 | 4:06 | 4:13 |
+| Bag at | 2:43 | 2:46 | 2:50 | 3:19 | 3:26 | 3:29 | 3:57 | 4:03 | 4:09 | 4:16 |
+| New-ball gap (min) | 3.0 | 3.7 | 3.3 | 2.9 | 3.3 | 6.9 | 3.4 | 4.8 | 5.0 | 4.9 |
 
-The player who never rebirths falls far behind after the first hour (x10 to x18), as the addendum wants.
+(Zone 4 ball 6's 6.9 min includes three Skyline Egg hatches.)
 
-## Where pacing breaks (and what I did)
+**Gates:** zone 2 at 17:15 (run 0), zone 3 at 59:07 (run 1), zone 4 at 2:03 (run 3).
 
-1. **Pets pulled balls 7-10 in too close** (FIXED). Step A2 timed the ladders without pets; with the eggs and slots of
-   B1/B2 balls 7-10 came 2.4-4.3 minutes apart (ball 10 at 27:31) instead of ~5. Balls 6-10 and bags 6-10 are
-   re-priced: balls 6-10 now 4.2 / 4.1 / 5.0 / 5.0 / 4.8 min apart, ball 10 at ~30 min. Balls 2-5 are unchanged
-   (ball 3 takes 2.9 min because the Neon Egg at 400 coins is bought first, which is the point of the egg).
-2. **Rebirth prices hit a wall** (FIXED). With x3 a rebirth, rebirth 5 needed a 2-hour save, rebirth 6 five hours and
-   rebirth 7 thirteen hours. The reason: once pets and the multiplier fill the bag in a throw or two, income only
-   grows about x(n+1)/n per rebirth, not x3. New prices: 10M, 25M, 60M, 120M, 220M, 380M, then x1.5 each. Saves now
-   grow slowly (4, 6, 9, 14, 22, 31, 41 min) and every run still ends higher than the last.
-3. **EQUIP BEST could halve your income** (FIXED as far as Config can). Once the bag fills almost at once, a bigger bag
-   is the only stat that still raises income, but EQUIP BEST counted Bag at 0.6, so Shiny Volcano pets (Coins/Pins)
-   pushed the bag pets out and income fell from ~13M to ~6.5M a minute (rebirther from rebirth 4, never-rebirther at
-   ~1 hour). Bag now counts 8 in EQUIP BEST: the rebirther keeps its bag pets through rebirth 8 (first run unchanged).
-   The never-rebirther still drops from ~3.2M to ~1.3M after ~200 Volcano hatches; only a code change fixes that
-   (see "for the owner" below).
-4. **PIN CRUSHER achievement went too fast** (FIXED). Pins are a big number now (16K-40K a throw at ball 10 with pets),
-   so the old goals 1K / 10K / 100K / 500K were all done in the first ~30 minutes. Core loop goals now 10K (~15 min),
-   1M (~35 min), 10M (~4-5 h), 100M (long-term). The other achievements are fine: MONEY MAKER 100K (~20 min) / 10M
-   (~40 min) / 1B (~3-4 h) / 1T (long), EGG HUNTER 1/10/50/200, BOWLER throws, REBORN 1/3/5/10.
-5. **Gift coins vs rebirth prices** (NOT fixed, needs code). Daily, playtime and level gifts pay 2 minutes (crates 5) of
-   the *bare* ladder income: no pets, no rebirth. At ball 10 that is ~330K, about 10 seconds of a real first-run
-   player's income, and after a rebirth it is almost nothing next to 25M+ prices. They are a token now. Fix idea:
-   pay gift coins from the player's real income (the new `Pacing.Income`, coins a minute over the last 3 minutes).
-6. **Eggs get cheap after rebirth** (NOT changed, your call). The Volcano Egg (1.5M) is ~10-15 seconds of income from
-   rebirth 2 on, so players can hatch hundreds; egg prices don't grow with rebirths. That is normal for a simulator,
-   but it makes the Shiny Mythics come fast and there is no 5th egg to chase. Options: a 5th egg tier (no new art:
-   another re-tint) or egg prices x (rebirth multiplier)^something.
-7. **The bag is the real cap** (design note, needs code). From rebirth 1 on the bag fills in under a throw, so balls,
-   the Coins and Pins pet stats and the pins multiplier hardly raise income; the bag size, the Bag pet stat and the
-   rebirth sell multiplier do. That is why later runs grow slowly. Fix idea: bag size x the rebirth multiplier (like
-   the sell), or pay the Coins pet stat on the sell instead of into the bag. Not done: Config-only step.
-8. **Pins number overflow**: no problem. Pins a throw peak ~1.1M at rebirth 7 (never-rebirther ~360K); coins earned ever
-   ~2.5B after 5 hours; the precision limit is 1,000,000,000,000,000. With the old x3 rebirth prices, rebirth 18 would
-   have cost over that limit (and the COSMIC tier at rebirth 20 was past it); with x1.5 that is past rebirth 40.
-9. **Long waits**: none in the first two hours. The longest single wait in run 0 is ~5 min (balls 8-10). After rebirth
-   7 the save is 40+ minutes, then longer (the "then longer" part).
+**Rebirths** (and the time to get back to where you were)
 
-## Every Config change (step E)
-| Where | Was | Now |
+| Rebirth | At (played) [range] | Where | Saving for it | Price | Back to the run before's best ball | Share of the run before |
+|---|---|---|---|---|---|---|
+| 1 | 32:56 [26:00-35:12] | zone 1 done, zone 2 ball 1 | 2.5 min | 5.4M | 7:26 into run 1 | 23% |
+| 2 | 1:01 [0:53-1:09] | zone 2 ball 7 (middle) | 1.8 min | 3.8B | 12:45 into run 2 | 40% |
+| 3 | 1:28 [1:20-1:39] | zone 3 ball 2 (start) | 1.5 min | 120B | 15:46 into run 3 | 59% |
+| 4 | 2:12 [2:01-2:27] | zone 3 ball 10 (end) | 2.9 min | 200T | 24:05 into run 4 | 58% |
+| 5 | 2:52 [2:36-3:09] | zone 4 ball 3 | 2.2 min | 1.2Qa | 24:15 into run 5 | 64% |
+| 6 | 3:32 | zone 4 ball 6 | 2.8 min | 14Qa | 23:09 | 56% |
+| 7 | 4:20 | zone 4 done | 3.0 min | 220Qa | 31:15 | 61% |
+| 8 | 5:00 | zone 4 done | 6.1 min | 660Qa | 24:20 | 63% |
+
+Rebirth 1 costs about 4 minutes of income at the moment zone 1's ladder is finished (3.1 to 4.8 across the 9
+runs), as the addendum asks.
+
+**Waits over about 8 minutes with nothing new to buy:** none before rebirth 8 (about 5 hours in). The longest
+stretch without a new purchase before that is under 7 minutes. After rebirth 8 the player owns everything and only
+rebirths are left, and each costs x3 the last: about 10-15 minutes to save for rebirth 9, ~20-35 for rebirth 10,
+~1-2 hours for rebirth 11. That is the end-game wall (see "for the owner" below).
+
+## Does rebirthing at once pay? (addendum rule 4)
+
+Played time to first reach each ball (middle of 9 runs):
+
+| Player | ball 15 | ball 20 | ball 25 | ball 30 | ball 35 | ball 40 |
+|---|---|---|---|---|---|---|
+| rebirths at once | 51:04 | 1:19 | 1:53 | 2:08 | 3:21 | 4:13 |
+| waits 5 min | 57:54 | 1:30 | 2:08 | 2:23 | 3:18 | 4:46 |
+| waits 10 min | 1:01 | 1:18 | 1:53 | 2:32 | 3:25 | 4:57 |
+| waits 20 min | 1:10 | 1:24 | 2:11 | 2:56 | 3:56 | 5:13 |
+| never rebirths | 1:01 | 1:50 | 2:59 | 4:50 | 6:27 | 7:05 |
+
+Rebirthing at once is first or within 3 minutes of first at every mark, and finishes the game 33-60 minutes ahead.
+Never rebirthing takes about 3 hours longer.
+
+## Players who hatch a lot (the pet snowball check)
+
+| Hatches of each egg a run | Rebirth 3 | Rebirth 5 | Rebirth 7 | Ball 30 | Ball 40 | Zone 4 new-ball gap |
+|---|---|---|---|---|---|---|
+| 3 (the report's player) | 1:28 | 2:52 | 4:20 | 2:08 | 4:13 | 3.9 min |
+| 8 | 1:14 | 2:11 | 3:18 | 1:40 | 3:15 | 2.5 min |
+| 15 | 1:09 | 2:02 | 2:58 | 1:37 | 2:56 | 1.8 min |
+| 30 | 1:12 | 2:07 | 3:07 | 1:41 | 3:05 | 1.3 min |
+
+Hatching more still pays (up to ~30% faster), but it levels off: a full team of the best pets is the cap. Before
+this pass, with the old numbers, a 15-hatch player finished the whole game in ~1 hour and zone 4 balls came every
+few seconds.
+
+## What was wrong before (the old numbers, same pretend player)
+
+- **Zones 3 and 4 flew by.** Zone 3's new balls came every 0.1-0.8 minutes, and the whole zone 4 ladder took about
+  2 minutes (ball 31 at 1:17, ball 40 at 1:19). The zone prices were set for a player with no rebirths, but by the
+  time you reach those zones you have 2-4 rebirths and strong pets, so income was 10-40x what the prices expected.
+- **Zone 4 pets snowballed.** By rebirth 5 the pets alone multiplied income ~16x (~50x for a heavy hatcher), mostly
+  through the Bag stat. Eggs don't get pricier after a rebirth, so later hatches were nearly free.
+- **Rebirths 3-8 came 4-9 minutes apart** and cost almost nothing (under 20 seconds of income), so they didn't feel
+  like goals. All 40 balls were done at ~1h20, then a wall: rebirth 10 at ~2h, rebirth 12 after 5-10 hours.
+- Zone 1, the zone 2 gate and rebirth 1 were fine and are untouched.
+
+## Every config change (Stage 9)
+
+| What | Was | Now |
 |---|---|---|
-| `CoreLoop.Balls` prices, balls 6-10 | 10K, 21K, 45K, 99K, 220K | 5.3K, 22K, 44K, 150K, 590K |
-| `CoreLoop.BagPrices`, bags 6-10 | 11K, 24K, 54K, 120K, 420K | 7.4K, 29K, 75K, 200K, 690K |
-| `CoreLoop.Rebirth.Prices` / `Growth` | {10M} then x3 | {10M, 25M, 60M, 120M, 220M, 380M} then x1.5 |
-| `PetStats.Types.Bag.Best` (EQUIP BEST weight) | 0.6 | 8 |
-| PIN CRUSHER goals (core loop only, end of Config) | 1K / 10K / 100K / 500K | 10K / 1M / 10M / 100M |
-| `Config.Pacing` (new) | - | Enabled, Print, KeepRuns 8, IncomeWindow 180 s |
+| Zone 2 ball prices, balls 2-10 | 5.4M, 9.3M, 16M, 27M, 110M, 190M, 330M, 550M, 960M | 9.3M, 15M, 23M, 61M, 220M, 320M, 2.9B, 4.3B, 8.2B |
+| Zone 3 ball prices, balls 1-10 | 5.9B, 6.7B, 11B, 19B, 33B, 140B, 240B, 410B, 680B, 1.2T | 28B, 35B, 76B, 140B, 180B, 850B, 1.5T, 4.5T, 9.1T, 19T |
+| Zone 4 ball prices, balls 1-10 | 7.1T, 8T, 14T, 23T, 40T, 160T, 280T, 480T, 830T, 1.4Qa | 110T, 140T, 230T, 570T, 980T, 2Qa, 6.6Qa, 15Qa, 25Qa, 41Qa |
+| Zone 2 bag prices, bags 2-10 | 6.7M, 12M, 20M, 47M, 140M, 240M, 400M, 690M, 1.3B | 11M, 18M, 36M, 100M, 260M, 920M, 3.3B, 5.6B, 8.2B |
+| Zone 3 bag prices, bags 1-10 | 6.2B, 8.2B, 14B, 24B, 59B, 170B, 300B, 500B, 850B, 1.6T | 31B, 49B, 99B, 150B, 330B, 1T, 2.5T, 6.1T, 12T, 25T |
+| Zone 4 bag prices, bags 1-10 | 7.4T, 10T, 17T, 29T, 70T, 200T, 350T, 600T, 1Qa, 1.9Qa | 120T, 170T, 340T, 710T, 1.2Qa, 3.4Qa, 9.4Qa, 18Qa, 30Qa, 56Qa |
+| Gate to zone 3 / zone 4 | 190M / 240B | 320M / 1.5T (still = the zone before's ball 7) |
+| Neon Egg / Main Street Egg / Skyline Egg | 19M / 23B / 28T | 33M / 360B / 2.9Qa (~1 min of income the first time you reach each) |
+| Rebirth prices 2-7 | 450M, 88B, 2T, 7.1Qa, 60Qa, 400Qa | 3.8B, 120B, 200T, 1.2Qa, 14Qa, 220Qa (then x3 each, unchanged) |
+| Main Street pets | Wood Pup Bag +0.6 Coins +0.15; Chrome Bat Coins +1.2 Bag +1; Kingpin Pins +2.5; Blaze Coins +4 Speed +0.4 | Wood Pup Bag +0.3 Coins +0.15; Chrome Bat Coins +0.6 Bag +0.4; Kingpin Pins +1.2; Blaze Coins +1.5 Speed +0.3 |
+| Skyline pets | Cloud Bumper Pins +0.8 Bag +1.5; Moony Coins +2.5 Bag +2; Cosmo Coins +12 Pins +6; Perfecto Pins +10 Speed +0.6 | Cloud Bumper Pins +0.6 Bag +0.5; Moony Coins +1.5 Bag +0.7; Cosmo Coins +3 Pins +2; Perfecto Pins +3 Speed +0.5 |
 
-Unchanged on purpose: `Rebirth.LadderPower` 1.6 (1.4 made recovery 13-25%, 1.8 made it 17-55%; 1.6 gives 15-40%
-around the addendum's "about a quarter"), egg prices, pet stats, slot prices, Bonus 1.
+Unchanged on purpose: everything in zone 1 (balls, bags, Speckled Egg, its pets), zone 2 ball 1 and bag 1, the
+zone 2 gate, rebirth 1 (5.4M), the rebirth boost (+200% coins, +100% pins a rebirth), how much shop prices rise
+after a rebirth, pet slot prices, pin values per zone, the Neon Egg's pets. Pets are still stronger every zone
+(best pet: zone 1 Coins +0.25, zone 2 Coins +1, zone 3 Coins +1.5, zone 4 Coins +3 Pins +2).
 
-## How to re-run
-- Studio command bar (edit mode): `print(require(game.ServerStorage.Tools.EconomySim).CorePacing())`
-  (optional: `CorePacing(nil, seed, runs, hatchesPerRun)`). Takes well under a second.
+## How the numbers were picked
+- Each zone 2-4 ball's price was tuned in the simulator until its new-ball gap matched zone 1's rhythm (about 2-3
+  minutes for the early balls, 4-5 minutes for the later ones, quick after a gate opens). Bags kept their place
+  between two balls. Gates stayed at "the zone before's ball 7", as the addendum says.
+- Each rebirth's price was set a little under the next ball's price at the spot the addendum names, so the rebirth
+  becomes the next thing to buy right there and takes 2-3 minutes to save for.
+- I first tried rebirth 4 after zone 3 ball 9 and rebirth 7 after zone 4 ball 9. Then a player who waited 5 minutes
+  got to balls 30 and 40 first (the next ball was cheap). Moving them to the end of each ladder fixed it. Raising the
+  boost (tried +250% and +300% coins, +150% pins) didn't help, so the boost stays.
+- The pet cut and the pricier eggs were tested against players who hatch 3, 8, 15 and 30 times a run. With only the
+  prices changed, a heavy hatcher finished about 1.8x faster. With the cut it's about 1.4x and it levels off.
+
+## For the owner (not changed, your call)
+1. **End-game wall after ~5 hours.** Once all 40 balls are bought, only rebirths are left and each costs x3 the last
+   (the addendum's number). Saving takes ~10 min for rebirth 9, ~30 for 10, 1-2 hours for 11. That's normal for a
+   simulator before the next zone (Alpine Peaks) comes. If you want it gentler: rebirth Growth 3 -> 2 in the config.
+2. **Real players hatch more than 3 times a run** once eggs are cheap, so expect the real game to run up to ~30%
+   faster than these tables. The in-game pacing log (Output window `[Pacing]` lines, TEST panel > PACING, and the
+   `Pacing` analytics events) shows real players' times to compare.
+3. **Very big numbers:** zone 4 prices and rebirths 5+ go past 1 quadrillion. The game handles them, but the
+   "precision" warning in Output (once per place) will show. The weekly coins leaderboard caps at ~9 quadrillion.

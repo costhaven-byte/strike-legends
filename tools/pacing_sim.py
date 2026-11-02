@@ -11,7 +11,8 @@ bags and zones; keeps pets and bought slots.
 The player buys the cheapest useful thing next: the next ball, the next bag, the next gate, the next pet slot, or a
 hatch of the highest open zone's egg (up to HATCHES per egg per run). EQUIP BEST by income.
 
-    python tools/pacing_sim.py            (prints the report)
+    python tools/pacing_sim.py            (prints the Stage 7 report)
+    python tools/pacing_sim.py stage9     (Stage 9: every table in PACING_REPORT.md, 9 pet-luck seeds; ~1 min)
 """
 import math
 import random
@@ -130,8 +131,9 @@ def rebirth_price(n: int) -> float:
 
 
 class Player:
-    def __init__(self, seed: int):
+    def __init__(self, seed: int, hatches: int = HATCHES):
         self.rng = random.Random(seed)
+        self.hatches = hatches
         self.pets = {}  # (id, shiny) -> count
         self.bought_slots = 0
         self.rebirths = 0
@@ -219,7 +221,7 @@ class Player:
         if self.bought_slots < len(SLOT_PRICES):
             out.append(("Slot", SLOT_PRICES[self.bought_slots]))
         for egg in EGGS:
-            if egg["Zone"] == self.zones and self.hatched.get(egg["Id"], 0) < HATCHES:
+            if egg["Zone"] == self.zones and self.hatched.get(egg["Id"], 0) < self.hatches:
                 out.append(("Egg", egg["Price"]))
         out.sort(key=lambda o: o[1])
         return out
@@ -269,11 +271,11 @@ def short(x: float) -> str:
     return "%.3g" % x
 
 
-def play(seed=7, policy="asap", rebirths=50, limit=600.0, delay=0.0, log=None):
+def play(seed=7, policy="asap", rebirths=50, limit=600.0, delay=0.0, log=None, hatches=HATCHES):
     """policy 'asap' = save for the rebirth as soon as it is the cheapest thing on offer, then rebirth; 'delay' = the
     same moment, then keep buying for `delay` more minutes first; 'never'. Returns the player and its runs. Each run:
     start/end (minutes played), buys [(minutes into the run, what)], place, income, cost, save, back."""
-    p = Player(seed)
+    p = Player(seed, hatches)
     runs = []
     run = {"start": 0.0, "buys": [], "back": None, "target": None}
     ready_at = None
@@ -288,7 +290,7 @@ def play(seed=7, policy="asap", rebirths=50, limit=600.0, delay=0.0, log=None):
             if not opts or policy == "asap" or p.minutes - ready_at >= delay:
                 save = price / p.income()
                 p.minutes += save
-                run.update(end=p.minutes, place=place(p), ball=p.ball, income=p.income(), cost=price, save=save)
+                run.update(end=p.minutes, place=place(p), ball=p.ball, income=p.income(), cost=price, save=save, team=dict(p.best_team()))
                 runs.append(run)
                 p.rebirths += 1
                 p.reset_run()
@@ -369,7 +371,191 @@ def compare(seed=7, limit=480.0):
     return NL.join(out)
 
 
+# ---- Stage 9 (pacing pass): every measure the addendum asks for, over several pet-luck seeds
+SEEDS = (1, 2, 3, 4, 5, 6, 7, 8, 9)
+
+
+def median(xs):
+    xs = sorted(x for x in xs if x is not None)
+    if not xs:
+        return None
+    n = len(xs)
+    return xs[n // 2] if n % 2 else (xs[n // 2 - 1] + xs[n // 2]) / 2
+
+
+def trace(seed=7, policy="asap", limit=360.0, hatches=HATCHES, rebirths=50, delay=0.0):
+    """One playthrough as a list of events (minutes played, run, what) + the runs. what = Ball12 / Bag3 / Zone2 /
+    Slot5 / EggX(pet) / Rebirth1."""
+    log = []
+    p, runs = play(seed, policy, rebirths=rebirths, limit=limit, delay=delay, log=log, hatches=hatches)
+    events = [(t, n, w) for t, n, w, inc in log]
+    for i, r in enumerate(runs):
+        if "cost" in r:
+            events.append((r["end"], i, "Rebirth%d" % (i + 1)))
+    events.sort(key=lambda e: e[0])
+    return p, runs, events
+
+
+def measures(seed=7, policy="asap", limit=360.0, hatches=HATCHES, delay=0.0):
+    p, runs, events = trace(seed, policy, limit, hatches, delay=delay)
+    out = {"ball": {}, "bag": {}, "gate": {}, "rebirth": {}, "waits": [], "frontier": {}, "back": {}, "runs": runs}
+    best_ball = 1
+    last_frontier = 0.0
+    run_ball, caught_up = 1, 0.0
+    for t, n, w in events:
+        m = re.match(r"(Ball|Bag|Zone|Rebirth)(\d+)$", w)
+        if not m:
+            continue
+        kind, k = m.group(1), int(m.group(2))
+        key = {"Ball": "ball", "Bag": "bag", "Zone": "gate", "Rebirth": "rebirth"}[kind]
+        if k not in out[key]:
+            out[key][k] = (t, n)
+        if kind == "Rebirth":
+            run_ball, caught_up = 1, None  # (not caught up with the best ball yet)
+            continue
+        if kind == "Ball":
+            run_ball = k
+            if k == best_ball and caught_up is None:
+                caught_up = t  # back at the best ball ever: the next new ball's wait starts here
+            if k > best_ball:
+                # the new-ball gap: minutes since the last new-best ball, or since this run caught up with it
+                out["frontier"][k] = t - max(last_frontier, caught_up if caught_up is not None else t)
+                best_ball, last_frontier, caught_up = k, t, t
+    prev = 0.0
+    for t, n, w in events:
+        if t - prev > 8:
+            out["waits"].append((prev, t, n, w))
+        prev = t
+    for i, r in enumerate(runs):
+        if i > 0 and r["back"] is not None:
+            before = runs[i - 1]
+            out["back"][i] = (r["back"], before["end"] - before["start"], before["place"])
+    return out
+
+
+def ball_name(k):
+    return "zone %d ball %d" % (BALLS[k - 1]["Zone"], (k - 1) % 10 + 1)
+
+
+def stage9(seeds=SEEDS, hatches=HATCHES, limit=360.0):
+    """Markdown tables for PACING_REPORT.md (median over seeds; [min-max] where it helps)."""
+    ms = [measures(s, "asap", limit, hatches) for s in seeds]
+    L = []
+
+    def at(key, k):
+        ts = [m[key][k][0] for m in ms if k in m[key]]
+        runs_ = [m[key][k][1] for m in ms if k in m[key]]
+        if not ts:
+            return "-", "-"
+        return clock(median(ts)), "%d" % median(runs_)
+
+    L.append("Played time (median of %d pet-luck seeds, %d hatches of each zone's egg per run). "
+             "Run = how many rebirths the player has done when it happens." % (len(seeds), hatches))
+    L.append("")
+    for z in (1, 2, 3, 4):
+        L.append("**Zone %d**" % z)
+        L.append("")
+        L.append("| | " + " | ".join(str(i) for i in range(1, 11)) + " |")
+        L.append("|---" * 11 + "|")
+        for key, label in (("ball", "Ball"), ("bag", "Bag")):
+            cells, runs_ = [], []
+            for i in range(1, 11):
+                k = (z - 1) * 10 + i
+                if k == 1:
+                    cells.append("start")
+                    runs_.append("0")
+                    continue
+                c, r = at(key, k)
+                cells.append(c)
+                runs_.append(r)
+            L.append("| %s at | %s |" % (label, " | ".join(cells)))
+            L.append("| (run) | %s |" % " | ".join(runs_))
+        fr = []
+        for i in range(1, 11):
+            k = (z - 1) * 10 + i
+            vals = [m["frontier"].get(k) for m in ms]
+            v = median(vals)
+            fr.append("%.1f" % v if v is not None else "-")
+        L.append("| new-ball gap (min) | %s |" % " | ".join(fr))
+        L.append("")
+    L.append("**Gates:** " + ", ".join("zone %d at %s (run %s)" % ((z,) + at("gate", z)) for z in (2, 3, 4)))
+    L.append("")
+    L.append("| Rebirth | At (played) | Where | Saving for it | Price | Back to the run before's best ball | % of that run |")
+    L.append("|---|---|---|---|---|---|---|")
+    for k in range(1, 9):
+        ts = [m["rebirth"][k][0] for m in ms if k in m["rebirth"]]
+        if not ts:
+            continue
+        rs = [m["runs"][k - 1] for m in ms if len(m["runs"]) > k - 1 and "cost" in m["runs"][k - 1]]
+        place_ = median([r["ball"] for r in rs])
+        save = median([r["save"] for r in rs])
+        backs = [m["back"].get(k) for m in ms if m["back"].get(k)]
+        b = median([x[0] for x in backs])
+        pct = median([100 * x[0] / x[1] for x in backs])
+        L.append("| %d | %s [%s-%s] | %s | %.1f min | %s | %s | %s |" % (
+            k, clock(median(ts)), clock(min(ts)), clock(max(ts)), ball_name(int(place_)), save, short(rs[0]["cost"]),
+            clock(b) if b is not None else "-", ("%.0f%%" % pct) if pct is not None else "-"))
+    L.append("")
+    waits = []
+    for s, m in zip(seeds, ms):
+        for a, b, n, w in m["waits"]:
+            waits.append((s, a, b, n, w))
+    if waits:
+        L.append("Waits over 8 minutes with nothing new to buy (seed: from - to, run, what ended it):")
+        for s, a, b, n, w in waits[:40]:
+            L.append("- seed %d: %s - %s (%.1f min), run %d, ended by %s" % (s, clock(a), clock(b), b - a, n, w))
+    else:
+        L.append("Waits over 8 minutes with nothing new to buy: **none** in the first %s." % clock(limit))
+    return NL.join(L), ms
+
+
+def waits_until(ms, rebirth=5):
+    """Waits over 8 min before rebirth `rebirth` (the part of the game the addendum times)."""
+    out = []
+    for m in ms:
+        end = m["rebirth"].get(rebirth, (1e9, 0))[0]
+        out += [(a, b, n, w) for a, b, n, w in m["waits"] if b <= end + 1e-9]
+    return out
+
+
+def rule4(seeds=SEEDS, limit=480.0, hatches=HATCHES):
+    """Addendum 7.4 over several seeds: rebirth the moment it's ready vs wait 5/10/20 min vs never. Median played
+    time to first reach balls 15..40."""
+    marks = (15, 20, 25, 30, 35, 40)
+    L = ["| Player | " + " | ".join("ball %d" % b for b in marks) + " |", "|---" * (len(marks) + 1) + "|"]
+    for name, kw in (("rebirths at once", dict(policy="asap")), ("waits 5 min", dict(policy="delay", delay=5)),
+                     ("waits 10 min", dict(policy="delay", delay=10)), ("waits 20 min", dict(policy="delay", delay=20)),
+                     ("never rebirths", dict(policy="never"))):
+        reached = {b: [] for b in marks}
+        for sd in seeds:
+            p, runs = play(sd, limit=limit, hatches=hatches, **kw)
+            for b in marks:
+                reached[b].append(reach(p, b))
+        L.append("| %s | %s |" % (name, " | ".join(clock(median(reached[b])) if median(reached[b]) else "-" for b in marks)))
+    return NL.join(L)
+
+
+def hatching(seeds=SEEDS, counts=(3, 8, 15, 30), limit=600.0):
+    """How much a player who hatches more each run speeds up (the pet snowball check)."""
+    L = ["| Hatches of each egg a run | Rebirth 3 | Rebirth 5 | Rebirth 7 | Ball 30 | Ball 40 | Zone 4 new-ball gap |",
+         "|---|---|---|---|---|---|---|"]
+    for h in counts:
+        ms = [measures(sd, "asap", limit, h) for sd in seeds]
+        r = lambda k: clock(median([m["rebirth"].get(k, (None,))[0] for m in ms]) or 0)
+        b = lambda k: clock(median([m["ball"].get(k, (None,))[0] for m in ms]) or 0)
+        z4 = median([m["frontier"].get(k) for m in ms for k in range(32, 41)])
+        L.append("| %d | %s | %s | %s | %s | %s | %.1f min |" % (h, r(3), r(5), r(7), b(30), b(40), z4))
+    return NL.join(L)
+
+
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "stage9":
+        print(stage9(hatches=int(sys.argv[2]) if len(sys.argv) > 2 else HATCHES, limit=480)[0])
+        print()
+        print(rule4())
+        print()
+        print(hatching())
+        raise SystemExit
     text, runs = report(int(sys.argv[1]) if len(sys.argv) > 1 else 7)
     print(text)
     print()

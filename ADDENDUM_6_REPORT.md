@@ -371,3 +371,90 @@ Note: everyone gets a free AUTO after their first rebirth (same speed). So AUTO 
 ### Placeholders still in use
 - **2X PINS picture**: uses the HUD pin icon (`Pass2xPins` in AssetSlots, tagged PLACEHOLDER). A real 2X PINS icon in the store kit style would replace it.
 - **2X PINS pass ID**: 0 until you create it (above).
+
+---
+
+## Stage 9: Pacing pass (2026-11-02, code tag `restore-a6-s9-before`)
+
+Built while you were asleep. Every decision is mine and written down here. The full tables are in
+`PACING_REPORT.md` (time to every ball and bag in all 4 zones, gates, rebirths, waits, comebacks).
+
+### What I found (simulated playthrough, fresh player, no passes)
+- **Zone 1 is fine and untouched**: ball 10 at ~21 min, zone 2 gate at ~17 min, rebirth 1 at ~33 min, costing
+  ~4 minutes of income when zone 1's ladder is done.
+- **Zones 3 and 4 flew by.** A new zone 3 ball came every 6-50 seconds, and the whole zone 4 ladder took about
+  2 minutes. Their prices were set for a player with no rebirths, but you get there with 2-4 rebirths and strong pets.
+- **Zone 4 pets snowballed** (the known problem). By rebirth 5, pets alone multiplied income ~16x (~50x for someone
+  who hatches a lot), mostly through the Bag stat. Eggs don't get pricier after a rebirth, so later hatches were
+  almost free.
+- **Rebirths 3 to 8 came minutes apart** and cost under 20 seconds of income, and the game was "done" at ~1h20.
+  After that, rebirth 10 took ~2h and rebirth 12 another 5-10 hours.
+
+### What changed (config numbers only, no systems)
+- **Zone 2 balls 2-10, zone 3 and zone 4 balls:** re-priced so each new ball comes about as far apart as in zone 1
+  (2-3 min early in a zone, 4-5 min later, quick after a gate opens). Examples: zone 2 ball 2 5.4M -> 9.3M, zone 3
+  ball 1 5.9B -> 28B, zone 3 ball 10 1.2T -> 19T, zone 4 ball 1 7.1T -> 110T, zone 4 ball 10 1.4Qa -> 41Qa.
+- **Bags 12-40:** re-priced with the balls (each still sits between two balls). E.g. zone 4's last bag 1.9Qa -> 56Qa.
+- **Gates:** zone 3 190M -> 320M, zone 4 240B -> 1.5T (still "the zone before's ball 7").
+- **Eggs:** Neon 19M -> 33M, Main Street 23B -> 360B, Skyline 28T -> 2.9Qa. A hatch now costs about 1 minute of
+  income when you first reach each egg (the Speckled Egg costs the same in zone 1).
+- **Rebirth prices 2-7:** 450M -> 3.8B, 88B -> 120B, 2T -> 200T, 7.1Qa -> 1.2Qa, 60Qa -> 14Qa, 400Qa -> 220Qa (then
+  x3 each, as before). Rebirth 1 stays 5.4M. They now come at: 2 = middle of zone 2 (~1h01), 3 = start of zone 3
+  (~1h28), 4 = end of zone 3 (~2h12), 5 = zone 4 ball 3 (~2h52), 6 = zone 4 ball 6 (~3h32), 7 = zone 4 done
+  (~4h20). Each takes 2-3 minutes to save for.
+- **Zone 3 pets (Main Street Egg) weaker:** Wood Pup Bag +0.6 -> +0.3; Chrome Bat Coins +1.2 -> +0.6, Bag +1 -> +0.4;
+  Kingpin Pins +2.5 -> +1.2; Blaze Coins +4 -> +1.5, Speed +0.4 -> +0.3.
+- **Zone 4 pets (Skyline Egg) weaker:** Cloud Bumper Bag +1.5 -> +0.5, Pins +0.8 -> +0.6; Moony Coins +2.5 -> +1.5,
+  Bag +2 -> +0.7; Cosmo Coins +12 -> +3, Pins +6 -> +2; Perfecto Pins +10 -> +3, Speed +0.6 -> +0.5. Each zone's best
+  pet is still clearly stronger than the zone before's. Players who already own these pets keep them; they just
+  give less.
+- **Not changed:** all of zone 1, the zone 2 gate, rebirth 1, the rebirth boost (+200% coins, +100% pins), how much
+  prices rise after a rebirth, pet slots, pin values, the Neon Egg's pets.
+- The pacing tool got the Stage 9 measures (`python tools/pacing_sim.py stage9`).
+
+### What the sim shows now
+- **Rebirth comebacks (rule 2):** back to where you were in 23% of the run before after rebirth 1, then 40-64%.
+  "About half", with the first comeback faster (as in Stage 7).
+- **Rebirth now vs wait (rule 4):** rebirthing at once is first, or within 3 minutes of first, at every point
+  checked, and finishes all 40 balls 33-60 minutes before players who wait 5-20 minutes each time. Never
+  rebirthing is ~3 hours slower. To get there I moved rebirth 4 to the end of zone 3 and rebirth 7 to the end of
+  zone 4. When they came one ball earlier, waiting 5 minutes won (the last ball was cheap). Raising the boost
+  didn't help, so the boost stays as it is.
+- **No waits over 8 minutes** with nothing to buy until about 5 hours in (rebirth 8). After that, only rebirths are
+  left and they cost x3 each: ~10-15 min for rebirth 9, ~30 for 10, 1-2 hours for 11. That's the end-game wall
+  until a 5th zone exists. If you want it gentler, say so: rebirth Growth 3 -> 2 is one number.
+- **Heavy hatchers** (15 hatches of each egg a run) finish ~30% faster (2h56 vs 4h13) and it levels off. Before,
+  they finished in about an hour.
+- **Whole game for the pretend player:** zone 1 ~22 min, zone 2 done ~1h20, zone 3 done ~2h08, zone 4 done ~4h13.
+
+### Checked in Studio (Play test, synced with the http trick + UpdateSourceAsync; the config is over 200K)
+- The server uses the new numbers: zone 2 ball 2 9.3M, zone 3 ball 1 28B, zone 4 ball 10 41Qa (110Qa after 6
+  rebirths), gates 320M / 1.5T, eggs 33M / 360B / 2.9Qa, rebirths 5.4M, 3.8B, 120B, 200T, 1.2Qa, 14Qa, 220Qa, 660Qa,
+  1.98Qi, and the new pet stats (Cosmo Coins 3 Pins 2, etc.).
+- The shop's Balls tab shows every new price, from 4.8M (zone 2 ball 1) to 41Qa (zone 4 ball 10).
+- No errors in Output.
+
+### Not verified
+- **I didn't sell by hand after the change.** My test tool couldn't fill the bag. The sell code and pin values
+  weren't touched, so payouts only change through the weaker zone 3/4 pets.
+- I didn't play the game for hours. Everything above comes from the simulator. Real players will hatch more than
+  3 times a run once eggs are cheap, so the real game may run up to ~30% faster than the tables.
+- The place in Studio has the new config but is **not saved to Roblox** (as asked). Save it when the test passes.
+
+### 2-minute test
+1. Press Play (TEST panel: START FROM ZERO is fine). Walk onto the blue shop circle. Balls tab, scroll down.
+   Expected: zone 2 ball 2 = **9.3M**, zone 3 ball 1 = **28B**, zone 4 ball 10 = **41Qa** (all greyed with a lock).
+2. Rebirth tab. Expected: rebirth 1 still **5.4M**. TEST panel > READY TO REBIRTH, rebirth, and the tab now asks
+   **3.8B** for rebirth 2 (it was 450M).
+3. TEST panel > JUMP TO ZONE 4, go to the egg stand. Expected: the Skyline Egg costs **2.9Qa**. Hatch with FREE EGG and
+   open the PETS panel. Expected: Cosmo / Perfecto / Moony / Cloud Bumper show the smaller bonuses (Cosmo x4 coins,
+   x3 pins).
+4. Throw a few times and sell. Expected: the sell popup's number = pins x the zone's pin value x your multiplier,
+   as before.
+- **Silent failures to watch:** old prices still showing (Studio has an old config: Rojo or the sync didn't run),
+  zone 1 prices changed (they mustn't: ball 10 = 590K, bag 10 = 690K, Speckled Egg 750), or a pet showing its old
+  big bonus.
+
+### Placeholders still in use
+- None new. Still from earlier stages: zone 3/4 ball models are re-used existing balls; the zone 4 egg stand is the
+  old cloud design; the 2X PINS picture and pass ID (Stage 8); some borrowed sounds (Stage 6).
