@@ -97,6 +97,7 @@ end
 -- Icon per pass / product Id (cards and the toast)
 local ICONS = {
 	DoubleCoins = "Pass2x",
+	DoublePins = "Pass2xPins",
 	VIP = "PassVip",
 	AutoBowl = "PassAuto",
 	Lucky = "PassLucky",
@@ -1610,7 +1611,9 @@ function StoreController:Start()
 		sectionHeader("passes", "GAME PASSES")
 		local passItems = {}
 		for _, pass in MONEY.Passes do
-			table.insert(passItems, { "Pass", pass })
+			if Store.Ready(pass) then -- (Addendum 6 Stage 8: a pass with no ID yet stays out of the live store)
+				table.insert(passItems, { "Pass", pass })
+			end
 		end
 		-- 2X COINS 15 MIN ends the PASSES section (its cyan BOOST label sets it apart)
 		local timed = Store.Product("CoinBoost")

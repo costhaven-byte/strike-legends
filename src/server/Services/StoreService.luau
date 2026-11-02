@@ -222,6 +222,14 @@ local function onBuy(player: Player, id: any)
 		return
 	end
 	local number = if pass then pass.PassId else product.ProductId
+	if pass and number <= 0 and RunService:IsStudio() then
+		-- (Addendum 6 Stage 8) Studio only: a pass not made in Creator Hub yet is given free for this test
+		givePass(player, pass)
+		if resultEvent then
+			resultEvent:FireClient(player, { Id = pass.Id, Text = pass.Name .. " is yours (Studio test: no pass ID yet)" })
+		end
+		return
+	end
 	if number <= 0 then
 		warn(
 			("[StoreService] %s has no %s yet (Config.Monetization)"):format(id, if pass then "PassId" else "ProductId")
@@ -233,6 +241,20 @@ local function onBuy(player: Player, id: any)
 	else
 		MarketplaceService:PromptProductPurchase(player, number)
 	end
+end
+
+-- Studio only (TEST panel, Addendum 6 Stage 8): turns a pass on or off for this test. Nothing is saved (passes come
+-- from Roblox on every join), so this can't change a real player. Returns the new state, or nil.
+function StoreService.TestToggle(player: Player, id: string): boolean?
+	local pass = Store.Pass(id)
+	if not RunService:IsStudio() or not pass then
+		return nil
+	end
+	owned[player] = owned[player] or {}
+	local on = not owned[player][pass.Id]
+	owned[player][pass.Id] = if on then true else nil
+	publish(player)
+	return on
 end
 
 -- True when this player may get an offer popup now: not in the first minutes (the Starter Pack has its own time),

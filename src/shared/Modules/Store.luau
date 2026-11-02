@@ -36,6 +36,12 @@ function Store.Product(id: string)
 	return products[id]
 end
 
+-- True when this pass can be shown and bought: it has its Creator Hub ID (PassId > 0), or this is Studio (where a
+-- pass with no ID yet is given free for the test, StoreService)
+function Store.Ready(pass): boolean
+	return pass ~= nil and ((tonumber(pass.PassId) or 0) > 0 or RunService:IsStudio())
+end
+
 -- True when this player owns this game pass (and the store is on)
 function Store.Owns(player: Player, passId: string): boolean
 	if not Store.Active() then

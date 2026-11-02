@@ -6,6 +6,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
 local player = Players.LocalPlayer
 
 local TestPanelController = {}
@@ -59,6 +61,15 @@ local SECTIONS = {
 		},
 	},
 }
+
+-- Addendum 6 Stage 8: one toggle per game pass (Config.Monetization.Passes); green = on for this test
+do
+	local buttons = {}
+	for _, pass in Config.Monetization.Passes do
+		table.insert(buttons, { Text = pass.Name, Action = "Pass", Mode = pass.Id })
+	end
+	table.insert(SECTIONS, { Title = "GAME PASSES (tap = on / off, this test only)", Buttons = buttons })
+end
 
 local function make(className: string, props: { [string]: any }, parent: Instance?): any
 	local instance = Instance.new(className)
@@ -190,6 +201,16 @@ function TestPanelController:Start()
 				TextWrapped = true,
 			}, grid)
 			corner(button, 6)
+			if info.Action == "Pass" then
+				local function paint()
+					local owned = player:GetAttribute("Passes")
+					local on = type(owned) == "string" and string.find(owned, ";" .. info.Mode .. ";", 1, true) ~= nil
+					button.BackgroundColor3 = if on then Color3.fromRGB(46, 150, 70) else BUTTON
+					button.Text = info.Text .. (if on then " ON" else "")
+				end
+				paint()
+				player:GetAttributeChangedSignal("Passes"):Connect(paint)
+			end
 			button.Activated:Connect(function()
 				if busy then
 					return

@@ -315,3 +315,59 @@
 - The sim's player buys the cheapest thing first and hatches each egg 3 times per run. Real players will differ.
 - Checked in Studio (Play test): the game uses the new prices and boosts (rebirths 0 to 9 printed), and the shop's Rebirth tab shows "+200% coins, +100% pins a throw" and "5.4M coins" (`screenshots/addendum6-stage7-rebirth-tab.jpg`). I didn't play a whole run by hand.
 - **Placeholders still in use:** none new.
+
+---
+
+## Stage 8: Gamepasses (2026-11-02, code tag `restore-a6-s8-before`)
+
+### What changed
+- **New PASSES tab in the shop window** (after Balls, Bags, Rebirth). One card per pass: picture, name, what it does, and a green Robux price button, or a grey OWNED when you have it. The top line says how many you own. Passes can be bought from anywhere, not only at the shop pad (they're Robux, not coins).
+- **Small gold PASSES button on the HUD**, right of PROFILE (on phones: right of STORE). It opens the PASSES tab.
+- **One new pass: 2X PINS** (double pins every swing, forever). It feeds the "Passes" slot of the pin multiplier, the same way 2X COINS feeds the coin one.
+- **The HUD multiplier card now shows the passes for pins too**: under PIN MULTIPLIER there's a GAME PASSES chip next to PINS A SWING. Coins already had a GAME PASSES row.
+- **Studio TEST panel: a GAME PASSES section** with one button per pass. Tap = on / off for this test only (green = on). Nothing is saved and it never exists in the live game.
+- A pass with no Creator Hub ID yet is **hidden in the live game** (in the shop tab and in the old STORE window). In Studio it shows with a red NO ID YET, and BUY gives it free for the test.
+
+### The addendum's list, mapped onto the passes you already have
+| Addendum asks for | Pass in the game | Status |
+|---|---|---|
+| 2x Coins | 2X COINS (DoubleCoins) | already live |
+| 2x Pins | **2X PINS (DoublePins)** | **new, needs creating** |
+| Lucky Eggs | LUCKY (x2 luck) + SUPER LUCKY (x4) | already live (eggs and crates) |
+| Triple Hatch | TRIPLE HATCH | already live |
+| Auto Swing | AUTO BOWL | already live (an AUTO button that keeps throwing while you stand on your lane) |
+| +2 Pet Slots | +2 PET SLOTS | already live |
+| (extra) | VIP | already live, kept in the tab |
+
+Note: everyone gets a free AUTO after their first rebirth (same speed). So AUTO BOWL mostly helps before rebirth 1. Tell me if you want the free one slower or gone.
+
+### What you need to create in Creator Hub (only one thing)
+1. Creator Hub > your game > Monetization > **Passes** > Create a Pass.
+2. Name: **2X PINS**. Description: "Double pins every swing, forever. Stacks with potions." Picture: any for now (see placeholders).
+3. Turn on **Item for Sale**, price **399 Robux** (or what you like; then tell me the price too).
+4. Copy the pass ID (the number in its page link) and send it to me.
+5. Where it goes: the config file, `Config.Monetization.Passes`, the row `Id = "DoublePins"`, in `PassId = 0` (0 becomes your number). Until then 2X PINS simply doesn't show in the live game.
+
+### Tested (Studio Play test, with screenshots in `screenshots/addendum6-stage8/`)
+- PASSES button shows right of PROFILE and the PASSES tab opens with all 8 passes; your account owns the 7 real ones (OWNED), 2X PINS shows NO ID YET + R$ 399 (`hud-passes-button.jpg`, `gamepasses-tab.jpg`).
+- Bought 2X PINS (Studio, free): pin multiplier went x1 -> x2, and the card turned OWNED.
+- TEST panel: 2X COINS off -> coin multiplier x2.5 -> x1.25 (only VIP left); back on -> x2.5.
+- HUD card shows GAME PASSES x2.5 for coins and GAME PASSES x2 for pins (`breakdown-2x-pins.jpg`).
+- No errors in Output from the new code.
+
+### Not verified
+- I didn't throw by hand to watch the pin count double. The throw uses the same pin number I checked (x2), so it should.
+- The phone layout of the PASSES button wasn't looked at on a phone-sized screen.
+- The real Robux buy prompt for 2X PINS can't be tested until the pass exists.
+
+### 2-minute test
+1. Press Play. Next to PROFILE there's a gold **PASSES** button. Tap it: the shop opens on the **Passes** tab. Expected: 8 cards, your 7 owned ones say OWNED, 2X PINS says NO ID YET with R$ 399.
+2. Tap 2X PINS's price. Expected: a "2X PINS is yours" message and the card turns OWNED (free, Studio only).
+3. Tap the **x2.5** badge under your coins. Expected: under PIN MULTIPLIER, PINS A SWING x2 and GAME PASSES x2.
+4. Open the purple **TEST** tab > GAME PASSES, tap 2X COINS (it goes grey). Expected: the badge drops to x1.25. Tap again: back to x2.5.
+5. Throw a few times with 2X PINS on vs off (TEST panel). Expected: about twice the pins.
+- **Silent failures to watch:** the PASSES button missing (the shop window didn't load), the tab showing no cards (store switched off), or 2X PINS showing in the live game before you add its ID (it shouldn't).
+
+### Placeholders still in use
+- **2X PINS picture**: uses the HUD pin icon (`Pass2xPins` in AssetSlots, tagged PLACEHOLDER). A real 2X PINS icon in the store kit style would replace it.
+- **2X PINS pass ID**: 0 until you create it (above).

@@ -384,6 +384,13 @@ function MultiplierController:Start()
 				HudIcon = "Ball",
 				Value = tonumber(player:GetAttribute("PinsMultiplier")) or 1,
 			})
+			-- (Addendum 6 Stage 8: the game passes' share of it, e.g. 2X PINS = x2)
+			table.insert(specials, {
+				Name = "GAME PASSES",
+				Icon = "Store",
+				HudIcon = "Store",
+				Value = CoreLadder.DecodeBoosts(player:GetAttribute("PinBoosts")).Passes or 1,
+			})
 		end
 		for _, special in if CORE then {} else SPECIALS do
 			if special.Value then
@@ -629,7 +636,7 @@ function MultiplierController:Start()
 			build(false)
 		end
 	end
-	for _, key in { "CoinMultipliers", "CoinMultiplier", "CoinBoosts", "PinsMultiplier" } do
+	for _, key in { "CoinMultipliers", "CoinMultiplier", "CoinBoosts", "PinsMultiplier", "PinBoosts" } do
 		player:GetAttributeChangedSignal(key):Connect(refresh)
 	end
 	refresh()

@@ -18,6 +18,9 @@
 --       rows of zones you haven't opened are greyed with a lock. Buying plays a short reveal (RevealSeconds).
 --   2.4 the Rebirth tab: rank now > next rank (Config.CoreLoop.Rebirth.Ranks), price, what resets / what you keep,
 --       the boost, and a HOLD TO REBIRTH button (HoldSeconds). The HUD REBIRTH button opens this tab.
+-- Addendum 6 Stage 8: the Gamepasses tab (Config.CoreLoop.Shop.Gamepasses = which Config.Monetization passes, in
+--   order): a card per pass with its icon, words and a Robux BUY button (StoreBuy, works anywhere) or OWNED. A pass with
+--   no Creator Hub ID yet is hidden in the live game. The small HUD PASSES button (HudKit spot "Passes") opens it.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -33,8 +36,10 @@ local CoreLadder = require(Shared.Modules.CoreLadder)
 local Currency = require(Shared.Modules.Currency)
 local Mascots = require(Shared.Modules.Mascots)
 local Rebirth = require(Shared.Modules.Rebirth)
+local Store = require(Shared.Modules.Store)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local BallView = require(Modules.BallView)
+local HudKit = require(Modules.HudKit)
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
 
@@ -66,6 +71,19 @@ local ROW = 70 -- list row height
 local GAP = 8
 local PAGE_TOP = 74 -- the pages start under the tabs
 local FOOT = 78 -- footer height (Buy Best / Go to shop / hold to rebirth)
+
+-- Gamepasses tab: the store kit icon per pass (AssetSlots.Images; same as StoreController's cards)
+local PASS_ICONS = {
+	DoubleCoins = "Pass2x",
+	DoublePins = "Pass2xPins",
+	VIP = "PassVip",
+	AutoBowl = "PassAuto",
+	Lucky = "PassLucky",
+	SuperLucky = "PassSuperLucky",
+	TripleHatch = "PassTriple",
+	PetSlots = "PassPets",
+}
+local ROBUX_GLYPH = utf8.char(0xE002) -- Roblox's own Robux sign (every Roblox font has it)
 
 local new = SunKit.New
 local text = SunKit.Text
@@ -855,6 +873,129 @@ function CoreShopController:Start()
 		}
 	end
 
+	-- Gamepasses (Stage 8): two cards to a row; BUY asks Roblox (StoreService), OWNED once you have it
+	if Store.Active() and table.find(SHOP.Tabs or {}, "Gamepasses") then
+		local page, list, head = listPage("GamepassesPage")
+		local layout = list:FindFirstChildOfClass("UIListLayout") :: UIListLayout
+		layout:Destroy()
+		new("UIGridLayout", {
+			CellSize = UDim2.new(0.5, -GAP / 2, 0, 112),
+			CellPadding = UDim2.fromOffset(GAP, GAP),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}, list)
+		local storeBuy = remotes:WaitForChild("StoreBuy", 10) :: RemoteEvent?
+		type PassCard = { Pass: any, Holder: Frame, Face: Frame, Badge: Frame, BadgeText: TextLabel, Note: TextLabel }
+		local cards: { PassCard } = {}
+		for index, id in SHOP.Gamepasses or {} do
+			local pass = Store.Pass(id)
+			if not Store.Ready(pass) then
+				continue -- (no Creator Hub ID yet: hidden in the live game)
+			end
+			local holder, cardFace = plate(list, "Pass_" .. id, PAPER, 10, 3)
+			holder.LayoutOrder = index
+			local disc, discFace = plate(cardFace, "Icon", K.Sky, 12, 3)
+			disc.Size = UDim2.fromOffset(78, 78)
+			disc.Position = UDim2.fromOffset(10, 12)
+			new("ImageLabel", {
+				Name = "Image",
+				BackgroundTransparency = 1,
+				Image = AssetSlots.Image(PASS_ICONS[id] or "Pass2x"),
+				ScaleType = Enum.ScaleType.Fit,
+				Size = UDim2.fromScale(0.92, 0.92),
+				Position = UDim2.fromScale(0.04, 0.04),
+			}, discFace)
+			text(cardFace, pass.Name, {
+				Name = "PassName",
+				Size = UDim2.new(1, -112, 0, 30),
+				Position = UDim2.fromOffset(100, 8),
+				TextColor3 = INK,
+				TextXAlignment = Enum.TextXAlignment.Left,
+			})
+			text(cardFace, pass.Text, {
+				Name = "Words",
+				Body = true,
+				TextScaled = false,
+				TextSize = 15,
+				TextWrapped = true,
+				Size = UDim2.new(1, -112, 0, 36),
+				Position = UDim2.fromOffset(100, 38),
+				TextColor3 = SOFT,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextYAlignment = Enum.TextYAlignment.Top,
+			})
+			-- Studio only: a pass not made in Creator Hub yet (BUY gives it free for the test)
+			local note = text(cardFace, "NO ID YET", {
+				Name = "Note",
+				Size = UDim2.fromOffset(84, 18),
+				Position = UDim2.new(1, -94, 0, 6),
+				TextColor3 = CORAL,
+				Stroke = 0,
+				Visible = (tonumber(pass.PassId) or 0) <= 0,
+			})
+			local badge, badgeFace = plate(cardFace, "Buy", GREEN, 10, 4)
+			badge.AnchorPoint = Vector2.new(1, 1)
+			badge.Size = UDim2.fromOffset(120, 34)
+			badge.Position = UDim2.new(1, -10, 1, -8)
+			shine(badgeFace)
+			local badgeText = text(badgeFace, "", {
+				Size = UDim2.new(1, -16, 0.74, 0),
+				Position = UDim2.new(0, 8, 0.13, 0),
+				Stroke = 2,
+			})
+			local button =
+				new("TextButton", { Text = "", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1) }, badgeFace)
+			juicy(button, badge)
+			button.Activated:Connect(function()
+				if Store.Owns(player, id) then
+					return
+				end
+				if not storeBuy then
+					Sfx.Play("Error", 1, 0.6)
+					task.spawn(shake, badge)
+					return
+				end
+				Sfx.Play("Click")
+				storeBuy:FireServer(id)
+			end)
+			table.insert(cards, {
+				Pass = pass,
+				Holder = holder,
+				Face = cardFace,
+				Badge = badge,
+				BadgeText = badgeText,
+				Note = note,
+			})
+		end
+		PAGES.Gamepasses = {
+			Id = "Gamepasses",
+			Title = "Passes",
+			Color = K.Purple,
+			Frame = page,
+			Refresh = function()
+				local have = 0
+				for _, card in cards do
+					local owned = Store.Owns(player, card.Pass.Id)
+					if owned then
+						have += 1
+					end
+					card.BadgeText.Text = if owned
+						then "OWNED"
+						else ROBUX_GLYPH .. " " .. tostring(card.Pass.Robux)
+					card.BadgeText.FontFace = if owned then SunKit.Display else Font.fromEnum(Enum.Font.BuilderSansBold)
+					SunKit.Paint(card.Badge, if owned then GREY else GREEN, SunKit.Lip(if owned then GREY else GREEN))
+					local stroke = card.Face:FindFirstChildOfClass("UIStroke") :: UIStroke
+					stroke.Color = if owned then K.Green else INK
+				end
+				head.Text = ("Game passes are yours forever, in every zone. You own %d of %d"):format(have, #cards)
+			end,
+			Footer = function()
+				bestHolder.Visible = false
+				goHolder.Visible = false
+				hint.Text = "Buy passes with Robux from anywhere. Rebirths keep them"
+			end,
+		}
+	end
+
 	-- Rebirth (2.4)
 	local rebirthRemote = remotes:WaitForChild("Rebirth") :: RemoteFunction
 	local holdFrom: number? = nil
@@ -1165,13 +1306,21 @@ function CoreShopController:Start()
 	-- The tab buttons, in Config order (an Id with no page is skipped until it's built, e.g. "Gamepasses")
 	local tabButtons: { [string]: Frame } = {}
 	local order = 0
+	-- (Stage 8: four tabs fit between the title and the coin pill, so each gets narrower than 110)
+	local tabCount = 0
+	for _, id in SHOP.Tabs or {} do
+		if PAGES[id] then
+			tabCount += 1
+		end
+	end
+	local tabW = math.min(110, math.floor((W - 460 - GAP * math.max(tabCount - 1, 0)) / math.max(tabCount, 1)))
 	for _, id in SHOP.Tabs or { "Balls", "Bags", "Rebirth" } do
 		local page = PAGES[id]
 		if page then
 			order += 1
 			local holder, tabFace = plate(tabBar, id .. "Tab", CARD, 10, 4)
 			holder.LayoutOrder = order
-			holder.Size = UDim2.fromOffset(110, 44)
+			holder.Size = UDim2.fromOffset(tabW, 44)
 			local label = text(tabFace, page.Title, {
 				Name = "Label",
 				Size = UDim2.new(1, -16, 0.62, 0),
@@ -1203,7 +1352,7 @@ function CoreShopController:Start()
 			SunKit.Paint(holder, color, if active then SunKit.Lip(color) else K.CreamLip)
 			local label = (holder :: any).Face.Label :: TextLabel
 			SunKit.Recolor(label, if active then WHITE else INK)
-			holder.Size = UDim2.fromOffset(110, if active then 46 else 42)
+			holder.Size = UDim2.fromOffset(tabW, if active then 46 else 42)
 		end
 		for id, page in PAGES do
 			if page.Frame then
@@ -1254,6 +1403,7 @@ function CoreShopController:Start()
 			"CoreLook",
 			"Rebirths",
 			"CoreZonesOpen",
+			"Passes", -- (Stage 8: a bought pass turns its card OWNED)
 		}
 	do
 		player:GetAttributeChangedSignal(key):Connect(function()
@@ -1602,6 +1752,32 @@ function CoreShopController:Start()
 			end)
 		end
 	end)
+
+	-- Stage 8: the small gold PASSES button on the HUD (right of PROFILE; phones: right of STORE) opens the
+	-- Gamepasses tab
+	if PAGES.Gamepasses then
+		task.spawn(function()
+			local ballsUi = playerGui:WaitForChild("BallsUI", 30) :: ScreenGui?
+			local buttonGui = new("ScreenGui", {
+				Name = "PassesButtonUI",
+				ResetOnSpawn = false,
+				DisplayOrder = if ballsUi then ballsUi.DisplayOrder else 5,
+				IgnoreGuiInset = if ballsUi then ballsUi.IgnoreGuiInset else false,
+			}, nil)
+			local kit = HudKit.Square(buttonGui, { Name = "PassesButton", Paint = "Gold", Icon = "Store", Key = "Passes" })
+			kit.Icon.Image = AssetSlots.Image("Pass2x")
+			kit:SetCaption("PASSES", nil, nil, 10)
+			local button = kit.Holder :: TextButton
+			button.Activated:Connect(function()
+				if open and currentTab == "Gamepasses" then
+					setOpen(false)
+				else
+					setOpen(true, "Gamepasses")
+				end
+			end)
+			buttonGui.Parent = playerGui
+		end)
+	end
 
 	-- Studio only: the playtest opens / closes the shop by setting the TestOpen attribute on CoreShopUI (TestTab =
 	-- the tab to open on)

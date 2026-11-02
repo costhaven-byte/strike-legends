@@ -84,6 +84,7 @@ AssetSlots.Images = {
 	BoostXp = 95906571584466,
 	Boost15 = 115844450036931,
 	Pass2x = 121415610421171,
+	Pass2xPins = 124362099981289, -- PLACEHOLDER (Addendum 6 Stage 8): the HUD pin icon until the owner designs a 2X PINS icon
 	PassVip = 118878841892191,
 	PassAuto = 114442555890368,
 	PassLucky = 85937808730956,

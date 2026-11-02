@@ -225,7 +225,13 @@ Config.CoreLoop = {
 		Color = Color3.fromRGB(64, 160, 236), -- sky blue
 		-- Addendum 6 2.1: the shop window's tabs, left to right (CoreShopController builds one page per Id it
 		-- knows; Stage 8 adds "Gamepasses" here). The PET SLOTS row sits at the bottom of the Bags tab.
-		Tabs = { "Balls", "Bags", "Rebirth" },
+		Tabs = { "Balls", "Bags", "Rebirth", "Gamepasses" },
+		-- Addendum 6 Stage 8: the Gamepasses tab's cards, in order (Ids of Config.Monetization.Passes; the pass rows
+		-- hold the IDs, prices and words). A pass whose PassId is still 0 is hidden in the live game (Studio shows
+		-- it as NO ID YET). The small HUD PASSES button opens this tab; Robux buys work anywhere, not only at the booth.
+		-- Addendum list -> pass: 2x Coins = DoubleCoins, 2x Pins = DoublePins, Lucky Eggs = Lucky + SuperLucky,
+		-- Triple Hatch = TripleHatch, Auto Swing = AutoBowl, +2 Pet Slots = PetSlots (VIP is an extra, kept).
+		Gamepasses = { "DoubleCoins", "DoublePins", "Lucky", "SuperLucky", "TripleHatch", "AutoBowl", "PetSlots", "VIP" },
 		RebirthTab = true, -- the HUD REBIRTH button opens the shop's Rebirth tab (false = the old rebirth window)
 		HoldSeconds = 1.5, -- Addendum 6 2.4: hold the REBIRTH button this long to rebirth
 		RevealSeconds = 1.6, -- Addendum 6 2.3: the reveal after buying a ball / bag (flash, colour, name, effect); under 2
@@ -4768,6 +4774,16 @@ Config.Monetization = {
 			Name = "TRIPLE HATCH",
 			Text = "Hatch 3 eggs at once (if you can pay for 3).",
 			Hatch = 3,
+		},
+		{
+			-- Addendum 6 Stage 8: pins per swing x2 (the "Passes" Times slot of Config.CoreLoop.Boosts.Pins).
+			-- PassId 0 = not made in Creator Hub yet: hidden in the live game until the owner puts the real ID here.
+			Id = "DoublePins",
+			PassId = 0,
+			Robux = 399,
+			Name = "2X PINS",
+			Text = "Double pins every swing, forever. Stacks with potions.",
+			Pins = 2,
 		},
 		{
 			Id = "PetSlots",

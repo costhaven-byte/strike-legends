@@ -25,6 +25,7 @@ local MultiplierService = require(script.Parent.MultiplierService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local PotionService = require(script.Parent.PotionService)
 local ProgressionService = require(script.Parent.ProgressionService)
+local StoreService = require(script.Parent.StoreService)
 
 local TestPanelService = {}
 
@@ -210,6 +211,9 @@ local ACTIONS: { [string]: (Player) -> any } = {
 		return reply(true, "Pacing record printed in Output")
 	end,
 	-- Addendum 6 1.1: prints the coin + pin multiplier and every source (MultiplierService.Report)
+	Pass = function() -- (handled in onRequest: it needs the pass Id)
+		return reply(false, "")
+	end,
 	Boosts = function(player)
 		print(MultiplierService.Report(player))
 		return reply(true, "Boost breakdown printed in Output")
@@ -230,6 +234,14 @@ local function onRequest(player: Player, action: any, mode: any)
 	end
 	if action == "Pacing" or action == "Boosts" then
 		return run(player) -- (read only: works in any test)
+	end
+	if action == "Pass" then
+		-- Addendum 6 Stage 8: turn a game pass on / off for this test (never saved, so it works in any test)
+		local on = StoreService.TestToggle(player, tostring(mode))
+		if on == nil then
+			return reply(false, "No such pass (or the store is off)")
+		end
+		return reply(true, ("%s %s for this test"):format(tostring(mode), if on then "ON" else "OFF"))
 	end
 	if not PlayerDataService.IsTestSession(player) then
 		return reply(false, "Only in a test that isn't saved: pick a start mode, then Stop and Play")
