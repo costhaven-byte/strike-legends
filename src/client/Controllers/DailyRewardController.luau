@@ -21,6 +21,9 @@ local HudKit = require(Modules.HudKit)
 local UiKit = require(Modules.UiKit)
 local CrateKit = require(Modules.CrateKit)
 local RewardKit = require(Modules.RewardKit)
+local DailyV2 = require(Modules.DailyV2)
+
+local DAILY_V2 = Config.Ui.DailyV2 == true -- (UI overhaul V8: the new calendar window, Modules/DailyV2)
 
 local C = UiKit.C
 
@@ -403,7 +406,15 @@ function DailyRewardController:Start()
 		end
 	end
 
+	local function isOpen(): boolean
+		return if DAILY_V2 then DailyV2.IsOpen() else popup.Visible
+	end
+
 	local function setOpen(open: boolean)
+		if DAILY_V2 then
+			DailyV2.SetOpen(open)
+			return
+		end
 		if open then
 			refresh()
 			win:Open()
@@ -443,6 +454,12 @@ function DailyRewardController:Start()
 		local ok, result = pcall(claimDaily.InvokeServer, claimDaily)
 		if not ok or not result or not result.Ok then
 			errorText = if ok and result and result.Error then result.Error else "That didn't work. Try again"
+			if DAILY_V2 then
+				errorText = nil
+				DailyV2.ShowError(if ok and result and result.Error then result.Error else "That didn't work. Try again")
+				busy = false
+				return
+			end
 			refresh()
 			claimButton:Shake()
 			task.delay(1.5, function()
@@ -454,21 +471,32 @@ function DailyRewardController:Start()
 		end
 
 		refresh()
-		celebrate(result.Day)
-		Sfx.Play("Reveal")
+		if DAILY_V2 then
+			DailyV2.Celebrate(result.Day)
+		else
+			celebrate(result.Day)
+			Sfx.Play("Reveal")
+		end
 		local crate = Balls.GetCrate(result.CrateId)
 		if crate and result.Crate and CrateController.PlayOpening then
 			task.wait(0.9)
-			win:Close()
+			setOpen(false)
 			CrateController.PlayOpening(crate, result.Crate)
 		else
 			if result.Egg then
-				paintClaim("Pink")
-				claimButton:SetText("HATCH IT AT THE EGG STAND!")
+				if DAILY_V2 then
+					DailyV2.ShowNote("HATCH IT AT THE EGG STAND!")
+				else
+					paintClaim("Pink")
+					claimButton:SetText("HATCH IT AT THE EGG STAND!")
+				end
 				task.wait(1.4)
 			end
 			task.wait(1.2)
-			win:Close()
+			setOpen(false)
+			if DAILY_V2 then
+				DailyV2.ShowNote(nil)
+			end
 		end
 		busy = false
 	end
@@ -492,12 +520,22 @@ function DailyRewardController:Start()
 			shaking = false
 			return
 		end
-		setOpen(not popup.Visible)
+		setOpen(not isOpen())
 	end)
 	closeButton.Activated:Connect(function()
 		setOpen(false)
 	end)
 	claimButton.Activated:Connect(claim)
+	-- UI overhaul V8 (Config.Ui.DailyV2): the new window (Modules/DailyV2); this controller keeps the remote, the DAILY
+	-- button and the join popup. The old window above is only used with DailyV2 = false.
+	if DAILY_V2 then
+		DailyV2.Start({
+			Resolve = resolve,
+			Claim = function()
+				task.spawn(claim)
+			end,
+		})
+	end
 
 	-- Hide the DAILY button while the book, crates or crate-opening screens are up
 	-- (on phones those fill the screen and the button would sit on top of them)
@@ -514,8 +552,8 @@ function DailyRewardController:Start()
 			covered = covered or screen.Visible
 		end
 		openButton.Visible = not covered
-		if covered and popup.Visible and not busy then
-			win:Close()
+		if covered and isOpen() and not busy then
+			setOpen(false)
 		end
 	end
 	for _, screen in covers do

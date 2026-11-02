@@ -1203,6 +1203,9 @@ Config.Ui = {
 	-- screen sequence (egg pops in, 3 shakes, cracks, light leak, flash, pet + card with NEW! / x2, OK + AUTO; triple =
 	-- rarest in the middle; Mythic = dark screen + lightning, 4.2 s). false = the old hatch on the 3D stand comes back.
 	HatchV2 = true,
+	-- UI overhaul V8 (owner's 'Strike Legends - Daily Reward.html' 1A/1B): the DAILY REWARDS calendar in the new look
+	-- (6 day tiles + big day 7, CLAIM -> blue countdown, reward flies to the HUD). false = the old calendar comes back.
+	DailyV2 = true,
 	HatchV2Quick = 2, -- AUTO HATCH (and after Config.MascotFx.Hatch.AutoSkipAfter hatches) plays it this many times faster; Mythic never
 	-- Tuck while bowling (owner 2026-10-28: on phones the HUD hid the lane): from the moment you start a throw, these
 	-- HUD pieces slide off the nearest screen edge; IdleSeconds after your last throw they slide back (Time = slide

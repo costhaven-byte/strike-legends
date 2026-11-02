@@ -243,6 +243,8 @@ AssetSlots.Images = {
 	-- V7 hatch: round ray discs (white 10/14 deg wedges, tinted per rarity; Mythic = pink/gold/blue wedges)
 	V2_hatch_rays_disc = 137569579792109, -- assets/ui_v2/hatch_rays_disc.png
 	V2_hatch_rays_mythic = 104283304212732, -- assets/ui_v2/hatch_rays_mythic.png
+	-- V8 daily: the countdown clock from 'Strike Legends - Daily Reward.html'
+	V2_ui_clock = 92461902976640, -- assets/ui_v2/icons/ui_clock.png
 }
 
 -- "rbxassetid://..." for an Images slot
