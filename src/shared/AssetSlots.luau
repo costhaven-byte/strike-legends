@@ -240,6 +240,9 @@ AssetSlots.Images = {
 	V2_ui_star = 121731496214218,
 	V2_ui_tick = 91592514739931,
 	V2_bg_rays = 70707268067512, -- assets/ui_v2/bg_rays_512.png: 16 white wedges, tinted per rarity behind card art
+	-- V7 hatch: round ray discs (white 10/14 deg wedges, tinted per rarity; Mythic = pink/gold/blue wedges)
+	V2_hatch_rays_disc = 137569579792109, -- assets/ui_v2/hatch_rays_disc.png
+	V2_hatch_rays_mythic = 104283304212732, -- assets/ui_v2/hatch_rays_mythic.png
 }
 
 -- "rbxassetid://..." for an Images slot

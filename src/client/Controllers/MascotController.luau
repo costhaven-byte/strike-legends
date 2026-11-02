@@ -36,6 +36,7 @@ local UiKit = require(Modules:WaitForChild("UiKit"))
 local CrateKit = require(Modules:WaitForChild("CrateKit"))
 local PetsV2 = require(Modules:WaitForChild("PetsV2"))
 local EggV2 = require(Modules:WaitForChild("EggV2"))
+local HatchV2 = require(Modules:WaitForChild("HatchV2"))
 
 local player = Players.LocalPlayer
 
@@ -43,6 +44,7 @@ local FX = Config.MascotFx
 local ECONOMY = Config.Economy.Mascots
 local PETS_V2 = Config.Ui.PetsV2 == true -- (UI overhaul V5: the new PETS window, Modules/PetsV2)
 local EGG_V2 = Config.Ui.EggV2 == true -- (UI overhaul V6: the new egg boards + FUSE PETS window, Modules/EggV2)
+local HATCH_V2 = Config.Ui.HatchV2 == true -- (UI overhaul V7: the new hatch sequence, Modules/HatchV2)
 local EGG = Config.Economy.Eggs[1] -- the Neon Egg (Id "Alley"); zone 3 and 4 eggs hatch at their own stands (Phase X)
 EGG = Mascots.GetEgg(EGG.Id) or EGG -- (Addendum 5 B2: on the roof, the egg ladder's first egg and its price)
 
@@ -1329,9 +1331,135 @@ function MascotController:Start()
 		playOnStand(result, mascot, site, camera)
 	end
 
+	-- UI overhaul V7 (Config.Ui.HatchV2): every hatch plays the new screen sequence (Modules/HatchV2) instead of the
+	-- stand scene. OK / a tap closes it; AUTO keeps hatching from the finished cards until it is stopped or coins run out.
+	local hatchV2: any = nil
+	local playV2: (result: any, mascot: any) -> ()
+	local function closeV2(keepScene: boolean?)
+		local current = hatchV2
+		hatchV2 = nil
+		if current then
+			current.Close()
+		end
+		if keepScene then
+			return
+		end
+		for _, other in hiddenGuis do
+			other.Enabled = true
+		end
+		table.clear(hiddenGuis)
+		standBusy = false
+		refreshButton()
+		local stand = stands[currentEgg.Id]
+		if stand then
+			stand.Prompt.Enabled = true
+		end
+	end
+	local function autoNextV2()
+		local current = hatchV2
+		if hatching or not current then
+			return
+		end
+		local unlocked, _, affordable = eggState(currentEgg)
+		if not unlocked or not affordable then
+			stopAuto("AUTO HATCH STOPPED: NOT ENOUGH COINS")
+			current.SetAuto(false)
+			return
+		end
+		hatching = true
+		local ok, result = pcall(hatchRemote.InvokeServer, hatchRemote, currentEgg.Id)
+		hatching = false
+		local mascot = ok and result and result.Ok and Mascots.Get(result.MascotId)
+		if hatchV2 ~= current then
+			return -- closed while waiting (the pet is still yours)
+		end
+		if not mascot then
+			stopAuto(if ok and result and result.Error then result.Error else "That didn't work. Try again")
+			current.SetAuto(false)
+			return
+		end
+		closeV2(true)
+		playV2(result, mascot)
+	end
+	playV2 = function(result, mascot)
+		hatchesThisSession += 1
+		standBusy = true
+		local stand = stands[currentEgg.Id]
+		if stand then
+			stand.Prompt.Enabled = false
+		end
+		if #hiddenGuis == 0 then
+			for _, other in playerGui:GetChildren() do
+				if other:IsA("ScreenGui") and other.Name ~= "FxUI" and other.Enabled then
+					other.Enabled = false
+					table.insert(hiddenGuis, other)
+				end
+			end
+		end
+		petsButton.Visible = false
+		closePanel()
+		local mine = owned()
+		local list = { { Mascot = mascot, IsNew = result.IsNew, Deleted = result.Deleted, Copies = mine[mascot.Id] } }
+		for _, extra in result.Extras or {} do
+			local other = Mascots.Get(extra.MascotId)
+			if other then
+				table.insert(list, { Mascot = other, IsNew = extra.IsNew, Deleted = extra.Deleted, Copies = mine[other.Id] })
+			end
+		end
+		local scene
+		scene = HatchV2.Play({
+			EggId = currentEgg.Id,
+			Pets = list,
+			Quick = autoHatch or hatchesThisSession > FX.Hatch.AutoSkipAfter,
+			Auto = autoHatch,
+			SkipFrom = FX.Hatch.SkipFrom,
+			OnRevealed = function()
+				if autoHatch then
+					task.delay(FX.Hatch.AutoNextDelay, function()
+						if autoHatch and hatchV2 == scene then
+							autoNextV2()
+						end
+					end)
+				end
+			end,
+			OnOk = function()
+				if hatchV2 == scene then
+					stopAuto()
+					closeV2()
+				end
+			end,
+			OnAuto = function()
+				if hatchV2 ~= scene then
+					return
+				end
+				if autoHatch then
+					stopAuto()
+					scene.SetAuto(false)
+					return
+				end
+				local unlocked, _, affordable = eggState(currentEgg)
+				if not unlocked or not affordable then
+					showToast("NOT ENOUGH COINS")
+					return
+				end
+				autoHatch = true
+				paintAuto()
+				scene.SetAuto(true)
+				if scene.Revealed() then
+					autoNextV2()
+				end
+			end,
+		})
+		hatchV2 = scene
+	end
+
 	local function play(result)
 		local mascot = Mascots.Get(result.MascotId)
 		if not mascot then
+			return
+		end
+		if HATCH_V2 then
+			playV2(result, mascot)
 			return
 		end
 		local stand = stands[currentEgg.Id]
@@ -1393,7 +1521,7 @@ function MascotController:Start()
 	end
 
 	doHatch = function(egg)
-		if hatching or overlay.Visible then
+		if hatching or overlay.Visible or hatchV2 then
 			return
 		end
 		egg = egg or EGG

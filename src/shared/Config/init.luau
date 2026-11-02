@@ -1199,6 +1199,11 @@ Config.Ui = {
 	-- odds, auto-delete X, HATCH / AUTO / x3; sizes in Config.EggBoard) and the FUSE PETS window in the new look.
 	-- false = the old odds bubbles + price line and the old PET FUSION window come back.
 	EggV2 = true,
+	-- UI overhaul V7 (owner's 'Strike Legends Pets UI.html' hatch frames F1-F9, T1, M1-M5): every hatch plays the new
+	-- screen sequence (egg pops in, 3 shakes, cracks, light leak, flash, pet + card with NEW! / x2, OK + AUTO; triple =
+	-- rarest in the middle; Mythic = dark screen + lightning, 4.2 s). false = the old hatch on the 3D stand comes back.
+	HatchV2 = true,
+	HatchV2Quick = 2, -- AUTO HATCH (and after Config.MascotFx.Hatch.AutoSkipAfter hatches) plays it this many times faster; Mythic never
 	-- Tuck while bowling (owner 2026-10-28: on phones the HUD hid the lane): from the moment you start a throw, these
 	-- HUD pieces slide off the nearest screen edge; IdleSeconds after your last throw they slide back (Time = slide
 	-- seconds). Coins, the level bar, POWER, the streak and the goal bar always stay, except POWER tucks too once it
