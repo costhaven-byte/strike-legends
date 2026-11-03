@@ -377,3 +377,14 @@ Before: File > Save to Roblox As a copy (restore = git tag `restore-polish-v2-be
 - Checked in Play (zone 2, a Heartbeat copy because Studio wasn't drawing frames): a palm leaf swings 9 degrees end
   to end, a flag 0.2 studs, a kite 1.2 studs; 9 waterfall sheets got their flow; stepping on the sell pad made the
   ring. Console clean (one parse error came from a broken test copy of mine, not the game).
+
+## L5 world clean-up (tag restore-pl-L5-before)
+- Checked by code (Studio wasn't drawing the 3D view this session, so no eye-check): zones 2-4 stand on terrain, so
+  stepping off their edges lands you on ground. Zone 1 is a roof ~1,300 studs up: glass rails close most sides, but
+  some sides (behind the lanes) open straight into the void, where you fell to your death and waited to respawn.
+- New fall rescue (`Config.WorldLife.FallRescue` = 80): fall more than 80 studs below where you last stood and you're
+  put back there (the D3 wipe hides the jump). Teleports (shop, sell, gates, rebirth) don't count as falls.
+- Checked in Play: stepped off the roof edge, dropped to 776, was put back on the roof alive; zone 2 travel right
+  after landed in zone 2 (not pulled back).
+- Not done (needs eyes on the 3D view): part-built leftovers next to designed models, hero prop scale, gaps,
+  z-fighting, unused display cases in zones 2-3. These go to the owner's playtest walk-around (each zone's edges).

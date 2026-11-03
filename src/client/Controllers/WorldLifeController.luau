@@ -375,11 +375,39 @@ local function watchPads()
 	end)
 end
 
+-- Polish v2 L5: falling far below where you last stood puts you back there (the D3 wipe covers the jump)
+local function watchFalls()
+	local lastSafe: CFrame? = nil
+	local lastAt: Vector3? = nil
+	local JUMP = Config.Motion.Wipe.Jump
+	RunService.Heartbeat:Connect(function()
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if not root or not humanoid or humanoid.Health <= 0 then
+			lastSafe, lastAt = nil, nil
+			return
+		end
+		-- (a teleport — shop, sell, gates, rebirth — isn't a fall: start over from the new spot)
+		if lastAt and (root.Position - lastAt).Magnitude > JUMP then
+			lastSafe = nil
+		end
+		lastAt = root.Position
+		if humanoid.FloorMaterial ~= Enum.Material.Air then
+			lastSafe = root.CFrame
+		elseif lastSafe and root.Position.Y < lastSafe.Position.Y - LIFE.FallRescue then
+			root.AssemblyLinearVelocity = Vector3.zero
+			character:PivotTo(lastSafe + Vector3.new(0, 3, 0))
+		end
+	end)
+end
+
 function WorldLifeController:Start()
 	if not LIFE.Enabled then
 		return
 	end
 	watchPads()
+	watchFalls()
 	task.spawn(function()
 		task.wait(3) -- (the zones are built by then)
 		local zones: { Zone } = {}

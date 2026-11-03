@@ -4678,6 +4678,9 @@ Config.WorldLife = {
 	Balloon = { Bob = 1.5, Speed = 0.3 },
 	Waterfall = { Speed = 10, Tile = 8, Transparency = 0.45, Foam = 10 }, -- studs/second down, foam puffs/second
 	PadPulse = { Grow = 1.8, Time = 0.5, Sound = "Tap" },
+	-- Polish v2 L5: fall more than this many studs below where you last stood (off the zone 1 roof into the void) and
+	-- you're put back there (the teleport wipe hides it) instead of dying and waiting to respawn
+	FallRescue = 80,
 }
 
 -- Polish v2 D4: how pets move (MascotFollowController, the egg stands, the egg board)
