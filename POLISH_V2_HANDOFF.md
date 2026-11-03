@@ -3,7 +3,7 @@
 Updated after every stage. If you're picking this up: read CLAUDE.md, PROJECT_STATE.md, POLISH_PLAN_V2.md,
 POLISH_V2_REPORT.md (what's done), then this file (where it stopped).
 
-## Where it stands (2026-11-03, end of first session: weekly usage ~92%, context nearly full)
+## Where it stands (2026-11-03, second session: weekly usage 94% after L4)
 - Run started with weekly usage at 87%. Stop rule from the owner: stop at 95% of the 5-hour limit or 98% weekly.
 - DONE: L0 (before the run, ffe84c0), U1 (492a81d), TUT tutorial (7346708; owner's extra ask mid-run: "really
   concise tutorial, show not tell, reward each step" = Config.Tutorial, TutorialService, TutorialController, save v39).
@@ -18,7 +18,10 @@ POLISH_V2_REPORT.md (what's done), then this file (where it stopped).
 - DONE: U3 part 1b = rarity names under board pets + AUTO-DELETE gear mode (see report).
 - DONE (second session, 2026-11-03): U3 part 2 = grid egg board (615df90, Config.EggBoard.Grid).
 - DONE: L2 zone 1 colours + lighting (b7a976c).
-- NEXT: L3 (zones 2-4 own Look rows), L4, D2, Q3 fixes, T1-T3. Studio is visible: screen_capture draws the 3D world.
+- DONE: L3 zones 2-4 own light (9c7cbaa).
+- DONE: L4 sell/shop pads per zone (d58d354). Left from L4: egg rings, gate landings, beams, sign style.
+- NEXT: Q3 fixes (biggest win: move the old loop's areas MainStreetLanes/BackAlley/NeonAlley/Hub/Showcase out of
+  Workspace carefully; CastShadow off on ~1,900 small parts), D2, T1-T3. Studio is visible: screen_capture works.
 - Testing tricks: TEST panel remote `ReplicatedStorage.Remotes.TestPanel:InvokeServer("Coins")` (x10 coins) and
   `("Pass", "TripleHatch")` (toggle a pass). Camera: RunService:BindToRenderStep at Last+10 setting cam.CFrame.
   Studio's mouse tool can't click buttons on 3D billboards; simulated E doesn't fire ProximityPrompts.

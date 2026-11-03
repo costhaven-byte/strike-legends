@@ -121,6 +121,34 @@ Already done before this run (ffe84c0).
 - Zones 2-4 still borrow this look until L3 gives each its own row.
 - Shots: screenshots/polish_v2/before/zone1_*.jpg vs after/zone1_*.jpg.
 
+## L3 lighting for zones 2-4 (9c7cbaa, tag restore-pl-L3-before)
+- Each outdoor zone has its own light now (its `LookChanges` in Config.CoreLoop.Zones.List; before, zones 2-3 borrowed
+  the rooftop's look):
+  - Sunset Boardwalk: late golden sun (16.8), peach haze, warm shadow fill.
+  - Jungle Falls: high sun through a light green haze, green shadow fill.
+  - Canyon Oasis: hot and golden (bright sun, warm sand fill, a little less exposure so the sand doesn't blow out).
+- The lighting recipe (allowed ranges for Brightness, Exposure, Ambient, Haze, Bloom...) is written in Config.Zones
+  above LookBlend, so later work stays consistent.
+- Self-test: TEST panel jumps 2 -> 3 -> 4, each zone takes its own look, lane readable in all of them (shots in
+  screenshots/polish_v2/after/zone2-4_lane.jpg). Console: only the two known warnings.
+- Not checked: the 0.6 s fade itself frame by frame, effects (trails, hatch, fever) under each light, phone graphics
+  level. In the owner playtest.
+
+## L4 pads that match their zone (d58d354, tag restore-pl-L4-before)
+- Every sell / shop pad is dressed like its zone's stalls (`Config.CoreLoop.PadStyles`, CoreLoopService `dressPad`):
+  - Zone 1 rooftop: painted metal floor plate (diamond plate) with 8 gold bolts, dark slate rim.
+  - Zone 2 boardwalk: round plank deck with a rope rim.
+  - Zone 3 jungle: carved stone disc with moss patches over the rim.
+  - Zone 4 canyon: sandstone tile with a carved, notched edge.
+- Green (sell) / blue (shop) stays as a ring inlay, so players still know what each pad does. Same size, and the
+  server's stand check (a distance) is unchanged. The sell coin sits on the new plate.
+- PadStyles = nil brings the plain white-rim circles back.
+- Self-test: zones 1 and 2 looked at (screenshots/polish_v2/after/zone1_pads.jpg, zone2_pads.jpg); zones 3-4 built
+  without errors but not looked at. Selling / opening the shop by standing on a pad not re-tried (the check code
+  didn't change).
+- Not done from L4: egg stand rings, gate landings, rebirth spot, display case bases, per-zone hint beams, one
+  style for every station billboard.
+
 ## Console notes for T1 (seen on every join)
 - "rbxassetid://203785492 failed due to: Asset type does not match requested type" x4.
 - "[ShowcaseController] zone 4: 10 balls to show but only 6 slots".
