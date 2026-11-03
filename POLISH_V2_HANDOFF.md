@@ -3,7 +3,7 @@
 Updated after every stage. If you're picking this up: read CLAUDE.md, PROJECT_STATE.md, POLISH_PLAN_V2.md,
 POLISH_V2_REPORT.md (what's done), then this file (where it stopped).
 
-## Where it stands (2026-11-03, second session: weekly usage 94% after L4)
+## Where it stands (2026-11-03, second session: weekly usage 96% after D2 part 1)
 - Run started with weekly usage at 87%. Stop rule from the owner: stop at 95% of the 5-hour limit or 98% weekly.
 - DONE: L0 (before the run, ffe84c0), U1 (492a81d), TUT tutorial (7346708; owner's extra ask mid-run: "really
   concise tutorial, show not tell, reward each step" = Config.Tutorial, TutorialService, TutorialController, save v39).
@@ -21,13 +21,19 @@ POLISH_V2_REPORT.md (what's done), then this file (where it stopped).
 - DONE: L3 zones 2-4 own light (9c7cbaa).
 - DONE: L4 sell/shop pads per zone (d58d354). Left from L4: egg rings, gate landings, beams, sign style.
 - DONE: Q3 part 1 small-decor shadows off (Config.Perf, PerfController).
-- NEXT: Q3 rest (biggest win: move the old loop's areas MainStreetLanes/BackAlley/NeonAlley/Hub/Showcase out of
-  Workspace carefully; CastShadow off on ~1,900 small parts), D2, T1-T3. Studio is visible: screen_capture works.
+- DONE (third stretch, weekly 96%): T1 BUY BEST "second tap" = not a tap bug; the grey button showed the next
+  locked-zone price. Now says OPEN ZONE n (2eb2064). Q3 part 2: old areas leave each screen 12 s after join,
+  client only (5822616, 17,244 -> 11,586 parts). D2 started: coin/gem flies swoop on a curve (4066115).
+- NEXT: D2 rest (AN2 items 1-3: throw approach, meter spring, ball hook + glint, pin weight, strike letters; item 5
+  curved pin chips + bag squash), then T1 full bug hunt -> BUG_HUNT_REPORT.md, T2 fixes, T3 final check.
+  Studio is visible: screen_capture draws the 3D world. To see a sell without pins: Server execute
+  `Remotes.CoreSold:FireClient(player, 125000, 2.5, {})` (no data change).
 - Testing tricks: TEST panel remote `ReplicatedStorage.Remotes.TestPanel:InvokeServer("Coins")` (x10 coins) and
   `("Pass", "TripleHatch")` (toggle a pass). Camera: RunService:BindToRenderStep at Last+10 setting cam.CFrame.
   Studio's mouse tool can't click buttons on 3D billboards; simulated E doesn't fire ProximityPrompts.
-- T1 suspect: second BUY BEST tap with 10K coins ("+140 5.3K") bought nothing (CoreBuy remote works directly).
-- NOT STARTED: L1, L3-L6, U4-U5, D1-D7, Q1-Q3, T1-T3. Must-finish order from the plan: L2, L3, L4, U2, U3, D2, Q3, T1-T3.
+  Studio play = fresh save each time (Config.Onboarding.StudioNewPlayer); shop buys need standing on the
+  zone 1 shop pad (-17, 853, -3415).
+- NOT STARTED: L1, L5, L6, U4, U5, D1, D3-D7, Q1. Must-finish left: D2 (rest), T1, T2, T3.
 - Saves: v39 Tutorial, v40 PetsFound. Next save change = v41.
 
 ## How to sync code into Studio (Rojo is often not applying)
