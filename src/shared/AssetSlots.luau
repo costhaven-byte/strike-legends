@@ -211,6 +211,10 @@ AssetSlots.Images = {
 	V2_pass_super_lucky = 80590885574213,
 	V2_pass_triple_hatch = 112007126224475,
 	V2_pass_vip = 138082273546801,
+	-- launch changes 2026-11-03: owner's icons (assets/ui_v2/icons)
+	V2_pass_auto_sell = 116725165489148,
+	V2_pass_infinite_bag = 131343171392329,
+	V2_pass_op_egg = 128802650362342,
 	V2_potion_coin = 107918488493336,
 	V2_potion_coin_mega = 123583068257951,
 	V2_potion_luck = 105146958614766,
