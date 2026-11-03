@@ -16,9 +16,12 @@ POLISH_V2_REPORT.md (what's done), then this file (where it stopped).
 - DONE: U2 STORE in V2 look (re-skin, Config.Ui.StoreV2).
 - DONE: T1 early abuse checks (buy/sell spam safe), owner playtest for the done stages written in the report.
 - DONE: U3 part 1b = rarity names under board pets + AUTO-DELETE gear mode (see report).
-- NEXT: U3 part 2 (reference picture = Documents/Strike Legends Assets/refforpethatch.png: small white card of 3-across
-  pet tiles with % on top + rarity name under, price pill right of it, round AUTO-DELETE / T AUTO / R OPEN 3 /
-  E OPEN 1 buttons under it, buff lines above), then L2/L3/L4 (needs Studio visible), D2, Q3 fixes, T1-T3.
+- DONE (second session, 2026-11-03): U3 part 2 = grid egg board (615df90, Config.EggBoard.Grid).
+- DONE: L2 zone 1 colours + lighting (b7a976c).
+- NEXT: L3 (zones 2-4 own Look rows), L4, D2, Q3 fixes, T1-T3. Studio is visible: screen_capture draws the 3D world.
+- Testing tricks: TEST panel remote `ReplicatedStorage.Remotes.TestPanel:InvokeServer("Coins")` (x10 coins) and
+  `("Pass", "TripleHatch")` (toggle a pass). Camera: RunService:BindToRenderStep at Last+10 setting cam.CFrame.
+  Studio's mouse tool can't click buttons on 3D billboards; simulated E doesn't fire ProximityPrompts.
 - T1 suspect: second BUY BEST tap with 10K coins ("+140 5.3K") bought nothing (CoreBuy remote works directly).
 - NOT STARTED: L1, L3-L6, U4-U5, D1-D7, Q1-Q3, T1-T3. Must-finish order from the plan: L2, L3, L4, U2, U3, D2, Q3, T1-T3.
 - Saves: v39 Tutorial, v40 PetsFound. Next save change = v41.

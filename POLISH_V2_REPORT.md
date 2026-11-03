@@ -88,6 +88,39 @@ Already done before this run (ffe84c0).
   T AUTO / R OPEN 3 / E OPEN 1 buttons with key letters, buff lines above (2X LUCK...). Reference picture:
   Documents/Strike Legends Assets/refforpethatch.png.
 
+## U3 part 2: the egg board like the reference picture (615df90, tag restore-pl-U3-2-before)
+- `Config.EggBoard.Grid = true` (false = the V6 row board): over each egg, buff lines (x2/x4/x8 LUCK, TRIPLE HATCH),
+  the egg's name on a gold tab, a white card with the pets 3 across (chance on top, the pet turning in 3D on a tile
+  in its rarity colour, rarity name under it; never found = black, rarest unfound = ???), the price pill right of the
+  card (green / red when you can't pay / FREE xN), and 4 round buttons under it: AUTO-DELETE (gear), AUTO (T),
+  OPEN 3 (R), OPEN 1 (E). Key letters on computers; phones show OFF/ON, x3, x1 instead.
+- OPEN 3 without the TRIPLE HATCH pass = the pass prompt (Robux badge on the button). OPEN 1 now opens one egg even
+  when you own TRIPLE HATCH (server: HatchEgg takes an optional count 1). AUTO still opens as many as your passes give.
+- R and T only work while the board is up and you're not typing. E is still the stand's hold prompt.
+- The PET EGGS sign now sits above the board instead of covering it.
+- `Config.EggBoard.GridHeight` = how high the board floats over the egg.
+- Self-test (zone 1, computer): board matches the picture; R opened 3 (2,250 coins), T auto-hatched until coins ran
+  out, OPEN 1 through the remote charged 750 with TRIPLE HATCH on; found pets turned coloured and ??? moved to the
+  next rarest. Console clean. Not tested by a real tap (Studio's mouse tool can't click 3D billboards): the four
+  buttons and E; in the owner playtest. Zones 2-4 boards not looked at yet.
+
+## L2 zone 1 colours + lighting (b7a976c, tag restore-pl-L2-before)
+- Zone 1's day paint now comes from one named palette taken from the owner's zone 1 stalls (sky-blue steel, warm
+  wood, cream, slate, gold): `Config.CoreLoop.Zone1Palette` + `Zone1Paint` (old place colour -> palette name). The
+  old one-off picks (sky-blue/mint/coral/sand city) are written in the comment.
+  - Roof floor: lilac grey -> warm mid concrete (8F8B85), so the teal lane and the stalls pop.
+  - Bowlers' approach: khaki -> warm maple (A88A66; lighter shades glared white in the sun).
+  - Tower walls: lilac white -> cream stone; tower glass -> the stalls' sky glass.
+  - Far city blocks: cream stone, sand, warm brick, a darker stall-blue (so they don't melt into the sky); ground
+    below: richer park green; helipad + gutters: the stalls' dark slate; helicopter: stall blue.
+- Light (zone 1 Look row): sun later in the day (ClockTime 15.3: longer shadows on the lane, the tower's front in
+  shade), Brightness 2, sky-blue fill in the shadows (was grey), exposure -0.05 (cream and white no longer blow
+  out), contrast 0.14, thinner haze (0.26 / 0.35), bloom 0.06. Old values in the Config comment.
+- Night leftovers: the lit windows, fill lights and helipad lamp were already off (DayNeon / DayLightsOff); the
+  small string-light bulbs on props stay (they're decor).
+- Zones 2-4 still borrow this look until L3 gives each its own row.
+- Shots: screenshots/polish_v2/before/zone1_*.jpg vs after/zone1_*.jpg.
+
 ## Console notes for T1 (seen on every join)
 - "rbxassetid://203785492 failed due to: Asset type does not match requested type" x4.
 - "[ShowcaseController] zone 4: 10 balls to show but only 6 slots".
