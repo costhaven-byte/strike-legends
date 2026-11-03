@@ -317,3 +317,20 @@ Before: File > Save to Roblox As a copy (restore = git tag `restore-polish-v2-be
   after (0.04); doze + z after 33 s still; egg rocks up to 5 degrees and settles back exactly (0.000 drift); board
   flip after a real hatch (Breezy: 100 px black -> 3 px -> 100 px colour); equip hop peaks ~2.3 studs over its
   start (tested with a Heartbeat copy: Studio stopped drawing frames when its window was hidden). Console clean.
+
+## L6 ball effect colours (tag restore-pl-L6-before)
+- Every ladder ball's effect (trail, sparkles, light, floor streak) now takes its colour from its v2 paint:
+  `Config.BallVfx.V2Paint` (40 rows from assets/v2_balls/spec.json: Main = the ball's most vivid colour, dark ones
+  lifted so a trail still glows; Accent = its gem / insert). BallFx turns each look to the paint's hue and pulls its
+  colours close to it (`V2Spread` 0.3), keeping each colour's lightness, so white cores stay white. The Rainbow Arc
+  and Confetti Popper keep all their colours.
+- The plain `Trail` colour of the 40 balls (pin bursts, lane follow lights) is the paint too (old value in a comment).
+- Trail styles were matched to the OLD ball names (the ids stayed when the v2 balls came in): the Coral Crusher
+  trailed fire, the Tide Turner toxic goo, the Golden Sphinx a galaxy. Re-matched to the v2 themes: Sky for Cloud
+  Roll / Gust / Tornado / Kite Flyer / Dust Devil / Sandstorm, Storm for Sunbolt / Monsoon, Solar for Sunspike /
+  Sun Disc, Gold for Lighthouse / Temple Stone / Jungle King / Golden Sphinx, Galaxy for Sonic Boom, Dawn for Sunset
+  Splash, Toxic (venom) for Scorpion; the rest draw Stardust in their own colours.
+- Kept on purpose: each ball's signature hit effect keeps its theme colour (the lighthouse beam is yellow light, the
+  waterfall blue water), and the themed styles keep their own colours (fire is orange).
+- Checked in Play, all 40 balls built through BallFx: every ball's effect is 65-100% on its paint's hue (Scorpion
+  55%: its green venom style). Before: 18 balls were mostly another colour.

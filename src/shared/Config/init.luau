@@ -2263,17 +2263,81 @@ Config.BallVfx = {
 			Light = { Color = Color3.fromRGB(255, 160, 130), Brightness = 2, Range = 7 },
 		},
 	},
-	-- Which balls draw which style (ball Id -> TrailStyles name), matched to the ball's name
+	-- Which balls draw which style (ball Id -> TrailStyles name), matched to the ball's name.
+	-- Polish v2 L6: re-matched to the v2 balls (the ids kept their old names: Magma is now the Coral Crusher, so it
+	-- lost its fire; Dragon is the Monsoon = Storm). Balls not listed draw Stardust in their own repainted colours.
+	-- Was: Electric/Thunder/Plasma = Electric, Toxic = Toxic, Frostbite/DumpsterDiamond/Crystal = Ice,
+	-- Magma/Inferno/Dragon = Fire, Galaxy/Nebula/Void/Supernova = Galaxy, SolidGold = Gold.
 	BallStyles = {
-		Electric = "Electric", Thunder = "Electric", Plasma = "Electric", Lightning = "Storm",
-		Toxic = "Toxic",
-		Frostbite = "Ice", DumpsterDiamond = "Ice", Crystal = "Ice",
-		Magma = "Fire", Inferno = "Fire", Dragon = "Fire", Sunburst = "Solar", Daybreak = "Dawn",
-		Galaxy = "Galaxy", Nebula = "Galaxy", Void = "Galaxy", Supernova = "Galaxy", CloudSwirl = "Sky",
-		Golden = "Gold", Championship = "Gold", SolidGold = "Gold",
+		CloudSwirl = "Sky", -- Cloud Roll
+		Frostbite = "Sky", -- Gust
+		Lightning = "Storm", -- Sunbolt
+		Sunburst = "Solar", -- Sunspike
+		Daybreak = "Galaxy", -- Sonic Boom (its signature is a black hole + boom)
+		SolidGold = "Sky", -- Tornado
+		Electric = "Sky", -- Kite Flyer
+		Golden = "Gold", -- Lighthouse Beam
+		Thunder = "Dawn", -- Sunset Splash
+		Void = "Gold", -- Jungle King
+		Dragon = "Storm", -- Monsoon
+		Championship = "Gold", -- Temple Stone
+		Hubcap = "Sky", -- Dust Devil
+		RustBucket = "Sky", -- Sandstorm
+		Scorpion = "Toxic", -- Scorpion (venom)
+		Perfect300 = "Solar", -- Sun Disc
+		Supernova = "Gold", -- Golden Sphinx
 	},
 	-- Mythic balls also send glowing shock rings across the lane in their trail's colours
 	MythicShockwave = { Rate = 4, Size = { 0.6, 3.5 }, Life = 0.7, Transparency = 0.35, Emission = 0.8 },
+	-- Polish v2 L6: each ladder ball's v2 paint (from assets/v2_balls/spec.json: Main = its most vivid colour, dark ones
+	-- lifted so a trail still glows; Accent = its gem / insert colour). Every effect colour of the ball (trail, sparkles,
+	-- light, rings) is turned to Main's hue keeping its own lightness, so whites stay white (BallFx.lookFor). The trail
+	-- styles with a theme of their own (Fire, Solar...) keep their colours. V2Spread: how much of each colour's distance
+	-- round the colour wheel from the look's average it keeps (0 = all one hue, 1 = only turned); Spread on a row
+	-- overrides it (the rainbow and confetti balls keep all their colours).
+	V2Spread = 0.3,
+	V2Paint = {
+		Tangerine = { Main = Color3.fromHex("F9C66D"), Accent = Color3.fromHex("E0A24C") }, -- Z1_beach_roller
+		CloudSwirl = { Main = Color3.fromHex("73C6FD"), Accent = Color3.fromHex("FFD66B") }, -- Z1_cloud_roll
+		Lime = { Main = Color3.fromHex("F587AF"), Accent = Color3.fromHex("FF4FA3"), Spread = 1 }, -- Z1_confetti_popper
+		Frostbite = { Main = Color3.fromHex("49B7F8"), Accent = Color3.fromHex("8BD4FF") }, -- Z1_gust
+		Crystal = { Main = Color3.fromHex("FFA13F"), Accent = Color3.fromHex("FFC07F"), Spread = 1 }, -- Z1_rainbow_arc
+		Bubblegum = { Main = Color3.fromHex("FC5746"), Accent = Color3.fromHex("C7362A") }, -- Z1_rubber_bouncer
+		Daybreak = { Main = Color3.fromHex("2A82B5"), Accent = Color3.fromHex("FF4FD8") }, -- Z1_sonic_boom
+		Lightning = { Main = Color3.fromHex("FFA332"), Accent = Color3.fromHex("FFE45C") }, -- Z1_sunbolt
+		Sunburst = { Main = Color3.fromHex("FF7916"), Accent = Color3.fromHex("FF7A1A") }, -- Z1_sunspike
+		SolidGold = { Main = Color3.fromHex("83B9EF"), Accent = Color3.fromHex("5FD4FF") }, -- Z1_tornado
+		Sunset = { Main = Color3.fromHex("FF735E"), Accent = Color3.fromHex("FFAA9E") }, -- Z2_beach_ball
+		Magma = { Main = Color3.fromHex("FE7460"), Accent = Color3.fromHex("F0D696") }, -- Z2_coral_crusher
+		Electric = { Main = Color3.fromHex("3ACEDA"), Accent = Color3.fromHex("F0D696") }, -- Z2_kite_flyer
+		Golden = { Main = Color3.fromHex("D02934"), Accent = Color3.fromHex("40CED6") }, -- Z2_lighthouse_beam
+		Plasma = { Main = Color3.fromHex("C87154"), Accent = Color3.fromHex("40CED6") }, -- Z2_pier_pounder
+		Ocean = { Main = Color3.fromHex("D28674"), Accent = Color3.fromHex("E39A88") }, -- Z2_seashell_spinner
+		Thunder = { Main = Color3.fromHex("FF9A4C"), Accent = Color3.fromHex("FFD86B") }, -- Z2_sunset_splash
+		Galaxy = { Main = Color3.fromHex("F03931"), Accent = Color3.fromHex("40CED6") }, -- Z2_surf_rider
+		Toxic = { Main = Color3.fromHex("34CDD5"), Accent = Color3.fromHex("7CF5FB") }, -- Z2_tide_turner
+		Nebula = { Main = Color3.fromHex("6DDCE3"), Accent = Color3.fromHex("A6F5F7") }, -- Z2_tsunami
+		CherrySwirl = { Main = Color3.fromHex("D98541"), Accent = Color3.fromHex("FFBF8D") }, -- Z3_coconut
+		TigerSwirl = { Main = Color3.fromHex("FF9630"), Accent = Color3.fromHex("FFB670") }, -- Z3_jaguar
+		Void = { Main = Color3.fromHex("FFC93A"), Accent = Color3.fromHex("B6F05A") }, -- Z3_jungle_king
+		Phantom = { Main = Color3.fromHex("C8BA58"), Accent = Color3.fromHex("B6F05A") }, -- Z3_leaf_storm
+		Dragon = { Main = Color3.fromHex("58CAD9"), Accent = Color3.fromHex("46D2DC") }, -- Z3_monsoon
+		Inferno = { Main = Color3.fromHex("CEAA5B"), Accent = Color3.fromHex("FF9632") }, -- Z3_rope_bridge
+		Championship = { Main = Color3.fromHex("5DBA51"), Accent = Color3.fromHex("3FD07A") }, -- Z3_temple_stone
+		BlueMarble = { Main = Color3.fromHex("FB952E"), Accent = Color3.fromHex("FF9632") }, -- Z3_toucan_roll
+		LeagueBlack = { Main = Color3.fromHex("77D96A"), Accent = Color3.fromHex("60B854") }, -- Z3_vine_swinger
+		PearlPro = { Main = Color3.fromHex("53D7E1"), Accent = Color3.fromHex("46D2DC") }, -- Z3_waterfall
+		DumpsterDiamond = { Main = Color3.fromHex("FF8CBD"), Accent = Color3.fromHex("FF6FA8") }, -- Z4_cactus_roller
+		CanyonEcho = { Main = Color3.fromHex("77AFD9"), Accent = Color3.fromHex("38C8C8") }, -- Z4_canyon_echo
+		Hubcap = { Main = Color3.fromHex("E49665"), Accent = Color3.fromHex("FFC846") }, -- Z4_dust_devil
+		Supernova = { Main = Color3.fromHex("FFCC51"), Accent = Color3.fromHex("38C8C8") }, -- Z4_golden_sphinx
+		DuctTape = { Main = Color3.fromHex("DB794F"), Accent = Color3.fromHex("38C8C8") }, -- Z4_mesa_smash
+		Mirage = { Main = Color3.fromHex("4CC0D4"), Accent = Color3.fromHex("B79CFF") }, -- Z4_mirage
+		Rookie = { Main = Color3.fromHex("EFB65A"), Accent = Color3.fromHex("38C8C8") }, -- Z4_oasis_spring
+		RustBucket = { Main = Color3.fromHex("DC9A4D"), Accent = Color3.fromHex("FFC846") }, -- Z4_sandstorm
+		Scorpion = { Main = Color3.fromHex("CEA145"), Accent = Color3.fromHex("E8423A") }, -- Z4_scorpion
+		Perfect300 = { Main = Color3.fromHex("E3A329"), Accent = Color3.fromHex("38C8C8") }, -- Z4_sun_disc
+	},
 	Balls = {
 		-- Back Alley balls: effects from the design notes (tape scraps, rust sparks, chrome glint, crystal shards)
 		DuctTape = {
@@ -3099,7 +3163,7 @@ Config.Balls = {
 		Forgiveness = 0,
 		Color = Color3.fromRGB(0, 220, 255),
 		Material = Enum.Material.Neon,
-		Trail = Color3.fromRGB(0, 220, 255),
+		Trail = Color3.fromHex("EFB65A"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(0, 220, 255))
 		InCrates = false,
 	},
 	{
@@ -3111,7 +3175,7 @@ Config.Balls = {
 		Forgiveness = 0,
 		Color = Color3.fromRGB(255, 130, 200),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromRGB(255, 170, 220),
+		Trail = Color3.fromHex("FC5746"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(255, 170, 220))
 		Traits = { Lucky = 0.1 },
 	},
 	{
@@ -3123,7 +3187,7 @@ Config.Balls = {
 		Forgiveness = 0,
 		Color = Color3.fromRGB(160, 255, 60),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromRGB(190, 255, 120),
+		Trail = Color3.fromHex("F587AF"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(190, 255, 120))
 		Traits = { Curve = 0.05 },
 	},
 	{
@@ -3135,7 +3199,7 @@ Config.Balls = {
 		Forgiveness = 0,
 		Color = Color3.fromRGB(255, 150, 40),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromRGB(255, 190, 90),
+		Trail = Color3.fromHex("F9C66D"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(255, 190, 90))
 		Traits = { Heavy = 0.05 },
 	},
 	{
@@ -3147,7 +3211,7 @@ Config.Balls = {
 		Forgiveness = 0.005,
 		Color = Color3.fromRGB(30, 90, 200),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromRGB(60, 140, 255),
+		Trail = Color3.fromHex("D28674"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(60, 140, 255))
 		Traits = { GemHunter = 0.01 },
 	}, -- Back Alley balls (owner's "Back Alley Bowling Assets" design, 2026-10-20): junk turned into prizes
 	{
@@ -3159,7 +3223,7 @@ Config.Balls = {
 		Forgiveness = 0,
 		Color = Color3.fromHex("C0C4C9"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromHex("C7CCD2"),
+		Trail = Color3.fromHex("DB794F"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("C7CCD2"))
 		Traits = { Lucky = 0.05 },
 	},
 	{
@@ -3171,7 +3235,7 @@ Config.Balls = {
 		Forgiveness = 0,
 		Color = Color3.fromHex("D2692A"),
 		Material = Enum.Material.Metal,
-		Trail = Color3.fromHex("D2692A"),
+		Trail = Color3.fromHex("DC9A4D"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("D2692A"))
 		Traits = { Heavy = 0.03 },
 	},
 
@@ -3185,7 +3249,7 @@ Config.Balls = {
 		Forgiveness = 0.01,
 		Color = Color3.fromRGB(40, 120, 255),
 		Material = Enum.Material.Neon,
-		Trail = Color3.fromRGB(120, 200, 255),
+		Trail = Color3.fromHex("3ACEDA"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(120, 200, 255))
 		Traits = { Curve = 0.12 },
 	},
 	{
@@ -3197,7 +3261,7 @@ Config.Balls = {
 		Forgiveness = 0.01,
 		Color = Color3.fromRGB(90, 255, 40),
 		Material = Enum.Material.Neon,
-		Trail = Color3.fromRGB(140, 255, 60),
+		Trail = Color3.fromHex("34CDD5"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(140, 255, 60))
 		Traits = { Blast = 0.15 },
 	},
 	{
@@ -3209,7 +3273,7 @@ Config.Balls = {
 		Forgiveness = 0.015,
 		Color = Color3.fromRGB(255, 90, 60),
 		Material = Enum.Material.Neon,
-		Trail = Color3.fromRGB(255, 200, 60),
+		Trail = Color3.fromHex("FF735E"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(255, 200, 60))
 		Traits = { Lucky = 0.3 },
 	},
 	{
@@ -3222,7 +3286,7 @@ Config.Balls = {
 		Forgiveness = 0.015,
 		Color = Color3.fromRGB(180, 240, 255),
 		Material = Enum.Material.Ice,
-		Trail = Color3.fromRGB(200, 250, 255),
+		Trail = Color3.fromHex("49B7F8"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(200, 250, 255))
 		Traits = { Heavy = 0.15 },
 	},
 	{
@@ -3234,7 +3298,7 @@ Config.Balls = {
 		Forgiveness = 0.01,
 		Color = Color3.fromHex("E9EEF3"),
 		Material = Enum.Material.Metal,
-		Trail = Color3.fromHex("7DF0A6"),
+		Trail = Color3.fromHex("E49665"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("7DF0A6"))
 		Traits = { Curve = 0.06 },
 	},
 
@@ -3248,7 +3312,7 @@ Config.Balls = {
 		Forgiveness = 0.02,
 		Color = Color3.fromRGB(255, 70, 20),
 		Material = Enum.Material.CrackedLava,
-		Trail = Color3.fromRGB(255, 120, 30),
+		Trail = Color3.fromHex("FE7460"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(255, 120, 30))
 		Traits = { Blast = 0.35 },
 	},
 	{
@@ -3260,7 +3324,7 @@ Config.Balls = {
 		Forgiveness = 0.02,
 		Color = Color3.fromRGB(90, 40, 180),
 		Material = Enum.Material.Neon,
-		Trail = Color3.fromRGB(200, 120, 255),
+		Trail = Color3.fromHex("F03931"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(200, 120, 255))
 		Traits = { Lucky = 0.75 },
 	},
 	{
@@ -3272,7 +3336,7 @@ Config.Balls = {
 		Forgiveness = 0.025,
 		Color = Color3.fromRGB(255, 240, 60),
 		Material = Enum.Material.Neon,
-		Trail = Color3.fromRGB(255, 255, 160),
+		Trail = Color3.fromHex("FF9A4C"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(255, 255, 160))
 		Traits = { StreakSaver = 60 },
 	},
 	{
@@ -3285,7 +3349,7 @@ Config.Balls = {
 		Forgiveness = 0.025,
 		Color = Color3.fromRGB(220, 220, 255),
 		Material = Enum.Material.ForceField,
-		Trail = Color3.fromRGB(180, 180, 255),
+		Trail = Color3.fromHex("C8BA58"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(180, 180, 255))
 		Traits = { Curve = 0.25 },
 	},
 	{
@@ -3297,7 +3361,7 @@ Config.Balls = {
 		Forgiveness = 0.02,
 		Color = Color3.fromHex("3CC8FF"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromHex("38C6FF"),
+		Trail = Color3.fromHex("FF8CBD"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("38C6FF"))
 		Traits = { Blast = 0.2 },
 	},
 
@@ -3311,7 +3375,7 @@ Config.Balls = {
 		Forgiveness = 0.03,
 		Color = Color3.fromRGB(255, 40, 220),
 		Material = Enum.Material.Neon,
-		Trail = Color3.fromRGB(255, 120, 240),
+		Trail = Color3.fromHex("C87154"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(255, 120, 240))
 		Traits = { Heavy = 0.4, GemHunter = 0.06 },
 	},
 	{
@@ -3323,7 +3387,7 @@ Config.Balls = {
 		Forgiveness = 0.035,
 		Color = Color3.fromRGB(120, 60, 255),
 		Material = Enum.Material.Neon,
-		Trail = Color3.fromRGB(255, 90, 200),
+		Trail = Color3.fromHex("6DDCE3"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(255, 90, 200))
 		Traits = { Lucky = 1.25, GemHunter = 0.08 },
 	},
 	{
@@ -3335,7 +3399,7 @@ Config.Balls = {
 		Forgiveness = 0.035,
 		Color = Color3.fromRGB(255, 100, 0),
 		Material = Enum.Material.Neon,
-		Trail = Color3.fromRGB(255, 40, 0),
+		Trail = Color3.fromHex("CEAA5B"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(255, 40, 0))
 		Traits = { Blast = 0.5, Curve = 0.35 },
 	},
 	-- Legendary
@@ -3349,7 +3413,7 @@ Config.Balls = {
 		Forgiveness = 0.04,
 		Color = Color3.fromRGB(255, 200, 40),
 		Material = Enum.Material.Foil,
-		Trail = Color3.fromRGB(255, 230, 120),
+		Trail = Color3.fromHex("D02934"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(255, 230, 120))
 		Traits = { Lucky = 2.0, GemHunter = 0.15 },
 	},
 	{
@@ -3362,7 +3426,7 @@ Config.Balls = {
 		Forgiveness = 0.045,
 		Color = Color3.fromRGB(200, 20, 40),
 		Material = Enum.Material.Neon,
-		Trail = Color3.fromRGB(255, 160, 0),
+		Trail = Color3.fromHex("58CAD9"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(255, 160, 0))
 		Traits = { Blast = 0.75, StreakSaver = 45 },
 	},
 	-- Mythic
@@ -3376,7 +3440,7 @@ Config.Balls = {
 		Forgiveness = 0.05,
 		Color = Color3.fromRGB(15, 0, 30),
 		Material = Enum.Material.Neon,
-		Trail = Color3.fromRGB(150, 0, 255),
+		Trail = Color3.fromHex("FFC93A"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(150, 0, 255))
 		Traits = { Curve = 0.6, StreakSaver = 30 },
 	},
 	{
@@ -3389,7 +3453,7 @@ Config.Balls = {
 		Forgiveness = 0.05,
 		Color = Color3.fromRGB(255, 255, 255),
 		Material = Enum.Material.Neon,
-		Trail = Color3.fromRGB(255, 220, 120),
+		Trail = Color3.fromHex("FFCC51"), -- (Polish v2 L6: its v2 paint; was Color3.fromRGB(255, 220, 120))
 		Traits = { Blast = 1, Heavy = 0.8 },
 	},
 	-- Main Street Lanes (zone 3, Phase X): classic league balls (marble, swirl, league). Real models from the owner's
@@ -3404,7 +3468,7 @@ Config.Balls = {
 		Forgiveness = 0.02,
 		Color = Color3.fromHex("1A1A22"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromHex("C21E37"),
+		Trail = Color3.fromHex("77D96A"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("C21E37"))
 		Traits = { Curve = 0.25 },
 	},
 	{
@@ -3416,7 +3480,7 @@ Config.Balls = {
 		Forgiveness = 0.02,
 		Color = Color3.fromHex("C21E37"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromHex("E85A6E"),
+		Trail = Color3.fromHex("D98541"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("E85A6E"))
 		Traits = { Lucky = 0.75 },
 	},
 	{
@@ -3428,7 +3492,7 @@ Config.Balls = {
 		Forgiveness = 0.025,
 		Color = Color3.fromHex("2A4FB8"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromHex("6E93E8"),
+		Trail = Color3.fromHex("FB952E"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("6E93E8"))
 		Traits = { Blast = 0.35 },
 	},
 	{
@@ -3440,7 +3504,7 @@ Config.Balls = {
 		Forgiveness = 0.03,
 		Color = Color3.fromHex("F6F1E7"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromHex("F2B9CC"),
+		Trail = Color3.fromHex("53D7E1"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("F2B9CC"))
 		Traits = { Curve = 0.35, GemHunter = 0.06 },
 	},
 	{
@@ -3452,7 +3516,7 @@ Config.Balls = {
 		Forgiveness = 0.035,
 		Color = Color3.fromHex("F08A24"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromHex("F08A24"),
+		Trail = Color3.fromHex("FF9630"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("F08A24"))
 		Traits = { Blast = 0.5, Lucky = 1.25 },
 	},
 	{
@@ -3464,7 +3528,7 @@ Config.Balls = {
 		Forgiveness = 0.04,
 		Color = Color3.fromHex("E2B24A"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromHex("E2B24A"),
+		Trail = Color3.fromHex("5DBA51"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("E2B24A"))
 		Traits = { Lucky = 2, GemHunter = 0.15 },
 	},
 	{
@@ -3476,7 +3540,7 @@ Config.Balls = {
 		Forgiveness = 0.045,
 		Color = Color3.fromHex("C21E37"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromHex("C21E37"),
+		Trail = Color3.fromHex("E3A329"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("C21E37"))
 		Traits = { Blast = 0.75, StreakSaver = 45 },
 	},
 	-- Skyline Lanes (zone 4, Phase X): sky, sun and storm balls. Real models from the owner's claude.ai/design
@@ -3491,7 +3555,7 @@ Config.Balls = {
 		Forgiveness = 0.035,
 		Color = Color3.fromHex("5AAEE8"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromHex("BFE4FF"),
+		Trail = Color3.fromHex("73C6FD"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("BFE4FF"))
 		Traits = { Lucky = 1.25, GemHunter = 0.08 },
 	},
 	{
@@ -3503,7 +3567,7 @@ Config.Balls = {
 		Forgiveness = 0.03,
 		Color = Color3.fromHex("8FE0FF"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromHex("8FE0FF"),
+		Trail = Color3.fromHex("FFA13F"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("8FE0FF"))
 		Traits = { Heavy = 0.4, GemHunter = 0.06 },
 	},
 	{
@@ -3515,7 +3579,7 @@ Config.Balls = {
 		Forgiveness = 0.04,
 		Color = Color3.fromHex("FFB52E"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromHex("FFB52E"),
+		Trail = Color3.fromHex("FF7916"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("FFB52E"))
 		Traits = { Lucky = 2, GemHunter = 0.15 },
 	},
 	{
@@ -3527,7 +3591,7 @@ Config.Balls = {
 		Forgiveness = 0.045,
 		Color = Color3.fromHex("F0B530"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromHex("FFD45A"),
+		Trail = Color3.fromHex("83B9EF"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("FFD45A"))
 		Traits = { Blast = 0.75, StreakSaver = 45 },
 	},
 	{
@@ -3539,7 +3603,7 @@ Config.Balls = {
 		Forgiveness = 0.05,
 		Color = Color3.fromHex("141A4A"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromHex("FFE45A"),
+		Trail = Color3.fromHex("FFA332"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("FFE45A"))
 		Traits = { Curve = 0.6, StreakSaver = 30 },
 	},
 	-- 2026-11-03: zone 4 ladder balls that used to share a zone 1 ball's Id (numbers copied from that ball)
@@ -3552,7 +3616,7 @@ Config.Balls = {
 		Forgiveness = 0.03,
 		Color = Color3.fromHex("8C2C2C"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromHex("E8423A"),
+		Trail = Color3.fromHex("CEA145"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("E8423A"))
 		Traits = { Heavy = 0.4, GemHunter = 0.06 },
 		InCrates = false,
 	},
@@ -3565,7 +3629,7 @@ Config.Balls = {
 		Forgiveness = 0.05,
 		Color = Color3.fromHex("3A233A"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromHex("38C8C8"),
+		Trail = Color3.fromHex("77AFD9"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("38C8C8"))
 		Traits = { Curve = 0.6, StreakSaver = 30 },
 		InCrates = false,
 	},
@@ -3578,7 +3642,7 @@ Config.Balls = {
 		Forgiveness = 0.045,
 		Color = Color3.fromHex("B4A5B9"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromHex("B79CFF"),
+		Trail = Color3.fromHex("4CC0D4"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("B79CFF"))
 		Traits = { Blast = 0.75, StreakSaver = 45 },
 		InCrates = false,
 	},
@@ -3591,7 +3655,7 @@ Config.Balls = {
 		Forgiveness = 0.05,
 		Color = Color3.fromHex("FF9C7A"),
 		Material = Enum.Material.SmoothPlastic,
-		Trail = Color3.fromHex("FF9C7A"),
+		Trail = Color3.fromHex("2A82B5"), -- (Polish v2 L6: its v2 paint; was Color3.fromHex("FF9C7A"))
 		Traits = { Blast = 1, Heavy = 0.8 },
 	},
 }

@@ -93,10 +93,70 @@ local function recolor(value, tint: Color3)
 end
 local borrowed = {}
 
+-- Polish v2 L6: the effect of a ball with a v2 paint (Config.BallVfx.V2Paint) turned to its paint's hue. Every colour
+-- keeps its lightness and its place in the look (a white core stays white, a darker edge stays darker); greys stay.
+-- The turn is from the look's average hue (weighted by how colourful each colour is) to the paint's, and every colour's
+-- distance round the colour wheel from that average shrinks to Config.BallVfx.V2Spread of it (rainbow balls keep 1).
+local function averageHue(value, sums: { number })
+	if typeof(value) == "Color3" then
+		local h, s, v = value:ToHSV()
+		if s >= 0.15 and v >= 0.2 then
+			local weight = s * v
+			sums[1] += math.cos(h * 2 * math.pi) * weight
+			sums[2] += math.sin(h * 2 * math.pi) * weight
+			sums[3] += s * weight
+			sums[4] += weight
+		end
+	elseif type(value) == "table" then
+		for _, item in value do
+			averageHue(item, sums)
+		end
+	end
+end
+local function turnHue(value, fromH: number, toH: number, spread: number, saturation: number)
+	if typeof(value) == "Color3" then
+		local h, s, v = value:ToHSV()
+		if s < 0.12 then
+			return value
+		end
+		local offset = (h - fromH + 0.5) % 1 - 0.5 -- (how far round the colour wheel from the look's average)
+		return Color3.fromHSV((toH + offset * spread) % 1, math.clamp(s * saturation, 0, 1), v)
+	elseif type(value) == "table" then
+		local copy = {}
+		for key, item in value do
+			copy[key] = turnHue(item, fromH, toH, spread, saturation)
+		end
+		return copy
+	end
+	return value
+end
+local repainted = {}
+local function repaint(look, ball)
+	local paint = VFX.V2Paint and VFX.V2Paint[ball.Id]
+	if not paint then
+		return look
+	end
+	if repainted[ball.Id] then
+		return repainted[ball.Id]
+	end
+	local sums = { 0, 0, 0, 0 }
+	averageHue(look, sums)
+	if sums[4] <= 0 then
+		return look
+	end
+	local fromH = (math.atan2(sums[2], sums[1]) / (2 * math.pi)) % 1
+	local fromS = sums[3] / sums[4]
+	local toH, toS = paint.Main:ToHSV()
+	local spread = paint.Spread or VFX.V2Spread -- (colours pulled close to the paint's hue, a little variety kept)
+	local result = turnHue(look, fromH, toH, spread, math.clamp(toS / math.max(fromS, 0.01), 0.7, 1.3))
+	repainted[ball.Id] = result
+	return result
+end
+
 local function lookFor(ball)
 	local own = VFX.Balls[ball.Id]
 	if own then
-		return own
+		return repaint(own, ball)
 	end
 	if ball.Model and ball.Tint and not ball.PlainModel and VFX.Balls[ball.Model] then
 		borrowed[ball.Id] = borrowed[ball.Id] or recolor(VFX.Balls[ball.Model], ball.Tint)
