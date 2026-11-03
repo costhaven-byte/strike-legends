@@ -22,8 +22,15 @@ local Sfx = require(Modules.Sfx)
 local ThrowController = require(script.Parent.ThrowController)
 local ShopV2 = require(Modules.ShopV2)
 
+local PetsV2 = require(Modules.PetsV2)
+local StoreController = require(script.Parent.StoreController)
+
+-- (each IsOpen exists once that window is built)
+local function isOpen(module: any): boolean
+	return module.IsOpen ~= nil and module.IsOpen() == true
+end
 local function shopOpen(): boolean
-	return (ShopV2 :: any).IsOpen ~= nil and ShopV2.IsOpen() -- (IsOpen exists once the shop window is built)
+	return isOpen(ShopV2)
 end
 
 local TUTORIAL = Config.Tutorial
@@ -221,7 +228,7 @@ function TutorialController:Start()
 		if camera and camera.CameraType == Enum.CameraType.Scriptable then
 			return true
 		end
-		if shopOpen() then
+		if shopOpen() or isOpen(StoreController) or isOpen(PetsV2) then
 			return true
 		end
 		for _, name in { "CoreShopUI", "StoreUI", "PetsV2UI", "FuseV2UI", "HatchV2UI" } do

@@ -36,6 +36,7 @@ local BallView = require(Modules:WaitForChild("BallView"))
 local CrateKit = require(Modules:WaitForChild("CrateKit"))
 local RewardKit = require(Modules:WaitForChild("RewardKit"))
 local UiKit = require(Modules:WaitForChild("UiKit"))
+local SlKit = require(Modules:WaitForChild("SlKit"))
 local Balls = require(Shared.Modules.Balls)
 
 local player = Players.LocalPlayer
@@ -92,6 +93,26 @@ if SUNNY then
 	C.Red, C.RedLip = S.Red, S.RedLip
 	C.Track = S.Dim
 	C.PressRing = S.SkyLip
+end
+
+-- Polish v2 U2 (Config.Ui.StoreV2): the STORE in the V2 look like the SHOP: navy window and tiles, ink outlines,
+-- the SlKit paints, Fredoka One everywhere, flat cards (no fading tint or dot fades). Same cards, prices and buys.
+-- false = the cream Store Kit look above.
+local STORE_V2 = Config.Ui.StoreV2 == true
+if STORE_V2 then
+	local K, P = SlKit.C, SlKit.Paints
+	C.Panel, C.Card, C.Ink = K.Window, K.Tile, K.Ink
+	C.PanelRing, C.CardRing = K.Ink, K.Ink
+	C.Body, C.GreyText = hex("BFD3F0"), K.White
+	C.Grey, C.GreyLip = P.Disabled[1], P.Disabled[2]
+	C.Gold, C.GoldLip, C.GoldDown = P.Gold[1], P.Gold[2], P.Gold[2]
+	C.Cyan = P.Blue[1]
+	C.Pink, C.PinkLip, C.PinkDown = P.Pink[1], P.Pink[2], P.Pink[2]
+	C.Lime, C.LimeLip, C.LimeDown = P.Green[1], P.Green[2], P.Green[2]
+	C.Red, C.RedLip = P.Red[1], P.Red[2]
+	C.Track = K.TileLip
+	C.PressRing = K.TileStrip
+	HEAD, BLACK, BOLD = SlKit.Font, SlKit.Font, SlKit.Font
 end
 
 -- Icon per pass / product Id (cards and the toast)
@@ -930,10 +951,12 @@ function StoreController:Start()
 			card
 		)
 		corner(art, radius)
-		local tint = make("Frame", { BackgroundColor3 = color, Size = UDim2.fromScale(1, 1) }, art)
-		fade(tint, { { 0, 0.7 }, { 0.6, 1 }, { 1, 1 } }, 75)
-		local dots = halftone(art, color, 0.76, 8)
-		fade(dots, { { 0, 1 }, { 0.4, 1 }, { 1, 0 } }, 30)
+		if not STORE_V2 then -- (V2: flat card, no fades; only the faint icon watermark)
+			local tint = make("Frame", { BackgroundColor3 = color, Size = UDim2.fromScale(1, 1) }, art)
+			fade(tint, { { 0, 0.7 }, { 0.6, 1 }, { 1, 1 } }, 75)
+			local dots = halftone(art, color, 0.76, 8)
+			fade(dots, { { 0, 1 }, { 0.4, 1 }, { 1, 0 } }, 30)
+		end
 		if not iconName then
 			return art -- a look card: its colour swatch is the picture
 		end
@@ -1760,6 +1783,9 @@ function StoreController:Start()
 		closePanel(window, panel, function()
 			return not isOpen
 		end)
+	end
+	function StoreController.IsOpen(): boolean
+		return isOpen
 	end
 	-- Polish v2 U1: the HUD PASSES button opens the store scrolled to a section ("passes"); tapping it again closes
 	function StoreController.OpenOn(section: string)

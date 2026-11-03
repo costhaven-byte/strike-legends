@@ -11,6 +11,7 @@ local SKIP = {
 	HUD = true,
 	CoreHUD = true,
 	CoreShopUI = true,
+	StoreUI = Config.Ui.StoreV2 == true, -- (Polish v2 U2: the STORE is navy now, its white text stays white)
 	ThrowUI = true,
 	JoinIntro = true, -- the owner's loading screen design
 	TestPanel = true,

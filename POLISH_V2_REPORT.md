@@ -66,3 +66,14 @@ Already done before this run (ffe84c0).
   the biggest easy win, but some old services still look for them (spin wheel, Rizzo, showcase, leaderboard walls),
   so it needs a careful pass + test. Second win: StreamingEnabled or hiding the zones you're not in on the client.
 - ~1,900 small parts (under 3 studs) cast shadows; turning CastShadow off on small decor is a cheap phone win.
+
+## U2 STORE in the V2 look (tag restore-pl-U2-before)
+- `Config.Ui.StoreV2 = true`: the STORE window uses the SHOP's look: navy window + tiles, ink outlines, SlKit paints
+  (green / gold / pink / red / blue), Fredoka One everywhere, flat cards (the fading colour tint and dot fades are
+  off; only the faint icon watermark stays). Same layout, tabs (BOOSTS / PASSES / LOOKS / GEMS), cards, prices,
+  OWNED / NO ID YET states and buy prompts; still behind `MonetizationEnabled`.
+- All passes live here (U1 took them out of the SHOP); the HUD PASSES button opens it on GAME PASSES.
+- Daylight text-darkening is skipped for the STORE (its text is white on navy now).
+- The tutorial hides while the STORE or PETS window is open.
+- Decision: a re-skin of the working STORE, not a rebuild with SlKit blocks (cheaper and keeps every buy path).
+  StoreV2 = false brings the cream look back. Not checked: phone size.

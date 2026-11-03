@@ -1228,6 +1228,9 @@ Config.Ui = {
 	-- stall and the NEXT GOAL card takes you there. The grid closes up and the PASSES button (opens the STORE on its
 	-- passes) takes the last grid spot. true = the SHOP button comes back.
 	ShopButton = false,
+	-- Polish v2 U2: the STORE window in the V2 look (navy, SlKit paints, Fredoka One, flat cards); false = the cream
+	-- Store Kit look
+	StoreV2 = true,
 	HatchV2Quick = 2, -- AUTO HATCH (and after Config.MascotFx.Hatch.AutoSkipAfter hatches) plays it this many times faster; Mythic never
 	-- Tuck while bowling (owner 2026-10-28: on phones the HUD hid the lane): from the moment you start a throw, these
 	-- HUD pieces slide off the nearest screen edge; IdleSeconds after your last throw they slide back (Time = slide
