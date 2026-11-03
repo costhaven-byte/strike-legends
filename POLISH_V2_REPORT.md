@@ -157,6 +157,16 @@ Already done before this run (ffe84c0).
 - Still to do from Q3: move the old loop's areas (MainStreetLanes, BackAlley, NeonAlley, Hub, Showcase, ~5,500 parts
   nobody can reach) out of Workspace (careful: old services still look for them), phone-size frame rate per zone.
 
+## Q3 part 2: the old areas leave the screen
+- The old loop's areas (MainStreetLanes, BackAlley, NeonAlley, Hub, Showcase) sit by the map's middle, 3,700+ studs
+  from every zone, and nobody can reach them. 12 s after joining, each player's screen moves them into a hidden
+  folder (Config.Perf.HideOld, PerfController). Client only: the server keeps them, nothing is deleted, the old
+  scripts that look them up already turned themselves off in the core loop or fail safely.
+- Measured: parts on screen 17,244 -> 11,586 (a third fewer). 60 fps on this PC before and after; no new errors.
+- Not done: a real phone fps number per zone (Studio on a PC can't measure a phone; do it in the owner playtest on a
+  phone) and StreamingEnabled (bigger change, needs its own careful pass; recommended after launch if phones lag).
+- Undo: Config.Perf.HideOld = false.
+
 ## Console notes for T1 (seen on every join)
 - "rbxassetid://203785492 failed due to: Asset type does not match requested type" x4.
 - "[ShowcaseController] zone 4: 10 balls to show but only 6 slots".

@@ -4874,6 +4874,11 @@ Config.Perf = {
 	Enabled = true,
 	NoShadowBelow = 3, -- studs
 	Folders = { "SkylineLanes", "SunsetBoardwalk", "JungleFalls", "CanyonOasis" },
+	-- Q3 part 2: the old loop's areas (~5,500 parts by the map's middle, 3,700+ studs from every zone, nobody can
+	-- get there in the core loop) leave each player's screen HideOldAfter seconds after joining. Client only: the
+	-- server keeps them, so old services that look them up still work. false = keep them.
+	HideOld = { "MainStreetLanes", "BackAlley", "NeonAlley", "Hub", "Showcase" },
+	HideOldAfter = 12, -- seconds
 }
 
 -- Coins per minute under the coin counter (polish P1, the green "+12K/min"). Server: AwayService.PerMinute.
