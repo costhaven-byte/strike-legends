@@ -976,7 +976,7 @@ function ShopV2.Start(ctx: { [string]: any })
 		card.Tick.Visible = owned
 		card.Name.Text = "INFINITE BAG"
 		card.StatIcon.Image = SlKit.Icon("hud_sell")
-		card.Stat.Text = "NO LIMIT, SELLS ITSELF"
+		card.Stat.Text = "NO LIMIT, SELL ANY TIME"
 		if owned then
 			paintButton(card, PAINT.Navy, "OWNED", "ui_tick")
 		elseif excluded then

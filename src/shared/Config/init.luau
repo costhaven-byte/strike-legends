@@ -5264,7 +5264,7 @@ Config.Monetization = {
 			PetSlots = 2,
 		},
 		-- Launch changes (owner 2026-11-03). AUTO SELL: the bag sells itself the moment it's full (at the zone you're in;
-		-- the AUTO SELL button turns it off and on). INFINITE BAG: no bag limit, pins sell the moment they land.
+		-- the AUTO SELL button turns it off and on). INFINITE BAG: no bag limit, the player sells when they choose.
 		-- Excludes = a pass that makes this one useless: owning it greys this card out and the server won't sell it.
 		-- PassId 0 = not made in Creator Hub yet: hidden in the live game until the owner puts the real ID here.
 		{
@@ -5281,9 +5281,8 @@ Config.Monetization = {
 			PassId = 0,
 			Robux = 499,
 			Name = "INFINITE BAG",
-			Text = "No bag limit. Pins turn into coins the moment they land.",
+			Text = "No bag limit. Keep bowling and sell whenever you want.",
 			InfiniteBag = true,
-			Excludes = "AutoSell",
 		},
 	},
 	-- Developer products: can be bought again and again (Once = one time only)

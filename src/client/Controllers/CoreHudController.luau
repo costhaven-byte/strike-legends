@@ -703,8 +703,8 @@ function CoreHudController:Start()
 		local share = math.clamp(amount / size, 0, 1)
 		if bagBar then
 			-- V2: green, orange from 80%, red FULL! (board A progress bar); the bag icon follows your bag level
-			-- (launch changes: the INFINITE BAG pass shows INFINITE on an empty bar)
-			bagBar:Set(amount, size, if size >= 1e17 then "INFINITE" elseif share >= 1 then "FULL!" else Currency.Format(amount) .. "/" .. Currency.Format(size) .. " PINS", amount > lastBag)
+			-- (launch changes: the INFINITE BAG pass shows its pins and no limit on an empty bar)
+			bagBar:Set(amount, size, if size >= 1e17 then Currency.Format(amount) .. " PINS, NO LIMIT" elseif share >= 1 then "FULL!" else Currency.Format(amount) .. "/" .. Currency.Format(size) .. " PINS", amount > lastBag)
 			local icon = bag:FindFirstChild("Icon") :: ImageLabel
 			icon.Image = (Kit :: any).Icon(("bag_%02d"):format(math.clamp(CoreLadder.BagLevel(player:GetAttribute("BagLevel")), 1, 10)))
 		else

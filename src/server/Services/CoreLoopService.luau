@@ -51,7 +51,7 @@ function CoreLoopService.PetStats(player: Player): { [string]: number }
 end
 
 -- How many pins the bag holds (Addendum 6 1.1: the bag holds pins, the sell turns them into coins) (Config.CoreLoop.BagSizes, by the saved BagLevel), x (1 + the pets' Bag stat)
--- Launch changes (owner 2026-11-03): the INFINITE BAG pass's bag never fills (its pins sell as they land)
+-- Launch changes (owner 2026-11-03): the INFINITE BAG pass's bag never fills (the player sells when they choose)
 local INFINITE_BAG = 1e18
 function CoreLoopService.BagSize(player: Player): number
 	if Store.Owns(player, "InfiniteBag") then
@@ -286,12 +286,13 @@ end
 -- Returns the pins that fit (0 = the bag is full: pins still fall but pay nothing).
 local sell: (player: Player, zone: number, auto: boolean?) -> ()
 -- Launch changes (owner 2026-11-03): AUTO SELL pass (switched on: the AutoSell attribute, AUTO SELL button) sells a
--- full bag by itself; INFINITE BAG sells every throw's pins as they land. Both at the zone the player is in.
+-- full bag by itself, at the zone the player is in. INFINITE BAG never sells by itself (owner: it fills forever and
+-- the player picks when to sell), and its bag is never full, so AUTO SELL does nothing with it.
 local function autoSells(player: Player): boolean
 	return Store.Owns(player, "AutoSell") and player:GetAttribute("AutoSell") ~= false
 end
 local function afterLanding(player: Player)
-	if Store.Owns(player, "InfiniteBag") or (autoSells(player) and CoreLoopService.IsFull(player)) then
+	if autoSells(player) and CoreLoopService.IsFull(player) then
 		sell(player, CoreLoopService.ZoneOf(player), true)
 	end
 end
