@@ -258,6 +258,8 @@ Config.CoreLoop = {
 		[1] = { Sell = "Sell", Shop = "Shop", Gate = "Gate", GateShift = Vector3.new(0, 0, -1.6), GateBoard = "PriceBoard_Blank" },
 		-- zone 2 (owner's SL_Z2 beach-hut stalls + driftwood arch; GateSign = its blank board that names the next zone)
 		[2] = { Sell = "Sell", Shop = "Shop", Gate = "Gate", GateBoard = "PriceBoard_Blank", GateSign = "DestinationSign_Blank" },
+		-- zone 3 (owner's SL_Z3 bamboo + stone stalls and the carved Canyon Oasis gate, its name already on it)
+		[3] = { Sell = "Sell", Shop = "Shop", Gate = "Gate", GateBoard = "price_board_slot_BLANK" },
 	},
 	Plaza = {
 		Props = {
@@ -323,12 +325,13 @@ Config.CoreLoop = {
 				Pets = { "Pinny", "LanePup", "Strikey", "Splitz", "Hambone" },
 			},
 			{
-				Id = "Arcade", -- the Main Street Egg
+				Id = "Arcade", -- the Jungle Egg (was the Main Street Egg; Id kept so saves keep working)
 				Zone = 3,
 				Price = 360000000000,
-				From = { "MainStreetLanes", "EggPad" },
+				-- 2026-11-03: the owner's stone altar (SL_Z3_Egg_JungleEgg_OnStand; was MainStreetLanes.EggPad)
+				From = { "ServerStorage", "ZoneKits", "Zone3", "JungleEgg" },
 				At = Vector3.new(26, 848.65, -3438),
-				Turn = 180,
+				Turn = 90, -- its front faces west, toward the shop
 				Odds = { Rare = 60, Epic = 33, Legendary = 7 },
 				Pets = { "WoodPup", "ChromeBat", "Kingpin", "Blaze" },
 			},
@@ -3979,21 +3982,21 @@ Config.Mascots = {
 	{
 		Id = "Kingpin",
 		Stats = { Pins = 1.2 }, -- Addendum 6 Stage 9 (pacing pass): was Pins = 2.5
-		Name = "Kingpin",
+		Name = "Temple Monkey", -- was "Kingpin" (2026-11-03: zone 3 design PET_TempleMonkey_Legendary; Id kept)
 		Egg = "Arcade", -- Phase X: moved from the Neon Egg to zone 3's Main Street Egg
 		Rarity = "Legendary",
-		Color = Color3.fromRGB(255, 195, 40),
-		Accent = Color3.fromRGB(255, 255, 255),
+		Color = Color3.fromHex("9C5F35"),
+		Accent = Color3.fromHex("FFC43D"),
 		Reaction = "Spin",
 	},
 	{
 		Id = "Blaze",
 		Stats = { Coins = 1.5, Speed = 0.3 }, -- Addendum 6 Stage 9 (pacing pass): was Coins = 4, Speed = 0.4
-		Name = "Blaze",
+		Name = "Jaguar Cub", -- was "Blaze" (2026-11-03: zone 3 design PET_JaguarCub_Legendary; Id kept)
 		Egg = "Arcade", -- Phase X: moved from the Neon Egg to zone 3's Main Street Egg
 		Rarity = "Legendary",
-		Color = Color3.fromRGB(255, 110, 30),
-		Accent = Color3.fromRGB(255, 230, 60),
+		Color = Color3.fromHex("F2A43A"),
+		Accent = Color3.fromHex("5A3420"),
 		Reaction = "Flip",
 	},
 	{
@@ -4020,22 +4023,22 @@ Config.Mascots = {
 	{
 		Id = "WoodPup",
 		Stats = { Bag = 0.3, Coins = 0.15 }, -- Addendum 6 Stage 9 (pacing pass): was Bag = 0.6, Coins = 0.15
-		Name = "Wood Pup",
+		Name = "Tree Frog", -- was "Wood Pup" (2026-11-03: zone 3 design PET_TreeFrog_Rare; Id kept)
 		Egg = "Arcade",
 		Rarity = "Rare",
-		Color = Color3.fromRGB(170, 112, 64),
-		Accent = Color3.fromRGB(255, 230, 190),
-		Reaction = "Hop", -- own model since 2026-10-28 (owner's WoodPup.glb)
+		Color = Color3.fromHex("63C94A"),
+		Accent = Color3.fromHex("FF9632"),
+		Reaction = "Hop",
 	},
 	{
 		Id = "ChromeBat",
 		Stats = { Coins = 0.6, Bag = 0.4 }, -- Addendum 6 Stage 9 (pacing pass): was Coins = 1.2, Bag = 1
-		Name = "Chrome Bat",
+		Name = "Toucan Tom", -- was "Chrome Bat" (2026-11-03: zone 3 design PET_ToucanTom_Epic; Id kept)
 		Egg = "Arcade",
 		Rarity = "Epic",
-		Color = Color3.fromRGB(200, 206, 218),
-		Accent = Color3.fromRGB(224, 165, 38),
-		Reaction = "Flip", -- own model since 2026-10-28 (owner's ChromeBat.glb)
+		Color = Color3.fromHex("2E3552"),
+		Accent = Color3.fromHex("FF8A2A"),
+		Reaction = "Flip",
 	},
 	{
 		Id = "CloudBumper",
@@ -4125,7 +4128,8 @@ Config.EggLooks = {
 	-- 2026-11-03: the owner's Sunset Egg (PetModels.Egg_Alley, SL_Z2_SunsetEgg_full); was the Neon Egg #ff3ad0 / #3ff0ff
 	Alley = { Name = "Sunset Egg", Color = Color3.fromRGB(255, 226, 198), Spots = Color3.fromRGB(255, 122, 92) },
 	Neon = { Name = "Neon Egg", Color = Color3.fromRGB(80, 230, 255), Spots = Color3.fromRGB(255, 60, 210) },
-	Arcade = { Name = "Main Street Egg", Color = Color3.fromRGB(224, 165, 38), Spots = Color3.fromRGB(150, 30, 40) }, -- Phase X: zone 3's egg (Id kept)
+	-- 2026-11-03: the owner's Jungle Egg (PetModels.Egg_Arcade, SL_Z3_Egg_JungleEgg); was the Main Street Egg #e0a526 / #961e28
+	Arcade = { Name = "Jungle Egg", Color = Color3.fromHex("7CC65A"), Spots = Color3.fromHex("FF9632") },
 	Skyline = { Name = "Skyline Egg", Color = Color3.fromRGB(255, 79, 139), Spots = Color3.fromRGB(245, 184, 46) }, -- zone 4's egg
 	-- Addendum 5 B2: the 4th roof egg. No model of its own: the server copies PetModels.Egg_<Copy> as Egg_Volcano in
 	-- Config.CoreLoop.Eggs.Tints[Tint] colours at start
@@ -4551,86 +4555,46 @@ Config.PetIdle = {
 			},
 		},
 	},
-	-- Zone 3 pets, the owner's Main Street designs (2026-10-28)
-	WoodPup = {
-		Body = { Bob = 0.04, BobSpeed = 0.6, Hop = { Every = 3, Height = 0.6, Time = 0.45 } },
+	-- Zone 3 pets, the owner's Jungle Falls designs (2026-11-03; WoodPup = Tree Frog, ChromeBat = Toucan Tom, Kingpin
+	-- = Temple Monkey, Blaze = Jaguar Cub). Old Main Street rows went with their models (PetModels_Backup_20261103)
+	WoodPup = { -- Tree Frog
+		Body = { Bob = 0.04, BobSpeed = 0.7, Hop = { Every = 2.6, Height = 0.5, Time = 0.35 } },
 		Moves = {
-			{
-				Kind = "Swing",
-				Parts = { "^head", "^snout", "^nose", "^eye_", "^ear_" },
-				Axis = Vector3.zAxis,
-				Angle = 8,
-				Speed = 0.35,
-			},
-			{ Kind = "Swing", Parts = { "^ear_" }, Axis = Vector3.zAxis, Angle = 12, Speed = 1.5, Mirror = true },
-			{ Kind = "Swing", Parts = { "^tail" }, Axis = Vector3.yAxis, Angle = 30, Speed = 4 },
-			{ Kind = "Swing", Parts = { "^bandana_flap" }, Axis = Vector3.xAxis, Angle = 8, Speed = 1.2 },
-			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.5 },
+			{ Kind = "Swing", Parts = { "^hat_" }, Axis = Vector3.zAxis, Angle = 8, Speed = 0.5 },
+			{ Kind = "Pulse", Parts = { "^cheek" }, Speed = 0.5, Min = 0.7, Max = 1 },
+			{ Kind = "Blink", Parts = { "^eye_white", "^pupil", "^eye_sparkle" }, Every = 3.4 },
 		},
 	},
-	ChromeBat = {
+	ChromeBat = { -- Toucan Tom
 		Floats = true,
-		Body = { Bob = 0.25, BobSpeed = 0.6, Sway = 4, SwaySpeed = 0.4 },
+		Body = { Bob = 0.22, BobSpeed = 0.6, Sway = 4, SwaySpeed = 0.4 },
 		Moves = {
-			{ Kind = "Swing", Parts = { "^wing_" }, Axis = Vector3.zAxis, Angle = 28, Speed = 2.2, Mirror = true },
-			{ Kind = "Swing", Parts = { "^ear_" }, Axis = Vector3.zAxis, Angle = 8, Speed = 0.8, Mirror = true },
-			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.2 },
+			{ Kind = "Swing", Parts = { "^wing_" }, Axis = Vector3.zAxis, Angle = 26, Speed = 2, Mirror = true },
+			{ Kind = "Swing", Parts = { "^tail_" }, Axis = Vector3.xAxis, Angle = 10, Speed = 0.8 },
+			{ Kind = "Twinkle", Parts = { "^crest_glow", "^wing_tip_glow", "^tail_tip_glow" }, Speed = 1.5, Min = 0.6, Max = 1 },
+			{ Kind = "Blink", Parts = { "^eye$", "^eye_0", "^eye%d", "^eye_sparkle" }, Every = 3.2 },
 		},
 	},
-	Kingpin = {
+	Kingpin = { -- Temple Monkey (its gold aura turns slowly behind it)
 		Body = { Bob = 0.05, BobSpeed = 0.5, Sway = 3, SwaySpeed = 0.35 },
 		Moves = {
-			{ Kind = "Swing", Parts = { "^arm_" }, Axis = Vector3.xAxis, Angle = 12, Speed = 0.6, Mirror = true },
-			{ Kind = "Swing", Parts = { "^cape$" }, Axis = Vector3.xAxis, Angle = 5, Speed = 0.5 },
-			{ Kind = "Lift", Parts = { "^foot_R" }, Height = 0.08, Speed = 0.9 },
-			{ Kind = "Lift", Parts = { "^foot_L" }, Height = 0.08, Speed = 0.9, Phase = 0.5 },
-			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.8 },
+			{ Kind = "Spin", Parts = { "^aura_ray" }, Axis = Vector3.zAxis, Speed = 0.08, Pivot = "Center" },
+			{ Kind = "Pulse", Parts = { "^aura" }, Speed = 0.5, Min = 0.6, Max = 1 },
+			{ Kind = "Swing", Parts = { "^arm_shape", "^hand", "^gold_armband" }, Axis = Vector3.xAxis, Angle = 12, Speed = 0.6, Mirror = true },
+			{ Kind = "Swing", Parts = { "^tail" }, Axis = Vector3.zAxis, Angle = 14, Speed = 0.7 },
+			{ Kind = "Twinkle", Parts = { "^crown_gem" }, Speed = 1.2, Min = 0.6, Max = 1 },
+			{ Kind = "Blink", Parts = { "^eye$", "^eye_0", "^eye%d", "^eye_sparkle" }, Every = 3.8 },
 		},
 	},
-	Blaze = {
-		Floats = true,
-		Body = { Bob = 0.2, BobSpeed = 0.55 },
+	Blaze = { -- Jaguar Cub (its sun aura turns behind it, the inner rays the other way)
+		Body = { Bob = 0.04, BobSpeed = 0.6, Hop = { Every = 3.4, Height = 0.35, Time = 0.35 } },
 		Moves = {
-			{ Kind = "Swing", Parts = { "^wing_" }, Axis = Vector3.zAxis, Angle = 22, Speed = 1.6, Mirror = true },
-			{ Kind = "Swing", Parts = { "^tail_" }, Axis = Vector3.yAxis, Angle = 15, Speed = 0.8 },
-			{
-				Kind = "Swing",
-				Parts = {
-					"^skull",
-					"^snout",
-					"^nose",
-					"^eye_",
-					"^pupil_",
-					"^ear_",
-					"^horn_",
-					"^cheek_",
-					"^brow_",
-					"^head_flame",
-				},
-				Axis = Vector3.yAxis,
-				Angle = 18,
-				Speed = 0.25,
-			},
-			{
-				Kind = "Twinkle",
-				Parts = { "^tail_flame", "^tail_lick", "^head_flame", "^crest_flame" },
-				Speed = 3,
-				Min = 0.7,
-				Max = 1,
-			},
-			{ Kind = "Pulse", Parts = { "^aura" }, Speed = 0.6, Min = 0.5, Max = 1 },
-		},
-		Hide = { "^ember" },
-		Particles = {
-			{
-				At = "Root",
-				Colors = { Color3.fromRGB(255, 120, 20), Color3.fromRGB(255, 220, 60) },
-				Rate = 10,
-				Size = 0.15,
-				Life = 1.3,
-				Speed = 0.45,
-				Up = 1,
-			},
+			{ Kind = "Spin", Parts = { "^aura_ray" }, Axis = Vector3.zAxis, Speed = 0.07, Pivot = "Center" },
+			{ Kind = "Spin", Parts = { "^aura_inner_ray" }, Axis = -Vector3.zAxis, Speed = 0.1, Pivot = "Center" },
+			{ Kind = "Pulse", Parts = { "^aura_ring", "^aura_ground_ring" }, Speed = 0.5, Min = 0.6, Max = 1 },
+			{ Kind = "Swing", Parts = { "^tail" }, Axis = Vector3.yAxis, Angle = 20, Speed = 0.9 },
+			{ Kind = "Twinkle", Parts = { "^spot_glow", "^collar_gem" }, Speed = 1.2, Min = 0.6, Max = 1 },
+			{ Kind = "Blink", Parts = { "^eye$", "^eye_0", "^eye%d", "^eye_sparkle" }, Every = 3.6 },
 		},
 	},
 	-- Zone 4 pets, the owner's Skyline designs (2026-10-29)

@@ -65,19 +65,19 @@ local function add(groupName: string, name: string, size: Vector3, cframe: CFram
 end
 
 -- 2026-11-03 v2 models: the owner's designed prop (ServerStorage.ZoneKits.Zone<zone>.<name>, pivot at its bottom
--- centre, front -Z) put in the group at the floor point `at`, turned `turn` degrees. False = no design: build parts.
-local function design(zone: number, name: string, at: Vector3, turn: number): boolean
+-- centre, front -Z) put in the group at the floor point `at`, turned `turn` degrees. Nil = no design: build parts.
+local function design(zone: number, name: string, at: Vector3, turn: number): Model?
 	local folder = ServerStorage:FindFirstChild("ZoneKits")
 	folder = folder and folder:FindFirstChild("Zone" .. zone)
 	local kit = folder and folder:FindFirstChild(name)
 	if not kit or not kit:IsA("Model") then
-		return false
+		return nil
 	end
 	local copy = kit:Clone()
 	copy.Name = "Design"
 	copy:PivotTo(CFrame.new(at) * CFrame.Angles(0, math.rad(turn), 0))
 	copy.Parent = group(name)
-	return true
+	return copy
 end
 
 -- A cylinder standing up (Roblox cylinders run along X)
@@ -817,8 +817,10 @@ local function buildJungle(info: any)
 		end
 	end
 	local sell, shop = CORE.Sell, CORE.Shop
-	thatch(sell.Position + Vector3.new(0, 0, sell.Radius + 2.2), 12)
-	thatch(shop.Position + Vector3.new(0, 0, shop.Radius + 2.2), 11)
+	if not (CORE.Kits and CORE.Kits[3]) then -- (the owner's zone 3 stalls have their own roofs since 2026-11-03)
+		thatch(sell.Position + Vector3.new(0, 0, sell.Radius + 2.2), 12)
+		thatch(shop.Position + Vector3.new(0, 0, shop.Radius + 2.2), 11)
+	end
 
 	-- The pool under the falls and the cliff behind it are Terrain (ZoneMaps.Terrain); three waterfalls pour into it
 	local pool = JUNGLE.PoolTop
@@ -826,7 +828,32 @@ local function buildJungle(info: any)
 	waterfall(Vector3.new(-104, JUNGLE.CliffTop, fallZ), pool, 14)
 	waterfall(Vector3.new(-36, JUNGLE.CliffTop, fallZ), pool, 26)
 	waterfall(Vector3.new(44, JUNGLE.CliffTop, fallZ), pool, 12)
-	waterfall(Vector3.new(130, JUNGLE.CliffTop, fallZ), pool, 10)
+	-- the east fall: the owner's SL_Z3_Hero_WaterfallCliff x1.5 (2026-11-03), a stepped cliff in front of the rock;
+	-- water pours from the cliff top onto its highest ledge, then from ledge to ledge into the pool
+	local cliff = design(3, "WaterfallCliff", Vector3.new(130, pool, JUNGLE.CliffZ + 11), 180)
+	if cliff then
+		local lips = {}
+		for _, p in cliff:GetChildren() do
+			if p:IsA("BasePart") and p.Name:match("^water_lip_ledge") then
+				table.insert(lips, p)
+			end
+		end
+		table.sort(lips, function(a, b)
+			return a.Position.Y > b.Position.Y
+		end)
+		for i, lip in lips do
+			local front = (lip.CFrame * CFrame.new(0, lip.Size.Y / 2, -lip.Size.Z / 2 - 0.4)).Position
+			local below = lips[i + 1]
+			local bottomY = if below then below.Position.Y + below.Size.Y / 2 else pool
+			if i == 1 then
+				local back = (lip.CFrame * CFrame.new(0, lip.Size.Y / 2, lip.Size.Z / 2)).Position
+				waterfall(Vector3.new(back.X, JUNGLE.CliffTop, back.Z), front.Y, lip.Size.X * 0.7)
+			end
+			waterfall(front, bottomY, lip.Size.X * 0.7)
+		end
+	else
+		waterfall(Vector3.new(130, JUNGLE.CliffTop, fallZ), pool, 10)
+	end
 	-- trees and giant plants along the cliff top, leafy ledges and vines down its face
 	for i = 0, 13 do
 		local x = -190 + i * 34 + (i % 3) * 5
@@ -857,32 +884,44 @@ local function buildJungle(info: any)
 		add("RopeBridges", "Ledge", Vector3.new(8, 2, 8), CFrame.new(at[1], TOP + at[2] - 1.2, JUNGLE.CliffZ + 7), Color3.fromRGB(120, 124, 110), { Material = Enum.Material.Slate })
 	end
 
-	-- The river along the east side (Terrain water) with a walkable rope bridge to the temple bank
-	ropeBridge(Vector3.new(gr.X1 - 2, TOP + 0.2, -3470), Vector3.new(e.X0 + 2, TOP + 0.2, -3470), 1.2, true)
+	-- The river along the east side (Terrain water) with a walkable rope bridge to the temple bank (the owner's
+	-- SL_Z3_Hero_RopeBridge since 2026-11-03: its stone feet on both banks, its planks collide, invisible rails)
+	local riverX = (gr.X1 + e.X0) / 2
+	if design(3, "RopeBridge", Vector3.new(riverX, TOP, -3470), 0) then
+		for _, s in { -1, 1 } do
+			add("RopeBridge", "BridgeRail", Vector3.new(44, 6, 0.4), CFrame.new(riverX, TOP + 4, -3470 + s * 3.3), WHITE, { Transparency = 1 })
+		end
+	else
+		ropeBridge(Vector3.new(gr.X1 - 2, TOP + 0.2, -3470), Vector3.new(e.X0 + 2, TOP + 0.2, -3470), 1.2, true)
+	end
 
-	-- The temple ruin on the east bank: four stepped stone tiers, a stair, a gold sun on top, moss and vines
+	-- The temple ruin on the east bank: four stepped stone tiers, a stair, a gold sun on top, moss and vines. Since
+	-- 2026-11-03 the owner's SL_Z3_Hero_TempleRuin x1.25, its front toward the river
 	local temple = Vector3.new(240, TOP, -3500)
-	local S = 1.3 -- (the whole ruin's scale)
-	local function at(x: number, y: number, z: number): CFrame
-		return CFrame.new(temple + Vector3.new(x, y, z) * S)
-	end
-	for k = 0, 3 do
-		local w = 30 - k * 7
-		add("Temple", "Tier", Vector3.new(w, 6, w) * S, at(0, 3 + k * 6, 0), if k % 2 == 0 then JUNGLE.Stone else JUNGLE.Stone:Lerp(Color3.new(0, 0, 0), 0.1), { Material = Enum.Material.Slate })
-		add("Temple", "Moss", Vector3.new(w + 0.2, 0.6, w * 0.6) * S, at(0, 6 + k * 6, w * 0.15), Color3.fromRGB(96, 168, 70), { Material = Enum.Material.Grass, Collide = false })
-	end
-	add("Temple", "Stair", Vector3.new(7, 24, 16) * S, at(-15 - 8, 12, 0) * CFrame.Angles(0, math.rad(90), 0), JUNGLE.Stone:Lerp(Color3.new(1, 1, 1), 0.1), { Class = "WedgePart", Material = Enum.Material.Slate })
-	add("Temple", "Shrine", Vector3.new(8, 7, 8) * S, at(0, 27.5, 0), Color3.fromRGB(128, 134, 112), { Material = Enum.Material.Slate })
-	add("Temple", "Door", Vector3.new(0.4, 4.5, 3.4) * S, at(-4.1, 26.3, 0), Color3.fromRGB(40, 46, 36), { Collide = false })
-	add("Temple", "Sun", Vector3.new(0.6, 5, 5) * S, at(0, 36, 0), Color3.fromRGB(255, 200, 60), { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Metal })
-	add("Temple", "SunStand", Vector3.new(1.4, 4, 1.4) * S, at(0, 32, 0), Color3.fromRGB(128, 134, 112), { Material = Enum.Material.Slate })
-	for i = 1, 4 do
-		vine((at(-15 + i * 2, 22 - i * 2, -15 + i * 6)).Position, (at(-15.4, 4, -15 + i * 6.5)).Position, 1.4)
-	end
-	for _, o in { { -21, -16 }, { -21, 16 } } do
-		add("Temple", "Statue", Vector3.new(3, 6, 3) * S, at(o[1], 3, o[2]), JUNGLE.Stone, { Material = Enum.Material.Slate })
-		add("Temple", "StatueHead", Vector3.new(3.6, 3.2, 3.6) * S, at(o[1], 7.6, o[2]), JUNGLE.Stone:Lerp(Color3.new(0, 0, 0), 0.15), { Material = Enum.Material.Slate })
-		add("Temple", "StatueEyes", Vector3.new(0.3, 0.6, 2.4) * S, at(o[1] - 1.85, 8, o[2]), JUNGLE.Aqua, { Collide = false })
+	local templeDesign = design(3, "TempleRuin", temple, 90)
+	if not templeDesign then
+		local S = 1.3 -- (the whole ruin's scale)
+		local function at(x: number, y: number, z: number): CFrame
+			return CFrame.new(temple + Vector3.new(x, y, z) * S)
+		end
+		for k = 0, 3 do
+			local w = 30 - k * 7
+			add("Temple", "Tier", Vector3.new(w, 6, w) * S, at(0, 3 + k * 6, 0), if k % 2 == 0 then JUNGLE.Stone else JUNGLE.Stone:Lerp(Color3.new(0, 0, 0), 0.1), { Material = Enum.Material.Slate })
+			add("Temple", "Moss", Vector3.new(w + 0.2, 0.6, w * 0.6) * S, at(0, 6 + k * 6, w * 0.15), Color3.fromRGB(96, 168, 70), { Material = Enum.Material.Grass, Collide = false })
+		end
+		add("Temple", "Stair", Vector3.new(7, 24, 16) * S, at(-15 - 8, 12, 0) * CFrame.Angles(0, math.rad(90), 0), JUNGLE.Stone:Lerp(Color3.new(1, 1, 1), 0.1), { Class = "WedgePart", Material = Enum.Material.Slate })
+		add("Temple", "Shrine", Vector3.new(8, 7, 8) * S, at(0, 27.5, 0), Color3.fromRGB(128, 134, 112), { Material = Enum.Material.Slate })
+		add("Temple", "Door", Vector3.new(0.4, 4.5, 3.4) * S, at(-4.1, 26.3, 0), Color3.fromRGB(40, 46, 36), { Collide = false })
+		add("Temple", "Sun", Vector3.new(0.6, 5, 5) * S, at(0, 36, 0), Color3.fromRGB(255, 200, 60), { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Metal })
+		add("Temple", "SunStand", Vector3.new(1.4, 4, 1.4) * S, at(0, 32, 0), Color3.fromRGB(128, 134, 112), { Material = Enum.Material.Slate })
+		for i = 1, 4 do
+			vine((at(-15 + i * 2, 22 - i * 2, -15 + i * 6)).Position, (at(-15.4, 4, -15 + i * 6.5)).Position, 1.4)
+		end
+		for _, o in { { -21, -16 }, { -21, 16 } } do
+			add("Temple", "Statue", Vector3.new(3, 6, 3) * S, at(o[1], 3, o[2]), JUNGLE.Stone, { Material = Enum.Material.Slate })
+			add("Temple", "StatueHead", Vector3.new(3.6, 3.2, 3.6) * S, at(o[1], 7.6, o[2]), JUNGLE.Stone:Lerp(Color3.new(0, 0, 0), 0.15), { Material = Enum.Material.Slate })
+			add("Temple", "StatueEyes", Vector3.new(0.3, 0.6, 2.4) * S, at(o[1] - 1.85, 8, o[2]), JUNGLE.Aqua, { Collide = false })
+		end
 	end
 
 	-- Trees, palms, giant plants and flowers all round the edges (the play area stays open)
@@ -891,8 +930,12 @@ local function buildJungle(info: any)
 		{ -108, -3338, 26 }, { 30, -3336, 30 }, { 80, -3340, 34 }, { 128, -3338, 28 }, { 156, -3380, 30 },
 		{ 156, -3560, 32 }, { 210, -3340, 32 }, { 262, -3360, 36 }, { 262, -3430, 30 }, { 210, -3580, 34 }, { 262, -3580, 30 },
 	}
+	-- (the west tree is the owner's SL_Z3_Hero_GiantJungleTree x1.3 since 2026-11-03)
+	local giant = design(3, "GiantTree", Vector3.new(-136, TOP, -3470), 90)
 	for i, t in trees do
-		jungleTree(Vector3.new(t[1], TOP, t[2]), t[3], i)
+		if not (giant and i == 3) then
+			jungleTree(Vector3.new(t[1], TOP, t[2]), t[3], i)
+		end
 	end
 	for _, p in { { 60, -3390, 15, 40 }, { 112, -3420, 17, 200 }, { 140, -3500, 14, 300 }, { 100, -3570, 16, 120 }, { -120, -3430, 15, 80 } } do
 		palm(Vector3.new(p[1], TOP, p[2]), p[3], p[4])
