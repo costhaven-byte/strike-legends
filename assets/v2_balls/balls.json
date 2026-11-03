@@ -1,0 +1,3777 @@
+{
+ "Z1_beach_roller": {
+  "shape": "plain",
+  "materials": {
+   "beach_roller_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.6,
+    "emissive": null,
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "beach_roller_insert": {
+    "color": [
+     0.7454042095350284,
+     0.36130677977297226,
+     0.0722718506743852,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "beach_roller_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "beach_roller_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "beach_roller_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "beach_roller_insert"
+   ]
+  ]
+ },
+ "Z1_cloud_roll": {
+  "shape": "plain",
+  "materials": {
+   "cloud_roll_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.35,
+    "emissive": null,
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "cloud_roll_insert": {
+    "color": [
+     1,
+     0.6724431569510133,
+     0.14702726648767014,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "cloud_roll_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "cloud_roll_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "cloud_roll_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "cloud_roll_insert"
+   ]
+  ]
+ },
+ "Z1_confetti_popper": {
+  "shape": "plain",
+  "materials": {
+   "confetti_popper_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.4,
+    "emissive": null,
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "confetti_popper_insert": {
+    "color": [
+     1,
+     0.07818742179702069,
+     0.36625259558833256,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "confetti_popper_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "confetti_popper_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "confetti_popper_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "confetti_popper_insert"
+   ]
+  ]
+ },
+ "Z1_gust": {
+  "shape": "plain",
+  "materials": {
+   "gust_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.35,
+    "emissive": null,
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "gust_insert": {
+    "color": null,
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "gust_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gust_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gust_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gust_insert"
+   ]
+  ]
+ },
+ "Z1_rainbow_arc": {
+  "shape": "plain",
+  "materials": {
+   "rainbow_arc_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.3,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "rainbow_arc_insert": {
+    "color": null,
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "rainbow_arc_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "rainbow_arc_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "rainbow_arc_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "rainbow_arc_insert"
+   ]
+  ]
+ },
+ "Z1_rubber_bouncer": {
+  "shape": "plain",
+  "materials": {
+   "rubber_bouncer_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.85,
+    "emissive": null,
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "rubber_bouncer_insert": {
+    "color": [
+     0.5711248294565854,
+     0.036889450395083165,
+     0.023153366173251363,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "rubber_bouncer_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "rubber_bouncer_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "rubber_bouncer_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "rubber_bouncer_insert"
+   ]
+  ]
+ },
+ "Z1_sonic_boom": {
+  "shape": "trim",
+  "materials": {
+   "sonic_boom_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.25,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "gold_trim": {
+    "color": [
+     1,
+     0.5775804404214573,
+     0.04666508633021928,
+     1
+    ],
+    "metal": 0.4,
+    "rough": 0.28,
+    "emissive": [
+     0.19461783043107173,
+     0.06847816983662762,
+     0
+    ],
+    "tex": false
+   },
+   "sonic_boom_gem": {
+    "color": [
+     1,
+     0.07818742179702069,
+     0.6866853124288864,
+     1
+    ],
+    "metal": 0.1,
+    "rough": 0.12,
+    "emissive": [
+     1,
+     0.07818742179702069,
+     0.6866853124288864
+    ],
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "sonic_boom_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "sonic_boom_gem"
+   ],
+   [
+    "sonic_boom_gem"
+   ],
+   [
+    "sonic_boom_gem"
+   ],
+   [
+    "sonic_boom_gem"
+   ]
+  ]
+ },
+ "Z1_sunbolt": {
+  "shape": "plain",
+  "materials": {
+   "sunbolt_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.3,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "sunbolt_insert": {
+    "color": [
+     1,
+     0.775822218312646,
+     0.10702310296918527,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "sunbolt_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "sunbolt_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "sunbolt_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "sunbolt_insert"
+   ]
+  ]
+ },
+ "Z1_sunspike": {
+  "shape": "plain",
+  "materials": {
+   "sunspike_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.4,
+    "emissive": null,
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "sunspike_insert": {
+    "color": [
+     1,
+     0.19461783043107173,
+     0.010329823026364548,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "sunspike_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "sunspike_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "sunspike_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "sunspike_insert"
+   ]
+  ]
+ },
+ "Z1_tornado": {
+  "shape": "trim",
+  "materials": {
+   "tornado_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.3,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "gold_trim": {
+    "color": [
+     1,
+     0.5775804404214573,
+     0.04666508633021928,
+     1
+    ],
+    "metal": 0.4,
+    "rough": 0.28,
+    "emissive": [
+     0.19461783043107173,
+     0.06847816983662762,
+     0
+    ],
+    "tex": false
+   },
+   "tornado_gem": {
+    "color": [
+     0.11443537381770343,
+     0.6583748172725346,
+     1,
+     1
+    ],
+    "metal": 0.1,
+    "rough": 0.12,
+    "emissive": [
+     0.11443537381770343,
+     0.6583748172725346,
+     1
+    ],
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "tornado_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "tornado_gem"
+   ],
+   [
+    "tornado_gem"
+   ],
+   [
+    "tornado_gem"
+   ],
+   [
+    "tornado_gem"
+   ]
+  ]
+ },
+ "Z2_beach_ball": {
+  "shape": "plain",
+  "materials": {
+   "beach_ball_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "beach_ball_insert": {
+    "color": [
+     1,
+     0.9386857284565036,
+     0.85499260812105,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "beach_ball_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "beach_ball_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "beach_ball_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "beach_ball_insert"
+   ]
+  ]
+ },
+ "Z2_coral_crusher": {
+  "shape": "plain",
+  "materials": {
+   "coral_crusher_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.5,
+    "emissive": null,
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "coral_crusher_insert": {
+    "color": [
+     0.8713671191959567,
+     0.6724431569510133,
+     0.3049873140591091,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "coral_crusher_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "coral_crusher_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "coral_crusher_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "coral_crusher_insert"
+   ]
+  ]
+ },
+ "Z2_kite_flyer": {
+  "shape": "plain",
+  "materials": {
+   "kite_flyer_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.4,
+    "emissive": null,
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "kite_flyer_insert": {
+    "color": [
+     0.8713671191959567,
+     0.6724431569510133,
+     0.3049873140591091,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "kite_flyer_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "kite_flyer_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "kite_flyer_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "kite_flyer_insert"
+   ]
+  ]
+ },
+ "Z2_lighthouse_beam": {
+  "shape": "trim",
+  "materials": {
+   "lighthouse_beam_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.3,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "gold_trim": {
+    "color": [
+     1,
+     0.5775804404214573,
+     0.04666508633021928,
+     1
+    ],
+    "metal": 0.4,
+    "rough": 0.28,
+    "emissive": [
+     0.19461783043107173,
+     0.06847816983662762,
+     0
+    ],
+    "tex": false
+   },
+   "lighthouse_beam_gem": {
+    "color": [
+     0.05126945836711539,
+     0.6172065624120635,
+     0.6724431569510133,
+     1
+    ],
+    "metal": 0.1,
+    "rough": 0.12,
+    "emissive": [
+     0.05126945836711539,
+     0.6172065624120635,
+     0.6724431569510133
+    ],
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "lighthouse_beam_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "lighthouse_beam_gem"
+   ],
+   [
+    "lighthouse_beam_gem"
+   ],
+   [
+    "lighthouse_beam_gem"
+   ],
+   [
+    "lighthouse_beam_gem"
+   ]
+  ]
+ },
+ "Z2_pier_pounder": {
+  "shape": "plain",
+  "materials": {
+   "pier_pounder_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.55,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "pier_pounder_insert": {
+    "color": [
+     0.05126945836711539,
+     0.6172065624120635,
+     0.6724431569510133,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "pier_pounder_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "pier_pounder_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "pier_pounder_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "pier_pounder_insert"
+   ]
+  ]
+ },
+ "Z2_seashell_spinner": {
+  "shape": "plain",
+  "materials": {
+   "seashell_spinner_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.5,
+    "emissive": null,
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "seashell_spinner_insert": {
+    "color": [
+     0.7681511472425809,
+     0.3231432091022285,
+     0.24620132669705552,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "seashell_spinner_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "seashell_spinner_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "seashell_spinner_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "seashell_spinner_insert"
+   ]
+  ]
+ },
+ "Z2_sunset_splash": {
+  "shape": "plain",
+  "materials": {
+   "sunset_splash_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.3,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "sunset_splash_insert": {
+    "color": [
+     1,
+     0.6866853124288864,
+     0.14702726648767014,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "sunset_splash_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "sunset_splash_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "sunset_splash_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "sunset_splash_insert"
+   ]
+  ]
+ },
+ "Z2_surf_rider": {
+  "shape": "plain",
+  "materials": {
+   "surf_rider_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.35,
+    "emissive": null,
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "surf_rider_insert": {
+    "color": [
+     0.05126945836711539,
+     0.6172065624120635,
+     0.6724431569510133,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "surf_rider_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "surf_rider_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "surf_rider_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "surf_rider_insert"
+   ]
+  ]
+ },
+ "Z2_tide_turner": {
+  "shape": "plain",
+  "materials": {
+   "tide_turner_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.35,
+    "emissive": null,
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "tide_turner_insert": {
+    "color": null,
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "tide_turner_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "tide_turner_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "tide_turner_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "tide_turner_insert"
+   ]
+  ]
+ },
+ "Z2_tsunami": {
+  "shape": "plain",
+  "materials": {
+   "tsunami_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.3,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "tsunami_insert": {
+    "color": [
+     0.3813260114221238,
+     0.913098651791473,
+     0.9301108583738498,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "tsunami_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "tsunami_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "tsunami_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "tsunami_insert"
+   ]
+  ]
+ },
+ "Z3_coconut": {
+  "shape": "plain",
+  "materials": {
+   "coconut_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.75,
+    "emissive": null,
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "coconut_insert": {
+    "color": [
+     0.04817182422013895,
+     0.019382360952473074,
+     0.0069954101845983935,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "coconut_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "coconut_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "coconut_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "coconut_insert"
+   ]
+  ]
+ },
+ "Z3_jaguar": {
+  "shape": "plain",
+  "materials": {
+   "jaguar_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.45,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "jaguar_insert": {
+    "color": [
+     0.023153366173251363,
+     0.008023192982520563,
+     0.0036765073221525194,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "jaguar_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "jaguar_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "jaguar_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "jaguar_insert"
+   ]
+  ]
+ },
+ "Z3_jungle_king": {
+  "shape": "trim",
+  "materials": {
+   "jungle_king_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.25,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "gold_trim": {
+    "color": [
+     1,
+     0.5775804404214573,
+     0.04666508633021928,
+     1
+    ],
+    "metal": 0.4,
+    "rough": 0.28,
+    "emissive": [
+     0.19461783043107173,
+     0.06847816983662762,
+     0
+    ],
+    "tex": false
+   },
+   "jungle_king_gem": {
+    "color": [
+     0.46778379610254284,
+     0.8713671191959567,
+     0.10224173307914941,
+     1
+    ],
+    "metal": 0.1,
+    "rough": 0.12,
+    "emissive": [
+     0.46778379610254284,
+     0.8713671191959567,
+     0.10224173307914941
+    ],
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "jungle_king_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "jungle_king_gem"
+   ],
+   [
+    "jungle_king_gem"
+   ],
+   [
+    "jungle_king_gem"
+   ],
+   [
+    "jungle_king_gem"
+   ]
+  ]
+ },
+ "Z3_leaf_storm": {
+  "shape": "plain",
+  "materials": {
+   "leaf_storm_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.35,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "leaf_storm_insert": {
+    "color": [
+     0.46778379610254284,
+     0.8713671191959567,
+     0.10224173307914941,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "leaf_storm_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "leaf_storm_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "leaf_storm_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "leaf_storm_insert"
+   ]
+  ]
+ },
+ "Z3_monsoon": {
+  "shape": "trim",
+  "materials": {
+   "monsoon_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.3,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "gold_trim": {
+    "color": [
+     1,
+     0.5775804404214573,
+     0.04666508633021928,
+     1
+    ],
+    "metal": 0.4,
+    "rough": 0.28,
+    "emissive": [
+     0.19461783043107173,
+     0.06847816983662762,
+     0
+    ],
+    "tex": false
+   },
+   "monsoon_gem": {
+    "color": [
+     0.061246054224174035,
+     0.6444796819634361,
+     0.7156935005005721,
+     1
+    ],
+    "metal": 0.1,
+    "rough": 0.12,
+    "emissive": [
+     0.061246054224174035,
+     0.6444796819634361,
+     0.7156935005005721
+    ],
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "monsoon_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "monsoon_gem"
+   ],
+   [
+    "monsoon_gem"
+   ],
+   [
+    "monsoon_gem"
+   ],
+   [
+    "monsoon_gem"
+   ]
+  ]
+ },
+ "Z3_rope_bridge": {
+  "shape": "trim",
+  "materials": {
+   "rope_bridge_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.5,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "gold_trim": {
+    "color": [
+     1,
+     0.5775804404214573,
+     0.04666508633021928,
+     1
+    ],
+    "metal": 0.4,
+    "rough": 0.28,
+    "emissive": [
+     0.19461783043107173,
+     0.06847816983662762,
+     0
+    ],
+    "tex": false
+   },
+   "rope_bridge_gem": {
+    "color": [
+     1,
+     0.3049873140591091,
+     0.031896033067374104,
+     1
+    ],
+    "metal": 0.1,
+    "rough": 0.12,
+    "emissive": [
+     1,
+     0.3049873140591091,
+     0.031896033067374104
+    ],
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "rope_bridge_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "rope_bridge_gem"
+   ],
+   [
+    "rope_bridge_gem"
+   ],
+   [
+    "rope_bridge_gem"
+   ],
+   [
+    "rope_bridge_gem"
+   ]
+  ]
+ },
+ "Z3_temple_stone": {
+  "shape": "trim",
+  "materials": {
+   "temple_stone_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.6,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "gold_trim": {
+    "color": [
+     1,
+     0.5775804404214573,
+     0.04666508633021928,
+     1
+    ],
+    "metal": 0.4,
+    "rough": 0.28,
+    "emissive": [
+     0.19461783043107173,
+     0.06847816983662762,
+     0
+    ],
+    "tex": false
+   },
+   "temple_stone_gem": {
+    "color": [
+     0.04970656597728775,
+     0.6307571363387763,
+     0.19461783043107173,
+     1
+    ],
+    "metal": 0.1,
+    "rough": 0.12,
+    "emissive": [
+     0.04970656597728775,
+     0.6307571363387763,
+     0.19461783043107173
+    ],
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "temple_stone_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "temple_stone_gem"
+   ],
+   [
+    "temple_stone_gem"
+   ],
+   [
+    "temple_stone_gem"
+   ],
+   [
+    "temple_stone_gem"
+   ]
+  ]
+ },
+ "Z3_toucan_roll": {
+  "shape": "plain",
+  "materials": {
+   "toucan_roll_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.4,
+    "emissive": null,
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "toucan_roll_insert": {
+    "color": [
+     1,
+     0.3049873140591091,
+     0.031896033067374104,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "toucan_roll_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "toucan_roll_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "toucan_roll_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "toucan_roll_insert"
+   ]
+  ]
+ },
+ "Z3_vine_swinger": {
+  "shape": "plain",
+  "materials": {
+   "vine_swinger_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.5,
+    "emissive": null,
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "vine_swinger_insert": {
+    "color": [
+     0.11697066774917994,
+     0.4793201830913402,
+     0.08865558627723595,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "vine_swinger_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "vine_swinger_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "vine_swinger_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "vine_swinger_insert"
+   ]
+  ]
+ },
+ "Z3_waterfall": {
+  "shape": "plain",
+  "materials": {
+   "waterfall_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.35,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "waterfall_insert": {
+    "color": [
+     0.061246054224174035,
+     0.6444796819634361,
+     0.7156935005005721,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "waterfall_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "waterfall_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "waterfall_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "waterfall_insert"
+   ]
+  ]
+ },
+ "Z4_cactus_roller": {
+  "shape": "plain",
+  "materials": {
+   "cactus_roller_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.5,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "cactus_roller_insert": {
+    "color": [
+     1,
+     0.158960835050774,
+     0.3915724777393922,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "cactus_roller_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "cactus_roller_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "cactus_roller_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "cactus_roller_insert"
+   ]
+  ]
+ },
+ "Z4_canyon_echo": {
+  "shape": "trim",
+  "materials": {
+   "canyon_echo_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.3,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "gold_trim": {
+    "color": [
+     1,
+     0.5775804404214573,
+     0.04666508633021928,
+     1
+    ],
+    "metal": 0.4,
+    "rough": 0.28,
+    "emissive": [
+     0.19461783043107173,
+     0.06847816983662762,
+     0
+    ],
+    "tex": false
+   },
+   "canyon_echo_gem": {
+    "color": [
+     0.03954623527052923,
+     0.5775804404214573,
+     0.5775804404214573,
+     1
+    ],
+    "metal": 0.1,
+    "rough": 0.12,
+    "emissive": [
+     0.03954623527052923,
+     0.5775804404214573,
+     0.5775804404214573
+    ],
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "canyon_echo_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "canyon_echo_gem"
+   ],
+   [
+    "canyon_echo_gem"
+   ],
+   [
+    "canyon_echo_gem"
+   ],
+   [
+    "canyon_echo_gem"
+   ]
+  ]
+ },
+ "Z4_dust_devil": {
+  "shape": "plain",
+  "materials": {
+   "dust_devil_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.45,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "dust_devil_insert": {
+    "color": [
+     1,
+     0.5775804404214573,
+     0.061246054224174035,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "dust_devil_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "dust_devil_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "dust_devil_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "dust_devil_insert"
+   ]
+  ]
+ },
+ "Z4_golden_sphinx": {
+  "shape": "trim",
+  "materials": {
+   "golden_sphinx_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.15,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "gold_trim": {
+    "color": [
+     1,
+     0.5775804404214573,
+     0.04666508633021928,
+     1
+    ],
+    "metal": 0.4,
+    "rough": 0.28,
+    "emissive": [
+     0.19461783043107173,
+     0.06847816983662762,
+     0
+    ],
+    "tex": false
+   },
+   "golden_sphinx_gem": {
+    "color": [
+     0.03954623527052923,
+     0.5775804404214573,
+     0.5775804404214573,
+     1
+    ],
+    "metal": 0.1,
+    "rough": 0.12,
+    "emissive": [
+     0.03954623527052923,
+     0.5775804404214573,
+     0.5775804404214573
+    ],
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "golden_sphinx_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "golden_sphinx_gem"
+   ],
+   [
+    "golden_sphinx_gem"
+   ],
+   [
+    "golden_sphinx_gem"
+   ],
+   [
+    "golden_sphinx_gem"
+   ]
+  ]
+ },
+ "Z4_mesa_smash": {
+  "shape": "plain",
+  "materials": {
+   "mesa_smash_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.55,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "mesa_smash_insert": {
+    "color": [
+     0.03954623527052923,
+     0.5775804404214573,
+     0.5775804404214573,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.45,
+    "emissive": null,
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "mesa_smash_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "mesa_smash_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "mesa_smash_insert"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "mesa_smash_insert"
+   ]
+  ]
+ },
+ "Z4_mirage": {
+  "shape": "trim",
+  "materials": {
+   "mirage_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.15,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "gold_trim": {
+    "color": [
+     1,
+     0.5775804404214573,
+     0.04666508633021928,
+     1
+    ],
+    "metal": 0.4,
+    "rough": 0.28,
+    "emissive": [
+     0.19461783043107173,
+     0.06847816983662762,
+     0
+    ],
+    "tex": false
+   },
+   "mirage_gem": {
+    "color": [
+     0.4735314961384573,
+     0.33245153633549385,
+     1,
+     1
+    ],
+    "metal": 0.1,
+    "rough": 0.12,
+    "emissive": [
+     0.4735314961384573,
+     0.33245153633549385,
+     1
+    ],
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "mirage_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "mirage_gem"
+   ],
+   [
+    "mirage_gem"
+   ],
+   [
+    "mirage_gem"
+   ],
+   [
+    "mirage_gem"
+   ]
+  ]
+ },
+ "Z4_oasis_spring": {
+  "shape": "trim",
+  "materials": {
+   "oasis_spring_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.3,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "gold_trim": {
+    "color": [
+     1,
+     0.5775804404214573,
+     0.04666508633021928,
+     1
+    ],
+    "metal": 0.4,
+    "rough": 0.28,
+    "emissive": [
+     0.19461783043107173,
+     0.06847816983662762,
+     0
+    ],
+    "tex": false
+   },
+   "oasis_spring_gem": {
+    "color": [
+     0.03954623527052923,
+     0.5775804404214573,
+     0.5775804404214573,
+     1
+    ],
+    "metal": 0.1,
+    "rough": 0.12,
+    "emissive": [
+     0.03954623527052923,
+     0.5775804404214573,
+     0.5775804404214573
+    ],
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "oasis_spring_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "oasis_spring_gem"
+   ],
+   [
+    "oasis_spring_gem"
+   ],
+   [
+    "oasis_spring_gem"
+   ],
+   [
+    "oasis_spring_gem"
+   ]
+  ]
+ },
+ "Z4_sandstorm": {
+  "shape": "trim",
+  "materials": {
+   "sandstorm_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.35,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "gold_trim": {
+    "color": [
+     1,
+     0.5775804404214573,
+     0.04666508633021928,
+     1
+    ],
+    "metal": 0.4,
+    "rough": 0.28,
+    "emissive": [
+     0.19461783043107173,
+     0.06847816983662762,
+     0
+    ],
+    "tex": false
+   },
+   "sandstorm_gem": {
+    "color": [
+     1,
+     0.5775804404214573,
+     0.061246054224174035,
+     1
+    ],
+    "metal": 0.1,
+    "rough": 0.12,
+    "emissive": [
+     1,
+     0.5775804404214573,
+     0.061246054224174035
+    ],
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "sandstorm_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "sandstorm_gem"
+   ],
+   [
+    "sandstorm_gem"
+   ],
+   [
+    "sandstorm_gem"
+   ],
+   [
+    "sandstorm_gem"
+   ]
+  ]
+ },
+ "Z4_scorpion": {
+  "shape": "trim",
+  "materials": {
+   "scorpion_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.25,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "gold_trim": {
+    "color": [
+     1,
+     0.5775804404214573,
+     0.04666508633021928,
+     1
+    ],
+    "metal": 0.4,
+    "rough": 0.28,
+    "emissive": [
+     0.19461783043107173,
+     0.06847816983662762,
+     0
+    ],
+    "tex": false
+   },
+   "scorpion_gem": {
+    "color": [
+     0.8069522576650873,
+     0.054480276435339814,
+     0.04231141061442144,
+     1
+    ],
+    "metal": 0.1,
+    "rough": 0.12,
+    "emissive": [
+     0.8069522576650873,
+     0.054480276435339814,
+     0.04231141061442144
+    ],
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "scorpion_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "scorpion_gem"
+   ],
+   [
+    "scorpion_gem"
+   ],
+   [
+    "scorpion_gem"
+   ],
+   [
+    "scorpion_gem"
+   ]
+  ]
+ },
+ "Z4_sun_disc": {
+  "shape": "trim",
+  "materials": {
+   "sun_disc_paint": {
+    "color": null,
+    "metal": 0.02,
+    "rough": 0.2,
+    "emissive": [
+     1,
+     1,
+     1
+    ],
+    "tex": true
+   },
+   "finger_hole": {
+    "color": [
+     0.024157632443547246,
+     0.01764195448412081,
+     0.014443843592229466,
+     1
+    ],
+    "metal": 0,
+    "rough": 0.9,
+    "emissive": null,
+    "tex": false
+   },
+   "finger_hole_floor": {
+    "color": [
+     0.0069954101845983935,
+     0.005605391621829108,
+     0.005181516700061659,
+     1
+    ],
+    "metal": 0,
+    "rough": 1,
+    "emissive": null,
+    "tex": false
+   },
+   "gold_trim": {
+    "color": [
+     1,
+     0.5775804404214573,
+     0.04666508633021928,
+     1
+    ],
+    "metal": 0.4,
+    "rough": 0.28,
+    "emissive": [
+     0.19461783043107173,
+     0.06847816983662762,
+     0
+    ],
+    "tex": false
+   },
+   "sun_disc_gem": {
+    "color": [
+     0.03954623527052923,
+     0.5775804404214573,
+     0.5775804404214573,
+     1
+    ],
+    "metal": 0.1,
+    "rough": 0.12,
+    "emissive": [
+     0.03954623527052923,
+     0.5775804404214573,
+     0.5775804404214573
+    ],
+    "tex": false
+   }
+  },
+  "mesh_material": [
+   [
+    "sun_disc_paint"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "finger_hole"
+   ],
+   [
+    "finger_hole_floor"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "gold_trim"
+   ],
+   [
+    "sun_disc_gem"
+   ],
+   [
+    "sun_disc_gem"
+   ],
+   [
+    "sun_disc_gem"
+   ],
+   [
+    "sun_disc_gem"
+   ]
+  ]
+ }
+}

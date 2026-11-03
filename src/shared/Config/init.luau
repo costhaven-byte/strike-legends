@@ -78,9 +78,9 @@ Config.CoreLoop = {
 		{ Ball = "Lightning", Name = "Sunbolt", Fx = "Bolt", Pins = 650, Price = 44000, Rarity = "Epic" },
 		{ Ball = "SolidGold", Name = "Tornado", Fx = "Tornado", Pins = 1400, Price = 150000, Rarity = "Legendary" },
 		{ Ball = "Daybreak", Name = "Sonic Boom", Fx = "BlackHole", Pins = 3200, Price = 590000, Rarity = "Mythic" },
-		-- Addendum 6 Stage 3: zones 2-4, 10 balls each (Zone = the zone that must be open to buy it). Zone 2 (Stage 4) has
-		-- its own sea/beach effects and the original ball designs. Zones 3/4 (Stages 5/6) have their own effects. PLACEHOLDER:
-		-- zone 3/4 Ball = existing models (no new designs yet).
+		-- Addendum 6 Stage 3: zones 2-4, 10 balls each (Zone = the zone that must be open to buy it). Zones 2-4 have their
+		-- own effects. 2026-11-03: all 40 looks = the owner's new ball designs (ReplicatedStorage.BallModels, assets/v2_balls);
+		-- Scorpion, Canyon Echo and Mirage got their own Ids (they shared Crystal / Lightning / SolidGold with zone 1).
 		-- Numbers: pins x1.7 a ball from ball 10 of the zone before; price = income with the ball before (pins x the
 		-- zone's PinValue x 84 throws a minute, zone 1's late pace with pets) x Zone 1's gaps (3, 2, 2, 2, 2, 5, 5, 5, 5, 5
 		-- min). Stage 9 tunes them from the pacing sim.
@@ -98,26 +98,26 @@ Config.CoreLoop = {
 		{ Ball = "Plasma", Name = "Pier Pounder", Fx = "Pound", Pins = 220000, Price = 2900000000, Rarity = "Epic", Zone = 2 },
 		{ Ball = "Nebula", Name = "Tsunami", Fx = "Tsunami", Pins = 380000, Price = 4300000000, Rarity = "Epic", Zone = 2 },
 		{ Ball = "Golden", Name = "Lighthouse Beam", Fx = "Lighthouse", Pins = 650000, Price = 8200000000, Rarity = "Legendary", Zone = 2 },
-		{ Ball = "LeagueBlack", Name = "Vine Swinger", Fx = "Vine", Pins = 1100000, Price = 28000000000, Rarity = "Rare", Zone = 3, Placeholder = true },
-		{ Ball = "CherrySwirl", Name = "Coconut", Fx = "Coconut", Pins = 1900000, Price = 35000000000, Rarity = "Rare", Zone = 3, Placeholder = true },
-		{ Ball = "BlueMarble", Name = "Toucan Roll", Fx = "Toucan", Pins = 3200000, Price = 76000000000, Rarity = "Rare", Zone = 3, Placeholder = true },
-		{ Ball = "Phantom", Name = "Leaf Storm", Fx = "LeafStorm", Pins = 5400000, Price = 140000000000, Rarity = "Epic", Zone = 3, Placeholder = true },
-		{ Ball = "PearlPro", Name = "Waterfall", Fx = "Waterfall", Pins = 9200000, Price = 180000000000, Rarity = "Epic", Zone = 3, Placeholder = true },
-		{ Ball = "TigerSwirl", Name = "Jaguar", Fx = "Jaguar", Pins = 16000000, Price = 850000000000, Rarity = "Epic", Zone = 3, Placeholder = true },
-		{ Ball = "Inferno", Name = "Rope Bridge", Fx = "Bridge", Pins = 27000000, Price = 1500000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
-		{ Ball = "Championship", Name = "Temple Stone", Fx = "Temple", Pins = 45000000, Price = 4500000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
-		{ Ball = "Dragon", Name = "Monsoon", Fx = "Monsoon", Pins = 77000000, Price = 9100000000000, Rarity = "Legendary", Zone = 3, Placeholder = true },
-		{ Ball = "Void", Name = "Jungle King", Fx = "JungleKing", Pins = 130000000, Price = 19000000000000, Rarity = "Mythic", Zone = 3, Placeholder = true },
-		{ Ball = "Hubcap", Name = "Dust Devil", Fx = "DustDevil", Pins = 220000000, Price = 110000000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
-		{ Ball = "DumpsterDiamond", Name = "Cactus Roller", Fx = "Cactus", Pins = 380000000, Price = 140000000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
-		{ Ball = "DuctTape", Name = "Mesa Smash", Fx = "Mesa", Pins = 640000000, Price = 230000000000000, Rarity = "Epic", Zone = 4, Placeholder = true },
-		{ Ball = "RustBucket", Name = "Sandstorm", Fx = "Sandstorm", Pins = 1100000000, Price = 570000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
-		{ Ball = "Rookie", Name = "Oasis Spring", Fx = "Oasis", Pins = 1800000000, Price = 980000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
-		{ Ball = "Crystal", Name = "Scorpion", Fx = "Scorpion", Pins = 3100000000, Price = 2000000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
-		{ Ball = "Perfect300", Name = "Sun Disc", Fx = "SunDisc", Pins = 5300000000, Price = 6600000000000000, Rarity = "Legendary", Zone = 4, Placeholder = true },
-		{ Ball = "Lightning", Name = "Canyon Echo", Fx = "Echo", Pins = 9100000000, Price = 15000000000000000, Rarity = "Mythic", Zone = 4, Placeholder = true },
-		{ Ball = "SolidGold", Name = "Mirage", Fx = "Mirage", Pins = 15000000000, Price = 25000000000000000, Rarity = "Mythic", Zone = 4, Placeholder = true },
-		{ Ball = "Supernova", Name = "Golden Sphinx", Fx = "Sphinx", Pins = 26000000000, Price = 41000000000000000, Rarity = "Mythic", Zone = 4, Placeholder = true },
+		{ Ball = "LeagueBlack", Name = "Vine Swinger", Fx = "Vine", Pins = 1100000, Price = 28000000000, Rarity = "Rare", Zone = 3 },
+		{ Ball = "CherrySwirl", Name = "Coconut", Fx = "Coconut", Pins = 1900000, Price = 35000000000, Rarity = "Rare", Zone = 3 },
+		{ Ball = "BlueMarble", Name = "Toucan Roll", Fx = "Toucan", Pins = 3200000, Price = 76000000000, Rarity = "Rare", Zone = 3 },
+		{ Ball = "Phantom", Name = "Leaf Storm", Fx = "LeafStorm", Pins = 5400000, Price = 140000000000, Rarity = "Epic", Zone = 3 },
+		{ Ball = "PearlPro", Name = "Waterfall", Fx = "Waterfall", Pins = 9200000, Price = 180000000000, Rarity = "Epic", Zone = 3 },
+		{ Ball = "TigerSwirl", Name = "Jaguar", Fx = "Jaguar", Pins = 16000000, Price = 850000000000, Rarity = "Epic", Zone = 3 },
+		{ Ball = "Inferno", Name = "Rope Bridge", Fx = "Bridge", Pins = 27000000, Price = 1500000000000, Rarity = "Legendary", Zone = 3 },
+		{ Ball = "Championship", Name = "Temple Stone", Fx = "Temple", Pins = 45000000, Price = 4500000000000, Rarity = "Legendary", Zone = 3 },
+		{ Ball = "Dragon", Name = "Monsoon", Fx = "Monsoon", Pins = 77000000, Price = 9100000000000, Rarity = "Legendary", Zone = 3 },
+		{ Ball = "Void", Name = "Jungle King", Fx = "JungleKing", Pins = 130000000, Price = 19000000000000, Rarity = "Mythic", Zone = 3 },
+		{ Ball = "Hubcap", Name = "Dust Devil", Fx = "DustDevil", Pins = 220000000, Price = 110000000000000, Rarity = "Epic", Zone = 4 },
+		{ Ball = "DumpsterDiamond", Name = "Cactus Roller", Fx = "Cactus", Pins = 380000000, Price = 140000000000000, Rarity = "Epic", Zone = 4 },
+		{ Ball = "DuctTape", Name = "Mesa Smash", Fx = "Mesa", Pins = 640000000, Price = 230000000000000, Rarity = "Epic", Zone = 4 },
+		{ Ball = "RustBucket", Name = "Sandstorm", Fx = "Sandstorm", Pins = 1100000000, Price = 570000000000000, Rarity = "Legendary", Zone = 4 },
+		{ Ball = "Rookie", Name = "Oasis Spring", Fx = "Oasis", Pins = 1800000000, Price = 980000000000000, Rarity = "Legendary", Zone = 4 },
+		{ Ball = "Scorpion", Name = "Scorpion", Fx = "Scorpion", Pins = 3100000000, Price = 2000000000000000, Rarity = "Legendary", Zone = 4 },
+		{ Ball = "Perfect300", Name = "Sun Disc", Fx = "SunDisc", Pins = 5300000000, Price = 6600000000000000, Rarity = "Legendary", Zone = 4 },
+		{ Ball = "CanyonEcho", Name = "Canyon Echo", Fx = "Echo", Pins = 9100000000, Price = 15000000000000000, Rarity = "Mythic", Zone = 4 },
+		{ Ball = "Mirage", Name = "Mirage", Fx = "Mirage", Pins = 15000000000, Price = 25000000000000000, Rarity = "Mythic", Zone = 4 },
+		{ Ball = "Supernova", Name = "Golden Sphinx", Fx = "Sphinx", Pins = 26000000000, Price = 41000000000000000, Rarity = "Mythic", Zone = 4 },
 	},
 	-- Addendum 5 D: each ladder ball's own signature effect (Fx on its row above; client Modules/BallSignature).
 	-- Visual and feel only, never a number. Strength 0..1 grows with the REAL pin count of the throw on a log scale:
@@ -2530,7 +2530,6 @@ Config.BallVfx = {
 				},
 			},
 			-- the owner's accretion disk, photon ring and shards (the-void-ball.obj)
-			Pieces = { Disk = 25, PhotonRing = -40, Shards = 15 },
 			Halos = {
 				{ Image = "Dot", Color = Color3.fromRGB(190, 40, 255), Size = 2.6, Transparency = 0.45 },
 			},
@@ -2588,7 +2587,6 @@ Config.BallVfx = {
 				},
 			},
 			-- the owner's three rings and mini stars (supernova-ball.obj)
-			Pieces = { RingMagenta1 = 60, RingCyan = -45, RingMagenta2 = 35, Stars = 12 },
 			-- tinted glow and light: a white glow reflects off the shiny lane as a white streak behind the ball
 			Halos = { { Image = "Dot", Color = Color3.fromRGB(150, 70, 255), Size = 2.4, Transparency = 0.6 } },
 			Light = { Color = Color3.fromRGB(255, 70, 190), Brightness = 2.5, Range = 6 },
@@ -2711,8 +2709,6 @@ Config.BallVfx = {
 		},
 		Crystal = {
 			Trails = { { Colors = { Color3.fromHex("E8FCFF"), Color3.fromHex("8FE0FF"), Color3.fromHex("2F8FE0") }, Width = 1.1, Lifetime = 0.45 } },
-			-- the owner's glowing core and glints turn slowly inside the see-through shell (BallFxPieces.Crystal)
-			Pieces = { CrystalCore = 40, CrystalGlints = -25 },
 			Particles = {
 				{ Image = "Diamond", Colors = { Color3.fromHex("FFFFFF"), Color3.fromHex("8FE0FF"), Color3.fromHex("4AB8FF") }, Rate = 24,
 					Size = 0.11, Life = { 0.5, 1 }, Speed = { 0.3, 0.8 }, Radius = 0.55, Twinkle = true, Spin = 200 },
@@ -3351,6 +3347,46 @@ Config.Balls = {
 		Material = Enum.Material.SmoothPlastic,
 		Trail = Color3.fromHex("FFE45A"),
 		Traits = { Curve = 0.6, StreakSaver = 30 },
+	},
+	-- 2026-11-03: zone 4 ladder balls that used to share a zone 1 ball's Id (numbers copied from that ball)
+	{
+		Id = "Scorpion",
+		Zone = 4,
+		Name = "Scorpion",
+		Rarity = "Legendary",
+		Multiplier = 3.0,
+		Forgiveness = 0.03,
+		Color = Color3.fromHex("8C2C2C"),
+		Material = Enum.Material.SmoothPlastic,
+		Trail = Color3.fromHex("E8423A"),
+		Traits = { Heavy = 0.4, GemHunter = 0.06 },
+		InCrates = false,
+	},
+	{
+		Id = "CanyonEcho",
+		Zone = 4,
+		Name = "Canyon Echo",
+		Rarity = "Mythic",
+		Multiplier = 20.0,
+		Forgiveness = 0.05,
+		Color = Color3.fromHex("3A233A"),
+		Material = Enum.Material.SmoothPlastic,
+		Trail = Color3.fromHex("38C8C8"),
+		Traits = { Curve = 0.6, StreakSaver = 30 },
+		InCrates = false,
+	},
+	{
+		Id = "Mirage",
+		Zone = 4,
+		Name = "Mirage",
+		Rarity = "Mythic",
+		Multiplier = 10.0,
+		Forgiveness = 0.045,
+		Color = Color3.fromHex("B4A5B9"),
+		Material = Enum.Material.SmoothPlastic,
+		Trail = Color3.fromHex("B79CFF"),
+		Traits = { Blast = 0.75, StreakSaver = 45 },
+		InCrates = false,
 	},
 	{
 		Id = "Daybreak",
