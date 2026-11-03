@@ -334,3 +334,15 @@ Before: File > Save to Roblox As a copy (restore = git tag `restore-polish-v2-be
   waterfall blue water), and the themed styles keep their own colours (fire is orange).
 - Checked in Play, all 40 balls built through BallFx: every ball's effect is 65-100% on its paint's hue (Scorpion
   55%: its green venom style). Before: 18 balls were mostly another colour.
+
+## D5 the 40 ball effects (tag restore-pl-D5-before)
+- The 40 signature hits were already built (Addendum 5 D + Addendum 6 stages 4-6), each with its own roll trail,
+  hit, pin push and sound; L6 just gave their trails the ball's v2 colours.
+- Fixed the plan's "impact = freeze + shake + particles + sound together" rule: effects whose falling part lands a
+  moment after the ball (Coconut, Toucan, Waterfall, Rope Bridge, Temple Stone, Monsoon, Jungle King, Mesa, Cactus,
+  Scorpion, Sun Disc, Mirage, Golden Sphinx, Oasis, Pier Pounder) shook the camera when the ball arrived, before the
+  hit. The shake now lands with the falling part, its sound and its burst.
+- Checked in Play: every one of the 40 played (roll + hit) at full strength on the real lane, with a copy that runs
+  their animated parts on Heartbeat (Studio wasn't drawing frames): no errors, console clean.
+- Not done (needs eyes on the 3D view, which Studio wasn't drawing this session): judging each effect's look one by
+  one, the plan's "one zone per chat" review. It's in the owner playtest: throw each zone's balls 1, 5 and 10.

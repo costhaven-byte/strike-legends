@@ -2497,11 +2497,20 @@ function BallSignature.Impact(name: string?, c): number
 	end
 	c.Color = row.Color
 	c.Floor = Vector3.new(c.Center.X, c.FloorY + 0.08, c.Center.Z)
-	-- Shake grows with the pin count (SCREEN SHAKE off = none)
+	-- Shake grows with the pin count (SCREEN SHAKE off = none). Polish v2 D5: an effect whose falling part lands a
+	-- moment after the ball (HOLD) shakes when it lands, with its sound and burst, not when the ball arrives
 	local THROW = Config.Throw
-	ThrowFx.Shake(THROW.CameraShakeStrength * row.Shake * (0.4 + 0.6 * c.T), THROW.CameraShakeTime * (0.6 + 0.6 * c.T))
-	if c.Big and c.T >= 0.5 and name ~= "BlackHole" then
-		CameraShake.Add(row.Shake * c.T * 0.5)
+	local landing = if name == "Pound" then 0.16 else HOLD[name] or 0
+	local function shake()
+		ThrowFx.Shake(THROW.CameraShakeStrength * row.Shake * (0.4 + 0.6 * c.T), THROW.CameraShakeTime * (0.6 + 0.6 * c.T))
+		if c.Big and c.T >= 0.5 and name ~= "BlackHole" then
+			CameraShake.Add(row.Shake * c.T * 0.5)
+		end
+	end
+	if landing > 0 then
+		task.delay(landing, shake)
+	else
+		shake()
 	end
 	if vfx() then
 		impacts[name](c)
