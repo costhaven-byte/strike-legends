@@ -180,6 +180,10 @@ function CollectionBookController:Start()
 	end)
 	HudKit.FitFrame(menu, "Balls") -- (V2: shrinks with the HUD on short screens; BallsUI also holds the book)
 	HudKit.Tuckable(menu, "Balls")
+	-- Polish v2 U1: no SHOP button on the HUD (Config.Ui.ShopButton); the shop opens at the BALLS & BAGS stall
+	if Config.CoreLoop.Enabled and Config.Ui.ShopButton == false then
+		ballsButton.Visible = false
+	end
 	swatch.BackgroundTransparency = 1
 	local buttonView = Instance.new("ViewportFrame")
 	buttonView.Name = "Ball3D"

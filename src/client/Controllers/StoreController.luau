@@ -1761,6 +1761,20 @@ function StoreController:Start()
 			return not isOpen
 		end)
 	end
+	-- Polish v2 U1: the HUD PASSES button opens the store scrolled to a section ("passes"); tapping it again closes
+	function StoreController.OpenOn(section: string)
+		if isOpen and activeTab == section then
+			StoreController.Close()
+			return
+		end
+		StoreController.Open()
+		task.defer(function()
+			task.wait() -- (the list lays out first, so the section's top is known)
+			if isOpen then
+				jump(section)
+			end
+		end)
+	end
 	function StoreController.Toggle()
 		if isOpen then
 			StoreController.Close()

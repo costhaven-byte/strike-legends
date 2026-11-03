@@ -198,9 +198,26 @@ local V2_LAYOUT = {
 	Sell = { Pc = { 474, 956, 200, 96, "L", "B" }, Phone = { 436, 326, 108, 50, "L", "B" } },
 	Hold = { Pc = { 790, 928, 340, 120, "C", "B" }, Phone = { 676, 310, 152, 66, "R", "B" } },
 }
+-- Polish v2 U1 (Config.Ui.ShopButton = false): no SHOP button, so the grid closes up from the top-left and the
+-- PASSES button joins the grid (TELEPORT last, as it hides until zone 2); GIFTS + SETTINGS slide right into the corner it left
+local NO_SHOP_LAYOUT = {
+	Pets = { Pc = { 24, 244, 96, 96, "L", "T" }, Phone = { 40, 104, 46, 46, "L", "T" } },
+	Store = { Pc = { 140, 244, 96, 96, "L", "T" }, Phone = { 100, 104, 46, 46, "L", "T" } },
+	Daily = { Pc = { 24, 364, 96, 96, "L", "T" }, Phone = { 160, 104, 46, 46, "L", "T" } },
+	Profile = { Pc = { 140, 364, 96, 96, "L", "T" }, Phone = { 40, 166, 46, 46, "L", "T" } },
+	Passes = { Pc = { 24, 484, 96, 96, "L", "T" }, Phone = { 100, 166, 46, 46, "L", "T" } },
+	Teleport = { Pc = { 140, 484, 96, 96, "L", "T" }, Phone = { 160, 166, 46, 46, "L", "T" } }, -- (last: hidden until zone 2)
+	Gifts = { Pc = { 1716, 24, 80, 80, "R", "T" }, Phone = { 728, 40, 44, 44, "R", "T" } },
+	Settings = { Pc = { 1816, 24, 80, 80, "R", "T" }, Phone = { 784, 40, 44, 44, "R", "T" } },
+}
 if V2 then
 	for key, row in V2_LAYOUT do
 		HudKit.Layout[key] = row
+	end
+	if Config.Ui.ShopButton == false and Config.CoreLoop.Enabled then
+		for key, row in NO_SHOP_LAYOUT do
+			HudKit.Layout[key] = row
+		end
 	end
 end
 

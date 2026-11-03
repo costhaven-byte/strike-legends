@@ -1805,8 +1805,8 @@ function CoreShopController:Start()
 	end)
 
 	-- Stage 8: the small gold PASSES button on the HUD (right of PROFILE; phones: right of STORE) opens the
-	-- Gamepasses tab
-	if PAGES.Gamepasses then
+	-- Gamepasses tab. Polish v2 U1: with that tab gone (passes only in the STORE), it opens the STORE on its passes.
+	if PAGES.Gamepasses or Store.Active() then
 		task.spawn(function()
 			local ballsUi = playerGui:WaitForChild("BallsUI", 30) :: ScreenGui?
 			local buttonGui = new("ScreenGui", {
@@ -1821,7 +1821,15 @@ function CoreShopController:Start()
 			kit:SetCaption("PASSES", nil, nil, 10)
 			local button = kit.Holder :: TextButton
 			button.Activated:Connect(function()
-				if
+				if not PAGES.Gamepasses then
+					if open or (V2 and ShopV2.IsOpen()) then
+						setOpen(false)
+					end
+					local StoreController = require(script.Parent.StoreController) :: any
+					if StoreController.OpenOn then
+						StoreController.OpenOn("passes")
+					end
+				elseif
 					(open and currentTab == "Gamepasses") or (V2 and ShopV2.IsOpen() and ShopV2.Tab() == "Gamepasses")
 				then
 					setOpen(false)

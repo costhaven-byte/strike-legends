@@ -229,8 +229,10 @@ Config.CoreLoop = {
 		BuySlack = 4, -- extra studs for lag (walking off while the buy is on its way)
 		Color = Color3.fromRGB(64, 160, 236), -- sky blue
 		-- Addendum 6 2.1: the shop window's tabs, left to right (CoreShopController builds one page per Id it
-		-- knows; Stage 8 adds "Gamepasses" here). The PET SLOTS row sits at the bottom of the Bags tab.
-		Tabs = { "Balls", "Bags", "Rebirth", "Gamepasses" },
+		-- knows; Stage 8 added "Gamepasses" here). The PET SLOTS row sits at the bottom of the Bags tab.
+		-- Polish v2 U1 (owner 2026-11-03): passes are sold only in the STORE, so "Gamepasses" is out of this list
+		-- (put it back to bring the shop's PASSES tab back).
+		Tabs = { "Balls", "Bags", "Rebirth" },
 		-- Addendum 6 Stage 8: the Gamepasses tab's cards, in order (Ids of Config.Monetization.Passes; the pass rows
 		-- hold the IDs, prices and words). A pass whose PassId is still 0 is hidden in the live game (Studio shows
 		-- it as NO ID YET). The small HUD PASSES button opens this tab; Robux buys work anywhere, not only at the booth.
@@ -1220,6 +1222,10 @@ Config.Ui = {
 	-- UI overhaul V8 (owner's 'Strike Legends - Daily Reward.html' 1A/1B): the DAILY REWARDS calendar in the new look
 	-- (6 day tiles + big day 7, CLAIM -> blue countdown, reward flies to the HUD). false = the old calendar comes back.
 	DailyV2 = true,
+	-- Polish v2 U1 (owner 2026-11-03): no SHOP (balls + bags) button on the HUD; the shop opens at the BALLS & BAGS
+	-- stall and the NEXT GOAL card takes you there. The grid closes up and the PASSES button (opens the STORE on its
+	-- passes) takes the last grid spot. true = the SHOP button comes back.
+	ShopButton = false,
 	HatchV2Quick = 2, -- AUTO HATCH (and after Config.MascotFx.Hatch.AutoSkipAfter hatches) plays it this many times faster; Mythic never
 	-- Tuck while bowling (owner 2026-10-28: on phones the HUD hid the lane): from the moment you start a throw, these
 	-- HUD pieces slide off the nearest screen edge; IdleSeconds after your last throw they slide back (Time = slide

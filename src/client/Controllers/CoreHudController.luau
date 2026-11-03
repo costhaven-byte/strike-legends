@@ -223,6 +223,28 @@ local function buildGoalCard(gui: ScreenGui)
 		player:GetAttributeChangedSignal(attribute):Connect(refresh)
 	end
 	refresh()
+
+	-- Polish v2 U1: with no SHOP button on the HUD, tapping the card takes you to the BALLS & BAGS stall (the
+	-- server moves you onto its pad, like the shop's GO TO SHOP), once there is something left to buy
+	local tap = new("TextButton", {
+		Name = "Tap",
+		Text = "",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1, 1),
+		ZIndex = 20,
+	}, holder) :: TextButton
+	local goRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CoreGoTo") :: RemoteEvent
+	local lastGo = 0
+	tap.Activated:Connect(function()
+		if shownKey == "Done" or os.clock() - lastGo < CORE.Teleport.Cooldown then
+			return
+		end
+		lastGo = os.clock()
+		kit.Pulse(holder, 0.94, 0.15)
+		Sfx.Play("Teleport", 1.1, 0.6)
+		UiFx.Flash(WHITE, 0.25, 0.25)
+		goRemote:FireServer("Shop")
+	end)
 end
 
 function CoreHudController:Start()
