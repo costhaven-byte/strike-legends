@@ -408,7 +408,47 @@ end
 -- hole...), sized by the real pin count (crash volume, shake, coin pop too). Visual only.
 -- The fresh rack stands RefillDelay seconds after the hit (knocked pins fly on as pooled, capped debris).
 local CORE = Config.CoreLoop
-local function playCoreThrow(data)
+local IMPACT = THROW.ImpactDust
+local DUST = "rbxasset://textures/particles/smoke_main.dds"
+
+-- Polish v2 D2: a soft puff where the ball meets the pins, in the zone's own ground colour (rooftop concrete dust,
+-- boardwalk sand, jungle spray, canyon sand). Bigger with the pin count.
+local function impactDust(lane: Model, position: Vector3, strength: number)
+	if not IMPACT or not Settings.Get("Vfx") then
+		return
+	end
+	local color = IMPACT.Colors[lane:GetAttribute("Zone") or 1] or IMPACT.Colors[1]
+	local holder = Instance.new("Part")
+	holder.Anchored = true
+	holder.CanCollide = false
+	holder.CanQuery = false
+	holder.CanTouch = false
+	holder.Transparency = 1
+	holder.Size = Vector3.one * 0.2
+	holder.Position = position
+	holder.Parent = lane
+	local size = IMPACT.Size * (1 + strength)
+	local puff = Instance.new("ParticleEmitter")
+	puff.Texture = DUST
+	puff.Color = ColorSequence.new(color)
+	puff.LightEmission = 0
+	puff.LightInfluence = 1
+	puff.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size * 0.5), NumberSequenceKeypoint.new(1, size * 1.6) })
+	puff.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 1) })
+	puff.Lifetime = NumberRange.new(0.45, 0.8)
+	puff.Speed = NumberRange.new(IMPACT.Speed * 0.5, IMPACT.Speed)
+	puff.SpreadAngle = Vector2.new(70, 20)
+	puff.EmissionDirection = Enum.NormalId.Top
+	puff.Drag = 5
+	puff.Rotation = NumberRange.new(0, 360)
+	puff.RotSpeed = NumberRange.new(-60, 60)
+	puff.Rate = 0
+	puff.Parent = holder
+	puff:Emit(math.floor(IMPACT.Count * (1 + strength)))
+	task.delay(1, holder.Destroy, holder)
+end
+
+local function rollCoreThrow(data)
 	local lane: Model = data.Lane
 	local rack = racks[lane]
 	if not rack then
@@ -450,10 +490,20 @@ local function playCoreThrow(data)
 	local each = if shown > 0 then paid / shown else 0
 	local force = THROW.Levels[level].Force * (if lucky then 1.3 else 1)
 	local hold = 0 -- seconds the signature holds the pins before they fly (the black hole pulls first)
+	-- Polish v2 D2: a LUCKY throw freezes for a beat at the hit (hit-stop), then the pins burst
+	local stop = if lucky and isOwn then THROW.HitStop else 0
+	local frozenUntil = 0
 
 	local function impact()
 		local hitPoint = rack.HeadPinCFrame.Position - forward * 1 + Vector3.new(0, 0.4, 0)
 		local big = lucky and shown >= CORE.BigClear
+		frozenUntil = os.clock() + stop
+		if isOwn then
+			impactDust(lane, hitPoint - Vector3.new(0, 0.3, 0), strength)
+		end
+		if lucky and thrower and thrower.Character then
+			ThrowPose.Hop(thrower.Character)
+		end
 		local effects = CORE.BallEffects
 		local loud = if signature then 1 + effects.CrashLoud * strength else 1
 		Sfx.PlayAt(
@@ -489,7 +539,7 @@ local function playCoreThrow(data)
 			if body then
 				if isOwn then
 					local distance = (body.Position - hitPoint).Magnitude
-					task.delay(hold + THROW.PinSpreadTime * math.clamp(distance / 12, 0, 1), function()
+					task.delay(hold + stop + THROW.PinSpreadTime * math.clamp(distance / 12, 0, 1), function()
 						rack:Knock(index, knockFrom, force * knockForce)
 					end)
 					if paid > 0 and popped < CORE.PopsPerThrow then
@@ -510,6 +560,15 @@ local function playCoreThrow(data)
 			return
 		end
 		ThrowFx.PinHitSound(lane.PinSpot, 1, false)
+		-- the knocked pins land on the deck a moment later: a softer second clatter
+		if shown >= (IMPACT and IMPACT.ClatterFrom or 6) then
+			task.delay(hold + stop + 0.32 + math.random() * 0.08, function()
+				Sfx.PlayAt("PinHit", lane.PinSpot, 0.78 + math.random() * 0.1, math.clamp(0.25 + shown * 0.012, 0.25, 0.7))
+			end)
+		end
+		if lucky then
+			ThrowFx.Punch(THROW.CameraPunch * 0.5)
+		end
 		if paid > 0 then
 			ThrowFx.NumberPop(
 				rack.HeadPinCFrame.Position + forward * 4 + Vector3.new(0, 3.5, 0),
@@ -532,6 +591,9 @@ local function playCoreThrow(data)
 	local hit = false
 	local connection
 	connection = RunService.Heartbeat:Connect(function(dt)
+		if os.clock() < frozenUntil then
+			return -- hit-stop
+		end
 		travelled += speed * dt * (if hit then 0.5 else 1)
 		local position = start + forward * travelled
 		if roll.Lift and not hit then
@@ -547,7 +609,7 @@ local function playCoreThrow(data)
 		if not hit and travelled >= headDistance - 0.5 then
 			hit = true
 			impact()
-			task.delay(hold + (data.ResetDelay or CORE.RefillDelay), function()
+			task.delay(hold + stop + (data.ResetDelay or CORE.RefillDelay), function()
 				rack:Refill()
 			end)
 		end
@@ -556,6 +618,17 @@ local function playCoreThrow(data)
 			ball:Destroy()
 		end
 	end)
+end
+
+-- Polish v2 D2: the ball leaves the bowler's hand at the bottom of the swing (ThrowPose winds up first), so the
+-- roll waits for the swing on screen. Everything after the hit (counter, gains) waits the same Lead.
+local function playCoreThrow(data)
+	local lead = if data.UserId == Players.LocalPlayer.UserId then ThrowPose.Lead(Players.LocalPlayer.Character) else 0
+	if lead > 0.01 then
+		task.delay(lead, rollCoreThrow, data)
+	else
+		rollCoreThrow(data)
+	end
 end
 
 -- ===== Addendum 5 A3: the one shared lane =====
@@ -568,8 +641,13 @@ local function playOtherBall(data)
 	local ballStart = typeof(lane) == "Instance" and lane:FindFirstChild("BallStart") :: BasePart?
 	local pinSpot = ballStart and lane:FindFirstChild("PinSpot") :: BasePart?
 	local thrower = Players:GetPlayerByUserId(data.UserId)
+	local lead = 0
 	if thrower and thrower.Character then
 		ThrowPose.Release(thrower.Character, data.Pose or 1)
+		lead = ThrowPose.Lead(thrower.Character)
+		if data.Lucky then
+			task.delay(lead + (data.RollTime or 0.45), ThrowPose.Hop, thrower.Character)
+		end
 	end
 	if not ballStart or not pinSpot or otherBalls >= (SHARED.OtherBalls or 0) then
 		return
@@ -595,11 +673,15 @@ local function playOtherBall(data)
 	local spin = Vector3.yAxis:Cross(forward).Unit
 	local radius = ball.Size.X / 2
 	ball.CFrame = CFrame.new(start)
-	ball.Parent = lane
-	local travelled = 0
+	local travelled = -speed * lead -- (Polish v2 D2: rolls once their swing lets go)
 	local connection
 	connection = RunService.Heartbeat:Connect(function(dt)
 		travelled += speed * dt
+		if travelled < 0 then
+			return
+		elseif not ball.Parent then
+			ball.Parent = lane
+		end
 		ball.CFrame = CFrame.new(start + forward * travelled) * CFrame.fromAxisAngle(spin, travelled / radius)
 		if travelled >= distance then
 			connection:Disconnect()

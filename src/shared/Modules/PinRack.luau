@@ -671,7 +671,12 @@ function PinRack:Knock(index: number, from: Vector3, force: number): number?
 	local velocity = direction * T.PinLaunchForce * k * f
 		-- upward grows a bit slower than sideways, so pins from the strongest balls still come back into view
 		+ Vector3.new(0, T.PinLaunchUpward * k * f ^ 0.7 * (0.8 + math.random() * 0.4), 0)
-	local spin = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5).Unit
+	-- Polish v2 D2: pins tumble end over end along their flight (top pitching forward), with a little random wobble,
+	-- instead of spinning on a random axis (reads as a heavy pin, not a tossed stick)
+	local tumble = Vector3.yAxis:Cross(Vector3.new(direction.X, 0, direction.Z))
+	tumble = if tumble.Magnitude > 0.01 then tumble.Unit else right
+	local wobble = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5).Unit
+	local spin = (tumble * (T.PinTumble or 0) + wobble * (1 - (T.PinTumble or 0))).Unit
 		* T.PinSpin
 		* math.sqrt(f)
 		* (0.7 + math.random() * 0.6)

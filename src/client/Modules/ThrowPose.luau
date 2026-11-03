@@ -14,8 +14,9 @@ local EXAGGERATE = THROW.PoseExaggeration or 1 -- cartoon-sized: every bend is t
 
 local ThrowPose = {}
 
--- Joint angles in degrees (x = swing forward/back, y = twist, z = out to the side), oy = how far the hips drop
-type Pose = { [string]: { x: number?, y: number?, z: number?, oy: number? } }
+-- Joint angles in degrees (x = swing forward/back, y = twist, z = out to the side), oy = how far the hips drop,
+-- oz = how far the body rocks back (+) or slides forward (-) (Root only)
+type Pose = { [string]: { x: number?, y: number?, z: number?, oy: number?, oz: number? } }
 
 local JOINTS = { "Arm", "Elbow", "LeftArm", "Waist", "Root", "RightHip", "RightKnee", "LeftHip", "LeftKnee" }
 
@@ -43,13 +44,26 @@ local TOP: Pose = {
 	LeftHip = { x = 30 },
 	LeftKnee = { x = -35 },
 }
--- The moment the ball leaves the hand: deep lunge, back leg out behind
+-- Polish v2 D2: the wind-up of a hold-to-throw throw (no meter to charge): weight rocks back and the arm swings
+-- back (anticipation), then the down-swing slides you forward into the lunge
+local WIND: Pose = {
+	Arm = { x = -100, z = 6 },
+	Elbow = { x = 8 },
+	LeftArm = { x = 35, z = -45 },
+	Waist = { x = -14, y = -16 },
+	Root = { oy = -0.25, oz = 0.3 },
+	RightHip = { x = 8 },
+	RightKnee = { x = -22 },
+	LeftHip = { x = 22 },
+	LeftKnee = { x = -28 },
+}
+-- The moment the ball leaves the hand: deep lunge, back leg out behind, slid forward on the front foot
 local RELEASE: Pose = {
 	Arm = { x = 15 },
 	Elbow = { x = 5 },
 	LeftArm = { x = 10, z = -75 },
 	Waist = { x = -32, y = 8 },
-	Root = { oy = -0.65 },
+	Root = { oy = -0.65, oz = -0.45 },
 	RightHip = { x = -45 },
 	RightKnee = { x = -20 },
 	LeftHip = { x = 60 },
@@ -61,7 +75,7 @@ local FOLLOW: Pose = {
 	Elbow = { x = 25 },
 	LeftArm = { x = 0, z = -80 },
 	Waist = { x = -18, y = 18 },
-	Root = { oy = -0.55 },
+	Root = { oy = -0.55, oz = -0.55 },
 	RightHip = { x = -40 },
 	RightKnee = { x = -25 },
 	LeftHip = { x = 55 },
@@ -93,7 +107,7 @@ local SCUFFED_RELEASE: Pose = {
 	Elbow = { x = 50 },
 	LeftArm = { x = 120, z = -40 },
 	Waist = { x = -5, y = 25 },
-	Root = { oy = -0.15 },
+	Root = { oy = -0.15, oz = -0.1 },
 	RightHip = { x = -10 },
 	RightKnee = { x = -5 },
 	LeftHip = { x = 20 },
@@ -120,6 +134,7 @@ local function lerpPose(a: Pose, b: Pose, t: number): Pose
 			y = (from.y or 0) + ((to.y or 0) - (from.y or 0)) * t,
 			z = (from.z or 0) + ((to.z or 0) - (from.z or 0)) * t,
 			oy = (from.oy or 0) + ((to.oy or 0) - (from.oy or 0)) * t,
+			oz = (from.oz or 0) + ((to.oz or 0) - (from.oz or 0)) * t,
 		}
 	end
 	return out
@@ -181,6 +196,8 @@ type State = {
 	Level: number,
 	Seed: number, -- makes every scuffed throw wobble a little differently
 	Wobble: number, -- seconds since the throw started, for the wobble
+	Wind: number, -- seconds of wind-up before the down-swing (0 = it was charged, so already wound up)
+	Hop: number?, -- seconds into a LUCKY hop
 }
 local states: { [Model]: State } = {}
 
@@ -200,7 +217,7 @@ local function apply(state: State, pose: Pose, exaggerate: number)
 		end
 		local rotation = CFrame.Angles(math.rad(x), math.rad(y), math.rad(z))
 		offsets[motor] = (offsets[motor] or CFrame.identity)
-			* CFrame.new(0, (angles.oy or 0) * exaggerate, 0)
+			* CFrame.new(0, (angles.oy or 0) * exaggerate, (angles.oz or 0) * exaggerate)
 			* rotation
 	end
 	for motor, offset in offsets do
@@ -244,6 +261,7 @@ local function getState(character: Model?): State?
 		Level = #THROW.Levels,
 		Seed = 0,
 		Wobble = 0,
+		Wind = 0,
 	}
 	states[character] = state
 	character.Destroying:Connect(function()
@@ -254,6 +272,13 @@ end
 
 local function ease(t: number): number
 	return t * t * (3 - 2 * t)
+end
+
+-- Goes a little past 1 and settles back (follow-through); Config.Throw.FollowOvershoot = how far
+local function easeBack(t: number): number
+	local c = THROW.FollowOvershoot or 0
+	local u = t - 1
+	return 1 + (c + 1) * u * u * u + c * u * u
 end
 
 -- How well a level throws: 0 = scuffed (level 1), 1 = clean (PoseCleanLevel and up)
@@ -289,10 +314,12 @@ function ThrowPose.Charge(character: Model?, charge: number, level: number?)
 	end
 end
 
--- Let go: down-swing, release, follow-through, relax
+-- Let go: down-swing, release, follow-through, relax. Without a charge first (hold-to-throw, someone else's throw)
+-- it winds up first (Config.Throw.WindUpTime): weight back, arm back, then the down-swing slides you forward.
 function ThrowPose.Release(character: Model?, level: number?)
 	local state = getState(character)
 	if state then
+		state.Wind = if state.Mode == "Charge" then 0 else THROW.WindUpTime or 0
 		if state.Mode ~= "Charge" then
 			startWobble(state) -- someone else's throw: we never saw them charge
 		end
@@ -310,7 +337,33 @@ function ThrowPose.Stop(character: Model?)
 		state.Mode = "Release"
 		state.From = state.Current
 		-- skip straight to relaxing
+		state.Wind = 0
 		state.Clock = THROW.DownSwingTime + THROW.FollowThroughTime + THROW.PoseHoldTime
+	end
+end
+
+-- Seconds until the ball leaves this character's hand in the throw now playing (0 = gone already / no throw).
+-- Your own ball waits this long before it rolls, so it leaves your hand instead of appearing before the swing.
+function ThrowPose.Lead(character: Model?): number
+	local state = character and states[character]
+	if not state or state.Mode ~= "Release" then
+		return 0
+	end
+	return math.max(0, state.Wind + THROW.DownSwingTime * 0.8 - state.Clock)
+end
+
+-- A little hop of joy (a LUCKY throw): the body springs up and lands again (Config.Throw.LuckyHop)
+function ThrowPose.Hop(character: Model?)
+	local state = getState(character)
+	if state and THROW.LuckyHop then
+		state.Hop = 0
+		if state.Mode == "Rest" then
+			-- keep the loop running for the hop: a finished throw that just stays at rest
+			state.Mode = "Release"
+			state.From = REST
+			state.Wind = 0
+			state.Clock = THROW.DownSwingTime + THROW.FollowThroughTime + THROW.PoseHoldTime + THROW.PoseRelaxTime
+		end
 	end
 end
 
@@ -351,29 +404,50 @@ RunService.PreSimulation:Connect(function(dt)
 			state.Current = lerpPose(state.Current, target, 1 - math.exp(-dt * 22))
 		elseif state.Mode == "Release" then
 			state.Clock += dt
-			local t = state.Clock
+			local wind = state.Wind
+			local t = state.Clock - wind
 			local down, follow, hold = THROW.DownSwingTime, THROW.FollowThroughTime, THROW.PoseHoldTime
-			if t < down then
-				-- Accelerates down like a pendulum
+			if t < 0 then
+				-- Wind-up: rocks back and swings the arm back, slowing at the top (anticipation)
+				local s = 1 + t / wind
+				state.Current = lerpPose(state.From, at(SCUFFED_TOP, WIND, level), 1 - (1 - s) ^ 2)
+			elseif t < down then
+				-- Accelerates down like a pendulum (from the top of the wind-up when there was one)
 				local s = t / down
-				state.Current = lerpPose(state.From, at(SCUFFED_RELEASE, RELEASE, level), s * s)
+				local top = if wind > 0 then at(SCUFFED_TOP, WIND, level) else state.From
+				state.Current = lerpPose(top, at(SCUFFED_RELEASE, RELEASE, level), s * s)
 			elseif t < down + follow then
 				local s = (t - down) / follow
 				local follows = at(SCUFFED_FOLLOW, FOLLOW, level)
-				state.Current = lerpPose(at(SCUFFED_RELEASE, RELEASE, level), follows, 1 - (1 - s) ^ 2)
+				state.Current = lerpPose(at(SCUFFED_RELEASE, RELEASE, level), follows, easeBack(s))
 			elseif t < down + follow + hold then
 				state.Current = at(SCUFFED_FOLLOW, FOLLOW, level)
 				state.From = state.Current
 			else
 				local s = math.min((t - down - follow - hold) / THROW.PoseRelaxTime, 1)
 				state.Current = lerpPose(state.From, REST, ease(s))
-				if s >= 1 then
+				if s >= 1 and not state.Hop then
 					state.Mode = "Rest"
 					state.Current = REST
 				end
 			end
 		end
-		apply(state, if state.Mode == "Rest" then state.Current else wobble(state, state.Current), exaggerationOf(level))
+		local pose = if state.Mode == "Rest" then state.Current else wobble(state, state.Current)
+		if state.Hop then
+			-- LUCKY hop: up and down once on top of whatever the throw is doing
+			state.Hop += dt
+			local hop = THROW.LuckyHop
+			local s = state.Hop / hop.Time
+			if s >= 1 then
+				state.Hop = nil
+			else
+				pose = table.clone(pose)
+				local root = table.clone(pose.Root or {})
+				root.oy = (root.oy or 0) + hop.Height * math.sin(math.pi * s)
+				pose.Root = root
+			end
+		end
+		apply(state, pose, exaggerationOf(level))
 		if state.Mode == "Rest" then
 			states[character] = nil
 		end

@@ -31,6 +31,7 @@ local CoreHudController = {}
 -- The sunny look (Modules/SunKit, Addendum 4 Stage 3d): light panels with dark text, colour buttons with white text
 local SunKit = require(Modules.SunKit)
 local BallSignature = require(Modules.BallSignature)
+local ThrowPose = require(Modules.ThrowPose)
 local K = SunKit.C
 local INK = K.Ink
 local PANEL = K.Cream -- light panels
@@ -788,7 +789,8 @@ function CoreHudController:Start()
 		if type(data) ~= "table" or not data.Core or data.UserId ~= player.UserId then
 			return
 		end
-		task.delay(data.RollTime or 0, function()
+		-- (+ the swing's Lead: the ball leaves your hand at the release, Polish v2 D2)
+		task.delay((data.RollTime or 0) + ThrowPose.Lead(player.Character), function()
 			showCount(data.Count or 0, data.Lucky == true, data.BagFull == true)
 			flyGain(tonumber(data.Paid) or 0, data.Lucky == true)
 		end)

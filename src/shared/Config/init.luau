@@ -767,6 +767,12 @@ Config.Throw = {
 	PoseHoldTime = 0.35, -- holds the follow-through pose this long, then relaxes
 	PoseRelaxTime = 0.35,
 	PoseExaggeration = 1.3, -- every bend of the throw animation is this much bigger (1 = the original pose)
+	-- Polish v2 D2: a throw with no charge first (hold-to-throw, other players' throws) winds up for this long (weight
+	-- back, arm back), then swings down and slides forward; your own ball leaves the hand at the release
+	-- (ThrowPose.Lead). 0 = no wind-up (the ball goes the moment you throw).
+	WindUpTime = 0.1,
+	FollowOvershoot = 1.1, -- the follow-through swings this much past its pose and settles back (0 = stops dead)
+	LuckyHop = { Height = 0.55, Time = 0.34 }, -- a LUCKY throw: the bowler hops (studs up, seconds); nil = no hop
 	-- Low pose levels throw worse: level 1 is stiff, wobbly and flailing, and it gets cleaner every level. The pose
 	-- level comes from your RANK LEVEL (RankStyle below; batch D1, owner 2026-10-29), not from Power Level.
 	PoseCleanLevel = 9, -- from this pose level the throw is fully clean
@@ -811,6 +817,22 @@ Config.Throw = {
 	PinLaunchForce = 55, -- backwards and sideways
 	PinLaunchUpward = 42, -- up into the air
 	PinSpin = 30,
+	PinTumble = 0.75, -- Polish v2 D2: share of the spin that tumbles the pin end over end along its flight (0 = random axis)
+	-- Polish v2 D2: the puff where the ball meets the pins (core loop, your own throws), in each zone's ground colour
+	-- (zone number -> colour). Size / Speed / Count grow up to x2 with the throw's strength; ClatterFrom = drawn pins
+	-- from which a second, softer clatter plays as the pins land.
+	ImpactDust = {
+		Colors = {
+			Color3.fromHex("B9B2A8"), -- rooftop concrete dust
+			Color3.fromHex("E8CFA0"), -- boardwalk sand
+			Color3.fromHex("CDEFF5"), -- jungle spray
+			Color3.fromHex("E2A66C"), -- canyon sand
+		},
+		Size = 1.4,
+		Speed = 9,
+		Count = 7,
+		ClatterFrom = 6,
+	},
 	PinSpreadTime = 0.05, -- seconds between the first and last pin taking off
 	PinGravity = 90, -- pull on flying pins (normal is 196); characters keep normal gravity
 	LabPinSpacing = 2.9, -- pin spacing in the Lab, used to scale the numbers above to this alley
