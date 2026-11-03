@@ -379,6 +379,75 @@ end
 
 local UPRIGHT = CFrame.Angles(0, 0, math.rad(90)) -- cylinders lie along X; this stands them up
 
+-- Polish v2 L4: dress a sell / shop pad like its zone's stalls (Config.CoreLoop.PadStyles[zone]). The rim and the
+-- pad keep their size (the server's stand check is a distance, so nothing about using it changes); the pad's own
+-- colour (green = sell, blue = shop) stays as a ring inlay round a plate in the zone's material, plus small details
+-- (bolts / plank lines / moss / carved notches). Returns the plate (the part to put the pad's top picture on), or
+-- the pad itself when the zone has no style.
+local function dressPad(zone: number, model: Model, rim: BasePart, pad: BasePart, base: Vector3, r: number): BasePart
+	local style = CORE.PadStyles and CORE.PadStyles[zone]
+	if not style then
+		return pad
+	end
+	local function paint(target: BasePart, look: { any })
+		target.Color = Color3.fromHex(look[1])
+		target.Material = Enum.Material[look[2]]
+	end
+	paint(rim, style.Rim)
+	local ring = style.Ring or 0.8
+	local plate = part({
+		Name = "Plate",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.38, r * 2 - ring * 2, r * 2 - ring * 2),
+		CFrame = CFrame.new(base + Vector3.new(0, 0.19, 0)) * UPRIGHT,
+		CanCollide = false,
+	}, model)
+	paint(plate, style.Plate)
+	local topY = base.Y + 0.38
+	local function bit(name: string, size: Vector3, cframe: CFrame, shape: Enum.PartType?)
+		local piece = part({ Name = name, Size = size, CFrame = cframe, CanCollide = false }, model)
+		if shape then
+			piece.Shape = shape
+		end
+		paint(piece, style.Trim)
+		return piece
+	end
+	local plateR = r - ring
+	if style.Detail == "Bolts" then
+		for i = 0, 7 do
+			local a = i * math.pi / 4 + math.pi / 8
+			local at =
+				Vector3.new(base.X + math.cos(a) * (plateR - 0.5), topY + 0.04, base.Z + math.sin(a) * (plateR - 0.5))
+			bit("Bolt", Vector3.new(0.12, 0.42, 0.42), CFrame.new(at) * UPRIGHT, Enum.PartType.Cylinder)
+		end
+	elseif style.Detail == "Planks" then
+		for i = -2, 2 do
+			local x = i * plateR * 0.36
+			local half = math.sqrt(math.max(plateR * plateR - x * x, 0))
+			bit("PlankLine", Vector3.new(0.12, 0.04, half * 2 - 0.3), CFrame.new(base.X + x, topY + 0.01, base.Z))
+		end
+	elseif style.Detail == "Moss" then
+		for i, a in { 0.4, 1.9, 2.6, 4.1, 5.3 } do
+			local reach = r + 0.2 - (i % 2) * 0.35
+			local size = 0.9 + (i % 3) * 0.35
+			local at = Vector3.new(base.X + math.cos(a) * reach, base.Y + 0.33, base.Z + math.sin(a) * reach)
+			bit(
+				"Moss",
+				Vector3.new(0.08, size, size * 1.4),
+				CFrame.new(at) * CFrame.Angles(0, a, 0) * UPRIGHT,
+				Enum.PartType.Cylinder
+			)
+		end
+	elseif style.Detail == "Notches" then
+		for i = 0, 11 do
+			local a = i * math.pi / 6
+			local at = Vector3.new(base.X + math.cos(a) * (r + 0.3), base.Y + 0.31, base.Z + math.sin(a) * (r + 0.3))
+			bit("Notch", Vector3.new(0.5, 0.06, 0.24), CFrame.new(at) * CFrame.Angles(0, -a, 0))
+		end
+	end
+	return plate
+end
+
 -- Mixed-case rounded bold text with a thin dark outline (the owner's simulator refs, Addendum 4)
 local function label(parent: Instance, text: string, size: UDim2, position: UDim2, color: Color3, stroke: number)
 	local t = Instance.new("TextLabel")
@@ -443,7 +512,7 @@ local function buildStation(zone: number): Model?
 	local base = SELL.Position
 	local r = SELL.Radius
 	-- The pad: a thick white rim with the coin-green circle on it
-	part({
+	local rim = part({
 		Name = "Rim",
 		Shape = Enum.PartType.Cylinder,
 		Size = Vector3.new(0.3, r * 2 + 1.2, r * 2 + 1.2),
@@ -472,6 +541,7 @@ local function buildStation(zone: number): Model?
 	coin.Size = UDim2.fromScale(0.36, 0.36)
 	coin.Image = "rbxassetid://" .. AssetSlots.Images.HudCoin
 	coin.Parent = top
+	top.Parent = dressPad(zone, model, rim, pad, base, r) -- (Polish v2 L4: the coin sits on the zone's plate)
 	if not placeKit(zone, "Sell", model, base + Vector3.new(0, 0, r + 0.6)) then
 		-- The booth behind the pad (away from the lanes): a counter and a sign facing the lanes
 		local back = base + Vector3.new(0, 0, r + 2.2)
@@ -549,7 +619,7 @@ local function buildShop(zone: number)
 	model.Name = "BallShop"
 	local base = SHOP.Position
 	local r = SHOP.Radius
-	part({
+	local rim = part({
 		Name = "Rim",
 		Shape = Enum.PartType.Cylinder,
 		Size = Vector3.new(0.3, r * 2 + 1.2, r * 2 + 1.2),
@@ -565,6 +635,7 @@ local function buildShop(zone: number)
 		Color = SHOP.Color,
 		CanCollide = false,
 	}, model)
+	dressPad(zone, model, rim, pad, base, r) -- (Polish v2 L4)
 	if not placeKit(zone, "Shop", model, base + Vector3.new(0, 0, r + 0.6)) then
 		local back = base + Vector3.new(0, 0, r + 2.2)
 		part({

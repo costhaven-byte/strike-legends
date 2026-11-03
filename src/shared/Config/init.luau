@@ -720,6 +720,16 @@ Config.CoreLoop = {
 		["d8d8d8"] = { Color = Color3.fromRGB(230, 230, 230), Material = Enum.Material.SmoothPlastic },
 	},
 	DayLightsOff = { "FillLight", "HeliLight" }, -- the night fill lights over the lanes and the helipad lamp
+	-- Polish v2 L4: the sell / shop pads dressed like each zone's stalls (CoreLoopService dressPad), one row per zone.
+	-- The pad's colour (green = sell, blue = shop) stays as a Ring-studs-wide inlay round a Plate in the zone's
+	-- material; Rim = the outer edge; Trim + Detail = small bits (Bolts / Planks / Moss / Notches). Colours are hex,
+	-- materials Enum.Material names. Size and the server's stand check don't change. PadStyles = nil = plain circles.
+	PadStyles = {
+		{ Rim = { "59646F", "DiamondPlate" }, Plate = { "8A97A4", "DiamondPlate" }, Trim = { "F5B82E", "Metal" }, Detail = "Bolts" }, -- rooftop: painted metal floor plate, gold bolts
+		{ Rim = { "D8B47A", "Fabric" }, Plate = { "B57A45", "WoodPlanks" }, Trim = { "7A4A28", "Wood" }, Detail = "Planks" }, -- boardwalk: round plank deck, rope rim
+		{ Rim = { "8C8A80", "Slate" }, Plate = { "A9A699", "Slate" }, Trim = { "5E8C3A", "Grass" }, Detail = "Moss" }, -- jungle: carved stone disc with moss
+		{ Rim = { "B0703E", "Sandstone" }, Plate = { "D9A066", "Sandstone" }, Trim = { "8F5530", "Sandstone" }, Detail = "Notches" }, -- canyon: sandstone tile, carved edge
+	},
 	ThrowRate = 0.33, -- the server never takes core throws faster than this (CooldownFloor is the real limit)
 }
 
