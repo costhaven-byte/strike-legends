@@ -1015,7 +1015,7 @@ local function cactus(at: Vector3, height: number, seed: number)
 end
 
 -- A hot-air balloon high up: a striped envelope (sphere slices, narrower at the bottom), ropes and a basket
-local function balloon(at: Vector3, stripes: { Color3 })
+local function partBalloon(at: Vector3, stripes: { Color3 })
 	local g = "Balloons"
 	local R = 9
 	for i = -5, 4 do
@@ -1165,8 +1165,10 @@ local function buildCanyon(info: any)
 
 	-- Striped market awnings over the sell pad and the shop
 	local sell, shop = CORE.Sell, CORE.Shop
-	awning(sell.Position + Vector3.new(0, 0, sell.Radius + 2.2), 12, CANYON.Terracotta, CANYON.Peach)
-	awning(shop.Position + Vector3.new(0, 0, shop.Radius + 2.2), 11, CANYON.Turquoise, WHITE)
+	if not (CORE.Kits and CORE.Kits[4]) then -- (the owner's zone 4 adobe stalls have their own rugs since 2026-11-03)
+		awning(sell.Position + Vector3.new(0, 0, sell.Radius + 2.2), 12, CANYON.Terracotta, CANYON.Peach)
+		awning(shop.Position + Vector3.new(0, 0, shop.Radius + 2.2), 11, CANYON.Turquoise, WHITE)
+	end
 
 	-- Past the pit: the turquoise lake (Terrain), a huge natural stone arch standing in it, hoodoos at its shores,
 	-- the red canyon walls behind with a gap to far-off buttes (ZoneMaps.Terrain)
@@ -1174,26 +1176,38 @@ local function buildCanyon(info: any)
 	local archZ = -3662
 	local xL, xR = LANE.Centre - 54, LANE.Centre + 54
 	local spring = TOP + 18
-	local rr, rh = (xR - xL) / 2, 34
-	for _, x in { xL, xR } do
-		local bands = 7
-		local h = spring - (lake - 8)
-		for k = 0, bands - 1 do
-			add("StoneArch", "Leg", Vector3.new(14 - k * 0.3, h / bands + 0.2, 14), CFrame.new(x, lake - 8 + h / bands * (k + 0.5), archZ), if k % 2 == 0 then CANYON.RedRock else CANYON.Terracotta, { Material = Enum.Material.Sandstone })
+	-- (since 2026-11-03 the owner's SL_Z4_Hero_StoneArch x1.9, its feet in the lake; the part-built one is the fallback)
+	local arch = design(4, "StoneArch", Vector3.new(LANE.Centre, lake - 2, archZ), 0)
+	if arch then
+		arch:ScaleTo(1.9)
+	else
+		local rr, rh = (xR - xL) / 2, 34
+		for _, x in { xL, xR } do
+			local bands = 7
+			local h = spring - (lake - 8)
+			for k = 0, bands - 1 do
+				add("StoneArch", "Leg", Vector3.new(14 - k * 0.3, h / bands + 0.2, 14), CFrame.new(x, lake - 8 + h / bands * (k + 0.5), archZ), if k % 2 == 0 then CANYON.RedRock else CANYON.Terracotta, { Material = Enum.Material.Sandstone })
+			end
+		end
+		local pieces = 22
+		for i = 0, pieces do
+			local a = math.pi * i / pieces
+			local at = Vector3.new(LANE.Centre - math.cos(a) * rr, spring + math.sin(a) * rh, archZ)
+			local na = math.pi * (i + 1) / pieces
+			local nextAt = Vector3.new(LANE.Centre - math.cos(na) * rr, spring + math.sin(na) * rh, archZ)
+			local tangent = (nextAt - at).Unit
+			local thick = 12 - math.sin(a) * 4 -- (thinner at the top)
+			add("StoneArch", "Span", Vector3.new(9, thick, 13), CFrame.fromMatrix(at, tangent, Vector3.new(-tangent.Y, tangent.X, 0)), if i % 3 == 0 then CANYON.Terracotta else CANYON.RedRock, { Material = Enum.Material.Sandstone })
 		end
 	end
-	local pieces = 22
-	for i = 0, pieces do
-		local a = math.pi * i / pieces
-		local at = Vector3.new(LANE.Centre - math.cos(a) * rr, spring + math.sin(a) * rh, archZ)
-		local na = math.pi * (i + 1) / pieces
-		local nextAt = Vector3.new(LANE.Centre - math.cos(na) * rr, spring + math.sin(na) * rh, archZ)
-		local tangent = (nextAt - at).Unit
-		local thick = 12 - math.sin(a) * 4 -- (thinner at the top)
-		add("StoneArch", "Span", Vector3.new(9, thick, 13), CFrame.fromMatrix(at, tangent, Vector3.new(-tangent.Y, tangent.X, 0)), if i % 3 == 0 then CANYON.Terracotta else CANYON.RedRock, { Material = Enum.Material.Sandstone })
-	end
-	for i, h in { { -130, -3640, 34, 10 }, { -112, -3690, 46, 12 }, { 60, -3640, 30, 9 }, { 92, -3680, 52, 13 }, { 150, -3630, 26, 8 }, { -150, -3615, 22, 7 } } do
-		hoodoo(Vector3.new(h[1], lake - 6, h[2]), h[3], h[4], i)
+	-- (the owner's SL_Z4_Hero_Hoodoo_A since 2026-11-03: one design, each sized to its spot's height and turned)
+	for i, h in { { -130, -3640, 34, 10 }, { -124, -3700, 46, 12 }, { 60, -3640, 30, 9 }, { 92, -3680, 52, 13 }, { 150, -3630, 26, 8 }, { -150, -3615, 22, 7 } } do
+		local rock = design(4, "Hoodoo", Vector3.new(h[1], lake - 1, h[2]), i * 67)
+		if rock then
+			rock:ScaleTo(h[3] / 21.8)
+		else
+			hoodoo(Vector3.new(h[1], lake - 6, h[2]), h[3], h[4], i)
+		end
 	end
 	-- the lake's shore: sand banks with palms and reeds where the floor meets the water
 	for i, p in { { -140, -3604, 15, 40 }, { -100, -3606, 13, 120 }, { 40, -3606, 14, 200 }, { 120, -3606, 16, 300 }, { 170, -3604, 13, 250 } } do
@@ -1237,31 +1251,33 @@ local function buildCanyon(info: any)
 		add("Pots", "PotBand", Vector3.new(0.3, 2.2 + (i % 3) * 0.4, 2.2 + (i % 3) * 0.4), CFrame.new(p[1], TOP + 1.2, p[2]) * UP, CANYON.Turquoise, { Shape = Enum.PartType.Cylinder, Collide = false })
 	end
 
-	-- The golden sphinx on its plinth at the oasis, looking at the lane
+	-- The golden sphinx on its plinth at the oasis (since 2026-11-03 the owner's SL_Z4_Hero_GoldenSphinx)
 	local sphinx = Vector3.new(232, TOP, -3384)
-	local S = 1.6
-	local function sp(x: number, y: number, z: number): CFrame
-		return CFrame.new(sphinx + Vector3.new(x, y, z) * S)
-	end
-	local gold, goldDark = CANYON.Gold, Color3.fromRGB(214, 150, 50)
-	add("Sphinx", "Plinth", Vector3.new(10, 3, 18) * S, sp(0, 1.5, 0), CANYON.Peach, { Material = Enum.Material.Sandstone })
-	add("Sphinx", "PlinthBand", Vector3.new(10.2, 0.8, 18.2) * S, sp(0, 2.6, 0), CANYON.Turquoise)
-	add("Sphinx", "Body", Vector3.new(6, 4.6, 11) * S, sp(0, 5.3, 2), gold)
-	for _, s in { -1, 1 } do
-		add("Sphinx", "Paw", Vector3.new(1.6, 1.6, 6) * S, sp(s * 2, 3.8, -5.6), gold)
-	end
-	add("Sphinx", "Chest", Vector3.new(5, 6, 3) * S, sp(0, 6.5, -2.6), gold)
-	add("Sphinx", "Head", Vector3.new(3.4, 3.8, 3.2) * S, sp(0, 10.6, -3.4), gold)
-	for k = 0, 4 do
-		for _, s in { -1, 1 } do
-			add("Sphinx", "Headdress", Vector3.new(0.6, 1, 3) * S, sp(s * 2, 12 - k * 1, -3), if k % 2 == 0 then CANYON.Turquoise else goldDark)
+	if not design(4, "GoldenSphinx", sphinx, 0) then
+		local S = 1.6
+		local function sp(x: number, y: number, z: number): CFrame
+			return CFrame.new(sphinx + Vector3.new(x, y, z) * S)
 		end
+		local gold, goldDark = CANYON.Gold, Color3.fromRGB(214, 150, 50)
+		add("Sphinx", "Plinth", Vector3.new(10, 3, 18) * S, sp(0, 1.5, 0), CANYON.Peach, { Material = Enum.Material.Sandstone })
+		add("Sphinx", "PlinthBand", Vector3.new(10.2, 0.8, 18.2) * S, sp(0, 2.6, 0), CANYON.Turquoise)
+		add("Sphinx", "Body", Vector3.new(6, 4.6, 11) * S, sp(0, 5.3, 2), gold)
+		for _, s in { -1, 1 } do
+			add("Sphinx", "Paw", Vector3.new(1.6, 1.6, 6) * S, sp(s * 2, 3.8, -5.6), gold)
+		end
+		add("Sphinx", "Chest", Vector3.new(5, 6, 3) * S, sp(0, 6.5, -2.6), gold)
+		add("Sphinx", "Head", Vector3.new(3.4, 3.8, 3.2) * S, sp(0, 10.6, -3.4), gold)
+		for k = 0, 4 do
+			for _, s in { -1, 1 } do
+				add("Sphinx", "Headdress", Vector3.new(0.6, 1, 3) * S, sp(s * 2, 12 - k * 1, -3), if k % 2 == 0 then CANYON.Turquoise else goldDark)
+			end
+		end
+		add("Sphinx", "HeaddressTop", Vector3.new(4.6, 0.8, 3.6) * S, sp(0, 12.8, -3.2), CANYON.Turquoise)
+		for _, s in { -1, 1 } do
+			add("Sphinx", "Eye", Vector3.new(0.7, 0.4, 0.2) * S, sp(s * 0.8, 11.2, -5.05), CANYON.Turquoise, { Material = Enum.Material.Neon, Collide = false })
+		end
+		add("Sphinx", "Beard", Vector3.new(0.8, 1.8, 0.6) * S, sp(0, 8.2, -4.8), CANYON.Turquoise)
 	end
-	add("Sphinx", "HeaddressTop", Vector3.new(4.6, 0.8, 3.6) * S, sp(0, 12.8, -3.2), CANYON.Turquoise)
-	for _, s in { -1, 1 } do
-		add("Sphinx", "Eye", Vector3.new(0.7, 0.4, 0.2) * S, sp(s * 0.8, 11.2, -5.05), CANYON.Turquoise, { Material = Enum.Material.Neon, Collide = false })
-	end
-	add("Sphinx", "Beard", Vector3.new(0.8, 1.8, 0.6) * S, sp(0, 8.2, -4.8), CANYON.Turquoise)
 
 	-- Adobe houses along the north edge and the west side, saguaros, boulders and desert flowers all round
 	for _, h in {
@@ -1290,7 +1306,15 @@ local function buildCanyon(info: any)
 		add("Flowers", "Shrub", Vector3.new(2.4, 1, 2.4), CFrame.new(x + 0.6, TOP + 0.3, z + 0.4), Color3.fromRGB(138, 160, 90), { Shape = Enum.PartType.Ball, Collide = false, Material = Enum.Material.Grass })
 	end
 
-	-- Hot-air balloons drifting over the canyon (seen over the arch and the walls)
+	-- Hot-air balloons drifting over the canyon (seen over the arch and the walls). Since 2026-11-03 the owner's
+	-- SL_Z4_Hero_HotAirBalloon, hung from its envelope's middle (20.35 over its basket's bottom), each turned
+	local turns = 0
+	local function balloon(at: Vector3, stripes: { Color3 })
+		turns += 1
+		if not design(4, "Balloon", at - Vector3.new(0, 20.35, 0), turns * 72) then
+			partBalloon(at, stripes)
+		end
+	end
 	balloon(Vector3.new(-120, TOP + 74, -3700), { CANYON.Terracotta, CANYON.Gold, WHITE })
 	balloon(Vector3.new(40, TOP + 92, -3760), { CANYON.Turquoise, WHITE, CANYON.Gold })
 	balloon(Vector3.new(160, TOP + 66, -3640), { Color3.fromRGB(255, 110, 150), CANYON.Gold, CANYON.Turquoise })

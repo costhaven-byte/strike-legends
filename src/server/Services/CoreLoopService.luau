@@ -949,8 +949,8 @@ local function buildGate(zone: number, target: number, at: Vector3)
 	local kit = CORE.Kits and CORE.Kits[zone]
 	local door: BasePart, sign: BasePart
 	local face = Enum.NormalId.Right -- (+X, the plaza side)
-	local board = target > zone
-		and placeKit(zone, "Gate", model, base + (kit and kit.GateShift or Vector3.zero), -90, true)
+	-- (a zone with no next gate can dress its back gate instead: Kits BackGate, zone 4's sandstone arch)
+	local board = placeKit(zone, if target > zone then "Gate" else "BackGate", model, base + (kit and kit.GateShift or Vector3.zero), -90, true)
 		and model:FindFirstChild(kit.GateBoard or "PriceBoard_Blank", true)
 	if board and board:IsA("BasePart") then
 		pad.Transparency = 1

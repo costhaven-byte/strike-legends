@@ -260,6 +260,9 @@ Config.CoreLoop = {
 		[2] = { Sell = "Sell", Shop = "Shop", Gate = "Gate", GateBoard = "PriceBoard_Blank", GateSign = "DestinationSign_Blank" },
 		-- zone 3 (owner's SL_Z3 bamboo + stone stalls and the carved Canyon Oasis gate, its name already on it)
 		[3] = { Sell = "Sell", Shop = "Shop", Gate = "Gate", GateBoard = "price_board_slot_BLANK" },
+		-- zone 4 (owner's SL_Z4 adobe market stalls; the last zone, so its banded sandstone arch is the BACK gate,
+		-- doors always open, JUNGLE FALLS on its destination board)
+		[4] = { Sell = "Sell", Shop = "Shop", BackGate = "Gate", GateBoard = "price_board_blank", GateSign = "sign_destination_board" },
 	},
 	Plaza = {
 		Props = {
@@ -336,12 +339,13 @@ Config.CoreLoop = {
 				Pets = { "WoodPup", "ChromeBat", "Kingpin", "Blaze" },
 			},
 			{
-				Id = "Skyline", -- the Skyline Egg
+				Id = "Skyline", -- the Sun Egg (was the Skyline Egg; Id kept so saves keep working)
 				Zone = 4,
 				Price = 2900000000000000,
-				From = { "SkylineLanes", "EggPad" },
+				-- 2026-11-03: the owner's sandstone pedestal with its gold sun (SL_Z4_SunEgg_Eggonstand; was SkylineLanes.EggPad)
+				From = { "ServerStorage", "ZoneKits", "Zone4", "SunEgg" },
 				At = Vector3.new(26, 848.65, -3438),
-				Turn = 90,
+				Turn = 90, -- its front faces west, toward the shop (the sun disc behind the egg)
 				Odds = { Epic = 62, Legendary = 33, Mythic = 5 },
 				Pets = { "CloudBumper", "SunnyHam", "Cosmo", "Perfecto" }, -- (Titan Jr. stays the boss pet)
 			},
@@ -4002,21 +4006,21 @@ Config.Mascots = {
 	{
 		Id = "Cosmo",
 		Stats = { Coins = 3, Pins = 2 }, -- Addendum 6 Stage 9 (pacing pass): was Coins = 12, Pins = 6
-		Name = "Cosmo",
-		Egg = "Skyline", -- Phase X: moved from the Neon Egg to zone 4's Skyline Egg
+		Name = "Scarab", -- was "Cosmo" (2026-11-03: zone 4 design SL_Z4_Pet_Scarab; Id kept)
+		Egg = "Skyline", -- Phase X: moved from the Neon Egg to zone 4's Skyline (now Sun) Egg
 		Rarity = "Mythic",
-		Color = Color3.fromRGB(255, 60, 150),
-		Accent = Color3.fromRGB(120, 220, 255),
+		Color = Color3.fromHex("FFC846"),
+		Accent = Color3.fromHex("1FB5B8"),
 		Reaction = "Spin",
 	},
 	{
 		Id = "Perfecto",
 		Stats = { Pins = 3, Speed = 0.5 }, -- Addendum 6 Stage 9 (pacing pass): was Pins = 10, Speed = 0.6
-		Name = "Perfecto",
-		Egg = "Skyline", -- Phase X: moved from the Neon Egg to zone 4's Skyline Egg
+		Name = "Sphinx Kitten", -- was "Perfecto" (2026-11-03: zone 4 design SL_Z4_Pet_SphinxKitten; Id kept)
+		Egg = "Skyline", -- Phase X: moved from the Neon Egg to zone 4's Skyline (now Sun) Egg
 		Rarity = "Mythic",
-		Color = Color3.fromRGB(255, 245, 200),
-		Accent = Color3.fromRGB(255, 60, 210),
+		Color = Color3.fromHex("FFC846"),
+		Accent = Color3.fromHex("38C8C8"),
 		Reaction = "Flip",
 	},
 	-- Phase X: zone 3 (Main Street Egg) and zone 4 (Skyline Egg) pets (owner's designs since 2026-10-28/29)
@@ -4043,22 +4047,22 @@ Config.Mascots = {
 	{
 		Id = "CloudBumper",
 		Stats = { Pins = 0.6, Bag = 0.5 }, -- Addendum 6 Stage 9 (pacing pass): was Pins = 0.8, Bag = 1.5
-		Name = "Cloud Bumper",
+		Name = "Fennec", -- was "Cloud Bumper" (2026-11-03: zone 4 design SL_Z4_Pet_Fennec; Id kept)
 		Egg = "Skyline",
 		Rarity = "Epic",
-		Color = Color3.fromRGB(225, 238, 255),
-		Accent = Color3.fromRGB(120, 190, 255),
-		Reaction = "Spin", -- own model since 2026-10-29 (owner's cloud_bumper.glb)
+		Color = Color3.fromHex("F2BE84"),
+		Accent = Color3.fromHex("5FF2EE"),
+		Reaction = "Hop",
 	},
 	{
 		Id = "SunnyHam",
 		Stats = { Coins = 1.5, Bag = 0.7 }, -- Addendum 6 Stage 9 (pacing pass): was Coins = 2.5, Bag = 2
-		Name = "Moony", -- was "Sunny" (owner 2026-10-27: zone 4 is at night); Id stays SunnyHam so owned pets keep working
+		Name = "Cactus Pal", -- was "Moony" (2026-11-03: zone 4 design SL_Z4_Pet_CactusPal; Id stays SunnyHam)
 		Egg = "Skyline",
 		Rarity = "Legendary",
-		Color = Color3.fromRGB(255, 180, 60),
-		Accent = Color3.fromRGB(255, 79, 139),
-		Reaction = "Hop", -- own model since 2026-10-29 (owner's moony.glb; PetModels.SunnyHam)
+		Color = Color3.fromHex("5CBF5E"),
+		Accent = Color3.fromHex("FF7FB8"),
+		Reaction = "Hop",
 	},
 	-- Boss-only pet (Config.Boss.Drop): no egg hatches it, only the Pin Titan drops it
 	{
@@ -4130,7 +4134,8 @@ Config.EggLooks = {
 	Neon = { Name = "Neon Egg", Color = Color3.fromRGB(80, 230, 255), Spots = Color3.fromRGB(255, 60, 210) },
 	-- 2026-11-03: the owner's Jungle Egg (PetModels.Egg_Arcade, SL_Z3_Egg_JungleEgg); was the Main Street Egg #e0a526 / #961e28
 	Arcade = { Name = "Jungle Egg", Color = Color3.fromHex("7CC65A"), Spots = Color3.fromHex("FF9632") },
-	Skyline = { Name = "Skyline Egg", Color = Color3.fromRGB(255, 79, 139), Spots = Color3.fromRGB(245, 184, 46) }, -- zone 4's egg
+	-- 2026-11-03: the owner's Sun Egg (PetModels.Egg_Skyline, SL_Z4_SunEgg); was the Skyline Egg #ff4f8b / #f5b82e
+	Skyline = { Name = "Sun Egg", Color = Color3.fromHex("FFC846"), Spots = Color3.fromHex("38C8C8") },
 	-- Addendum 5 B2: the 4th roof egg. No model of its own: the server copies PetModels.Egg_<Copy> as Egg_Volcano in
 	-- Config.CoreLoop.Eggs.Tints[Tint] colours at start
 	-- Addendum 6 3.3 PLACEHOLDER: zone 1's starter egg, the Neon Egg model re-tinted at start (no model of its own yet)
@@ -4597,45 +4602,47 @@ Config.PetIdle = {
 			{ Kind = "Blink", Parts = { "^eye$", "^eye_0", "^eye%d", "^eye_sparkle" }, Every = 3.6 },
 		},
 	},
-	-- Zone 4 pets, the owner's Skyline designs (2026-10-29)
-	CloudBumper = {
-		Floats = true,
-		Body = { Bob = 0.2, BobSpeed = 0.5, Sway = 3, SwaySpeed = 0.35 },
+	-- Zone 4 pets, the owner's Canyon Oasis designs (2026-11-03; CloudBumper = Fennec, SunnyHam = Cactus Pal, Cosmo =
+	-- Scarab, Perfecto = Sphinx Kitten). Old Skyline rows went with their models (PetModels_Backup_20261103)
+	CloudBumper = { -- Fennec
+		Body = { Bob = 0.04, BobSpeed = 0.6, Hop = { Every = 3, Height = 0.45, Time = 0.35 } },
 		Moves = {
-			{ Kind = "Swing", Parts = { "^puff_L", "^puff_R", "^puff_top_" }, Axis = Vector3.zAxis, Angle = 5, Speed = 0.7, Mirror = true },
-			{ Kind = "Spin", Parts = { "^sparkle_" }, Axis = Vector3.yAxis, Speed = 0.15, Pivot = "Root" },
-			{ Kind = "Twinkle", Parts = { "^sparkle_" }, Speed = 1.2, Min = 0.2, Max = 1 },
-			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.4 },
+			{ Kind = "Swing", Parts = { "^ear" }, Axis = Vector3.zAxis, Angle = 10, Speed = 1.2, Mirror = true },
+			{ Kind = "Swing", Parts = { "^tail" }, Axis = Vector3.yAxis, Angle = 22, Speed = 1 },
+			{ Kind = "Twinkle", Parts = { "_glow$" }, Speed = 1.2, Min = 0.6, Max = 1 },
+			{ Kind = "Blink", Parts = { "^eye" }, Every = 3.4 },
 		},
 	},
-	SunnyHam = { -- Moony
-		Floats = true,
-		Body = { Bob = 0.18, BobSpeed = 0.4, Sway = 4, SwaySpeed = 0.3 },
+	SunnyHam = { -- Cactus Pal (the gold sun spikes behind it turn slowly)
+		Body = { Bob = 0.04, BobSpeed = 0.5, Hop = { Every = 3.6, Height = 0.35, Time = 0.35 } },
 		Moves = {
-			{ Kind = "Swing", Parts = { "^tail" }, Axis = Vector3.zAxis, Angle = 18, Speed = 0.8 },
-			{ Kind = "Swing", Parts = { "^ear_" }, Axis = Vector3.zAxis, Angle = 10, Speed = 1.3, Mirror = true },
-			{ Kind = "Twinkle", Parts = { "^collar_star" }, Speed = 0.8, Min = 0.4, Max = 1 },
-			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.6 },
+			{ Kind = "Spin", Parts = { "^aura_spike" }, Axis = Vector3.zAxis, Speed = 0.08, Pivot = "Center" },
+			{ Kind = "Pulse", Parts = { "^aura_ring" }, Speed = 0.5, Min = 0.6, Max = 1 },
+			{ Kind = "Swing", Parts = { "^arm" }, Axis = Vector3.zAxis, Angle = 12, Speed = 0.7, Mirror = true },
+			{ Kind = "Swing", Parts = { "^flower_" }, Axis = Vector3.zAxis, Angle = 6, Speed = 0.5 },
+			{ Kind = "Blink", Parts = { "^eye" }, Every = 3.6 },
 		},
 	},
-	Cosmo = {
-		Floats = true,
-		Body = { Bob = 0.2, BobSpeed = 0.5, Sway = 3, SwaySpeed = 0.35 },
+	Cosmo = { -- Scarab (wing shards float and flutter, the sun orb turns)
+		Body = { Bob = 0.05, BobSpeed = 0.6, Sway = 3, SwaySpeed = 0.35 },
 		Moves = {
-			{ Kind = "Pulse", Parts = { "^aura" }, Speed = 0.5, Min = 0.6, Max = 1 },
-			{ Kind = "Twinkle", Parts = { "^star_" }, Speed = 1.5, Min = 0.2, Max = 1 },
-			{ Kind = "Swing", Parts = { "^joint_" }, Axis = Vector3.zAxis, Angle = 10, Speed = 0.6 },
-			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.8 },
+			{ Kind = "Swing", Parts = { "^wing_shard" }, Axis = Vector3.zAxis, Angle = 14, Speed = 1.6, Mirror = true },
+			{ Kind = "Twinkle", Parts = { "^wing_shard" }, Speed = 1.4, Min = 0.6, Max = 1 },
+			{ Kind = "Spin", Parts = { "^sun_orb_ring" }, Axis = Vector3.yAxis, Speed = 0.2, Pivot = "Center" },
+			{ Kind = "Pulse", Parts = { "^sun_orb_core", "^energy_ring" }, Speed = 0.6, Min = 0.6, Max = 1 },
+			{ Kind = "Swing", Parts = { "^antenna" }, Axis = Vector3.xAxis, Angle = 10, Speed = 0.9 },
+			{ Kind = "Blink", Parts = { "^eye" }, Every = 3.8 },
 		},
 	},
-	Perfecto = {
-		Floats = true,
-		Body = { Bob = 0.2, BobSpeed = 0.45, Sway = 3, SwaySpeed = 0.3 },
+	Perfecto = { -- Sphinx Kitten (its headdress floats over its head, sparkles turn round it)
+		Body = { Bob = 0.04, BobSpeed = 0.5, Sway = 2, SwaySpeed = 0.3 },
 		Moves = {
-			{ Kind = "Swing", Parts = { "^wing_" }, Axis = Vector3.yAxis, Angle = 22, Speed = 1.8, Mirror = true },
-			{ Kind = "Spin", Parts = { "^halo_" }, Axis = Vector3.yAxis, Speed = 0.25, Pivot = "Center" },
-			{ Kind = "Twinkle", Parts = { "^base_gem" }, Speed = 0.9, Min = 0.5, Max = 1 },
-			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.5 },
+			{ Kind = "Lift", Parts = { "^headdress", "^circlet", "^uraeus", "^sun_disc" }, Height = 0.12, Speed = 0.5 },
+			{ Kind = "Spin", Parts = { "^sparkle" }, Axis = Vector3.yAxis, Speed = 0.15, Pivot = "Root" },
+			{ Kind = "Twinkle", Parts = { "^sparkle", "^uraeus_gem" }, Speed = 1.2, Min = 0.3, Max = 1 },
+			{ Kind = "Pulse", Parts = { "^aura_ground_ring", "^sun_disc" }, Speed = 0.5, Min = 0.6, Max = 1 },
+			{ Kind = "Swing", Parts = { "^tail" }, Axis = Vector3.yAxis, Angle = 18, Speed = 0.8 },
+			{ Kind = "Blink", Parts = { "^pupil", "^eye_glow" }, Every = 3.5 },
 		},
 	},
 	TitanJr = {
@@ -4645,12 +4652,6 @@ Config.PetIdle = {
 			{ Kind = "Lift", Parts = { "^foot_R" }, Height = 0.08, Speed = 0.9 },
 			{ Kind = "Lift", Parts = { "^foot_L" }, Height = 0.08, Speed = 0.9, Phase = 0.5 },
 			{ Kind = "Pulse", Parts = { "^crack_", "^core_eye" }, Speed = 0.6, Min = 0.55, Max = 1 },
-		},
-	},
-	-- The Skyline Egg on its stand: the window's stars twinkle
-	Egg_Skyline = {
-		Moves = {
-			{ Kind = "Twinkle", Parts = { "^window_star" }, Speed = 0.9, Min = 0.3, Max = 1 },
 		},
 	},
 	-- The Neon Egg on its stand: the core pulses on a 1.6s beat (glow 60 to 100%), the lines breathe 15%
