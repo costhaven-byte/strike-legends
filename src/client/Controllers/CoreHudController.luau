@@ -951,6 +951,15 @@ function CoreHudController:Start()
 			local target = gatePrompt:GetAttribute("Target") or 1
 			local gate = gatePrompt:FindFirstAncestorOfClass("Model")
 			local sub = gate and gate:FindFirstChild("Sub", true) :: TextLabel?
+			-- a designed gate's padlock, chains and barrier (parts with GateLock) go once you've opened it
+			if gate then
+				for _, p in gate:GetDescendants() do
+					if p:IsA("BasePart") and p:GetAttribute("GateLock") then
+						p.LocalTransparencyModifier = if target <= open then 1 else 0
+						p.CanCollide = false
+					end
+				end
+			end
 			if target <= open then
 				gatePrompt.ActionText = "Go"
 				if sub then

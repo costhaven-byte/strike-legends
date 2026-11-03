@@ -250,11 +250,16 @@ Config.CoreLoop = {
 	-- <Folder>.Plaza. From = path from Workspace, At = floor point under the model's middle, Turn = degrees around Y.
 	-- Main Street's models face +Z with Turn 0 (sofas face -Z). Cases = the zone 4 display case row, one case per
 	-- ladder ball (Config.Showcase set with Ladder = true): First = floor point of case 1, Step = to the next.
+	-- 2026-11-03 v2 models: a zone's own designed station pieces (models in ServerStorage.ZoneKits.Zone<n>, pivot at
+	-- their bottom centre, front -Z; CoreLoopService placeKit). Sell / Shop stand behind their circle (the circles
+	-- stay), Gate = the NEXT gate (turned to face the plaza; GateShift moves it off the roof rail, GateBoard = the
+	-- blank board the price goes on). A missing kit or zone = the plain part-built booth.
+	Kits = {
+		[1] = { Sell = "Sell", Shop = "Shop", Gate = "Gate", GateShift = Vector3.new(0, 0, -1.6), GateBoard = "PriceBoard_Blank" },
+	},
 	Plaza = {
 		Props = {
-			-- ball racks either side of the ball shop
-			{ From = { "MainStreetLanes", "Design", "HouseBallRacks", "HouseBallRack1" }, At = Vector3.new(-26.6, 848.65, -3409), Turn = 180 },
-			{ From = { "MainStreetLanes", "Design", "HouseBallRacks", "HouseBallRack2" }, At = Vector3.new(-7.4, 848.65, -3409), Turn = 180 },
+			-- (the two ball racks either side of the ball shop went 2026-11-03: the designed shop stall shows its balls)
 			-- lounges in the open half (Addendum 5 B2: moved out of the egg row's way, two behind the row and one
 			-- facing the eggs; were (40, -3418), (76, -3418), (58, -3450), all Turn 180)
 			{ From = { "MainStreetLanes", "Design", "Seating", "BowlerArea1" }, At = Vector3.new(36, 848.65, -3463), Turn = 0 },
@@ -293,14 +298,13 @@ Config.CoreLoop = {
 		-- ~1 min of income the first time you reach each egg. Was Neon 19M, Main Street 23B, Skyline 28T.
 		List = {
 			{
-				Id = "Speckled", -- the Speckled Egg (zone 1 starter)
+				Id = "Speckled", -- the Rooftop Egg (zone 1 starter; Id kept from the Speckled Egg so saves keep working)
 				Zone = 1,
 				Price = 750,
-				From = { "Hub", "EggPad" },
+				-- 2026-11-03: the owner's water-tank stand (SL_Z1_RooftopEgg_full; was the Neon stand re-tinted)
+				From = { "ServerStorage", "ZoneKits", "Zone1", "RooftopEgg" },
 				At = Vector3.new(26, 848.65, -3438),
-				Turn = -90,
-				Sign = "SPECKLED EGG",
-				Tint = "Speckled",
+				Turn = 90, -- its steps face west, toward the shop
 				Odds = { Common = 65, Uncommon = 30, Rare = 5 },
 				Pets = { "Gus", "Pebble", "Bumper", "Breezy", "Sunspot" },
 			},
@@ -545,7 +549,7 @@ Config.CoreLoop = {
 		Radius = 6, -- studs (flat) from the centre that count as standing on it
 		Color = Color3.fromRGB(64, 196, 92), -- coin green
 	},
-	Spawn = Vector3.new(-37, 849.2, -3398), -- the rooftop spawn, just behind the sell station
+	Spawn = Vector3.new(-37, 849.2, -3395), -- the rooftop spawn, just behind the sell stall (was z -3398 until the 2026-11-03 stall)
 	CameraBack = 9, -- while you throw, the camera hovers this far before the head pin...
 	CameraHeight = 5.5, -- ...this high
 	CameraLook = 6, -- looking this far past the head pin
@@ -1587,7 +1591,7 @@ Config.Showcase = {
 			Zone = 4,
 			Slots = { "SkylineLanes", "Showcase", "Slots" },
 			Egg = "Skyline",
-			Theme = "Skyline",
+			Theme = "Rooftop", -- 2026-11-03 (was "Skyline"): the roof is zone 1, the owner's SL_Z1_DisplayCase
 			Ladder = true, -- core loop on: shows the 10 shop balls (Config.CoreLoop.Balls), owned once bought
 		},
 	},
@@ -1626,6 +1630,31 @@ Config.Showcase = {
 				BlueCap = Enum.Material.Metal,
 				Pedestal = Enum.Material.Metal,
 			},
+		},
+		-- 2026-11-03: the owner's zone 1 case (SL_Z1_DisplayCase_Common, x4/3 to the old 5.6-stud case): one design for
+		-- every rarity; its gem + glow disc glow in the rarity's colour, its trims take that colour (Tint = no Neon)
+		Rooftop = {
+			Design = "Rooftop",
+			Bands = {
+				crest_gem = "Accent",
+				glow_disc = "Accent",
+				trim_band_low = "Tint",
+				trim_band_top = "Tint",
+				cap_trim = "Tint",
+				post_glow_0 = "Tint",
+				post_glow_1 = "Tint",
+				post_glow_2 = "Tint",
+				post_glow_3 = "Tint",
+			},
+			Ink = Color3.fromRGB(46, 36, 30),
+			Navy = Color3.fromRGB(247, 243, 234),
+			NavyTop = Color3.fromRGB(79, 179, 236),
+			BlueCap = Color3.fromRGB(79, 179, 236),
+			Pedestal = Color3.fromRGB(79, 179, 236),
+			Glass = Color3.fromRGB(216, 241, 255),
+			SignBg = Color3.fromRGB(44, 134, 201),
+			SignTop = Color3.fromRGB(245, 184, 46),
+			CaseLight = Color3.fromRGB(255, 244, 220),
 		},
 		Skyline = { -- the owner's skyline_ball_case design (one for every rarity, bands in the rarity colour)
 			Design = "Skyline",
@@ -3874,7 +3903,7 @@ Config.Mascots = {
 	{
 		Id = "Gus",
 		Stats = { Coins = 0.1 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
-		Name = "Gutter Gus",
+		Name = "Pidge", -- was "Gutter Gus" (2026-11-03: zone 1 design SL_Z1_Pet_PIDGE; Id kept)
 		Egg = nil, -- Phase X holding list: cut from the Neon Egg (6 pets now); owners keep it. Was Egg = "Alley"
 		BonusEgg = "Alley", -- its bonus stays the Neon Egg's (owners' pets don't change)
 		Rarity = "Common",
@@ -3895,7 +3924,7 @@ Config.Mascots = {
 	{
 		Id = "Bumper",
 		Stats = { Bag = 0.3 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
-		Name = "Bumper",
+		Name = "Vent Puff", -- was "Bumper" (2026-11-03: zone 1 design SL_Z1_Pet_VENTPUFF; Id kept)
 		Egg = nil, -- Phase X holding list: cut from the Neon Egg (6 pets now); owners keep it. Was Egg = "Alley"
 		BonusEgg = "Alley", -- its bonus stays the Neon Egg's (owners' pets don't change)
 		Rarity = "Uncommon",
@@ -4036,45 +4065,36 @@ Config.Mascots = {
 		Accent = Color3.fromRGB(255, 50, 80),
 		Reaction = "Flip", -- own model since 2026-10-29 (owner's titan_jr.glb)
 	},
-	-- Addendum 6 3.3: zone 1's Speckled Egg pets. PLACEHOLDER: no models of their own yet, they borrow another pet's
-	-- model (Model) repainted (Tint) until real designs exist. Weakest pets in the game (zone 1, Common to Rare).
+	-- Addendum 6 3.3: zone 1's Rooftop Egg pets (Weakest pets in the game, zone 1, Common to Rare). Own models since
+	-- 2026-11-03 (owner's SL_Z1_Pets_Lineup; were other pets' models re-tinted); Ids kept, names new.
 	{
 		Id = "Pebble",
 		Stats = { Pins = 0.1 },
-		Name = "Pebble",
+		Name = "Gravel", -- was "Pebble"
 		Egg = "Speckled",
 		Rarity = "Common",
-		Model = "Gus",
-		Tint = Color3.fromRGB(214, 190, 150),
-		Placeholder = true,
-		Color = Color3.fromRGB(214, 190, 150),
-		Accent = Color3.fromRGB(120, 200, 240),
+		Color = Color3.fromRGB(168, 156, 140),
+		Accent = Color3.fromRGB(255, 194, 51),
 		Reaction = "Wiggle",
 	},
 	{
 		Id = "Breezy",
 		Stats = { Coins = 0.12, Speed = 0.06 },
-		Name = "Breezy",
+		Name = "Kite Pup", -- was "Breezy"
 		Egg = "Speckled",
 		Rarity = "Uncommon",
-		Model = "LanePup",
-		Tint = Color3.fromRGB(150, 210, 250),
-		Placeholder = true,
-		Color = Color3.fromRGB(150, 210, 250),
-		Accent = Color3.fromRGB(255, 255, 255),
+		Color = Color3.fromRGB(245, 221, 176),
+		Accent = Color3.fromRGB(73, 179, 238),
 		Reaction = "Hop",
 	},
 	{
 		Id = "Sunspot",
 		Stats = { Coins = 0.25, Pins = 0.15 },
-		Name = "Sunspot",
+		Name = "Solar Cat", -- was "Sunspot"
 		Egg = "Speckled",
 		Rarity = "Rare",
-		Model = "Strikey",
-		Tint = Color3.fromRGB(255, 196, 70),
-		Placeholder = true,
-		Color = Color3.fromRGB(255, 196, 70),
-		Accent = Color3.fromRGB(255, 120, 60),
+		Color = Color3.fromRGB(255, 169, 77),
+		Accent = Color3.fromRGB(255, 194, 51),
 		Reaction = "Flip",
 	},
 }
@@ -4105,7 +4125,8 @@ Config.EggLooks = {
 	-- Addendum 5 B2: the 4th roof egg. No model of its own: the server copies PetModels.Egg_<Copy> as Egg_Volcano in
 	-- Config.CoreLoop.Eggs.Tints[Tint] colours at start
 	-- Addendum 6 3.3 PLACEHOLDER: zone 1's starter egg, the Neon Egg model re-tinted at start (no model of its own yet)
-	Speckled = { Name = "Speckled Egg", Color = Color3.fromRGB(240, 214, 160), Spots = Color3.fromRGB(110, 190, 240), Copy = "Alley", Tint = "Speckled" },
+	-- 2026-11-03: the owner's Rooftop Egg (PetModels.Egg_Speckled, SL_Z1_RooftopEgg_full); was the Neon Egg re-tinted
+	Speckled = { Name = "Rooftop Egg", Color = Color3.fromRGB(246, 235, 210), Spots = Color3.fromRGB(93, 189, 240) },
 	Volcano = { Name = "Volcano Egg", Color = Color3.fromRGB(255, 100, 40), Spots = Color3.fromRGB(60, 20, 20), Copy = "Alley", Tint = "Volcano" },
 }
 
@@ -4412,12 +4433,39 @@ Config.PetIdle = {
 			{ Kind = "Pulse", Parts = { "^neck_" }, Speed = 0.6, Min = 0.6, Max = 1 },
 		},
 	},
+	-- 2026-11-03: zone 1's own designs (SL_Z1 pets; Gus = Pidge, Pebble = Gravel, Bumper = Vent Puff, Breezy = Kite
+	-- Pup, Sunspot = Solar Cat)
 	Gus = {
-		Body = { Bob = 0.05, BobSpeed = 0.5, Sway = 4, SwaySpeed = 0.4 },
+		Body = { Bob = 0.05, BobSpeed = 0.9, Hop = { Every = 2.6, Height = 0.35, Time = 0.3 } },
 		Moves = {
-			{ Kind = "Swing", Parts = { "^arm_" }, Axis = Vector3.xAxis, Angle = 10, Speed = 0.8, Mirror = true },
-			{ Kind = "Blink", Parts = { "^eye_l_glow", "^eye_r_glow" }, Every = 4 },
-			{ Kind = "Pulse", Parts = { "^neon_" }, Speed = 0.5, Min = 0.6, Max = 1 },
+			{ Kind = "Swing", Parts = { "^wing" }, Axis = Vector3.zAxis, Angle = 14, Speed = 1.6, Mirror = true },
+			{ Kind = "Swing", Parts = { "^skull", "^beak", "^cere", "^eye_", "^blush" }, Axis = Vector3.yAxis, Angle = 12, Speed = 0.45 },
+			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.4 },
+		},
+	},
+	Pebble = {
+		Body = { Sway = 5, SwaySpeed = 0.6 },
+		Moves = {
+			{ Kind = "Swing", Parts = { "^arm_" }, Axis = Vector3.xAxis, Angle = 18, Speed = 0.9, Mirror = true },
+			{ Kind = "Lift", Parts = { "^foot_R" }, Height = 0.1, Speed = 1.2 },
+			{ Kind = "Lift", Parts = { "^foot_L" }, Height = 0.1, Speed = 1.2, Phase = 0.5 },
+			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.8 },
+		},
+	},
+	Breezy = {
+		Body = { Bob = 0.06, BobSpeed = 0.8, Hop = { Every = 3, Height = 0.5, Time = 0.4 } },
+		Moves = {
+			{ Kind = "Swing", Parts = { "^sock" }, Axis = Vector3.yAxis, Angle = 24, Speed = 1.8 },
+			{ Kind = "Swing", Parts = { "^ear" }, Axis = Vector3.zAxis, Angle = 12, Speed = 1.4, Mirror = true },
+			{ Kind = "Blink", Parts = { "^eye_L", "^eye_R", "^eye_shine" }, Every = 3.5 },
+		},
+	},
+	Sunspot = {
+		Body = { Bob = 0.06, BobSpeed = 0.6, Sway = 4, SwaySpeed = 0.4 },
+		Moves = {
+			{ Kind = "Spin", Parts = { "^ray_", "^mane_ring" }, Axis = Vector3.zAxis, Speed = 0.12, Pivot = "Center" },
+			{ Kind = "Swing", Parts = { "^tail" }, Axis = Vector3.yAxis, Angle = 22, Speed = 0.8 },
+			{ Kind = "Blink", Parts = { "^eye_" }, Every = 4 },
 		},
 	},
 	LanePup = {
@@ -4445,11 +4493,11 @@ Config.PetIdle = {
 			{ Kind = "Blink", Parts = { "^eye_", "^pupil_" }, Every = 3.5 },
 		},
 	},
-	Bumper = {
-		Body = { Sway = 4, SwaySpeed = 0.5, Hop = { Every = 1.1, Height = 0.35, Time = 0.4 } },
+	Bumper = { -- Vent Puff
+		Body = { Bob = 0.12, BobSpeed = 0.5, Sway = 3, SwaySpeed = 0.35 },
 		Moves = {
+			{ Kind = "Lift", Parts = { "^wisp_" }, Height = 0.18, Speed = 0.9 },
 			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3 },
-			{ Kind = "Pulse", Parts = { "^stripe_", "^lane_arrow", "^end_" }, Speed = 0.8, Min = 0.7, Max = 1 },
 		},
 	},
 	Strikey = {

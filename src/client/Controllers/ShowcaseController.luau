@@ -386,9 +386,12 @@ local function placeDesign(template: Model, base: CFrame, model: Model, style)
 			continue
 		end
 		-- Rarity bands glow (Neon); Recolor themes tint them to the rarity's accent
+		-- ("Tint" = the accent colour without the glow)
 		if T.Bands and T.Bands[p.Name] then
-			p.Material = Enum.Material.Neon
-			if T.Bands[p.Name] == "Accent" then
+			if T.Bands[p.Name] ~= "Tint" then
+				p.Material = Enum.Material.Neon
+			end
+			if T.Bands[p.Name] ~= "Glow" then
 				p.Color = style.Accent
 			end
 		end

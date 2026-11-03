@@ -397,6 +397,38 @@ local function label(parent: Instance, text: string, size: UDim2, position: UDim
 	return t
 end
 
+-- 2026-11-03 v2 models: a zone's designed station piece (Config.CoreLoop.Kits[zone][kind] = a model in
+-- ServerStorage.ZoneKits.Zone<zone>, pivot at its bottom centre, front -Z), copied in front-edge-first at `front`
+-- (zone 1's layout; moved with the station model) and turned `turn` degrees; `centred` puts its middle there instead.
+-- False = no design: build the parts.
+local function placeKit(
+	zone: number,
+	kind: string,
+	parent: Instance,
+	front: Vector3,
+	turn: number?,
+	centred: boolean?
+): boolean
+	local name = CORE.Kits and CORE.Kits[zone] and CORE.Kits[zone][kind]
+	if not name then
+		return false
+	end
+	local folder = ServerStorage:FindFirstChild("ZoneKits")
+	folder = folder and folder:FindFirstChild("Zone" .. zone)
+	local kit = folder and folder:FindFirstChild(name)
+	if not kit or not kit:IsA("Model") then
+		warn(("[CoreLoopService] ZoneKits.Zone%d.%s is missing: plain %s built"):format(zone, name, kind))
+		return false
+	end
+	local copy = kit:Clone()
+	copy.Name = "Design"
+	local _, size = copy:GetBoundingBox()
+	local rotation = CFrame.Angles(0, math.rad(turn or 0), 0)
+	copy:PivotTo(CFrame.new(front) * rotation * CFrame.new(0, 0, if centred then 0 else size.Z / 2))
+	copy.Parent = parent
+	return true
+end
+
 local function buildStation(zone: number): Model?
 	local roof = Workspace:FindFirstChild(CoreLadder.ZoneFolder(zone))
 	if not roof then
@@ -440,56 +472,58 @@ local function buildStation(zone: number): Model?
 	coin.Size = UDim2.fromScale(0.36, 0.36)
 	coin.Image = "rbxassetid://" .. AssetSlots.Images.HudCoin
 	coin.Parent = top
-	-- The booth behind the pad (away from the lanes): a counter and a sign facing the lanes
-	local back = base + Vector3.new(0, 0, r + 2.2)
-	part({
-		Name = "Counter",
-		Size = Vector3.new(10, 3.2, 2.4),
-		CFrame = CFrame.new(back + Vector3.new(0, 1.6, 0)),
-		Color = Color3.fromRGB(255, 196, 64),
-	}, model)
-	part({
-		Name = "CounterTop",
-		Size = Vector3.new(10.6, 0.4, 3),
-		CFrame = CFrame.new(back + Vector3.new(0, 3.4, 0)),
-		Color = Color3.fromRGB(250, 248, 240),
-	}, model)
-	for _, x in { -4.6, 4.6 } do
+	if not placeKit(zone, "Sell", model, base + Vector3.new(0, 0, r + 0.6)) then
+		-- The booth behind the pad (away from the lanes): a counter and a sign facing the lanes
+		local back = base + Vector3.new(0, 0, r + 2.2)
 		part({
-			Name = "Post",
-			Size = Vector3.new(0.5, 9, 0.5),
-			CFrame = CFrame.new(back + Vector3.new(x, 4.5, 0.6)),
+			Name = "Counter",
+			Size = Vector3.new(10, 3.2, 2.4),
+			CFrame = CFrame.new(back + Vector3.new(0, 1.6, 0)),
+			Color = Color3.fromRGB(255, 196, 64),
+		}, model)
+		part({
+			Name = "CounterTop",
+			Size = Vector3.new(10.6, 0.4, 3),
+			CFrame = CFrame.new(back + Vector3.new(0, 3.4, 0)),
 			Color = Color3.fromRGB(250, 248, 240),
 		}, model)
+		for _, x in { -4.6, 4.6 } do
+			part({
+				Name = "Post",
+				Size = Vector3.new(0.5, 9, 0.5),
+				CFrame = CFrame.new(back + Vector3.new(x, 4.5, 0.6)),
+				Color = Color3.fromRGB(250, 248, 240),
+			}, model)
+		end
+		local sign = part({
+			Name = "Sign",
+			Size = Vector3.new(10.4, 3.4, 0.4),
+			CFrame = CFrame.lookAt(back + Vector3.new(0, 8.2, 0.6), back + Vector3.new(0, 8.2, -10)),
+			Color = SELL.Color,
+		}, model)
+		local outline = part({
+			Name = "SignBack",
+			Size = Vector3.new(11, 4, 0.3),
+			CFrame = sign.CFrame * CFrame.new(0, 0, 0.3),
+			Color = Color3.fromRGB(28, 36, 48),
+		}, model)
+		outline.CanCollide = false
+		local surface = Instance.new("SurfaceGui")
+		surface.Face = Enum.NormalId.Front
+		surface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		surface.PixelsPerStud = 40
+		surface.LightInfluence = 0
+		surface.Parent = sign
+		label(surface, "Sell", UDim2.fromScale(0.8, 0.62), UDim2.fromScale(0.1, 0.04), Color3.new(1, 1, 1), 5)
+		label(
+			surface,
+			"Stand on the green circle",
+			UDim2.fromScale(0.86, 0.26),
+			UDim2.fromScale(0.07, 0.68),
+			Color3.fromRGB(255, 240, 160),
+			3
+		)
 	end
-	local sign = part({
-		Name = "Sign",
-		Size = Vector3.new(10.4, 3.4, 0.4),
-		CFrame = CFrame.lookAt(back + Vector3.new(0, 8.2, 0.6), back + Vector3.new(0, 8.2, -10)),
-		Color = SELL.Color,
-	}, model)
-	local outline = part({
-		Name = "SignBack",
-		Size = Vector3.new(11, 4, 0.3),
-		CFrame = sign.CFrame * CFrame.new(0, 0, 0.3),
-		Color = Color3.fromRGB(28, 36, 48),
-	}, model)
-	outline.CanCollide = false
-	local surface = Instance.new("SurfaceGui")
-	surface.Face = Enum.NormalId.Front
-	surface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	surface.PixelsPerStud = 40
-	surface.LightInfluence = 0
-	surface.Parent = sign
-	label(surface, "Sell", UDim2.fromScale(0.8, 0.62), UDim2.fromScale(0.1, 0.04), Color3.new(1, 1, 1), 5)
-	label(
-		surface,
-		"Stand on the green circle",
-		UDim2.fromScale(0.86, 0.26),
-		UDim2.fromScale(0.07, 0.68),
-		Color3.fromRGB(255, 240, 160),
-		3
-	)
 	-- The point the SELL button's guide leads to
 	local beacon = Instance.new("Attachment")
 	beacon.Name = "Beacon"
@@ -531,68 +565,70 @@ local function buildShop(zone: number)
 		Color = SHOP.Color,
 		CanCollide = false,
 	}, model)
-	local back = base + Vector3.new(0, 0, r + 2.2)
-	part({
-		Name = "Counter",
-		Size = Vector3.new(9, 3.2, 2.4),
-		CFrame = CFrame.new(back + Vector3.new(0, 1.6, 0)),
-		Color = Color3.fromRGB(255, 196, 64),
-	}, model)
-	part({
-		Name = "CounterTop",
-		Size = Vector3.new(9.6, 0.4, 3),
-		CFrame = CFrame.new(back + Vector3.new(0, 3.4, 0)),
-		Color = Color3.fromRGB(250, 248, 240),
-	}, model)
-	for _, x in { -4.1, 4.1 } do
+	if not placeKit(zone, "Shop", model, base + Vector3.new(0, 0, r + 0.6)) then
+		local back = base + Vector3.new(0, 0, r + 2.2)
 		part({
-			Name = "Post",
-			Size = Vector3.new(0.5, 9, 0.5),
-			CFrame = CFrame.new(back + Vector3.new(x, 4.5, 0.6)),
+			Name = "Counter",
+			Size = Vector3.new(9, 3.2, 2.4),
+			CFrame = CFrame.new(back + Vector3.new(0, 1.6, 0)),
+			Color = Color3.fromRGB(255, 196, 64),
+		}, model)
+		part({
+			Name = "CounterTop",
+			Size = Vector3.new(9.6, 0.4, 3),
+			CFrame = CFrame.new(back + Vector3.new(0, 3.4, 0)),
 			Color = Color3.fromRGB(250, 248, 240),
 		}, model)
-	end
-	-- Balls 1, 5 and 10 of the zone's part of the ladder on the counter, in their colours
-	for i, step in { 1, 5, 10 } do
-		step += (zone - 1) * 10
-		local ball = Balls.Get(CORE.Balls[step].Ball)
-		part({
-			Name = "Ball",
-			Shape = Enum.PartType.Ball,
-			Size = Vector3.one * 1.6,
-			CFrame = CFrame.new(back + Vector3.new((i - 2) * 2.6, 4.4, 0)),
-			Color = if ball then ball.Color else Color3.new(1, 1, 1),
-			CanCollide = false,
+		for _, x in { -4.1, 4.1 } do
+			part({
+				Name = "Post",
+				Size = Vector3.new(0.5, 9, 0.5),
+				CFrame = CFrame.new(back + Vector3.new(x, 4.5, 0.6)),
+				Color = Color3.fromRGB(250, 248, 240),
+			}, model)
+		end
+		-- Balls 1, 5 and 10 of the zone's part of the ladder on the counter, in their colours
+		for i, step in { 1, 5, 10 } do
+			step += (zone - 1) * 10
+			local ball = Balls.Get(CORE.Balls[step].Ball)
+			part({
+				Name = "Ball",
+				Shape = Enum.PartType.Ball,
+				Size = Vector3.one * 1.6,
+				CFrame = CFrame.new(back + Vector3.new((i - 2) * 2.6, 4.4, 0)),
+				Color = if ball then ball.Color else Color3.new(1, 1, 1),
+				CanCollide = false,
+			}, model)
+		end
+		local sign = part({
+			Name = "Sign",
+			Size = Vector3.new(9.4, 3.4, 0.4),
+			CFrame = CFrame.lookAt(back + Vector3.new(0, 8.2, 0.6), back + Vector3.new(0, 8.2, -10)),
+			Color = SHOP.Color,
 		}, model)
+		local outline = part({
+			Name = "SignBack",
+			Size = Vector3.new(10, 4, 0.3),
+			CFrame = sign.CFrame * CFrame.new(0, 0, 0.3),
+			Color = Color3.fromRGB(28, 36, 48),
+		}, model)
+		outline.CanCollide = false
+		local surface = Instance.new("SurfaceGui")
+		surface.Face = Enum.NormalId.Front
+		surface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		surface.PixelsPerStud = 40
+		surface.LightInfluence = 0
+		surface.Parent = sign
+		label(surface, "Balls & Bags", UDim2.fromScale(0.86, 0.62), UDim2.fromScale(0.07, 0.04), Color3.new(1, 1, 1), 5)
+		label(
+			surface,
+			"Stand on the blue circle",
+			UDim2.fromScale(0.86, 0.26),
+			UDim2.fromScale(0.07, 0.68),
+			Color3.fromRGB(220, 240, 255),
+			3
+		)
 	end
-	local sign = part({
-		Name = "Sign",
-		Size = Vector3.new(9.4, 3.4, 0.4),
-		CFrame = CFrame.lookAt(back + Vector3.new(0, 8.2, 0.6), back + Vector3.new(0, 8.2, -10)),
-		Color = SHOP.Color,
-	}, model)
-	local outline = part({
-		Name = "SignBack",
-		Size = Vector3.new(10, 4, 0.3),
-		CFrame = sign.CFrame * CFrame.new(0, 0, 0.3),
-		Color = Color3.fromRGB(28, 36, 48),
-	}, model)
-	outline.CanCollide = false
-	local surface = Instance.new("SurfaceGui")
-	surface.Face = Enum.NormalId.Front
-	surface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	surface.PixelsPerStud = 40
-	surface.LightInfluence = 0
-	surface.Parent = sign
-	label(surface, "Balls & Bags", UDim2.fromScale(0.86, 0.62), UDim2.fromScale(0.07, 0.04), Color3.new(1, 1, 1), 5)
-	label(
-		surface,
-		"Stand on the blue circle",
-		UDim2.fromScale(0.86, 0.26),
-		UDim2.fromScale(0.07, 0.68),
-		Color3.fromRGB(220, 240, 255),
-		3
-	)
 	-- The point the first-30-seconds guide leads to (CoreHudController)
 	local beacon = Instance.new("Attachment")
 	beacon.Name = "Beacon"
@@ -726,8 +762,12 @@ end
 
 -- B2: a stand or machine to copy: the path from Workspace, else (hidden at start) ServerStorage.CoreLoopHidden
 local function source(path: { string }): Instance?
-	local node: Instance? = Workspace
-	for _, name in path do
+	-- (2026-11-03: a path starting "ServerStorage" is a design kept there, e.g. ServerStorage.ZoneKits.Zone1.RooftopEgg)
+	local node: Instance? = if path[1] == "ServerStorage" then ServerStorage else Workspace
+	for i, name in path do
+		if i == 1 and node == ServerStorage then
+			continue
+		end
 		node = node and node:FindFirstChild(name)
 	end
 	if not node then
@@ -904,46 +944,69 @@ local function buildGate(zone: number, target: number, at: Vector3)
 		Color = palette.Edge,
 		CanCollide = false,
 	}, model)
-	for _, side in { -1, 1 } do
+	-- 2026-11-03: zone 1's next gate is the owner's design (Config.CoreLoop.Kits): its blank price board carries the
+	-- words, an invisible doorway holds the prompt, the plain pad stays only as the guide's beacon
+	local kit = CORE.Kits and CORE.Kits[zone]
+	local door: BasePart, sign: BasePart
+	local face = Enum.NormalId.Right -- (+X, the plaza side)
+	local board = target > zone
+		and placeKit(zone, "Gate", model, base + (kit and kit.GateShift or Vector3.zero), -90, true)
+		and model:FindFirstChild(kit.GateBoard or "PriceBoard_Blank", true)
+	if board and board:IsA("BasePart") then
+		pad.Transparency = 1
+		door = part({
+			Name = "Door",
+			Size = Vector3.new(0.4, 11.2, 9.6),
+			CFrame = CFrame.new(base + Vector3.new(0, 5.8, 0)),
+			Transparency = 1,
+			CanCollide = false,
+		}, model)
+		sign = board
+		face = Enum.NormalId.Front -- (the design's front, turned to +X)
+	else
+		for _, side in { -1, 1 } do
+			part({
+				Name = "Pillar",
+				Size = Vector3.new(1.6, 12, 1.6),
+				CFrame = CFrame.new(base + Vector3.new(0, 6, side * 5.6)),
+				Color = Color3.fromRGB(250, 248, 240),
+			}, model)
+		end
 		part({
-			Name = "Pillar",
-			Size = Vector3.new(1.6, 12, 1.6),
-			CFrame = CFrame.new(base + Vector3.new(0, 6, side * 5.6)),
-			Color = Color3.fromRGB(250, 248, 240),
+			Name = "Top",
+			Size = Vector3.new(2, 1.6, 13),
+			CFrame = CFrame.new(base + Vector3.new(0, 12.8, 0)),
+			Color = palette.Accent,
+		}, model)
+		-- the glowing doorway (walk-through, no collisions)
+		door = part({
+			Name = "Door",
+			Size = Vector3.new(0.4, 11.2, 9.6),
+			CFrame = CFrame.new(base + Vector3.new(0, 5.8, 0)),
+			Color = palette.Edge,
+			Material = Enum.Material.Neon,
+			Transparency = 0.55,
+			CanCollide = false,
+		}, model)
+		sign = part({
+			Name = "Sign",
+			Size = Vector3.new(0.4, 3.6, 12),
+			CFrame = CFrame.new(base + Vector3.new(0.9, 15.4, 0)),
+			Color = Color3.fromRGB(255, 248, 232),
 		}, model)
 	end
-	part({
-		Name = "Top",
-		Size = Vector3.new(2, 1.6, 13),
-		CFrame = CFrame.new(base + Vector3.new(0, 12.8, 0)),
-		Color = palette.Accent,
-	}, model)
-	-- the glowing doorway (walk-through, no collisions)
-	local door = part({
-		Name = "Door",
-		Size = Vector3.new(0.4, 11.2, 9.6),
-		CFrame = CFrame.new(base + Vector3.new(0, 5.8, 0)),
-		Color = palette.Edge,
-		Material = Enum.Material.Neon,
-		Transparency = 0.55,
-		CanCollide = false,
-	}, model)
-	local sign = part({
-		Name = "Sign",
-		Size = Vector3.new(0.4, 3.6, 12),
-		CFrame = CFrame.new(base + Vector3.new(0.9, 15.4, 0)),
-		Color = Color3.fromRGB(255, 248, 232),
-	}, model)
 	local surface = Instance.new("SurfaceGui")
 	surface.Name = "Words"
-	surface.Face = Enum.NormalId.Right -- (+X, the plaza side)
+	surface.Face = face
 	surface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
 	surface.PixelsPerStud = 40
 	surface.LightInfluence = 0
 	surface.Parent = sign
 	local title = label(
 		surface,
-		(if target > zone then "To %s" else "Back to %s"):format(info.Name),
+		if sign.Name ~= "Sign" -- (a design's board: its own sign above already names the zone)
+			then ("Zone %d"):format(target)
+			else (if target > zone then "To %s" else "Back to %s"):format(info.Name),
 		UDim2.fromScale(0.94, 0.56),
 		UDim2.fromScale(0.03, 0.04),
 		Color3.new(1, 1, 1),
