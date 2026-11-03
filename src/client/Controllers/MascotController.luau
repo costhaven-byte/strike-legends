@@ -1127,7 +1127,7 @@ function MascotController:Start()
 		end
 	end
 
-	local doHatch: (egg: any?) -> ()
+	local doHatch: (egg: any?, count: number?) -> ()
 
 	local autoHatch = false
 	local autoNext: () -> ()
@@ -1520,7 +1520,8 @@ function MascotController:Start()
 		showCard(result, mascot)
 	end
 
-	doHatch = function(egg)
+	-- count: 1 = OPEN 1 even with TRIPLE HATCH (Polish v2 U3 grid board), nil = as many as the passes give
+	doHatch = function(egg, count)
 		if hatching or overlay.Visible or hatchV2 then
 			return
 		end
@@ -1536,7 +1537,7 @@ function MascotController:Start()
 			return
 		end
 		hatching = true
-		local ok, result = pcall(hatchRemote.InvokeServer, hatchRemote, egg.Id)
+		local ok, result = pcall(hatchRemote.InvokeServer, hatchRemote, egg.Id, count)
 		if ok and result and result.Ok then
 			play(result)
 		else
@@ -2188,7 +2189,7 @@ function MascotController:Start()
 		prompt.RequiresLineOfSight = false
 		prompt.Parent = shell
 		prompt.Triggered:Connect(function()
-			task.spawn(doHatch, egg)
+			task.spawn(doHatch, egg, if EGG_V2 and Config.EggBoard.Grid then 1 else nil) -- (grid board: E = OPEN 1)
 		end)
 
 		-- Price and lock just above the stand's sign (the sign itself shows the name)
@@ -2227,7 +2228,7 @@ function MascotController:Start()
 		if EGG_V2 then
 			prompt.Style = Enum.ProximityPromptStyle.Custom
 			local storeBuy = remotes:FindFirstChild("StoreBuy") :: RemoteEvent?
-			local boardV2 = EggV2.Board({
+			local boardV2 = (if Config.EggBoard.Grid then EggV2.GridBoard else EggV2.Board)({
 				Egg = egg,
 				Shell = shell,
 				Base = base,
@@ -2263,8 +2264,11 @@ function MascotController:Start()
 				Busy = function()
 					return standBusy or overlay.Visible
 				end,
-				Hatch = function()
-					task.spawn(doHatch, egg)
+				Hatch = function(count: number?)
+					task.spawn(doHatch, egg, count)
+				end,
+				Luck = function()
+					return Store.Luck(player)
 				end,
 				Auto = function()
 					if autoHatch then

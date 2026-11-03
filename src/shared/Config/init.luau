@@ -4199,6 +4199,11 @@ Config.EggBoard = {
 	HideDistance = 18, -- further = it hides (the gap stops flicker at the edge)
 	PetFill = 0.8, -- how much of its round slot the pet fills
 	Spin = 30, -- degrees per second the pets turn (0 = still)
+	-- Polish v2 U3 part 2 (owner's reference picture): buff lines, a white card with the pets 3 across, the price
+	-- pill beside it and round AUTO-DELETE / AUTO (T) / OPEN 3 (R) / OPEN 1 (E) buttons under it (EggV2.GridBoard).
+	-- false = the V6 board above (one row of round slots, HATCH / AUTO / x3).
+	Grid = true,
+	GridHeight = 2.6, -- studs from the egg's middle up to the grid board's bottom edge (its button labels)
 }
 
 -- Batch C3 (final changes 11b): tap a pet on an egg's odds board to X it out; X'd pets you hatch are auto-deleted
@@ -4245,7 +4250,7 @@ Config.AreaSigns = {
 -- Addendum 5 B2: signs over the roof's egg row and fusion machine (Config.CoreLoop.Eggs)
 if Config.CoreLoop.Enabled and Config.CoreLoop.Eggs.Enabled then
 	local roof = Config.CoreLoop.Folder
-	table.insert(Config.AreaSigns.Signs, { Text = "PET EGGS", Paint = "Pink", Icon = "Paw", Path = { roof, "EggRow" }, Lift = if Config.Ui.EggV2 then 8 else 4 }) -- (V6: clears the taller egg board)
+	table.insert(Config.AreaSigns.Signs, { Text = "PET EGGS", Paint = "Pink", Icon = "Paw", Path = { roof, "EggRow" }, Lift = if Config.Ui.EggV2 then 8 else 4, Egg = Config.Ui.EggV2 and Config.EggBoard.Grid }) -- (V6: clears the taller egg board; grid board: sits above it)
 	table.insert(Config.AreaSigns.Signs, { Text = "FUSION", Paint = "Purple", Icon = "Paw", Path = { roof, Config.CoreLoop.Eggs.Fusion.Name } })
 end
 -- Addendum 5 F: the roof's own crate kiosk and egg pad are moved away in the core loop (CoreLoop.HiddenStations), so

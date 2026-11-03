@@ -246,7 +246,8 @@ local function atEggStand(player: Player, eggId: string): boolean
 	return offset.Magnitude <= HATCH_RANGE
 end
 
-local function hatch(player: Player, eggId: any)
+-- want = 1: OPEN 1 even with TRIPLE HATCH (Polish v2 U3 grid board); anything else = as many as the passes give
+local function hatch(player: Player, eggId: any, want: any)
 	local egg = Mascots.GetEgg(eggId)
 	if not egg or not Mascots.EggReady(egg.Id) then
 		return { Ok = false, Error = "Coming soon" }
@@ -272,7 +273,7 @@ local function hatch(player: Player, eggId: any)
 
 	-- TRIPLE HATCH game pass: 3 at once when the player can pay for all 3 (free hatches go one at a time)
 	local count = Store.HatchCount(player)
-	if free or not PlayerDataService.CanAfford(player, "Coins", egg.Price * count) then
+	if want == 1 or free or not PlayerDataService.CanAfford(player, "Coins", egg.Price * count) then
 		count = 1
 	end
 	if free then
@@ -420,12 +421,12 @@ function MascotService.GivePet(player: Player, eggId: string, rarity: string)
 	return { MascotId = mascot.Id, IsNew = isNew, Equipped = autoEquipped }
 end
 
-local function onHatch(player: Player, eggId: any)
+local function onHatch(player: Player, eggId: any, want: any)
 	if busy[player] then
 		return { Ok = false, Error = "Too fast, wait a sec" }
 	end
 	busy[player] = true
-	local ok, result = pcall(hatch, player, eggId)
+	local ok, result = pcall(hatch, player, eggId, want)
 	busy[player] = nil
 	if not ok then
 		warn("[MascotService] Hatch failed: " .. tostring(result))

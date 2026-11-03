@@ -685,6 +685,630 @@ function EggV2.Board(ctx: { [string]: any }): { [string]: any }
 	}
 end
 
+-- ===== Polish v2 U3 part 2: the egg board in the owner's reference layout (Config.EggBoard.Grid) =====
+-- Buff lines on top (x2 LUCK, TRIPLE HATCH), a white card with the pets 3 across (chance on top, the pet turning in
+-- 3D on a tile in its rarity colour, rarity name under it; never found = black, the rarest unfound one "???"), the
+-- egg's name on a gold tab over the card, the price pill right of the card (red = can't pay, FREE xN) and four round
+-- buttons under it: AUTO-DELETE (gear: on = tap pets to X them, off = taps do nothing), AUTO (T), OPEN 3 (R: the
+-- TRIPLE HATCH pass, Robux badge until owned) and OPEN 1 (E, the stand's hold prompt). Key letters on computers only.
+-- Same ctx as EggV2.Board, plus Luck() -> number; Hatch(count) gets 1 or 3. Returns { Gui, Shown() -> bool }.
+local CARD_PAINT = { hex("F4F7FC"), hex("BFCBDD"), WHITE }
+
+-- A round button: circle block + a word, key letter or icon inside + a label under it
+local function roundButton(parent: Instance, opts: { [string]: any }): { [string]: any }
+	local size = opts.Size
+	local b = SlKit.Block(parent, {
+		Name = opts.Name,
+		Button = true,
+		Size = UDim2.fromOffset(size, size),
+		Radius = size / 2,
+		Paint = opts.Paint,
+		Lip = 6,
+		ZIndex = 4,
+	}) :: any
+	local inside = text(b.Content, opts.Inside or "", opts.InsideSize or 40, WHITE, { Name = "Inside", ZIndex = 9 });
+	(inside:FindFirstChildOfClass("UIStroke") :: UIStroke).Thickness = 3
+	local icon: ImageLabel? = nil
+	if opts.Icon then
+		icon = SlKit.Image(b.Content, opts.Icon, math.floor(size * 0.55), {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			ZIndex = 9,
+		})
+	end
+	local lock = SlKit.Image(b.Content, "ui_lock", math.floor(size * 0.42), {
+		Name = "Lock",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		ZIndex = 10,
+		Visible = false,
+	})
+	local label = text(b.Holder, opts.Label or "", 20, WHITE, {
+		Name = "Label",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 1, 2),
+		Size = UDim2.fromOffset(150, 26),
+		ZIndex = 9,
+	});
+	(label:FindFirstChildOfClass("UIStroke") :: UIStroke).Thickness = 3
+	-- READY (auto on): a white ring round the circle, the button bobs
+	local ring = make("Frame", {
+		Name = "Ready",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(size + 14, size + 14),
+		Visible = false,
+		ZIndex = 3,
+	}, b.Holder)
+	corner(ring, (size + 14) / 2)
+	stroke(ring, WHITE, 4)
+	local paint = opts.Paint
+	local state = "normal"
+	local stopBob: (() -> ())? = nil
+	function b.SetState(_self, newState: string)
+		if newState == state then
+			return
+		end
+		state = newState
+		b.Holder:SetAttribute("KitDisabled", newState == "locked")
+		b:Paint(if newState == "locked" then PAINT.Locked else paint)
+		lock.Visible = newState == "locked"
+		inside.Visible = newState ~= "locked"
+		if icon then
+			icon.Visible = newState ~= "locked"
+		end
+		ring.Visible = newState == "ready"
+		if stopBob then
+			stopBob()
+			stopBob = nil
+		end
+		if newState == "ready" then
+			stopBob = SlKit.Bob(b.Holder, 5, 1)
+		end
+	end
+	function b.Repaint(_self, newPaint)
+		paint = newPaint
+		if state ~= "locked" then
+			b:Paint(newPaint)
+		end
+	end
+	b.Inside = inside
+	b.Label = label
+	b.State = function()
+		return state
+	end
+	return b
+end
+
+function EggV2.GridBoard(ctx: { [string]: any }): { [string]: any }
+	local pets = ctx.Pets
+	local n = #pets
+	local PER_ROW = 3
+	local rows = math.max(1, math.ceil(n / PER_ROW))
+	local TILE_W, TILE_H, SQUARE, GAP = 116, 146, 92, 10
+	local PAD = 18
+	local cardW = PER_ROW * TILE_W + (PER_ROW - 1) * GAP + PAD * 2
+	local cardH = 34 + rows * TILE_H + (rows - 1) * GAP + 12 -- (34: under the name tab)
+	local BUFF_H, BUFFS = 40, 2
+	local BTN, BTN_STEP = 84, 126
+	local W = 820
+	local cardTop = BUFFS * BUFF_H + 30
+	local buttonsTop = cardTop + cardH + 22
+	local H = buttonsTop + BTN + 30
+	local studsPerPixel = BOARD.Width / 720 -- (same pixel size as the V6 board)
+	local studsW, studsH = W * studsPerPixel, H * studsPerPixel
+	local gui = make("BillboardGui", {
+		Name = "EggOdds", -- (AreaSignController finds the board by this name to sit above it)
+		Size = UDim2.fromScale(studsW, studsH), -- scale = studs: the same size on every screen
+		StudsOffset = Vector3.new(0, BOARD.GridHeight + studsH / 2, 0),
+		LightInfluence = 0,
+		Active = true,
+		Enabled = false,
+		ResetOnSpawn = false,
+		Adornee = ctx.Shell,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	})
+	-- (pet viewports on a billboard in the Workspace often don't draw: it lives in PlayerGui, pinned by Adornee)
+	local root = make("Frame", {
+		Name = "Board",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.fromScale(0.5, 1),
+		Size = UDim2.fromOffset(W, H),
+	}, gui)
+	local fit = make("UIScale", { Name = "Fit" }, root)
+	local inner = make("Frame", {
+		Name = "Inner",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.fromScale(0.5, 1),
+		Size = UDim2.fromScale(1, 1),
+	}, root)
+	local pop = make("UIScale", { Name = "Pop" }, inner) -- (scales from the bottom middle, over the egg)
+	local function refit()
+		fit.Scale = math.max(gui.AbsoluteSize.X, 1) / W
+	end
+	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(refit)
+
+	-- Buff lines (nearest the card first): x2 LUCK, TRIPLE HATCH
+	local buffs = make("Frame", {
+		Name = "Buffs",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(W, BUFFS * BUFF_H),
+		ZIndex = 4,
+	}, inner)
+	make("UIListLayout", {
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		VerticalAlignment = Enum.VerticalAlignment.Bottom,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}, buffs)
+	local function buffLine(order: number, icon: string, color: Color3): TextLabel
+		local line = make("Frame", {
+			Name = "Buff" .. order,
+			BackgroundTransparency = 1,
+			Size = UDim2.fromOffset(W, BUFF_H),
+			LayoutOrder = -order,
+			Visible = false,
+			ZIndex = 4,
+		}, buffs)
+		make("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			HorizontalAlignment = Enum.HorizontalAlignment.Center,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+			Padding = UDim.new(0, 8),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}, line)
+		SlKit.Image(line, icon, 34, { LayoutOrder = 1, ZIndex = 5 })
+		local words = text(line, "", 30, color, {
+			AutomaticSize = Enum.AutomaticSize.X,
+			Size = UDim2.fromOffset(0, BUFF_H),
+			LayoutOrder = 2,
+			ZIndex = 5,
+		});
+		(words:FindFirstChildOfClass("UIStroke") :: UIStroke).Thickness = 3
+		return words
+	end
+	local luckLine = buffLine(1, "potion_luck", C.Value)
+	local tripleLine = buffLine(2, "pass_triple_hatch", PAINT.Pink[3])
+	tripleLine.Text = "TRIPLE HATCH"
+
+	-- The card: white, ink outline, grey lip; the egg's name on a gold tab over its top edge
+	local cardX = (W - cardW) / 2
+	local card = SlKit.Block(
+		inner,
+		{ Name = "Card", Size = UDim2.fromOffset(cardW, cardH + 6), Radius = 20, Paint = CARD_PAINT }
+	)
+	card.Holder.Position = UDim2.fromOffset(cardX, cardTop)
+	local title = string.upper((Config.EggLooks[ctx.Egg.Id] or {}).Name or ctx.Egg.Name or "EGG")
+	local tabW = math.min(cardW + 40, 12 + 40 + 8 + textWidth(title, 28) + 20)
+	local tab = SlKit.Block(
+		inner,
+		{ Name = "Plate", Size = UDim2.fromOffset(tabW, 48), Radius = 14, Paint = "Header", Lip = 5, ZIndex = 6 }
+	)
+	tab.Holder.Position = UDim2.fromOffset((W - tabW) / 2, cardTop - 26)
+	local eggSlot = make("Frame", {
+		Name = "Egg",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(12, -2),
+		Size = UDim2.fromOffset(40, 40),
+		ZIndex = 11,
+	}, tab.Content)
+	MascotView.Viewport(eggSlot, MascotView.Egg(ctx.Egg.Id, 4), 0.95).ZIndex = 11
+	local titleLabel = text(tab.Content, title, 28, WHITE, {
+		Position = UDim2.fromOffset(60, 0),
+		Size = UDim2.new(1, -60 - 14, 1, 0),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 11,
+	});
+	(titleLabel:FindFirstChildOfClass("UIStroke") :: UIStroke).Thickness = 3
+
+	-- Price pill right of the card (tap = OPEN 1)
+	local price = button(
+		inner,
+		{ Name = "Price", Paint = PAINT.Green, W = 176, H = 64, Icon = "cur_coin", IconSize = 38, TextSize = 26, ZIndex = 4 }
+	)
+	price.Holder.AnchorPoint = Vector2.new(0, 0.5)
+	price.Holder.Position = UDim2.fromOffset(cardX + cardW + 12, cardTop + (cardH + 6) / 2)
+
+	-- Pet tiles, 3 across (a short last row is centred)
+	local slots = {}
+	local foundViews = {}
+	local deleteMode = false
+	local spinners: { Model } = {}
+	local marked: { [string]: boolean } = {}
+	for index, mascot in pets do
+		local color = SlKit.Rarity[mascot.Rarity] or Mascots.RarityColor(mascot.Rarity)
+		local row = math.ceil(index / PER_ROW)
+		local inRow = if row < rows then PER_ROW else n - (rows - 1) * PER_ROW
+		local col = (index - 1) % PER_ROW
+		local rowW = inRow * TILE_W + (inRow - 1) * GAP
+		local column = make("Frame", {
+			Name = mascot.Id,
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(
+				cardX + (cardW - rowW) / 2 + col * (TILE_W + GAP),
+				cardTop + 34 + (row - 1) * (TILE_H + GAP)
+			),
+			Size = UDim2.fromOffset(TILE_W, TILE_H),
+			ZIndex = 4,
+		}, inner)
+		local percent = text(column, "", 24, WHITE, {
+			Name = "Chance",
+			Size = UDim2.new(1, 0, 0, 26),
+			ZIndex = 7,
+		});
+		(percent:FindFirstChildOfClass("UIStroke") :: UIStroke).Thickness = 3
+		local tileButton = make("TextButton", {
+			Name = "Slot",
+			Text = "",
+			AutoButtonColor = false,
+			BackgroundColor3 = color,
+			BorderSizePixel = 0,
+			Position = UDim2.fromOffset((TILE_W - SQUARE) / 2, 28),
+			Size = UDim2.fromOffset(SQUARE, SQUARE),
+			ZIndex = 5,
+		}, column) :: TextButton
+		corner(tileButton, 16)
+		stroke(tileButton, INK, 3)
+		local petFrame = make("Frame", {
+			Name = "Pet",
+			BackgroundTransparency = 1,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromOffset(SQUARE + 8, SQUARE + 8),
+			ZIndex = 6,
+		}, tileButton)
+		local model = MascotView.Mascot(mascot, 2, false)
+		local view = MascotView.Viewport(petFrame, model, BOARD.PetFill)
+		view.ZIndex = 6
+		table.insert(spinners, model)
+		local mystery = text(tileButton, "???", 32, WHITE, {
+			Name = "Mystery",
+			Size = UDim2.fromScale(1, 1),
+			Visible = false,
+			ZIndex = 8,
+		});
+		(mystery:FindFirstChildOfClass("UIStroke") :: UIStroke).Thickness = 3
+		foundViews[mascot] = { View = view, Mystery = mystery, Column = column }
+		text(column, string.upper(mascot.Rarity), 20, color, {
+			Name = "Rarity",
+			Position = UDim2.fromOffset(-8, 28 + SQUARE + 1),
+			Size = UDim2.new(1, 16, 0, 24),
+			ZIndex = 7,
+		})
+		-- auto-delete: tile dark + red X
+		local dark = make("Frame", {
+			Name = "Deleted",
+			BackgroundColor3 = hex("0F2442"),
+			BackgroundTransparency = 0.3,
+			BorderSizePixel = 0,
+			Size = UDim2.fromScale(1, 1),
+			Visible = false,
+			ZIndex = 8,
+		}, tileButton)
+		corner(dark, 16)
+		local tile = SlKit.Block(
+			dark,
+			{ Name = "X", Size = UDim2.fromOffset(52, 52), Radius = 14, Paint = PAINT.Red, ZIndex = 9 }
+		)
+		tile.Holder.AnchorPoint = Vector2.new(0.5, 0.5)
+		tile.Holder.Position = UDim2.fromScale(0.5, 0.5)
+		for _, angle in { 45, -45 } do
+			local bar = make("Frame", {
+				Name = "Bar",
+				BackgroundColor3 = WHITE,
+				BorderSizePixel = 0,
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromOffset(8, 28),
+				Rotation = angle,
+				ZIndex = 13,
+			}, tile.Content)
+			corner(bar, 4)
+			stroke(bar, INK, 2.5)
+		end
+		slots[mascot] = { Percent = percent, Dark = dark, Color = color }
+		if ctx.AutoDeleteRemote then
+			tileButton.Activated:Connect(function()
+				local AUTO_DELETE = Config.AutoDelete
+				if not deleteMode then
+					return -- (tapping pets does nothing until the AUTO-DELETE gear is on)
+				end
+				if Mascots.RarityIndex(mascot.Rarity) > Mascots.RarityIndex(AUTO_DELETE.MaxRarity) then
+					ctx.Toast(AUTO_DELETE.TooRare:format(string.upper(mascot.Rarity)))
+					SlKit.Shake(column, 6, 0, 0.25)
+					return
+				end
+				local on = not marked[mascot.Id]
+				marked[mascot.Id] = if on then true else nil
+				Sfx.Play("Click")
+				ctx.AutoDeleteRemote:FireServer(mascot.Id, on)
+				-- straight away; the server's AutoDelete attribute confirms it
+				dark.Visible = on
+				percent.TextTransparency = if on then 0.45 else 0
+				if on then
+					local scale = SlKit.ScaleOf(tile.Holder)
+					scale.Scale = 0
+					SlKit.Tween(scale, 0.1, "Snap", { Scale = 1.15 })
+					task.delay(0.1, function()
+						SlKit.Tween(scale, 0.08, "Over", { Scale = 1 })
+					end)
+				end
+			end)
+		end
+	end
+
+	-- Round buttons: AUTO-DELETE / AUTO (T) / OPEN 3 (R) / OPEN 1 (E)
+	local computer = UserInputService.KeyboardEnabled and not UserInputService.TouchEnabled
+	local order = {}
+	local gear = roundButton(
+		inner,
+		{ Name = "AutoDeleteGear", Size = BTN, Paint = PAINT.Blue, Icon = "hud_settings", Label = "AUTO-DELETE" }
+	)
+	if ctx.AutoDeleteRemote then
+		table.insert(order, gear)
+	else
+		gear.Holder.Visible = false
+	end
+	local auto = roundButton(inner, {
+		Name = "Auto",
+		Size = BTN,
+		Paint = PAINT.Blue,
+		Inside = if computer then "T" else "OFF",
+		InsideSize = if computer then 40 else 26,
+		Label = "AUTO",
+	})
+	local triple = roundButton(
+		inner,
+		{ Name = "Open3", Size = BTN, Paint = PAINT.Pink, Inside = if computer then "R" else "x3", Label = "OPEN 3" }
+	)
+	local single = roundButton(inner, {
+		Name = "Open1",
+		Size = BTN,
+		Paint = PAINT.Green,
+		Inside = if computer and ctx.Prompt then "E" else "x1",
+		Label = "OPEN 1",
+	})
+	table.insert(order, auto)
+	table.insert(order, triple)
+	table.insert(order, single)
+	local rowSpan = (#order - 1) * BTN_STEP
+	for i, b in order do
+		b.Holder.AnchorPoint = Vector2.new(0.5, 0)
+		b.Holder.Position = UDim2.fromOffset(W / 2 - rowSpan / 2 + (i - 1) * BTN_STEP, buttonsTop)
+	end
+	-- Robux badge on OPEN 3 until the TRIPLE HATCH pass is owned
+	local badge = make("Frame", {
+		Name = "Badge",
+		BackgroundColor3 = PAINT.Green[1],
+		BorderSizePixel = 0,
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, 8, 0, -8),
+		Size = UDim2.fromOffset(34, 34),
+		ZIndex = 20,
+	}, triple.Holder)
+	corner(badge, 17)
+	stroke(badge, INK, 3)
+	-- (the Robux glyph only draws in Builder Sans)
+	text(badge, ROBUX_GLYPH, 22, WHITE, { FontFace = Font.fromEnum(Enum.Font.BuilderSansBold), ZIndex = 21 })
+
+	local function refresh()
+		local unlocked, why, free, affordable = ctx.State()
+		-- price
+		if not unlocked then
+			price:SetState("locked")
+			price:SetText(string.upper(tostring(why or "LOCKED")))
+		else
+			price:SetState("normal")
+			price:Repaint(if affordable then PAINT.Green else PAINT.Red)
+			price:SetText(if free > 0 then ("FREE x%d"):format(free) else Currency.Format(ctx.Egg.Price))
+			if price.Icon then
+				price.Icon.Visible = free <= 0
+			end
+		end
+		price.Label.TextSize = if #price.Label.Text > 7 then 20 else 26
+		-- buttons
+		local ready = unlocked and affordable
+		if single:State() ~= "pressed" then
+			single:SetState(if ready then "normal" else "locked")
+		end
+		local autoOn = ctx.AutoOn()
+		auto:SetState(if not ready then "locked" elseif autoOn then "ready" else "normal")
+		if not computer then
+			auto.Inside.Text = if autoOn then "ON" else "OFF"
+		end
+		local owns = ctx.TripleOwned()
+		badge.Visible = not owns
+		triple:SetState(if owns and not ready then "locked" else "normal")
+		gear:Repaint(if deleteMode then PAINT.Red else PAINT.Blue)
+		gear.Label.Text = if deleteMode then "TAP PETS!" else "AUTO-DELETE"
+		gear.Label.TextColor3 = if deleteMode then PAINT.Red[3] else WHITE
+		-- odds
+		local odds = ctx.Odds()
+		for mascot, slot in slots do
+			local chance = odds[mascot] or 0
+			slot.Percent.Text = percentText(chance)
+			slot.Percent.TextColor3 = if chance <= 0.01 then slot.Color else WHITE
+		end
+		-- buffs
+		local luck = ctx.Luck()
+		luckLine.Parent.Visible = luck > 1
+		luckLine.Text = ("x%s LUCK"):format((("%.1f"):format(luck):gsub("%.0$", "")))
+		tripleLine.Parent.Visible = owns
+	end
+
+	gear.Holder.Activated:Connect(function()
+		deleteMode = not deleteMode
+		Sfx.Play("Click")
+		SlKit.Pulse(gear.Holder, 1.15, 0.2)
+		refresh()
+	end)
+
+	local function refreshMarks()
+		marked = {}
+		for id in string.gmatch(player:GetAttribute("AutoDelete") or "", "[^,]+") do
+			marked[id] = true
+		end
+		for mascot, slot in slots do
+			slot.Dark.Visible = marked[mascot.Id] == true
+			slot.Percent.TextTransparency = if marked[mascot.Id] then 0.45 else 0
+		end
+	end
+	player:GetAttributeChangedSignal("AutoDelete"):Connect(refreshMarks)
+
+	-- Pets you've never found are black (chance still shows: honest odds); the rarest unfound one says "???".
+	-- A pet found just now pops back into colour.
+	local wasFound: { [any]: boolean } = {}
+	local function refreshFound()
+		local found = {}
+		for _, id in string.split(player:GetAttribute("PetsFound") or "", ",") do
+			found[id] = true
+		end
+		local rarest, rarestRank = nil, -1
+		for mascot, refs in foundViews do
+			local isFound = found[mascot.Id] == true
+			refs.View.ImageColor3 = if isFound then WHITE else Color3.new(0, 0, 0)
+			refs.Mystery.Visible = false
+			if not isFound and Mascots.RarityIndex(mascot.Rarity) > rarestRank then
+				rarest, rarestRank = mascot, Mascots.RarityIndex(mascot.Rarity)
+			end
+			if isFound and wasFound[mascot] == false then
+				SlKit.Pulse(refs.Column, 1.25, 0.4)
+			end
+			wasFound[mascot] = isFound
+		end
+		if rarest then
+			foundViews[rarest].Mystery.Visible = true
+		end
+	end
+	refreshFound()
+	player:GetAttributeChangedSignal("PetsFound"):Connect(refreshFound)
+	refreshMarks()
+
+	local function openOne()
+		if single.Holder:GetAttribute("KitDisabled") then
+			SlKit.Shake(single.Holder, 8, 0, 0.3)
+		end
+		ctx.Hatch(1)
+	end
+	local function openThree()
+		if not ctx.TripleOwned() then
+			ctx.BuyTriple()
+			return
+		end
+		if triple.Holder:GetAttribute("KitDisabled") then
+			SlKit.Shake(triple.Holder, 8, 0, 0.3)
+		end
+		ctx.Hatch(3)
+	end
+	local function toggleAuto()
+		if auto.Holder:GetAttribute("KitDisabled") then
+			SlKit.Shake(auto.Holder, 8, 0, 0.3)
+			ctx.Hatch(1) -- (says why: locked / not enough coins)
+			return
+		end
+		ctx.Auto()
+		refresh()
+	end
+	single.Holder.Activated:Connect(openOne)
+	triple.Holder.Activated:Connect(openThree)
+	auto.Holder.Activated:Connect(toggleAuto)
+	price.Holder.Activated:Connect(openOne)
+	-- holding E (the stand's prompt) presses OPEN 1
+	if ctx.Prompt then
+		ctx.Prompt.PromptButtonHoldBegan:Connect(function()
+			if single:State() == "normal" then
+				single:SetState("pressed")
+				single:SetPressed(true)
+			end
+		end)
+		ctx.Prompt.PromptButtonHoldEnded:Connect(function()
+			if single:State() == "pressed" then
+				single:SetPressed(false)
+				single:SetState("normal")
+				refresh()
+			end
+		end)
+	end
+
+	gui.Parent = player:WaitForChild("PlayerGui")
+	refit()
+
+	-- Walk near: show (scale 0.7 -> 1 overshoot, 0.2 s); walk away or a hatch starts: hide (0.12 s snap)
+	local shown = false
+	local spin = 0
+	local sinceRefresh = math.huge
+	local function show(on: boolean)
+		if on == shown then
+			return
+		end
+		shown = on
+		if on then
+			gui.Enabled = true
+			refit()
+			refresh()
+			pop.Scale = 0.7
+			SlKit.Tween(pop, 0.2, "Over", { Scale = 1 })
+		else
+			SlKit.Tween(pop, 0.12, "Snap", { Scale = 0.7 })
+			task.delay(0.12, function()
+				if not shown then
+					gui.Enabled = false
+				end
+			end)
+		end
+	end
+	-- T = AUTO, R = OPEN 3 while the board is up (E is the stand's own prompt)
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if processed or not shown then
+			return
+		end
+		if input.KeyCode == Enum.KeyCode.T then
+			SlKit.Pulse(auto.Holder, 0.9, 0.16)
+			toggleAuto()
+		elseif input.KeyCode == Enum.KeyCode.R then
+			SlKit.Pulse(triple.Holder, 0.9, 0.16)
+			openThree()
+		end
+	end)
+	local near = false
+	RunService.RenderStepped:Connect(function(dt)
+		local rootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local distance = if rootPart
+			then ((rootPart.Position - ctx.Base) * Vector3.new(1, 0, 1)).Magnitude
+			else math.huge
+		if distance <= BOARD.ShowDistance then
+			near = true
+		elseif distance > BOARD.HideDistance then
+			near = false
+		end
+		show(near and not ctx.Busy())
+		if not shown then
+			return
+		end
+		sinceRefresh += dt
+		if sinceRefresh >= 0.25 then -- coins, free eggs and passes change often: a light poll while it's up
+			sinceRefresh = 0
+			refresh()
+		end
+		if BOARD.Spin ~= 0 then
+			spin += math.rad(BOARD.Spin) * dt
+			local turn = CFrame.Angles(0, spin, 0)
+			for _, model in spinners do
+				model:PivotTo(turn)
+			end
+		end
+	end)
+
+	return {
+		Gui = gui,
+		Shown = function()
+			return shown
+		end,
+	}
+end
+
 -- ===== FUSE PETS =====
 -- ctx: Fusable() -> { mascot } (most copies first), Owned() -> { [id]: count }, Fuse(mascot) (closes this window and
 -- plays the merge), OnOpen(), OnClose(). Returns { Open(), Close(), IsOpen() -> bool }.
