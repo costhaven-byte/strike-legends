@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
+local Motion = require(Modules.Motion)
 
 -- These play their own sound when pressed
 local SILENT_BUTTONS = {
@@ -19,10 +20,35 @@ local function screenSized(button: GuiButton): boolean
 	return button.Name == "Backdrop" or (button.Size.X.Scale >= 0.95 and button.Size.Y.Scale >= 0.95)
 end
 
+-- Polish v2 D1: red dots and count badges pop in on a spring whenever they show up
+local function popWhenShown(object: GuiObject)
+	object:GetPropertyChangedSignal("Visible"):Connect(function()
+		if object.Visible then
+			local scale = object:FindFirstChildOfClass("UIScale") -- (one UIScale per object: reuse the kit's)
+			if not scale then
+				scale = Instance.new("UIScale")
+				scale.Parent = object
+			end
+			Motion.PopIn(scale :: UIScale, 0.2)
+		end
+	end)
+end
+
 local function setup(object: Instance)
-	-- OwnPress: the button animates and clicks by itself (the store's chunky buttons)
-	if object:IsA("GuiButton") and not object:GetAttribute("OwnPress") and not screenSized(object) then
-		UiFx.Press(object, SILENT_BUTTONS[object.Name] == true)
+	if object:IsA("GuiButton") and not screenSized(object) then
+		-- every press is remembered, so a window it opens grows out of it (Motion.WindowOpen); THROW is held all the
+		-- time, so a popup that shows up while throwing doesn't fly out of it
+		if not SILENT_BUTTONS[object.Name] then
+			object.MouseButton1Down:Connect(function()
+				Motion.NotePress(object)
+			end)
+		end
+		-- OwnPress: the button animates and clicks by itself (the store's chunky buttons)
+		if not object:GetAttribute("OwnPress") then
+			UiFx.Press(object, SILENT_BUTTONS[object.Name] == true)
+		end
+	elseif object:IsA("Frame") and (object.Name == "Dot" or object.Name == "Badge") then
+		popWhenShown(object)
 	end
 end
 

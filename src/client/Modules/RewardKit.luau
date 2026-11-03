@@ -13,6 +13,7 @@ local CrateKit = require(script.Parent:WaitForChild("CrateKit"))
 local HudKit = require(script.Parent:WaitForChild("HudKit"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
 local MascotView = require(script.Parent:WaitForChild("MascotView"))
+local Motion = require(script.Parent:WaitForChild("Motion"))
 local Balls = require(Shared.Modules.Balls)
 
 local RewardKit = {}
@@ -455,6 +456,8 @@ end
 
 -- ===== Toast: a navy pill that drops in at the top centre, then slides away =====
 -- toast(text, icon kind?, icon value?, colour?, seconds?). It lives on its own layer over every window.
+-- Polish v2 D1: it drops on the Pop spring and settles; toasts showing at the same time stack downwards.
+local liveToasts: { [GuiObject]: boolean } = setmetatable({}, { __mode = "k" }) :: any
 function RewardKit.Toast(owner: ScreenGui): (string, string?, any?, Color3?, number?) -> ()
 	local W, H = 420, 60
 	local gui = make("ScreenGui", {
@@ -508,16 +511,27 @@ function RewardKit.Toast(owner: ScreenGui): (string, string?, any?, Color3?, num
 		local area = gui.AbsoluteSize
 		fitScale.Scale = math.min(1, math.max(0.5, (area.X - 24) / W))
 		local top = if area.Y > 0 and area.Y < Config.Ui.CompactHeight then 52 else 110
+		local below = 0
+		for other in liveToasts do
+			if other ~= holder and other.Visible and other.Parent then
+				below += 1
+			end
+		end
+		top += below * (H + Config.Motion.ToastGap) * fitScale.Scale
+		liveToasts[holder] = true
+		local function setY(y: number)
+			holder.Position = UDim2.new(0.5, 0, 0, y)
+		end
+		local wasShown = holder.Visible
 		holder.Visible = true
-		holder.Position = UDim2.new(0.5, 0, 0, -90)
-		tween(holder, 0.28, Enum.EasingStyle.Back, { Position = UDim2.new(0.5, 0, 0, top) })
+		Motion.Drive(holder, "Toast", if wasShown then nil else -90, top, "Pop", setY)
 		task.delay(seconds or 2.4, function()
 			if token == mine then
-				tween(holder, 0.18, Enum.EasingStyle.Quad, { Position = UDim2.new(0.5, 0, 0, -90) }, Enum.EasingDirection.In)
-				task.wait(0.2)
-				if token == mine then
-					holder.Visible = false
-				end
+				Motion.Drive(holder, "Toast", nil, -90, "Shut", setY, function()
+					if token == mine then
+						holder.Visible = false
+					end
+				end)
 			end
 		end)
 	end

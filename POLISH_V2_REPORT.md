@@ -266,3 +266,19 @@ Before: File > Save to Roblox As a copy (restore = git tag `restore-polish-v2-be
   They keep working through the TEST panel and use the new palette, but a player never sees them.
 - Not done: a real phone-size check (Studio can't change the screen size from here). Windows and moments shrink
   to fit any screen by code (RewardKit.Window / MomentKit stage fit).
+
+## D1 Motion module + HUD buttons, windows, dots, toasts (tag restore-pl-D1-before)
+- New `Modules/Motion` (numbers in `Config.Motion`): springs for anything you touch, so a new target bends the motion
+  already running and a fast tap can't leave a button stuck half-pressed. Named presets used everywhere: Snap
+  (buttons down), Pop (buttons back up with a small kick, small rewards, red dots), Window (opening, ~8% overshoot),
+  Slam (big moments), Shut (closing), Float (idle bob), Drift (soft fades). Stagger 0.05 s.
+- Windows grow out of the button you pressed and shrink back into it: GIFTS, PROFILE, SETTINGS, DAILY, PETS, STORE
+  and every window built on the shared kits. Opened with no button (the SHOP on its stall pad) = pops in place.
+  Fixes an old quirk too: the kit windows used to grow from their top-left corner.
+- Every button press (UiFx, SlKit, HUD hover) is on springs; red dots and count badges pop in on a spring when they
+  appear; SlKit pulses stack smoothly; idle bobs (hint bubbles, ready cards) move on a small curve, not a line.
+- Toasts drop on a spring and settle; two toasts at once stack instead of covering each other.
+- Not done here: new-item glints (moved to D3/D4 where the new items are).
+- Checked in Play: GIFTS caught mid-flight coming out of its button, settles at the same spot as before; close /
+  re-open / fast open-close taps on PETS end clean (hidden, scale 1, at rest); STORE, PROFILE; held THROW and
+  4 s of throws; console = only the known avatar warning.

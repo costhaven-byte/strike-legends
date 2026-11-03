@@ -12,6 +12,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local UiKitAssets = require(Shared.UiKitAssets)
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
+local Motion = require(script.Parent:WaitForChild("Motion"))
 
 local UiKit = {}
 
@@ -388,25 +389,15 @@ function UiKit.Backdrop(parent: Instance): TextButton
 	}, parent)
 end
 
--- Window opens: backdrop fades in (0.15 Linear); panel UIScale 0.6 -> 1.05 (0.18 Back Out) -> 1 (0.08 Quad Out)
--- while it rises 40 px into place (0.18 Quad Out). screen = the full-screen frame holding both.
+-- Window opens: backdrop fades in (0.15 Linear); the panel grows out of the button you pressed on the Window spring
+-- (Polish v2 D1, Modules/Motion), or pops in place. screen = the full-screen frame holding both.
 local tokens: { [Instance]: number } = setmetatable({}, { __mode = "k" }) :: any
 function UiKit.Open(screen: GuiObject, backdrop: GuiObject, panel: GuiObject, scale: UIScale)
 	tokens[screen] = (tokens[screen] or 0) + 1
-	local token = tokens[screen]
 	screen.Visible = true
 	backdrop.BackgroundTransparency = 1
 	tween(backdrop, 0.15, Enum.EasingStyle.Linear, { BackgroundTransparency = 0.38 })
-	local rest = panel:GetAttribute("RestPosition") or panel.Position
-	panel:SetAttribute("RestPosition", rest)
-	panel.Position = rest + UDim2.fromOffset(0, 40)
-	tween(panel, 0.18, Enum.EasingStyle.Quad, { Position = rest })
-	scale.Scale = 0.6
-	tween(scale, 0.18, Enum.EasingStyle.Back, { Scale = 1.05 }).Completed:Once(function()
-		if tokens[screen] == token then
-			tween(scale, 0.08, Enum.EasingStyle.Quad, { Scale = 1 })
-		end
-	end)
+	Motion.WindowOpen(panel, scale)
 end
 
 -- Window closes: panel UIScale -> 0.85 (0.12 Quad In), backdrop fades out, then hidden.
@@ -418,14 +409,12 @@ function UiKit.Close(screen: GuiObject, backdrop: GuiObject, scale: UIScale)
 	tokens[screen] = (tokens[screen] or 0) + 1
 	local token = tokens[screen]
 	tween(backdrop, 0.12, Enum.EasingStyle.Linear, { BackgroundTransparency = 1 })
-	local base = scale.Scale
-	tween(scale, 0.12, Enum.EasingStyle.Quad, { Scale = base * 0.85 }, Enum.EasingDirection.In).Completed:Once(
-		function()
-			if tokens[screen] == token then
-				screen.Visible = false
-			end
+	-- shrinks back into the button that opened it (or in place)
+	Motion.WindowClose(scale.Parent :: GuiObject, scale, function()
+		if tokens[screen] == token then
+			screen.Visible = false
 		end
-	)
+	end)
 end
 
 -- Esc and the gamepad B button call fn while the screen is open

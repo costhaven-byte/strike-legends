@@ -27,6 +27,7 @@ local MascotView = require(script.Parent.MascotView)
 local PetsV2 = require(script.Parent.PetsV2)
 local RewardKit = require(script.Parent.RewardKit)
 local SlKit = require(script.Parent.SlKit)
+local Motion = require(script.Parent:WaitForChild("Motion"))
 local Sfx = require(script.Parent.Sfx)
 
 local player = Players.LocalPlayer
@@ -815,10 +816,8 @@ function DailyV2.Start(ctx: { [string]: any })
 			errorText, noteText = nil, nil
 			refresh()
 			backdrop.Visible = true
-			win.Visible = true
-			-- window: scale 0.85 -> 1.04 -> 1, 0.28 s overshoot; plate y -24 -> 0, 0.22 s overshoot, +0.06 s
-			openScale.Scale = 0.85
-			SlKit.Tween(openScale, 0.28, "Over", { Scale = 1 })
+			-- window grows out of the button you pressed (Polish v2 D1, Motion); plate y -24 -> 0, 0.22 s overshoot
+			Motion.WindowOpen(win, openScale)
 			plate.Holder.Position = plateBase + UDim2.fromOffset(0, -24)
 			task.delay(0.06, function()
 				SlKit.Tween(plate.Holder, 0.22, "Over", { Position = plateBase })
@@ -836,12 +835,10 @@ function DailyV2.Start(ctx: { [string]: any })
 				end)
 			end
 		else
-			SlKit.Tween(openScale, 0.14, "Snap", { Scale = 0.85 })
-			task.delay(0.14, function()
+			Motion.WindowClose(win, openScale, function()
 				if not open then
 					win.Visible = false
 					backdrop.Visible = false
-					openScale.Scale = 1
 				end
 			end)
 			if ctx.OnClose then

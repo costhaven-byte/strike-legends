@@ -14,6 +14,8 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local AssetSlots = require(Shared.AssetSlots)
 local Currency = require(Shared.Modules.Currency)
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
+local Motion = require(script.Parent:WaitForChild("Motion"))
+local MOTION = require(Shared.Config).Motion
 
 local SlKit = {}
 
@@ -124,41 +126,20 @@ local function scaleOf(object: GuiObject): UIScale
 end
 SlKit.ScaleOf = scaleOf
 
--- Scale 1 -> to -> 1 (coin icon pulse 1.25, red dot re-pop 1.2)
-function SlKit.Pulse(object: GuiObject, to: number?, time: number?)
-	local scale = scaleOf(object)
-	local half = (time or 0.24) / 2
-	SlKit.Tween(scale, half, "Snap", { Scale = to or 1.25 })
-	task.delay(half, function()
-		SlKit.Tween(scale, half, "Over", { Scale = 1 })
-	end)
+-- Scale 1 -> to -> 1 (coin icon pulse 1.25, red dot re-pop 1.2). Polish v2 D1: a spring kick (Modules/Motion), so
+-- pulses that come fast stack smoothly instead of restarting.
+function SlKit.Pulse(object: GuiObject, to: number?, _time: number?)
+	Motion.Bump(scaleOf(object), ((to or 1.25) - 1) * 14)
 end
 
--- Pop in from nothing: 0 -> 1.3 -> 1 (red dot, badges)
-function SlKit.PopIn(object: GuiObject, time: number?)
-	local scale = scaleOf(object)
-	scale.Scale = 0
-	local t = time or 0.25
-	SlKit.Tween(scale, t * 0.6, "Snap", { Scale = 1.3 })
-	task.delay(t * 0.6, function()
-		SlKit.Tween(scale, t * 0.4, "Over", { Scale = 1 })
-	end)
+-- Pop in from small on the Pop spring (red dot, badges, cards)
+function SlKit.PopIn(object: GuiObject, _time: number?)
+	Motion.PopIn(scaleOf(object), 0.2)
 end
 
--- Up-and-down loop (hint bubble 8 px / 0.8 s, ready cards 6 px / 1.2 s). Returns stop().
+-- Idle bob on a small curve (hint bubble 8 px / 0.8 s, ready cards 6 px / 1.2 s). Returns stop().
 function SlKit.Bob(object: GuiObject, px: number?, period: number?): () -> ()
-	local base = object.Position
-	local up = UDim2.new(base.X.Scale, base.X.Offset, base.Y.Scale, base.Y.Offset - (px or 8))
-	local tween = TweenService:Create(
-		object,
-		TweenInfo.new((period or 0.8) / 2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-		{ Position = up }
-	)
-	tween:Play()
-	return function()
-		tween:Cancel()
-		object.Position = base
-	end
+	return Motion.Float(object, px or 8, period or 0.8)
 end
 
 -- Side to side shake (locked tap: 8 px + rotation 12; FULL bag shake)
@@ -364,34 +345,32 @@ end
 function SlKit.Press(block: Block, silent: boolean?)
 	local button = block.Holder :: GuiButton
 	local scale = scaleOf(button)
+	-- (Polish v2 D1: on springs, so a fast tap never leaves it stuck half-pressed)
 	local function down()
 		if block.Pressed or button:GetAttribute("KitDisabled") then
 			return
 		end
 		block:SetPressed(true)
-		SlKit.Tween(scale, 0.06, "Snap", { Scale = 0.92 })
+		Motion.Spring(scale, "Scale", MOTION.ButtonDown, "Snap")
 	end
 	local function up()
 		if not block.Pressed then
 			return
 		end
 		block:SetPressed(false)
-		SlKit.Tween(scale, 0.08, "Snap", { Scale = 1.04 })
-		task.delay(0.08, function()
-			SlKit.Tween(scale, 0.14, "Over", { Scale = 1 })
-		end)
+		Motion.Spring(scale, "Scale", 1, "Pop", { Velocity = MOTION.ButtonKick })
 	end
 	button.MouseButton1Down:Connect(down)
 	button.MouseButton1Up:Connect(up)
 	button.MouseLeave:Connect(function()
 		up()
 		if not block.Pressed then
-			SlKit.Tween(scale, 0.12, "Soft", { Scale = 1 })
+			Motion.Spring(scale, "Scale", 1, "Pop")
 		end
 	end)
 	button.MouseEnter:Connect(function()
 		if not UserInputService.TouchEnabled and not button:GetAttribute("KitDisabled") then
-			SlKit.Tween(scale, 0.12, "Soft", { Scale = 1.04 })
+			Motion.Spring(scale, "Scale", 1.04, "Pop")
 		end
 	end)
 	if not silent then

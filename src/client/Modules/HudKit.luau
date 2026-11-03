@@ -16,6 +16,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local AssetSlots = require(Shared.AssetSlots)
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
+local Motion = require(script.Parent:WaitForChild("Motion"))
 
 local player = Players.LocalPlayer
 
@@ -1017,13 +1018,14 @@ function HudKit.Press(block: Block, silent: boolean?, source: GuiButton?)
 	button.MouseButton1Up:Connect(function()
 		set(false)
 	end)
+	-- hover grows on the Pop spring (Polish v2 D1, Modules/Motion)
 	button.MouseLeave:Connect(function()
 		set(false)
-		TweenService:Create(block.Scale, TweenInfo.new(0.12, Enum.EasingStyle.Quad), { Scale = 1 }):Play()
+		Motion.Spring(block.Scale, "Scale", 1, "Pop")
 	end)
 	button.MouseEnter:Connect(function()
 		if not UserInputService.TouchEnabled then
-			TweenService:Create(block.Scale, TweenInfo.new(0.12, Enum.EasingStyle.Quad), { Scale = 1.06 }):Play()
+			Motion.Spring(block.Scale, "Scale", 1.06, "Pop")
 		end
 	end)
 	if not silent then

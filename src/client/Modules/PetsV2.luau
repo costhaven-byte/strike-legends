@@ -24,6 +24,7 @@ local Mascots = require(Shared.Modules.Mascots)
 local HudKit = require(script.Parent.HudKit)
 local MascotView = require(script.Parent.MascotView)
 local SlKit = require(script.Parent.SlKit)
+local Motion = require(script.Parent:WaitForChild("Motion"))
 local Sfx = require(script.Parent.Sfx)
 
 local player = Players.LocalPlayer
@@ -1335,9 +1336,7 @@ function PetsV2.Start(ctx: { [string]: any })
 		if on then
 			refit()
 			refresh()
-			win.Visible = true
-			openScale.Scale = 0.85
-			SlKit.Tween(openScale, 0.28, "Over", { Scale = 1 })
+			Motion.WindowOpen(win, openScale) -- (Polish v2 D1: grows out of the button you pressed, or pops in place)
 			Sfx.Play("Click", 1.1)
 			-- cards pop in one after another (the first dozen)
 			if currentTab == "Pets" then
@@ -1360,11 +1359,9 @@ function PetsV2.Start(ctx: { [string]: any })
 			if currentTab == "Pets" then
 				seen = owned()
 			end
-			SlKit.Tween(openScale, 0.14, "Snap", { Scale = 0.85 })
-			task.delay(0.14, function()
+			Motion.WindowClose(win, openScale, function() -- (Polish v2 D1: back into the button that opened it)
 				if not open then
 					win.Visible = false
-					openScale.Scale = 1
 				end
 			end)
 			if ctx.OnClose then

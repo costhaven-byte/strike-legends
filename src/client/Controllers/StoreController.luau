@@ -37,6 +37,7 @@ local CrateKit = require(Modules:WaitForChild("CrateKit"))
 local RewardKit = require(Modules:WaitForChild("RewardKit"))
 local UiKit = require(Modules:WaitForChild("UiKit"))
 local SlKit = require(Modules:WaitForChild("SlKit"))
+local Motion = require(Modules:WaitForChild("Motion"))
 local Balls = require(Shared.Modules.Balls)
 
 local player = Players.LocalPlayer
@@ -1742,22 +1743,17 @@ function StoreController:Start()
 		end
 	end
 	local function openPanel(frame: GuiObject, group: CanvasGroup)
-		local scale = scaleOf(frame)
-		scale.Scale = 0.8
 		group.GroupTransparency = 1
-		frame.Visible = true
-		tween(scale, 0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out, { Scale = 1 })
+		Motion.WindowOpen(frame, scaleOf(frame)) -- (Polish v2 D1: grows out of the button you pressed)
 		tween(group, 0.12, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, { GroupTransparency = 0 })
 	end
 	local function closePanel(frame: GuiObject, group: CanvasGroup, stillClosed: () -> boolean)
-		tween(scaleOf(frame), 0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In, { Scale = 0.9 })
-		tween(group, 0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In, { GroupTransparency = 1 }).Completed:Once(
-			function()
-				if stillClosed() then
-					frame.Visible = false
-				end
+		Motion.WindowClose(frame, scaleOf(frame), function()
+			if stillClosed() then
+				frame.Visible = false
 			end
-		)
+		end)
+		tween(group, 0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In, { GroupTransparency = 1 })
 	end
 
 	function StoreController.Open()

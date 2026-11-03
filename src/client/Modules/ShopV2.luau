@@ -29,6 +29,7 @@ local Rebirth = require(Shared.Modules.Rebirth)
 local Store = require(Shared.Modules.Store)
 local BallView = require(script.Parent.BallView)
 local SlKit = require(script.Parent.SlKit)
+local Motion = require(script.Parent:WaitForChild("Motion"))
 local Sfx = require(script.Parent.Sfx)
 local UiFx = require(script.Parent.UiFx)
 
@@ -2183,17 +2184,13 @@ function ShopV2.Start(ctx: { [string]: any })
 		if on then
 			refit()
 			refresh()
-			win.Visible = true
-			openScale.Scale = 0.85
-			SlKit.Tween(openScale, 0.28, "Over", { Scale = 1 })
+			Motion.WindowOpen(win, openScale) -- (Polish v2 D1: grows out of the button you pressed, or pops in place)
 			Sfx.Play("Click", 1.1)
 			task.delay(0.3, scrollToFocus)
 		else
-			SlKit.Tween(openScale, 0.14, "Snap", { Scale = 0.85 })
-			task.delay(0.14, function()
+			Motion.WindowClose(win, openScale, function() -- (Polish v2 D1: back into the button that opened it)
 				if not open then
 					win.Visible = false
-					openScale.Scale = 1
 				end
 			end)
 		end

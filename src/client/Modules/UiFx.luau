@@ -4,6 +4,8 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
 local Sfx = require(script.Parent.Sfx)
+local Motion = require(script.Parent.Motion)
+local MOTION = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config")).Motion
 
 local player = Players.LocalPlayer
 
@@ -82,12 +84,18 @@ function UiFx.Press(button: GuiButton, silent: boolean?)
 		return
 	end
 	pressable[button] = true
+	-- (Polish v2 D1: springs, so fast taps never leave a button stuck half-pressed)
 	local scale = getScale(button)
+	local down = false
 	button.MouseButton1Down:Connect(function()
-		TweenService:Create(scale, TweenInfo.new(0.08), { Scale = 0.9 }):Play()
+		down = true
+		Motion.Spring(scale, "Scale", MOTION.ButtonDown, "Snap")
 	end)
 	local function release()
-		TweenService:Create(scale, BACK_OUT, { Scale = 1 }):Play()
+		if down then
+			down = false
+			Motion.Spring(scale, "Scale", 1, "Pop", { Velocity = MOTION.ButtonKick })
+		end
 	end
 	button.MouseButton1Up:Connect(release)
 	button.MouseLeave:Connect(release)

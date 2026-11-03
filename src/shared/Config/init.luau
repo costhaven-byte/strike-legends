@@ -1307,6 +1307,29 @@ Config.Juice = {
 }
 
 -- Screen layout
+-- Polish v2 D1: Modules/Motion, one motion feel for every screen. Springs: Freq = how fast (Hz), Damp = 1 no bounce,
+-- lower = more bounce. One-shots: Time (s) + easing.
+Config.Motion = {
+	Presets = {
+		Snap = { Freq = 8, Damp = 1 }, -- buttons going down
+		Pop = { Freq = 3.4, Damp = 0.5 }, -- small rewards, buttons coming back up, red dots
+		Window = { Freq = 3.2, Damp = 0.62 }, -- windows opening
+		Slam = { Freq = 2.6, Damp = 0.38 }, -- big moments
+		Shut = { Time = 0.14, Style = Enum.EasingStyle.Quad, Dir = Enum.EasingDirection.In }, -- closing
+		Float = { Time = 1.2, Style = Enum.EasingStyle.Sine, Dir = Enum.EasingDirection.InOut }, -- idle loops
+		Drift = { Time = 0.35, Style = Enum.EasingStyle.Sine, Dir = Enum.EasingDirection.InOut }, -- soft fades
+	},
+	Stagger = 0.05, -- seconds between items in a list / reward row
+	PressMemory = 0.5, -- a window opening this soon after a button press grows out of that button
+	FromButtonScale = 0.12, -- window size at the button (it grows to 1 on the way out)
+	InPlaceScale = 0.85, -- window opened with no button (a stall pad): pops in place from this size
+	CloseScale = 0.85, -- window closed with no button: shrinks in place to this size
+	FloatSway = 0.25, -- idle bob: sideways sway as a share of the bob height (a curve, not a line)
+	ButtonDown = 0.92, -- button press scale
+	ButtonKick = 1.6, -- spring kick on release (the little overshoot past full size)
+	ToastGap = 8, -- px between stacked toasts
+}
+
 Config.Ui = {
 	CompactHeight = 500, -- screens shorter than this (phones held sideways) use the compact phone layout
 	-- Addendum 4 Stage 3d: the sunny look (Modules/SunKit palette + 2 fonts, no gloss, light panels with dark text).
