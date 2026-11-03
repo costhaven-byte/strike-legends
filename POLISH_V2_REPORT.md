@@ -174,8 +174,11 @@ Already done before this run (ffe84c0).
 - Done: every coin / gem fly (HudController flyIcons) now swoops home on a curve, bowed out to alternate sides, so
   a sell sprays out of the tag and swoops into the pill (Config.Juice.FlyBow / FlyBowMax; 0 = straight again).
   Shot: screenshots/polish_v2/after/sell_coins_arc.jpg.
+- Done: the "+25" pin gains fly into the bag on a curve too (Config.CoreLoop.Gains.Bow); the bag already pops on
+  each catch. Shot: screenshots/polish_v2/after/gain_arc.jpg.
 - Not done (out of usage this run): items 1-3 of AN2 (4-step throw approach, meter spring, ball hook + lane
-  glint, pin weight, strike letters slam), and from item 5 the curved pin chips + bag squash per catch.
+  glint, pin weight, strike letters slam) and a true squash of the bag (kept the even pop: resizing HUD icons
+  fights HudKit's layout).
 
 ## Console notes for T1 (seen on every join)
 - "rbxassetid://203785492 failed due to: Asset type does not match requested type" x4.

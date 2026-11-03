@@ -214,7 +214,7 @@ Config.CoreLoop = {
 	-- sell trips of TripSeconds counted, no multipliers). A crate in a reward pays CrateMinutes of it instead, since
 	-- crates no longer give balls. Away coins measure your real throws.
 	-- Addendum 5 F: each throw's coins fly as a "+25" from the pin counter into the bag (CoreHudController)
-	Gains = { Enabled = true, Max = 6 }, -- Max = at most this many in the air at once
+	Gains = { Enabled = true, Max = 6, Bow = 0.3 }, -- Max = at most this many in the air at once; Bow = curve (0 = straight)
 	Gifts = {
 		TripSeconds = 6,
 		RewardMinutes = 2,

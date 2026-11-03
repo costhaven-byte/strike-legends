@@ -754,10 +754,23 @@ function CoreHudController:Start()
 		TweenService:Create(scale, TweenInfo.new(0.16, Enum.EasingStyle.Back), { Scale = if isLucky then 1.25 else 1 })
 			:Play()
 		task.delay(0.22, function()
-			local home = TweenService:Create(tag, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-				Position = UDim2.fromOffset(to.X, to.Y),
-				Rotation = math.random(-12, 12),
-			})
+			-- (Polish v2 D2: into the bag on a curve bowed to a random side, GAINS.Bow; 0 = the old straight line)
+			local start = Vector2.new(tag.Position.X.Offset, tag.Position.Y.Offset)
+			local line = to - start
+			local side = if line.Magnitude > 1 then Vector2.new(-line.Y, line.X).Unit else Vector2.zero
+			local bend = start:Lerp(to, 0.45) + side * line.Magnitude * (GAINS.Bow or 0) * (if math.random() < 0.5 then -1 else 1)
+			local spin = math.random(-12, 12)
+			local progress = Instance.new("NumberValue")
+			progress.Changed:Connect(function(a: number)
+				local at = start:Lerp(bend, a):Lerp(bend:Lerp(to, a), a)
+				tag.Position = UDim2.fromOffset(at.X, at.Y)
+				tag.Rotation = spin * a
+			end)
+			tag.Destroying:Connect(function()
+				progress:Destroy()
+			end)
+			local home =
+				TweenService:Create(progress, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Value = 1 })
 			TweenService:Create(scale, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 				Scale = 0.45,
 			}):Play()

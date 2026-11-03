@@ -23,9 +23,9 @@ POLISH_V2_REPORT.md (what's done), then this file (where it stopped).
 - DONE: Q3 part 1 small-decor shadows off (Config.Perf, PerfController).
 - DONE (third stretch, weekly 96%): T1 BUY BEST "second tap" = not a tap bug; the grey button showed the next
   locked-zone price. Now says OPEN ZONE n (2eb2064). Q3 part 2: old areas leave each screen 12 s after join,
-  client only (5822616, 17,244 -> 11,586 parts). D2 started: coin/gem flies swoop on a curve (4066115).
+  client only (5822616, 17,244 -> 11,586 parts). D2 started: coin/gem flies + pin gains swoop on a curve.
 - NEXT: D2 rest (AN2 items 1-3: throw approach, meter spring, ball hook + glint, pin weight, strike letters; item 5
-  curved pin chips + bag squash), then T1 full bug hunt -> BUG_HUNT_REPORT.md, T2 fixes, T3 final check.
+  bag squash), then T1 full bug hunt -> BUG_HUNT_REPORT.md, T2 fixes, T3 final check.
   Studio is visible: screen_capture draws the 3D world. To see a sell without pins: Server execute
   `Remotes.CoreSold:FireClient(player, 125000, 2.5, {})` (no data change).
 - Testing tricks: TEST panel remote `ReplicatedStorage.Remotes.TestPanel:InvokeServer("Coins")` (x10 coins) and
