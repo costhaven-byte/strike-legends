@@ -48,3 +48,21 @@ Already done before this run (ffe84c0).
 - NOT DONE (U3 part 2, for the next account): the reference layout (3-across square tiles with rarity name, price
   pill, round AUTO-DELETE / AUTO (T) / OPEN 3 (R) / OPEN 1 (E) buttons, buff lines). Needs the owner's reference
   picture; the current V6 board layout stays.
+
+## Q2 words (quick pass, live scan only)
+- Scanned every text players can see in a live game (HUD, windows, world signs). No old names (Neon Egg, Main
+  Street, Back Alley, Rizzo, crates) anywhere a player can reach: all hits are in the old lobby areas (Hub,
+  MainStreetLanes, NeonAlley, BackAlley, old spin wheel) ~3,500 studs from zone 1, plus old hidden panels.
+- Old strings still in code (not shown in the core loop): MascotController "HATCH THE NEON EGG...", BossController
+  "GO TO THE SKYLINE HELIPAD", Config.ZoneUnlock / Config.Economy.Zones old zone names. Not changed.
+- Not done: zones 2-4 signs read on site, number formats, phone cut-offs.
+
+## Q3 speed (measured, nothing changed yet)
+- In a live game the client holds 17,422 parts and 71 particle emitters; 60 fps and ~3.2 GB Studio memory on this PC.
+- StreamingEnabled is OFF, so every player loads all 4 zones at once: Jungle Falls 3,627 parts, Skyline Rooftop
+  3,095, Sunset Boardwalk 2,495, Canyon Oasis 2,360.
+- About 5,500 parts (a third) are the OLD loop's areas nobody can reach any more: MainStreetLanes 1,823, BackAlley
+  1,799, NeonAlley 1,190, Hub 477, Showcase 371. Moving them out of Workspace (to ServerStorage, not deleting) is
+  the biggest easy win, but some old services still look for them (spin wheel, Rizzo, showcase, leaderboard walls),
+  so it needs a careful pass + test. Second win: StreamingEnabled or hiding the zones you're not in on the client.
+- ~1,900 small parts (under 3 studs) cast shadows; turning CastShadow off on small decor is a cheap phone win.

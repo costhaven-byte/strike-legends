@@ -10,6 +10,9 @@ POLISH_V2_REPORT.md (what's done), then this file (where it stopped).
 - DONE: U3 part 1 = PetsFound save v40 + black unfound pets + ??? (see report).
 - SKIPPED FOR NOW: L2 zone 1 colours + lighting (tag restore-pl-L2-before): Studio's 3D view was not drawing in
   screen captures (window minimized?), so lighting can't be judged. Ask the owner to keep Studio visible, then do it.
+- DONE (findings only): Q2 quick live scan, Q3 measurements (see report: old areas = 1/3 of all parts, streaming off).
+- BUY BEST bug from the tutorial test: NOT reproducible through the CoreBuy remote (bought ball 6 fine). Re-check the
+  real tap in T1.
 - NEXT: U3 part 2 (reference layout; find the owner's reference picture first), U2 STORE in V2 look, L2/L3/L4.
 - T1 suspect: second BUY BEST tap with 10K coins ("+140 5.3K") bought nothing (CoreBuy remote works directly).
 - NOT STARTED: L1, L3-L6, U2-U5, D1-D7, Q1-Q3, T1-T3. Must-finish order from the plan: L2, L3, L4, U2, U3, D2, Q3, T1-T3.
