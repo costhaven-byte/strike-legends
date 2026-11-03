@@ -5247,9 +5247,8 @@ Config.Monetization = {
 		},
 		{
 			-- Addendum 6 Stage 8: pins per swing x2 (the "Passes" Times slot of Config.CoreLoop.Boosts.Pins).
-			-- PassId 0 = not made in Creator Hub yet: hidden in the live game until the owner puts the real ID here.
 			Id = "DoublePins",
-			PassId = 0,
+			PassId = 2068057689,
 			Robux = 399,
 			Name = "2X PINS",
 			Text = "Double pins every swing, forever. Stacks with potions.",
@@ -5266,10 +5265,9 @@ Config.Monetization = {
 		-- Launch changes (owner 2026-11-03). AUTO SELL: the bag sells itself the moment it's full (at the zone you're in;
 		-- the AUTO SELL button turns it off and on). INFINITE BAG: no bag limit, the player sells when they choose.
 		-- Excludes = a pass that makes this one useless: owning it greys this card out and the server won't sell it.
-		-- PassId 0 = not made in Creator Hub yet: hidden in the live game until the owner puts the real ID here.
 		{
 			Id = "AutoSell",
-			PassId = 0,
+			PassId = 2066929753,
 			Robux = 249,
 			Name = "AUTO SELL",
 			Text = "Your bag sells itself the moment it's full.",
@@ -5278,7 +5276,7 @@ Config.Monetization = {
 		},
 		{
 			Id = "InfiniteBag",
-			PassId = 0,
+			PassId = 2066905723,
 			Robux = 499,
 			Name = "INFINITE BAG",
 			Text = "No bag limit. Keep bowling and sell whenever you want.",
@@ -5325,7 +5323,7 @@ Config.Monetization = {
 		},
 		-- Launch changes (owner 2026-11-03): one hatch of the OP Egg (zone 1), bought at its stand only (not in the STORE).
 		-- Egg = the egg it hatches (one at a time, never triple). ProductId 0 = not made yet (Studio gives it free).
-		{ Id = "OpEgg", ProductId = 0, Robux = 299, Name = "OP EGG", Text = "One OP Egg hatch.", Egg = "OP", Hidden = true },
+		{ Id = "OpEgg", ProductId = 3727960174, Robux = 299, Name = "OP EGG", Text = "One OP Egg hatch.", Egg = "OP", Hidden = true },
 		{ Id = "GemsSmall", ProductId = 3723602054, Robux = 99, Name = "60 GEMS", Text = "A handful of gems.", Gems = 60 },
 		{ Id = "GemsMedium", ProductId = 3723602173, Robux = 399, Name = "300 GEMS", Text = "A bag of gems.", Gems = 300 },
 		{ Id = "GemsLarge", ProductId = 3723602254, Robux = 1599, Name = "1,500 GEMS", Text = "A chest of gems.", Gems = 1500 },
