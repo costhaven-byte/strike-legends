@@ -713,6 +713,10 @@ function StoreController:Start()
 	end
 	local pills = {}
 	local pillPhone = nil
+	-- computer pill sizes x1.25 (owner 2026-11-03: "slightly bigger"); phones keep theirs
+	local function pc(n: number): number
+		return math.round(n * 1.25)
+	end
 	local function buildPills()
 		for _, pill in pills do
 			pill.Holder:Destroy()
@@ -720,7 +724,7 @@ function StoreController:Start()
 		table.clear(pills)
 		local phone = compact()
 		pillPhone = phone
-		local w, h = if phone then 88 else 78, if phone then 44 else 30
+		local w, h = if phone then 88 else pc(78), if phone then 44 else pc(30)
 		for _, ladder in LADDERS do
 			local holder, face, body = chunky(hud, {
 				Name = "Quick" .. ladder.Ladder,
@@ -732,7 +736,7 @@ function StoreController:Start()
 				Lip = if SUNNY then SunKit.C.GreenLip else C.PinkLip,
 				LipHeight = 3,
 				Drop = 3,
-				Outline = if phone then 3 else 2.5,
+				Outline = if phone then 3 else pc(2.5),
 				Highlight = if SUNNY then 0 else 2,
 				HighlightAlpha = 0.45,
 				Clip = true,
@@ -743,18 +747,18 @@ function StoreController:Start()
 			local glow = make("Frame", { BackgroundColor3 = C.White, Size = UDim2.fromScale(1, 1), ZIndex = 2 }, face)
 			fade(glow, { { 0, 0.72 }, { 0.7, 1 }, { 1, 1 } }, 90)
 			-- Halftone dots at both ends, faded out behind the text
-			local dots = halftone(face, C.Ink, 0.78, if phone then 5 else 4)
+			local dots = halftone(face, C.Ink, 0.78, if phone then 5 else pc(4))
 			fade(dots, { { 0, 0 }, { 0.45, 1 }, { 0.55, 1 }, { 1, 0 } }, 0)
 			-- Two faint tilted icons bleeding off the corners
-			image(face, ladder.Icon, if phone then 40 else 30, {
-				Position = UDim2.fromOffset(if phone then -10 else -9, if phone then -6 else -5),
+			image(face, ladder.Icon, if phone then 40 else pc(30), {
+				Position = UDim2.fromOffset(if phone then -10 else pc(-9), if phone then -6 else pc(-5)),
 				Rotation = -18,
 				ImageTransparency = 0.6,
 				ZIndex = 2,
 			})
-			image(face, ladder.Icon, if phone then 34 else 26, {
+			image(face, ladder.Icon, if phone then 34 else pc(26), {
 				AnchorPoint = Vector2.new(1, 1),
-				Position = UDim2.new(1, if phone then 9 else 8, 1, if phone then 11 else 9),
+				Position = UDim2.new(1, if phone then 9 else pc(8), 1, if phone then 11 else pc(9)),
 				Rotation = 16,
 				ImageTransparency = 0.6,
 				ZIndex = 2,
@@ -763,8 +767,8 @@ function StoreController:Start()
 			local band = make("Frame", {
 				BackgroundColor3 = C.White,
 				BackgroundTransparency = 0.78,
-				Position = UDim2.fromOffset(if phone then 3 else 2, 0),
-				Size = UDim2.new(1, if phone then -6 else -4, 0, if phone then 12 else 8),
+				Position = UDim2.fromOffset(if phone then 3 else pc(2), 0),
+				Size = UDim2.new(1, if phone then -6 else pc(-4), 0, if phone then 12 else pc(8)),
 				ZIndex = 3,
 			}, face)
 			corner(band, 10)
@@ -778,25 +782,25 @@ function StoreController:Start()
 					end
 				end
 			end
-			local top = label(face, "", HEAD, if phone then 16 else 13, if SUNNY then C.White else ladder.Color, if phone then 5 else 4)
-			top.Size = UDim2.new(1, 0, 0, if phone then 16 else 13)
-			HudKit.Fit(top, if phone then 16 else 13) -- long texts like "x1.75 COINS" must fit too
-			top.Position = UDim2.fromOffset(0, if phone then 4 else 3)
+			local top = label(face, "", HEAD, if phone then 16 else pc(13), if SUNNY then C.White else ladder.Color, if phone then 5 else pc(4))
+			top.Size = UDim2.new(1, 0, 0, if phone then 16 else pc(13))
+			HudKit.Fit(top, if phone then 16 else pc(13)) -- long texts like "x1.75 COINS" must fit too
+			top.Position = UDim2.fromOffset(0, if phone then 4 else pc(3))
 			local priceRow = make("Frame", {
 				BackgroundTransparency = 1,
-				Position = UDim2.fromOffset(0, if phone then 20 else 14),
-				Size = UDim2.new(1, 0, 0, if phone then 15 else 12),
+				Position = UDim2.fromOffset(0, if phone then 20 else pc(14)),
+				Size = UDim2.new(1, 0, 0, if phone then 15 else pc(12)),
 				ZIndex = 4,
 			}, face)
-			local layout = list(priceRow, true, if phone then 3 else 2)
+			local layout = list(priceRow, true, if phone then 3 else pc(2))
 			layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-			image(priceRow, "Robux", if phone then 14 else 11, { LayoutOrder = 1, ZIndex = 4 })
-			local price = label(priceRow, "", NUM, if phone then 15 else 12, C.White, if phone then 4 else 3.5)
+			image(priceRow, "Robux", if phone then 14 else pc(11), { LayoutOrder = 1, ZIndex = 4 })
+			local price = label(priceRow, "", NUM, if phone then 15 else pc(12), C.White, if phone then 4 else pc(3.5))
 			price.LayoutOrder = 2
 			price.AutomaticSize = Enum.AutomaticSize.X
 			price.Size = UDim2.fromScale(0, 1)
 			if not SUNNY then
-				shine(face, if phone then 76 else 56, if phone then 11 else 10, ladder.Delay, paused)
+				shine(face, if phone then 76 else pc(56), if phone then 11 else pc(10), ladder.Delay, paused)
 			end
 			body.Activated:Connect(function()
 				local step = Store.NextStep(player, ladder.Ladder)

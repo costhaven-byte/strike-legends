@@ -20,7 +20,10 @@ change; OP Egg gets a green "super saiyan" aura. Restore point: git tag `restore
 9. Eggs bigger: Config.EggBoard / stand egg scale.
 
 ## Progress
-- (update as each item lands)
+- All 9 items in 903933f. Play-checked 2026-11-03: OP Egg stand at (60, -3438) clear of props (Speckled egg 34 studs away),
+  green aura + R$ 299 tag show, AUTO SELL under AUTO, no PASSES button, no new errors. Not triggered in play: fuse prompt
+  (needs 3 copies), INFINITE BAG card. Owner extras: REBIRTH bar under DAILY/PROFILE on computers (TELEPORT under it),
+  x2 COINS pill x1.25 on computers.
 
 ## Sync
 `python -m http.server 35311 --bind 127.0.0.1` in the project folder, then in Studio Edit:

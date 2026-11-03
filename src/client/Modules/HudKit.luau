@@ -239,8 +239,16 @@ if V2 then
 			HudKit.Layout[key] = row
 		end
 		-- (launch changes: no PASSES button, Config.Ui.PassesButton = false: TELEPORT takes its grid spot)
+		-- (owner 2026-11-03, computer: REBIRTH right under DAILY + PROFILE, TELEPORT under REBIRTH once zone 2 opens)
 		if Config.Ui.PassesButton == false then
-			HudKit.Layout.Teleport = NO_SHOP_LAYOUT.Passes
+			HudKit.Layout.Teleport = {
+				Pc = { 24, 592, 96, 96, "L", "T" },
+				Phone = NO_SHOP_LAYOUT.Passes.Phone,
+			}
+			HudKit.Layout.CoreRebirth = {
+				Pc = { 24, 484, 212, 88, "L", "T" },
+				Phone = V2_LAYOUT.CoreRebirth.Phone,
+			}
 		end
 	end
 end
