@@ -453,7 +453,7 @@ window visible. TEST panel: START FROM ZERO.
    box (the one thing that couldn't be checked by code this run).
 
 ## Launch list (owner)
-1. 2X PINS game pass: make it on the Creator Hub and put its ID in Config (`PassId` is still 0, so it can't be bought).
+1. 2X PINS game pass: make it on the Creator Hub and put its ID in Config (`PassId` is still 0, so the pass is hidden in the live game).
 2. Monetization: already ON (owner flipped it, 7ba3d33). Check one test purchase of each kind in Studio.
 3. Thumbnail + icon: from THUMBNAIL_ICON_PROMPTS.md / assets/thumbnail_art.
 4. File > Save to Roblox (the place is not saved since the v2 model batches; every change of this run is synced into

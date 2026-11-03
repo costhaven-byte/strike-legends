@@ -3,7 +3,7 @@
 Updated after every stage. If you're picking this up: read CLAUDE.md, PROJECT_STATE.md, POLISH_PLAN_V2.md,
 POLISH_V2_REPORT.md (what's done), then this file (where it stopped).
 
-## Where it stands (2026-11-03, STOPPED at weekly usage 97%: next step too big for the last 1%)
+## Where it stands (2026-11-03: RUN DONE, every stage built and self-tested; owner playtest next)
 - Run started with weekly usage at 87%. Stop rule from the owner: stop at 95% of the 5-hour limit or 98% weekly.
 - DONE: L0 (before the run, ffe84c0), U1 (492a81d), TUT tutorial (7346708; owner's extra ask mid-run: "really
   concise tutorial, show not tell, reward each step" = Config.Tutorial, TutorialService, TutorialController, save v39).
@@ -30,7 +30,16 @@ POLISH_V2_REPORT.md (what's done), then this file (where it stopped).
 - DONE: U4 a81cca8 (Config.Ui.WindowsV2: all UiKit/HudKit/RewardKit windows navy; roof leaderboard navy).
 - DONE: U5 dbf45b9 (ZONE n OPEN! banner, strike challenge hidden, backdrop press fix).
 - DONE: D1 (Modules/Motion + Config.Motion; windows from their button; springs everywhere; see report).
-- NEXT (in this order): D3, D4, L6 + D5, D6, D7, L5, Q1, Q2 rest, then T3 + finish the owner playtest.
+- DONE: D3 880f227 (shop from its stall + card pops, rebirth moment on springs, teleport wipe).
+- DONE: D4 (pets on springs, lane watch, doze, equip hop, egg rock, board flip; Config.PetMotion).
+- DONE: L6 061e5b8 (ball effects in v2 paint colours, styles re-matched), D5 (falling-part shakes; 40 effects run clean).
+- DONE: D6 (directional shakes, curved DAILY flies).
+- DONE: D7 (WorldLifeController: palms, bunting, kites, balloon, waterfalls, pad pulse).
+- DONE: L5 (fall rescue off the zone 1 roof; visual sweep left for the owner's walk-around).
+- DONE: Q1 f75d22f (zone music per today's zones, same-sound gap, rescue whoosh).
+- DONE: Q2 rest (nothing reachable to fix) + T3 (clean join, core loop replay) 9e8a190.
+- RUN DONE 2026-11-03. Left for the owner: the FINAL owner playtest + launch list at the end of POLISH_V2_REPORT.md.
+- If RenderStepped stops (Studio window hidden): test a controller by cloning it with Heartbeat instead (see D4).
 - Studio 3D view is NOT drawing in captures this session (world white/grey): read colours back with code instead.
 - Sync is now `require(game.ServerStorage.Tools.DevSync:Clone())({ "src/...luau" })` in Edit (tools/DevSync.luau).
   Studio is visible: screen_capture draws the 3D world. To see a sell without pins: Server execute
@@ -40,7 +49,6 @@ POLISH_V2_REPORT.md (what's done), then this file (where it stopped).
   Studio's mouse tool can't click buttons on 3D billboards; simulated E doesn't fire ProximityPrompts.
   Studio play = fresh save each time (Config.Onboarding.StudioNewPlayer); shop buys need standing on the
   zone 1 shop pad (-17, 853, -3415).
-- NOT STARTED: L1, L5, L6, U4, U5, D1, D3-D7, Q1. Must-finish left: D2 (rest), T1, T2, T3.
 - Saves: v39 Tutorial, v40 PetsFound. Next save change = v41.
 
 ## How to sync code into Studio (Rojo is often not applying)
