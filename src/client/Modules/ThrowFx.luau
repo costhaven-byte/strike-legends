@@ -392,6 +392,8 @@ end
 local punch = 0
 local shakeLeft, shakeTotal, shakeStrength = 0, 0, 0
 local shakeClock = 0
+local shakeDir = Vector2.new(0, 1) -- (Polish v2 D6: the one direction a shake rings out along)
+local JUICE = Config.Juice
 local slowZoom = 0
 
 local tint = Instance.new("ColorCorrectionEffect")
@@ -411,6 +413,8 @@ function ThrowFx.Shake(strength: number, time: number)
 	end
 	if strength >= shakeStrength * (shakeLeft / math.max(shakeTotal, 0.001)) then
 		shakeStrength, shakeLeft, shakeTotal = strength, time, time
+		shakeClock = 0
+		shakeDir = Vector2.new((math.random() - 0.5) * 0.8, 1).Unit
 	end
 end
 
@@ -422,9 +426,12 @@ function ThrowFx.CameraOffset(dt: number): CFrame
 		shakeLeft -= dt
 		shakeClock += dt
 		local s = shakeStrength * math.max(0, shakeLeft / shakeTotal)
-		local x = math.noise(shakeClock * 32, 0.5) * s * 1.6
-		local y = math.noise(shakeClock * 32, 10.5) * s * 1.6
-		local roll = math.noise(shakeClock * 26, 20.5) * s * 5
+		-- one swing along shakeDir that rings out, a little jitter on top
+		local swing = math.sin(shakeClock * JUICE.ShakeFreq * 2 * math.pi) * s * 1.6
+		local jitter = JUICE.ShakeJitter * s * 1.6
+		local x = shakeDir.X * swing + math.noise(shakeClock * 32, 0.5) * jitter
+		local y = shakeDir.Y * swing + math.noise(shakeClock * 32, 10.5) * jitter
+		local roll = shakeDir.X * swing * 3
 		cf *= CFrame.new(x, y, 0) * CFrame.Angles(0, 0, math.rad(roll))
 	end
 	return cf

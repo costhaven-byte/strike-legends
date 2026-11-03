@@ -926,11 +926,24 @@ function DailyV2.Start(ctx: { [string]: any })
 						ZIndex = 50,
 					})
 					local to = hudTarget(flight[1])
-					SlKit.Tween(fly, 0.5, "Soft", {
-						Position = UDim2.fromOffset(to.X, to.Y),
-						Size = UDim2.fromOffset(px * 0.4, px * 0.4),
-					})
-					task.delay(0.5, function()
+					-- (Polish v2 D6) home on a curve bowed to alternate sides, like the sell coins (Config.Juice.FlyBow)
+					local start = Vector2.new(from.X, from.Y)
+					local finish = Vector2.new(to.X, to.Y)
+					local trip = finish - start
+					local bow = math.min(trip.Magnitude * Config.Juice.FlyBow, Config.Juice.FlyBowMax)
+					local side = if i % 2 == 0 then -1 else 1
+					local bend = if trip.Magnitude > 1 then Vector2.new(-trip.Y, trip.X).Unit * bow * side else Vector2.zero
+					local control = (start + finish) / 2 + bend
+					Motion.Drive(fly, "Fly", 0, 1, {
+						Time = 0.55,
+						Style = Enum.EasingStyle.Quad,
+						Dir = Enum.EasingDirection.In,
+					}, function(k)
+						local at = start:Lerp(control, k):Lerp(control:Lerp(finish, k), k)
+						fly.Position = UDim2.fromOffset(at.X, at.Y)
+						local size = px * (1 - 0.6 * k)
+						fly.Size = UDim2.fromOffset(size, size)
+					end, function()
 						fly:Destroy()
 					end)
 				end)

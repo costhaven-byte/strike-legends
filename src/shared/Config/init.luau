@@ -1285,6 +1285,10 @@ Config.Juice = {
 	ShakePerPin = 0.05, -- camera shake strength for each pin knocked
 	ShakeStrikeBonus = 0.35, -- extra shake on a strike
 	ShakeDecay = 3, -- how fast the shake dies down (higher = shorter)
+	-- Polish v2 D6: shakes ring out along one direction (mostly up-down, a little sideways) like a real knock, instead
+	-- of random jitter: ShakeFreq swings per second, ShakeJitter = the share of leftover jitter on top
+	ShakeFreq = 11,
+	ShakeJitter = 0.25,
 
 	ConfettiAmount = 60, -- confetti pieces in the alley on a strike
 	PerfectFireworks = 3, -- firework bursts on a Perfect Strike

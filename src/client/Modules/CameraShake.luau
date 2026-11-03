@@ -8,10 +8,15 @@ local CameraShake = {}
 
 local strength = 0
 local clock = 0
+local direction = Vector2.new(0, 1) -- (Polish v2 D6: shakes ring out along one direction)
 
 function CameraShake.Add(amount: number)
 	if not Settings.Get("Shake") then -- SETTINGS: SCREEN SHAKE off
 		return
+	end
+	if amount > strength then
+		clock = 0
+		direction = Vector2.new((math.random() - 0.5) * 0.8, 1).Unit
 	end
 	strength = math.min(strength + amount, 1.5)
 end
@@ -24,9 +29,11 @@ function CameraShake.Offset(dt: number): CFrame
 		return CFrame.identity
 	end
 	local s = strength * strength -- small kicks stay gentle, big ones really shake
-	local x = math.noise(clock * 25, 0.5) * s
-	local y = math.noise(clock * 25, 10.5) * s
-	local roll = math.noise(clock * 20, 20.5) * s * 4
+	local swing = math.sin(clock * Config.Juice.ShakeFreq * 2 * math.pi) * s
+	local jitter = Config.Juice.ShakeJitter * s
+	local x = direction.X * swing + math.noise(clock * 25, 0.5) * jitter
+	local y = direction.Y * swing + math.noise(clock * 25, 10.5) * jitter
+	local roll = direction.X * swing * 3
 	return CFrame.new(x, y, 0) * CFrame.Angles(0, 0, math.rad(roll))
 end
 

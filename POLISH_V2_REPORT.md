@@ -346,3 +346,17 @@ Before: File > Save to Roblox As a copy (restore = git tag `restore-polish-v2-be
   their animated parts on Heartbeat (Studio wasn't drawing frames): no errors, console clean.
 - Not done (needs eyes on the 3D view, which Studio wasn't drawing this session): judging each effect's look one by
   one, the plan's "one zone per chat" review. It's in the owner playtest: throw each zone's balls 1, 5 and 10.
+
+## D6 rewards, camera, loading screen (tag restore-pl-D6-before)
+- Camera shakes (throws, ball hits, big moments) now ring out along one direction (mostly up-down, a little
+  sideways, 11 swings a second, `Config.Juice.ShakeFreq`) with a little jitter on top (`ShakeJitter`), instead of
+  random jitter. SETTINGS > SCREEN SHAKE off still turns them all off.
+- DAILY: the reward icons now swoop into the HUD on a curve bowed to alternate sides (like the sell coins), shrinking
+  as they go.
+- Already in good shape, left as is: GIFTS claims (tile jump, tick stamp, confetti, flash), the loading screen's exit
+  (logo lifts, pins scatter, everything fades over 0.6 s) and the join fly-over's eased glide back.
+- Not live in the core loop, so not touched: spin wheel, fever, lane events, the boss (`Config.Boss.Enabled` is off
+  while the core loop is on).
+- Checked in Play: throw shake x/y movement 89% along one line, 11 swings in 0.5 s, dying out; the bigger shake rings
+  out the same way. The DAILY curve wasn't watched live (Studio wasn't drawing frames); it uses the same curve maths
+  as the sell coins, checked in D2.
