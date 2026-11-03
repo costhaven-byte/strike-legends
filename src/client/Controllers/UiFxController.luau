@@ -13,9 +13,15 @@ local SILENT_BUTTONS = {
 
 local UiFxController = {}
 
+-- Full-screen dim layers behind windows (and other screen-sized tap catchers) are buttons too, but shrinking one
+-- uncovers the screen's edges (Polish v2 U5)
+local function screenSized(button: GuiButton): boolean
+	return button.Name == "Backdrop" or (button.Size.X.Scale >= 0.95 and button.Size.Y.Scale >= 0.95)
+end
+
 local function setup(object: Instance)
 	-- OwnPress: the button animates and clicks by itself (the store's chunky buttons)
-	if object:IsA("GuiButton") and not object:GetAttribute("OwnPress") then
+	if object:IsA("GuiButton") and not object:GetAttribute("OwnPress") and not screenSized(object) then
 		UiFx.Press(object, SILENT_BUTTONS[object.Name] == true)
 	end
 end

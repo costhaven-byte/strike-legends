@@ -251,3 +251,18 @@ Before: File > Save to Roblox As a copy (restore = git tag `restore-polish-v2-be
   spin wheel are switched off in the core loop (unreachable), so they only got the palette, not a visual check.
 - Checked in Play: SETTINGS, GIFTS, PROFILE x3 tabs (screenshots), leaderboard colours read back (3D view not drawing
   in captures this session). Console: only the known warnings.
+
+## U5 moments + popups (tag restore-pl-U5-before)
+- Opening a zone at its gate is now a big moment: the gold slam banner "ZONE 2 OPEN!" with the zone's name on a navy
+  chip, the map-pin icon and confetti (was a small note). "Welcome to ..." on a return trip stays the small note.
+- Fixed: after opening zone 2 a CHALLENGE card asked for "3 STRIKES IN A ROW" for a free crate. The core loop has
+  no strikes, so it could never be done; strike challenges are hidden while the core loop is on.
+- Fixed: tapping the dim background behind a window shrank the background itself (the press effect every button
+  gets), uncovering a bright strip at the right and bottom of the screen. Screen-sized backdrops don't shrink now.
+- Checked in Play, already in the V2 look through U4's palette: FEVER! and lane event banners (orange / gold plate +
+  navy chip), REBIRTH! moment (navy chips, green CONTINUE), toasts, area signs (HudKit paints), chat tag.
+- Only one window at a time: tapping a HUD button while a window is open closes the window first (backdrop).
+- Not live in the core loop (no strikes): fever, lane events, strike challenges, the spin wheel, TELEPORT window.
+  They keep working through the TEST panel and use the new palette, but a player never sees them.
+- Not done: a real phone-size check (Studio can't change the screen size from here). Windows and moments shrink
+  to fit any screen by code (RewardKit.Window / MomentKit stage fit).

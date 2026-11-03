@@ -274,6 +274,9 @@ function MilestoneController:Start()
 		local now = Workspace:GetServerTimeNow()
 		local active = nil
 		for _, challenge in MILESTONES.Challenges do
+			if Config.CoreLoop.Enabled and challenge.Kind == "StrikeStreak" then
+				continue -- (Polish v2 U5: the core loop has no strikes, so this card could never be done)
+			end
 			if challenge.Zone == nil or challenge.Zone == zone then
 				active = challenge
 				break

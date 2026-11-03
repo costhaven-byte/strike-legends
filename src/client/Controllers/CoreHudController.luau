@@ -1016,6 +1016,8 @@ function CoreHudController:Start()
 		end
 	end
 	local busy = false
+	-- Polish v2 U5: opening a zone is a big moment: the gold slam banner (ZONE n OPEN! + its name) with confetti
+	local zoneBanner = nil
 	local function hookPrompt(gatePrompt: ProximityPrompt)
 		if table.find(prompts, gatePrompt) then
 			return
@@ -1034,10 +1036,21 @@ function CoreHudController:Start()
 			if ok and type(result) == "table" and result.Ok then
 				local info = CoreLadder.ZoneInfo(target)
 				Sfx.Play(if result.Opened then "Cheer" else "Teleport", 1, 0.7)
-				showNote(
-					(if result.Opened then "%s is open!" else "Welcome to %s"):format(if info then info.Name else "zone " .. target),
-					if result.Opened then GREEN else INK
-				)
+				if result.Opened then
+					if not zoneBanner then
+						local MomentKit = require(Modules.MomentKit)
+						zoneBanner = MomentKit.Banner(MomentKit.Layer("ZoneOpenUI", 45), 0.3)
+					end
+					zoneBanner(
+						("ZONE %d OPEN!"):format(target),
+						"Gold",
+						if info then string.upper(info.Name) else nil,
+						"Zone",
+						2.6
+					)
+				else
+					showNote(("Welcome to %s"):format(if info then info.Name else "zone " .. target), INK)
+				end
 			else
 				Sfx.Play("Error", 1, 0.6)
 				showNote(if ok and type(result) == "table" and result.Error then result.Error else "Try again", CORAL)
