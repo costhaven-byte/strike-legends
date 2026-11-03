@@ -407,3 +407,56 @@ Before: File > Save to Roblox As a copy (restore = git tag `restore-polish-v2-be
   music 0.22 under the 70% slider.
 - New things from this run all have sounds (pad pulse Tap, zone open Cheer, tutorial SpinWin, board flip Reveal,
   rebirth ticks, fall rescue Teleport).
+
+## Q2 words, the rest (no changes needed)
+- Scanned every text in every screen a player can open today, the 4 zones' signs and prompts, and the code of the
+  windows that are built only when opened (shop, pets, eggs, daily, store, profile, rebirth, tutorial, settings).
+- Old names (Neon Egg, Main Street, Back Alley, Rizzo, crates, LEVEL, POWER LV) only live in the old screens that
+  are switched off in today's game (old ball book, trials, events, rank-up, the pre-core rebirth window). Players
+  can't reach them. "Skyline Rooftop" is zone 1's real name, so "Back to Skyline Rooftop" is right.
+- Numbers: one format everywhere (1K, 1.23K, 999.9K, 1.5M, 2.45B, 1T, 3.3Qa, x1.25); it rounds down, so it never
+  shows "1000K".
+- Not checked: cut-off text. Studio wasn't drawing its window (screen size 1x1), so text sizes can't be measured.
+  It's in the playtest below (computer + phone size).
+
+## T3 final check (tag restore-pl-Q1-before covers it; nothing changed in T3)
+- Join: zero errors and zero warnings in the console (the old avatar-asset and showcase warnings are gone too).
+- Core loop replayed through the game's own remotes: 28 throw presses -> 14 throws (the cooldown, as designed), bag
+  filled 0 -> 60, SELL paid 930 coins, then at the shop ball 2 and bag 2 bought (950 -> 780 coins).
+- Every stage of this run was checked live as it was built (see each section). What only eyes can check is in the
+  playtest below.
+
+## FINAL owner playtest (about 10 minutes, covers the whole run)
+Before: File > Save to Roblox As a copy. Restore for code = git tag `restore-polish-v2-before`. Keep the Studio
+window visible. TEST panel: START FROM ZERO.
+1. Join (1 min): loading screen, then the roof. Music = Rooftop Triumph with soft wind. HUD: PETS, STORE / DAILY,
+   PROFILE / PASSES, GIFTS + SETTINGS top-right, no SHOP button. Silent failure: a gap in the button grid.
+2. Tutorial (2 min): hand on THROW -> throw (ball winds up, slides, dust on hit, pins tumble, +20 off the first tile)
+   -> SELL (+30, coins fly on a curve) -> NEXT GOAL (screen wipe, you land at the shop, the shop grows out of the
+   stall, cards pop in one by one) -> BUY BEST (+120) -> one more buy = FREE EGG. Silent failure: a reward paid twice.
+3. Pets (1.5 min): walk to the Rooftop Egg (it rocks every few seconds). Hatch: the board pet flips from black to
+   colour. Equip: the pet hops out of you, follows on a spring, leans in turns, watches the lane while your ball
+   rolls. Stand still 30 s: it dozes with a small "z". Silent failure: a pet sinking into the floor.
+4. Windows (1 min): every window grows from its button and is navy (no cream, no purple, no gradients). DAILY: the
+   reward flies home on a curve.
+5. Zones (2 min): TEST panel Zone2. ZONE 2 OPEN! gold banner, wipe, Sunset Boardwalk: music changes to Vinyl Cradle
+   over 2 s. Palms sway, flags flutter, kites float, the sell/shop pad pulses when you step on it. Zone3 = Jungle
+   Falls (waterfalls flow, music Neon Arcade Run), Zone4 = Canyon Oasis (music Jukebox Lanes). Silent failure: the
+   same song in every zone, or the music cutting instead of fading.
+6. Ball effects (1 min): TEST panel gives -> throw a few balls: effect colours match each ball's paint; big hits shake
+   up-down along one line (not random jitter); falling-part effects shake when the part lands.
+7. Rebirth (1 min): TEST panel Rebirth (or coins + rebirth at the shop): the celebration springs in, chips pop one by
+   one with ticks, wipe back to the roof, music back to Rooftop Triumph.
+8. Edges (30 s): walk off the open roof edge behind the lanes: you're put back on the roof with a soft whoosh.
+9. Fast taps (15 s): tap a button 5 times fast: clicks never stack into one loud blast.
+10. Phone size (Studio device emulator, 1 min): repeat 1, 2 and 4. Look for text that is cut off or runs out of its
+   box (the one thing that couldn't be checked by code this run).
+
+## Launch list (owner)
+1. 2X PINS game pass: make it on the Creator Hub and put its ID in Config (`PassId` is still 0, so it can't be bought).
+2. Monetization: already ON (owner flipped it, 7ba3d33). Check one test purchase of each kind in Studio.
+3. Thumbnail + icon: from THUMBNAIL_ICON_PROMPTS.md / assets/thumbnail_art.
+4. File > Save to Roblox (the place is not saved since the v2 model batches; every change of this run is synced into
+   Studio).
+5. Publish, then play once on a real phone.
+6. Optional: beach / jungle / canyon ambience sounds for zones 2-4 (`AssetSlots.Music.CoreZones[n].Ambience`).
