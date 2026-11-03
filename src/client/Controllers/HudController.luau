@@ -624,13 +624,26 @@ local function flyIcons(pill: Frame, count: number, from: Vector2, startSize: nu
 				})
 			pop:Play()
 			pop.Completed:Wait()
+			-- Polish v2 D2: home on a curve bowed out to alternate sides (Config.Juice.FlyBow), not a straight line
+			local line = target - spot
+			local bow = math.min(line.Magnitude * (JUICE.FlyBow or 0), JUICE.FlyBowMax or 140) * (0.6 + math.random() * 0.4)
+			local side = if line.Magnitude > 1 then Vector2.new(-line.Y, line.X).Unit else Vector2.zero
+			local bend = spot:Lerp(target, 0.4) + side * bow * (if i % 2 == 0 then 1 else -1)
+			local progress = Instance.new("NumberValue")
+			progress.Changed:Connect(function(a: number)
+				local at = spot:Lerp(bend, a):Lerp(bend:Lerp(target, a), a)
+				local size = startSize + (endSize - startSize) * a
+				flyer.Position = UDim2.fromOffset(at.X, at.Y)
+				flyer.Size = UDim2.fromOffset(size, size)
+			end)
 			local home = TweenService:Create(
-				flyer,
+				progress,
 				TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-				{ Position = UDim2.fromOffset(target.X, target.Y), Size = UDim2.fromOffset(endSize, endSize) }
+				{ Value = 1 }
 			)
 			home:Play()
 			home.Completed:Wait()
+			progress:Destroy()
 			Sfx.Play("Coin", 1 + (i - 1) * JUICE.CoinPitchStep)
 			bumpIcon(icon)
 			local fade = TweenService:Create(flyer, TweenInfo.new(0.08), { ImageTransparency = 1 })

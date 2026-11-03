@@ -1272,6 +1272,10 @@ Config.Juice = {
 	CoinsPerIcon = 30, -- ...one icon per this many coins earned, between Min and Max
 	SellIconsPerTen = 2, -- (Addendum 5 F) a core-loop sell flies Min + this many icons per x10 coins (100 = 7, 1M = 15 -> Max)
 	CoinPitchStep = 0.05, -- each coin's "ding" is this much higher than the last
+	-- Polish v2 D2 (AN2 item 5): flying coins / gems home on a curve, bowed out to alternate sides by this share of
+	-- the trip (at most FlyBowMax pixels), so a sell sprays out and swoops in. 0 = straight lines.
+	FlyBow = 0.25,
+	FlyBowMax = 140,
 
 	StreakSparkleRate = 4, -- sparkles per second on your alley's light strips, per streak tier from Turkey up
 

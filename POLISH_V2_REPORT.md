@@ -167,6 +167,16 @@ Already done before this run (ffe84c0).
   phone) and StreamingEnabled (bigger change, needs its own careful pass; recommended after launch if phones lag).
 - Undo: Config.Perf.HideOld = false.
 
+## D2 (AN2 core loop motion): started, one piece done
+- Checked what item 5 (pins -> bag -> sell -> coins) already has: gains fly "+25" into the bag and the bag pops;
+  a sell shows the green +amount tag and coins fly one by one into the coin pill with a rising "ding" and a bump
+  per coin. Missing was the arc: they flew in straight lines.
+- Done: every coin / gem fly (HudController flyIcons) now swoops home on a curve, bowed out to alternate sides, so
+  a sell sprays out of the tag and swoops into the pill (Config.Juice.FlyBow / FlyBowMax; 0 = straight again).
+  Shot: screenshots/polish_v2/after/sell_coins_arc.jpg.
+- Not done (out of usage this run): items 1-3 of AN2 (4-step throw approach, meter spring, ball hook + lane
+  glint, pin weight, strike letters slam), and from item 5 the curved pin chips + bag squash per catch.
+
 ## Console notes for T1 (seen on every join)
 - "rbxassetid://203785492 failed due to: Asset type does not match requested type" x4.
 - "[ShowcaseController] zone 4: 10 balls to show but only 6 slots".
