@@ -401,6 +401,20 @@ Config.CoreLoop = {
 				Palette = { Ground = Color3.fromRGB(240, 214, 150), Edge = Color3.fromRGB(64, 206, 214), Accent = Color3.fromRGB(255, 120, 100) },
 				-- the lane in deep sea navy (matt), so the beach effects (foam, coral, gold) read on it (Addendum 6 1.2)
 				Lane = { Wood = { Color3.fromRGB(26, 50, 96), Color3.fromRGB(22, 44, 86) }, Deck = Color3.fromRGB(32, 60, 110) },
+				-- Polish v2 L3: its own warm late-afternoon look (low golden sun, peach haze, warm shadow fill)
+				LookChanges = {
+					ClockTime = 16.8,
+					Brightness = 1.8,
+					Ambient = Color3.fromRGB(118, 104, 98),
+					OutdoorAmbient = Color3.fromRGB(160, 140, 150),
+					Exposure = 0,
+					Saturation = 0.22,
+					Tint = Color3.fromRGB(255, 238, 220),
+					HazeColor = Color3.fromHex("FFD9B8"),
+					HazeDecay = Color3.fromHex("FFA77E"),
+					HazeDensity = 0.28,
+					Haze = 0.6,
+				},
 			},
 			{
 				Name = "Jungle Falls",
@@ -414,6 +428,21 @@ Config.CoreLoop = {
 				Palette = { Ground = Color3.fromRGB(96, 184, 84), Edge = Color3.fromRGB(70, 210, 220), Accent = Color3.fromRGB(255, 150, 50) },
 				-- the lane in deep mahogany (matt), so the green, gold and water effects read on it (Addendum 6 1.2)
 				Lane = { Wood = { Color3.fromRGB(78, 40, 34), Color3.fromRGB(70, 36, 30) }, Deck = Color3.fromRGB(88, 48, 40) },
+				-- Polish v2 L3: its own soft green look (high sun through a light jungle haze, green shadow fill)
+				LookChanges = {
+					ClockTime = 13.5,
+					Brightness = 1.8,
+					Ambient = Color3.fromRGB(100, 112, 96),
+					OutdoorAmbient = Color3.fromRGB(122, 150, 128),
+					Exposure = 0,
+					Saturation = 0.22,
+					Contrast = 0.1,
+					Tint = Color3.fromRGB(244, 255, 238),
+					HazeColor = Color3.fromHex("CFEBC8"),
+					HazeDecay = Color3.fromHex("EEF4CC"),
+					HazeDensity = 0.32,
+					Haze = 1,
+				},
 			},
 			{
 				Name = "Canyon Oasis",
@@ -428,8 +457,21 @@ Config.CoreLoop = {
 				Palette = { Ground = Color3.fromRGB(214, 124, 84), Edge = Color3.fromRGB(56, 200, 200), Accent = Color3.fromRGB(255, 200, 70) },
 				-- the lane in deep plum (matt), so the sand, gold, fire and turquoise effects read on it (Addendum 6 1.2)
 				Lane = { Wood = { Color3.fromRGB(66, 34, 62), Color3.fromRGB(58, 30, 56) }, Deck = Color3.fromRGB(76, 40, 70) },
-				-- a warmer, golden desert haze than the rooftop's sky blue
-				LookChanges = { HazeColor = Color3.fromHex("FFE6C4"), HazeDecay = Color3.fromHex("FFC08A"), Tint = Color3.fromRGB(255, 246, 228) },
+				-- a warmer, golden desert haze than the rooftop's sky blue; Polish v2 L3: hot and golden (bright high sun,
+				-- warm sand fill in the shadows, a touch less exposure so the pale sand doesn't blow out)
+				LookChanges = {
+					ClockTime = 14.5,
+					Brightness = 2.3,
+					Ambient = Color3.fromRGB(128, 110, 92),
+					OutdoorAmbient = Color3.fromRGB(176, 150, 124),
+					Exposure = -0.12,
+					Saturation = 0.2,
+					Tint = Color3.fromRGB(255, 242, 218),
+					HazeColor = Color3.fromHex("FFE6C4"),
+					HazeDecay = Color3.fromHex("FFC08A"),
+					HazeDensity = 0.24,
+					Haze = 0.5,
+				},
 			},
 		},
 		-- The gates, in zone 1's layout (moved by each zone's Offset): Next = the gate to the next zone (pay once to open,
@@ -5439,6 +5481,11 @@ Config.Zones = {
 	},
 	ClaimCheck = 0.25, -- seconds between the server's "who stands where" checks
 	LookBlend = 0.6, -- seconds to fade between looks
+	-- Polish v2 L3 lighting recipe for the outdoor zones (keep new looks inside these ranges): ClockTime 13-17
+	-- (shadows that read on the lane), Brightness 1.8-2.4, Exposure -0.15..0 (cream/white/sand must not blow out),
+	-- Ambient 90-130 per channel and OutdoorAmbient tinted by the zone's sky (never flat grey), Saturation 0.18-0.25,
+	-- Contrast 0.08-0.14, HazeDensity 0.22-0.32, Haze 0.35-1, Bloom 0.05-0.08 (UI and neon must not haze).
+	-- The lane, pins, ball and player stay brighter and more saturated than the background.
 	Worlds = {
 		{
 			Id = "StarterAlley",
