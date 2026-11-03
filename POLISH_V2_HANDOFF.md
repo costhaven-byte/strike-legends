@@ -27,8 +27,11 @@ POLISH_V2_REPORT.md (what's done), then this file (where it stopped).
 - DONE (fourth session, 2026-11-03, fresh weekly): D2 part 2 af1f33b (swing wind-up + slide, ball leaves at the
   release, impact dust, LUCKY hit-stop, pin tumble). D2 DONE.
 - DONE: T1 bug hunt + T2 fixes (BUG_HUNT_REPORT.md; 6 bugs fixed, all synced to Studio and checked live).
-- NEXT (in this order): U4 restyle PROFILE / SETTINGS / GIFTS / DAILY-cream screens to the V2 navy SlKit look, U5,
-  D1 Motion module, L5/L6, D3-D7, Q1, Q2 rest, then T3 final check + finish POLISH_V2_REPORT.md owner playtest.
+- DONE: U4 a81cca8 (Config.Ui.WindowsV2: all UiKit/HudKit/RewardKit windows navy; roof leaderboard navy).
+- DONE: U5 dbf45b9 (ZONE n OPEN! banner, strike challenge hidden, backdrop press fix).
+- DONE: D1 (Modules/Motion + Config.Motion; windows from their button; springs everywhere; see report).
+- NEXT (in this order): D3, D4, L6 + D5, D6, D7, L5, Q1, Q2 rest, then T3 + finish the owner playtest.
+- Studio 3D view is NOT drawing in captures this session (world white/grey): read colours back with code instead.
 - Sync is now `require(game.ServerStorage.Tools.DevSync:Clone())({ "src/...luau" })` in Edit (tools/DevSync.luau).
   Studio is visible: screen_capture draws the 3D world. To see a sell without pins: Server execute
   `Remotes.CoreSold:FireClient(player, 125000, 2.5, {})` (no data change).
