@@ -351,6 +351,26 @@ Config.CoreLoop = {
 				Odds = { Epic = 62, Legendary = 33, Mythic = 5 },
 				Pets = { "CloudBumper", "SunnyHam", "Cosmo", "Perfecto" }, -- (Titan Jr. stays the boss pet)
 			},
+			{
+				-- Launch changes (owner 2026-11-03): the OP Egg in zone 1, bought with Robux only (Robux = the
+				-- Config.Monetization product Id that buys one hatch), one at a time (Single: no OPEN 3 / AUTO). Its pets
+				-- are the old zone 4 designs (models copied from ServerStorage.PetModels_Backup_20261103 as Op*), stronger
+				-- than any other pet. Weights = each pet's real chance (they add to 100): pets are picked by these, not by
+				-- rarity, and LUCKY passes don't change them. The board shows exactly these numbers (Roblox requires the
+				-- real odds of anything random bought with Robux). Odds only has to name the rarities it has.
+				-- Stand = the old zone 4 cloud stand (ServerStorage.ZoneKits.Zone1.OPEgg, x0.72); green aura: Config.OpAura.
+				Id = "OP",
+				Zone = 1,
+				Price = 0,
+				Robux = "OpEgg",
+				Single = true,
+				From = { "ServerStorage", "ZoneKits", "Zone1", "OPEgg" },
+				At = Vector3.new(60, 848.65, -3438),
+				Turn = 90,
+				Odds = { Legendary = 85, Mythic = 15 },
+				Weights = { OpCloudBumper = 55, OpMoony = 30, OpTitanJr = 10, OpCosmo = 4.5, OpPerfecto = 0.5 },
+				Pets = { "OpCloudBumper", "OpMoony", "OpTitanJr", "OpCosmo", "OpPerfecto" },
+			},
 		},
 		-- Hue shifts for Tint (hue 0..1 ranges -> new hue; saturation and brightness kept, dark colours darker)
 		Tints = {
@@ -374,6 +394,7 @@ Config.CoreLoop = {
 			Name = "PetFusion",
 			At = Vector3.new(96, 848.65, -3418),
 			Turn = 90, -- faces west, toward the shop
+			GoTo = Vector3.new(88, 848.65, -3418), -- (launch changes) the fuse prompt's GO FUSE lands you here, facing it
 		},
 		-- GO TO EGGS (PETS window, no pets yet): CoreGoTo "Eggs" lands you here, facing the first egg
 		GoTo = Vector3.new(26, 848.65, -3430),
@@ -1375,6 +1396,9 @@ Config.Ui = {
 	-- stall and the NEXT GOAL card takes you there. The grid closes up and the PASSES button (opens the STORE on its
 	-- passes) takes the last grid spot. true = the SHOP button comes back.
 	ShopButton = false,
+	-- Launch changes (owner 2026-11-03): no PASSES button on the HUD (the STORE button has the passes); TELEPORT takes
+	-- its grid spot. true = the PASSES button comes back.
+	PassesButton = false,
 	-- Polish v2 U2: the STORE window in the V2 look (navy, SlKit paints, Fredoka One, flat cards); false = the cream
 	-- Store Kit look
 	StoreV2 = true,
@@ -4124,10 +4148,14 @@ Config.CrateShop = {
 -- Placeholder looks (Addendum 2 section 9.7): a coloured ball with eyes. Color = body, Accent = tuft and cheeks.
 -- Egg = which egg hatches it. Only the Neon Egg (Id "Alley", sold in zone 2) has mascots so far; the others come with zones 2 to 5.
 -- Adding a mascot = adding a row. Each egg needs at least one mascot per rarity in Config.Economy.Mascots.Odds.
+-- Launch changes (owner 2026-11-03): pet slots went from up to 8 (coin slots) to 3 + 1 at 3 rebirths, so every pet
+-- in the zone 2 egg (and the old Neon Egg pets) got x1.6 its stats and zone 3 + 4 egg pets x1.7 (tools/pacing_sim.py
+-- stage9: rebirths 3-8 land within ~2 min of before, zone 4's last ball 4h28 vs 4h27; rebirth 1 ~6 min sooner).
+-- Zone 1 and the OP Egg pets are as written. The weakest OP pet beats every other pet in the game.
 Config.Mascots = {
 	{
 		Id = "Pinny",
-		Stats = { Coins = 0.2 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
+		Stats = { Coins = 0.32 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Pinch", -- was "Pinny" (2026-11-03: zone 2 design SL_Z2_Pet_PINCH; Id kept)
 		Egg = "Alley",
 		Rarity = "Uncommon", -- Phase X: was Common (zone 2 starts at Uncommon); BaseBonus keeps its old +2%
@@ -4138,7 +4166,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Gus",
-		Stats = { Coins = 0.1 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
+		Stats = { Coins = 0.16 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Pidge", -- was "Gutter Gus" (2026-11-03: zone 1 design SL_Z1_Pet_PIDGE; Id kept)
 		Egg = nil, -- Phase X holding list: cut from the Neon Egg (6 pets now); owners keep it. Was Egg = "Alley"
 		BonusEgg = "Alley", -- its bonus stays the Neon Egg's (owners' pets don't change)
@@ -4149,7 +4177,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "LanePup",
-		Stats = { Bag = 0.15, Speed = 0.1 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
+		Stats = { Bag = 0.24, Speed = 0.16 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Gully", -- was "Lane Pup" (2026-11-03: zone 2 design SL_Z2_Pet_GULLY; Id kept)
 		Egg = "Alley",
 		Rarity = "Uncommon",
@@ -4159,7 +4187,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Bumper",
-		Stats = { Bag = 0.3 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
+		Stats = { Bag = 0.48 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Vent Puff", -- was "Bumper" (2026-11-03: zone 1 design SL_Z1_Pet_VENTPUFF; Id kept)
 		Egg = nil, -- Phase X holding list: cut from the Neon Egg (6 pets now); owners keep it. Was Egg = "Alley"
 		BonusEgg = "Alley", -- its bonus stays the Neon Egg's (owners' pets don't change)
@@ -4170,7 +4198,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Strikey",
-		Stats = { Pins = 0.4 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
+		Stats = { Pins = 0.64 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Jellybop", -- was "Strikey" (2026-11-03: zone 2 design SL_Z2_Pet_JELLYBOP; Id kept)
 		Egg = "Alley",
 		Rarity = "Rare",
@@ -4180,7 +4208,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Splitz",
-		Stats = { Coins = 0.35, Pins = 0.25 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
+		Stats = { Coins = 0.56, Pins = 0.4 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Shellby", -- was "Splitz" (2026-11-03: zone 2 design SL_Z2_Pet_SHELLBY; Id kept)
 		Egg = "Alley",
 		Rarity = "Rare",
@@ -4190,7 +4218,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Hambone",
-		Stats = { Coins = 1 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
+		Stats = { Coins = 1.6 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Surf Otter", -- was "Hambone" (2026-11-03: zone 2 design SL_Z2_Pet_SURFOTTER; Id kept)
 		Egg = "Alley",
 		Rarity = "Epic",
@@ -4200,7 +4228,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "NeonBat",
-		Stats = { Pins = 0.6, Speed = 0.25 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
+		Stats = { Pins = 0.96, Speed = 0.4 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Neon Bat",
 		Egg = nil, -- 2026-11-03: out of the Sunset Egg (zone 2 designs = 5 pets); owners keep it. Was Egg = "Alley"
 		BonusEgg = "Alley", -- its bonus stays the Neon Egg's (owners' pets don't change)
@@ -4211,7 +4239,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Kingpin",
-		Stats = { Pins = 1.2 }, -- Addendum 6 Stage 9 (pacing pass): was Pins = 2.5
+		Stats = { Pins = 2.04 }, -- Addendum 6 Stage 9 (pacing pass): was Pins = 2.5
 		Name = "Temple Monkey", -- was "Kingpin" (2026-11-03: zone 3 design PET_TempleMonkey_Legendary; Id kept)
 		Egg = "Arcade", -- Phase X: moved from the Neon Egg to zone 3's Main Street Egg
 		Rarity = "Legendary",
@@ -4221,7 +4249,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Blaze",
-		Stats = { Coins = 1.5, Speed = 0.3 }, -- Addendum 6 Stage 9 (pacing pass): was Coins = 4, Speed = 0.4
+		Stats = { Coins = 2.55, Speed = 0.51 }, -- Addendum 6 Stage 9 (pacing pass): was Coins = 4, Speed = 0.4
 		Name = "Jaguar Cub", -- was "Blaze" (2026-11-03: zone 3 design PET_JaguarCub_Legendary; Id kept)
 		Egg = "Arcade", -- Phase X: moved from the Neon Egg to zone 3's Main Street Egg
 		Rarity = "Legendary",
@@ -4231,7 +4259,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Cosmo",
-		Stats = { Coins = 3, Pins = 2 }, -- Addendum 6 Stage 9 (pacing pass): was Coins = 12, Pins = 6
+		Stats = { Coins = 5.1, Pins = 3.4 }, -- Addendum 6 Stage 9 (pacing pass): was Coins = 12, Pins = 6
 		Name = "Scarab", -- was "Cosmo" (2026-11-03: zone 4 design SL_Z4_Pet_Scarab; Id kept)
 		Egg = "Skyline", -- Phase X: moved from the Neon Egg to zone 4's Skyline (now Sun) Egg
 		Rarity = "Mythic",
@@ -4241,7 +4269,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "Perfecto",
-		Stats = { Pins = 3, Speed = 0.5 }, -- Addendum 6 Stage 9 (pacing pass): was Pins = 10, Speed = 0.6
+		Stats = { Pins = 5.1, Speed = 0.85 }, -- Addendum 6 Stage 9 (pacing pass): was Pins = 10, Speed = 0.6
 		Name = "Sphinx Kitten", -- was "Perfecto" (2026-11-03: zone 4 design SL_Z4_Pet_SphinxKitten; Id kept)
 		Egg = "Skyline", -- Phase X: moved from the Neon Egg to zone 4's Skyline (now Sun) Egg
 		Rarity = "Mythic",
@@ -4252,7 +4280,7 @@ Config.Mascots = {
 	-- Phase X: zone 3 (Main Street Egg) and zone 4 (Skyline Egg) pets (owner's designs since 2026-10-28/29)
 	{
 		Id = "WoodPup",
-		Stats = { Bag = 0.3, Coins = 0.15 }, -- Addendum 6 Stage 9 (pacing pass): was Bag = 0.6, Coins = 0.15
+		Stats = { Bag = 0.51, Coins = 0.255 }, -- Addendum 6 Stage 9 (pacing pass): was Bag = 0.6, Coins = 0.15
 		Name = "Tree Frog", -- was "Wood Pup" (2026-11-03: zone 3 design PET_TreeFrog_Rare; Id kept)
 		Egg = "Arcade",
 		Rarity = "Rare",
@@ -4262,7 +4290,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "ChromeBat",
-		Stats = { Coins = 0.6, Bag = 0.4 }, -- Addendum 6 Stage 9 (pacing pass): was Coins = 1.2, Bag = 1
+		Stats = { Coins = 1.02, Bag = 0.68 }, -- Addendum 6 Stage 9 (pacing pass): was Coins = 1.2, Bag = 1
 		Name = "Toucan Tom", -- was "Chrome Bat" (2026-11-03: zone 3 design PET_ToucanTom_Epic; Id kept)
 		Egg = "Arcade",
 		Rarity = "Epic",
@@ -4272,7 +4300,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "CloudBumper",
-		Stats = { Pins = 0.6, Bag = 0.5 }, -- Addendum 6 Stage 9 (pacing pass): was Pins = 0.8, Bag = 1.5
+		Stats = { Pins = 1.02, Bag = 0.85 }, -- Addendum 6 Stage 9 (pacing pass): was Pins = 0.8, Bag = 1.5
 		Name = "Fennec", -- was "Cloud Bumper" (2026-11-03: zone 4 design SL_Z4_Pet_Fennec; Id kept)
 		Egg = "Skyline",
 		Rarity = "Epic",
@@ -4282,7 +4310,7 @@ Config.Mascots = {
 	},
 	{
 		Id = "SunnyHam",
-		Stats = { Coins = 1.5, Bag = 0.7 }, -- Addendum 6 Stage 9 (pacing pass): was Coins = 2.5, Bag = 2
+		Stats = { Coins = 2.55, Bag = 1.19 }, -- Addendum 6 Stage 9 (pacing pass): was Coins = 2.5, Bag = 2
 		Name = "Cactus Pal", -- was "Moony" (2026-11-03: zone 4 design SL_Z4_Pet_CactusPal; Id stays SunnyHam)
 		Egg = "Skyline",
 		Rarity = "Legendary",
@@ -4301,6 +4329,59 @@ Config.Mascots = {
 		Color = Color3.fromRGB(70, 60, 80),
 		Accent = Color3.fromRGB(255, 50, 80),
 		Reaction = "Flip", -- own model since 2026-10-29 (owner's titan_jr.glb)
+	},
+	-- Launch changes (owner 2026-11-03): the OP Egg's pets (Robux egg in zone 1): the old zone 4 designs, the strongest
+	-- pets in the game, rarer = stronger (chances in Config.CoreLoop.Eggs.List OP Weights). Model = the model they wear.
+	{
+		Id = "OpCloudBumper",
+		Stats = { Coins = 7, Pins = 6, Bag = 2 },
+		Name = "Cloud Bumper",
+		Egg = "OP",
+		Rarity = "Legendary",
+		Color = Color3.fromRGB(150, 220, 255),
+		Accent = Color3.fromRGB(255, 255, 255),
+		Reaction = "Hop",
+	},
+	{
+		Id = "OpMoony",
+		Stats = { Coins = 10, Pins = 8, Bag = 3 },
+		Name = "Moony",
+		Egg = "OP",
+		Rarity = "Legendary",
+		Color = Color3.fromRGB(255, 225, 120),
+		Accent = Color3.fromRGB(120, 90, 200),
+		Reaction = "Hop",
+	},
+	{
+		Id = "OpTitanJr",
+		Model = "TitanJr",
+		Stats = { Coins = 15, Pins = 11, Bag = 4, Speed = 0.4 },
+		Name = "Titan Jr.",
+		Egg = "OP",
+		Rarity = "Mythic",
+		Color = Color3.fromRGB(70, 60, 80),
+		Accent = Color3.fromRGB(255, 50, 80),
+		Reaction = "Flip",
+	},
+	{
+		Id = "OpCosmo",
+		Stats = { Coins = 22, Pins = 16, Bag = 6, Speed = 0.6 },
+		Name = "Cosmo",
+		Egg = "OP",
+		Rarity = "Mythic",
+		Color = Color3.fromRGB(60, 40, 140),
+		Accent = Color3.fromRGB(120, 230, 255),
+		Reaction = "Spin",
+	},
+	{
+		Id = "OpPerfecto",
+		Stats = { Coins = 35, Pins = 25, Bag = 9, Speed = 1 },
+		Name = "Perfecto",
+		Egg = "OP",
+		Rarity = "Mythic",
+		Color = Color3.fromRGB(255, 200, 60),
+		Accent = Color3.fromRGB(255, 255, 255),
+		Reaction = "Flip",
 	},
 	-- Addendum 6 3.3: zone 1's Rooftop Egg pets (Weakest pets in the game, zone 1, Common to Rare). Own models since
 	-- 2026-11-03 (owner's SL_Z1_Pets_Lineup; were other pets' models re-tinted); Ids kept, names new.
@@ -4347,7 +4428,7 @@ Config.Mascots = {
 Config.AutoBowl = {
 	Enabled = false, -- true = the free auto for everyone from the start (Studio tests)
 	Interval = 4.5, -- seconds between auto throws with the AUTO BOWL pass (a manual throw takes about 3)
-	FreeAfterRebirths = 1, -- the free slow auto opens at this many rebirths (0 = never)
+	FreeAfterRebirths = 0, -- the free slow auto opens at this many rebirths (0 = never; launch changes 2026-11-03: AUTO is the pass only, was 1)
 	FreeInterval = 7, -- seconds between free auto throws
 	ChargeMin = 0.4, -- each auto throw's power is picked between these (0 to 1 of the bar, never the red)
 	ChargeMax = 0.85,
@@ -4367,6 +4448,8 @@ Config.EggLooks = {
 	-- Addendum 6 3.3 PLACEHOLDER: zone 1's starter egg, the Neon Egg model re-tinted at start (no model of its own yet)
 	-- 2026-11-03: the owner's Rooftop Egg (PetModels.Egg_Speckled, SL_Z1_RooftopEgg_full); was the Neon Egg re-tinted
 	Speckled = { Name = "Rooftop Egg", Color = Color3.fromRGB(246, 235, 210), Spots = Color3.fromRGB(93, 189, 240) },
+	-- Launch changes (owner 2026-11-03): the Robux OP Egg (PetModels.Egg_OP = the old Skyline Egg design)
+	OP = { Name = "OP Egg", Color = Color3.fromRGB(70, 255, 120), Spots = Color3.fromRGB(255, 220, 60) },
 	Volcano = { Name = "Volcano Egg", Color = Color3.fromRGB(255, 100, 40), Spots = Color3.fromRGB(60, 20, 20), Copy = "Alley", Tint = "Volcano" },
 }
 
@@ -4419,6 +4502,24 @@ Config.EggBoard = {
 	-- false = the V6 board above (one row of round slots, HATCH / AUTO / x3).
 	Grid = true,
 	GridHeight = 2.6, -- studs from the egg's middle up to the grid board's bottom edge (its button labels)
+	-- Launch changes (owner 2026-11-03): every egg on its stand is this much bigger than its egg spot (its bottom stays
+	-- in the cradle; 1 = the old size)
+	EggScale = 1.45,
+}
+
+-- Launch changes (owner 2026-11-03): the OP Egg's green power-up aura (MascotController, client only): flames
+-- rising round the egg, sparks, a green glow and outline that pulse. Sizes are x the egg's height.
+Config.OpAura = {
+	Egg = "OP",
+	Color = Color3.fromRGB(60, 255, 90),
+	Core = Color3.fromRGB(210, 255, 160), -- the hot inner colour
+	FlameRate = 60, -- flame puffs a second
+	FlameSize = 0.55,
+	FlameLife = 0.7,
+	FlameRise = 1.6, -- studs a second x height
+	SparkRate = 14,
+	LightRange = 18,
+	PulseSeconds = 0.9, -- one glow pulse
 }
 
 -- Batch C3 (final changes 11b): tap a pet on an egg's odds board to X it out; X'd pets you hatch are auto-deleted
@@ -5137,7 +5238,7 @@ Config.Monetization = {
 		{
 			Id = "TripleHatch",
 			PassId = 2062270254,
-			Robux = 399,
+			Robux = 199, -- (launch changes 2026-11-03: was 399; set the same price in Creator Hub)
 			Name = "TRIPLE HATCH",
 			Text = "Hatch 3 eggs at once (if you can pay for 3).",
 			Hatch = 3,
@@ -5159,6 +5260,28 @@ Config.Monetization = {
 			Name = "+2 PET SLOTS",
 			Text = "2 more pets out at once.",
 			PetSlots = 2,
+		},
+		-- Launch changes (owner 2026-11-03). AUTO SELL: the bag sells itself the moment it's full (at the zone you're in;
+		-- the AUTO SELL button turns it off and on). INFINITE BAG: no bag limit, pins sell the moment they land.
+		-- Excludes = a pass that makes this one useless: owning it greys this card out and the server won't sell it.
+		-- PassId 0 = not made in Creator Hub yet: hidden in the live game until the owner puts the real ID here.
+		{
+			Id = "AutoSell",
+			PassId = 0,
+			Robux = 249,
+			Name = "AUTO SELL",
+			Text = "Your bag sells itself the moment it's full.",
+			AutoSell = true,
+			Excludes = "InfiniteBag",
+		},
+		{
+			Id = "InfiniteBag",
+			PassId = 0,
+			Robux = 499,
+			Name = "INFINITE BAG",
+			Text = "No bag limit. Pins turn into coins the moment they land.",
+			InfiniteBag = true,
+			Excludes = "AutoSell",
 		},
 	},
 	-- Developer products: can be bought again and again (Once = one time only)
@@ -5199,6 +5322,9 @@ Config.Monetization = {
 			Text = "Double coins for 15 min of play.",
 			Boost = { Potion = "CoinSmall", Minutes = 15 },
 		},
+		-- Launch changes (owner 2026-11-03): one hatch of the OP Egg (zone 1), bought at its stand only (not in the STORE).
+		-- Egg = the egg it hatches (one at a time, never triple). ProductId 0 = not made yet (Studio gives it free).
+		{ Id = "OpEgg", ProductId = 0, Robux = 299, Name = "OP EGG", Text = "One OP Egg hatch.", Egg = "OP", Hidden = true },
 		{ Id = "GemsSmall", ProductId = 3723602054, Robux = 99, Name = "60 GEMS", Text = "A handful of gems.", Gems = 60 },
 		{ Id = "GemsMedium", ProductId = 3723602173, Robux = 399, Name = "300 GEMS", Text = "A bag of gems.", Gems = 300 },
 		{ Id = "GemsLarge", ProductId = 3723602254, Robux = 1599, Name = "1,500 GEMS", Text = "A chest of gems.", Gems = 1500 },
@@ -6120,7 +6246,9 @@ Config.Economy.Mascots = {
 	MaxSlots = 6, -- slots from StartSlots + SlotRebirths (and old saves' PetSlotsKept) stop here; the pass adds on top
 	-- Final changes item 7 (owner 2026-10-29): 3 slots, +1 at 5 rebirths, +2 with the +2 PET SLOTS pass. Was +1 at
 	-- rank levels 15 and 30 and at 1 rebirth; old saves keep the slots they had (save v30 PetSlotsKept).
-	SlotRebirths = { 5 }, -- each of these rebirth counts adds a slot
+	-- Launch changes (owner 2026-11-03): 3 slots, +1 at 3 rebirths, +2 with the +2 PET SLOTS Robux pass (no coin slots
+	-- any more; Config.PetStats.SlotPrices is empty). Was { 5 }.
+	SlotRebirths = { 3 }, -- each of these rebirth counts adds a slot
 }
 for name, power in Config.RarityPower do
 	if name ~= "Step" then
@@ -6155,7 +6283,9 @@ Config.PetStats = {
 	-- Equip slots: StartSlots (Config.Economy.Mascots) + slots bought with coins at the shop booth, one at a time,
 	-- in this price order (slot 4, 5, 6 ...). The +2 PET SLOTS pass adds on top. Old saves never lose a slot they had
 	-- (PetSlotsKept). Bought slots are saved (PetSlotsBought, v35).
-	SlotPrices = { 2500, 25000, 150000, 600000, 2500000 },
+	-- Launch changes (owner 2026-11-03): no coin slots (slots come from rebirths + the Robux pass, Config.Economy.Mascots
+	-- SlotRebirths); was { 2500, 25000, 150000, 600000, 2500000 }. The shop's PET SLOTS card shows only while this has prices.
+	SlotPrices = {},
 	KeepPetSlots = true, -- rebirth keeps the bought slots (false = back to StartSlots on rebirth)
 	-- Addendum 5 F: EQUIP BEST ranks pets by the coins a minute they really earn you (Mascots.Income: throws until the
 	-- bag is full + one sell trip), so bag pets win exactly when the bag holds you back. false = the Best weights above.

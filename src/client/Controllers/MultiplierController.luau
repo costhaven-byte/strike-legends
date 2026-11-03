@@ -730,8 +730,13 @@ function MultiplierController:Start()
 					or (need > 0 and (player:GetAttribute("Rebirths") or 0) >= need)
 					or Store.Owns(player, "AutoBowl")
 			end
+			-- (launch changes 2026-11-03: AUTO is the AUTO BOWL pass; everyone sees the button, a tap without it buys it)
+			local function forSale(): boolean
+				local pass = Store.Pass("AutoBowl")
+				return Store.Active() and Store.Ready(pass)
+			end
 			local function show()
-				auto.Visible = allowed()
+				auto.Visible = allowed() or forSale()
 				local on = player:GetAttribute("AutoBowl") == true
 				label.Text = if on then "AUTO ON" else "AUTO"
 				auto.BackgroundColor3 = if v2Kit
@@ -762,9 +767,67 @@ function MultiplierController:Start()
 			player:GetAttributeChangedSignal("Passes"):Connect(show)
 			show()
 			auto.Activated:Connect(function()
+				if not allowed() then
+					local storeBuy = ReplicatedStorage:WaitForChild("Remotes"):FindFirstChild("StoreBuy") :: RemoteEvent?
+					if storeBuy then
+						storeBuy:FireServer("AutoBowl")
+					end
+					return
+				end
 				remote:FireServer(player:GetAttribute("AutoBowl") ~= true)
 			end)
 			UiFx.Press(auto)
+
+			-- Launch changes (owner 2026-11-03): AUTO SELL under AUTO. With the AUTO SELL pass it switches selling by
+			-- itself on and off; without it a tap buys it; with INFINITE BAG it's grey (that bag sells every throw).
+			local sellRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("SetAutoSell", 10) :: RemoteEvent?
+			if sellRemote and Config.CoreLoop.Enabled then
+				local autoSell = auto:Clone()
+				autoSell.Name = "AutoSell"
+				local free = autoSell:FindFirstChild("FreeTag")
+				if free then
+					free:Destroy()
+				end
+				autoSell.Parent = hud
+				local sellLabel = autoSell:FindFirstChild("Label") :: TextLabel
+				HudKit.OnLayout(function()
+					autoSell.Size = auto.Size
+					autoSell.Position = auto.Position + UDim2.fromOffset(0, auto.Size.Y.Offset + 6)
+				end)
+				autoSell.Size = auto.Size
+				autoSell.Position = auto.Position + UDim2.fromOffset(0, auto.Size.Y.Offset + 6)
+				local function showSell()
+					local pass = Store.Pass("AutoSell")
+					local owns = Store.Owns(player, "AutoSell")
+					local infinite = Store.Owns(player, "InfiniteBag")
+					autoSell.Visible = owns or infinite or (Store.Active() and Store.Ready(pass))
+					local on = owns and player:GetAttribute("AutoSell") ~= false
+					sellLabel.Text = if infinite then "NO LIMIT" elseif on then "SELL ON" else "AUTO SELL"
+					sellLabel.TextColor3 = if v2Kit then K.White else LIME
+					autoSell.BackgroundColor3 = if infinite
+						then Color3.fromRGB(110, 120, 140)
+						elseif v2Kit then (if on then v2Kit.Paints.Green[1] else v2Kit.Paints.Blue[1])
+						elseif on then (if SUNNY then K.Lime else Color3.fromRGB(40, 90, 30))
+						else CARD
+				end
+				player:GetAttributeChangedSignal("AutoSell"):Connect(showSell)
+				player:GetAttributeChangedSignal("Passes"):Connect(showSell)
+				showSell()
+				autoSell.Activated:Connect(function()
+					if Store.Owns(player, "InfiniteBag") then
+						return
+					end
+					if not Store.Owns(player, "AutoSell") then
+						local storeBuy = ReplicatedStorage:WaitForChild("Remotes"):FindFirstChild("StoreBuy") :: RemoteEvent?
+						if storeBuy then
+							storeBuy:FireServer("AutoSell")
+						end
+						return
+					end
+					sellRemote:FireServer(player:GetAttribute("AutoSell") == false)
+				end)
+				UiFx.Press(autoSell)
+			end
 		end
 	end
 end

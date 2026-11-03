@@ -18,6 +18,7 @@ local Balls = require(Shared.Modules.Balls)
 local CoreLadder = require(Shared.Modules.CoreLadder)
 local Currency = require(Shared.Modules.Currency)
 local Mascots = require(Shared.Modules.Mascots)
+local Store = require(Shared.Modules.Store)
 local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
 local LaneService = require(script.Parent.LaneService)
@@ -50,7 +51,12 @@ function CoreLoopService.PetStats(player: Player): { [string]: number }
 end
 
 -- How many pins the bag holds (Addendum 6 1.1: the bag holds pins, the sell turns them into coins) (Config.CoreLoop.BagSizes, by the saved BagLevel), x (1 + the pets' Bag stat)
+-- Launch changes (owner 2026-11-03): the INFINITE BAG pass's bag never fills (its pins sell as they land)
+local INFINITE_BAG = 1e18
 function CoreLoopService.BagSize(player: Player): number
+	if Store.Owns(player, "InfiniteBag") then
+		return INFINITE_BAG
+	end
 	local size = CORE.BagSizes[CoreLadder.BagLevel(PlayerDataService.Get(player, "BagLevel"))]
 	return math.floor(size * (1 + CoreLoopService.PetStats(player).Bag) + 0.5)
 end
@@ -278,7 +284,22 @@ end
 
 -- Promises up to `pins` to the bag and drops them in after `delay` seconds (when the ball reaches the pins).
 -- Returns the pins that fit (0 = the bag is full: pins still fall but pay nothing).
+local sell: (player: Player, zone: number, auto: boolean?) -> ()
+-- Launch changes (owner 2026-11-03): AUTO SELL pass (switched on: the AutoSell attribute, AUTO SELL button) sells a
+-- full bag by itself; INFINITE BAG sells every throw's pins as they land. Both at the zone the player is in.
+local function autoSells(player: Player): boolean
+	return Store.Owns(player, "AutoSell") and player:GetAttribute("AutoSell") ~= false
+end
+local function afterLanding(player: Player)
+	if Store.Owns(player, "InfiniteBag") or (autoSells(player) and CoreLoopService.IsFull(player)) then
+		sell(player, CoreLoopService.ZoneOf(player), true)
+	end
+end
+
 function CoreLoopService.AddToBag(player: Player, pins: number, delay: number): number
+	if autoSells(player) and not Store.Owns(player, "InfiniteBag") and CoreLoopService.IsFull(player) then
+		sell(player, CoreLoopService.ZoneOf(player), true) -- (a bag that was already full when AUTO SELL came on)
+	end
 	local room = CoreLoopService.BagSize(player) - (PlayerDataService.Get(player, "Bag") or 0) - (pending[player] or 0)
 	local paid = math.clamp(math.floor(pins), 0, math.max(0, room))
 	if paid <= 0 then
@@ -294,6 +315,7 @@ function CoreLoopService.AddToBag(player: Player, pins: number, delay: number): 
 			pending[player] -= paid
 		end
 		PlayerDataService.Add(player, "Bag", paid)
+		afterLanding(player)
 	end)
 	return paid
 end
@@ -334,7 +356,8 @@ end
 -- pays the bag's pins x PinValue x the coin multiplier (MultiplierService.GetCoinMultiplier: pets, rebirth, friends,
 -- potion, passes, COIN BOOST), so every boost shows on every sell.
 -- Addendum 6 Stage 3: a pin sells for the PinValue of the zone whose pad you stand on (x6 a zone)
-local function sell(player: Player, zone: number)
+-- auto = the AUTO SELL / INFINITE BAG passes sold it (the HUD shows a smaller pop)
+function sell(player: Player, zone: number, auto: boolean?)
 	local bag = PlayerDataService.Get(player, "Bag") or 0
 	if bag <= 0 then
 		return
@@ -348,7 +371,14 @@ local function sell(player: Player, zone: number)
 	Analytics.Currency(player, "Coins", paid, "Gameplay", "Sell")
 	SessionLog.Sell(player, paid, PlayerDataService.Get(player, "CoreSells") or 1)
 	Pacing.Sold(player, paid)
-	soldRemote:FireClient(player, paid, multiplier, CoreLadder.EncodeBoosts("Coins", sources), CoreLadder.ZoneValue(zone))
+	soldRemote:FireClient(
+		player,
+		paid,
+		multiplier,
+		CoreLadder.EncodeBoosts("Coins", sources),
+		CoreLadder.ZoneValue(zone),
+		auto == true
+	)
 end
 
 -- The zone whose sell pad this position stands on (nil = none)
@@ -1257,8 +1287,9 @@ function CoreLoopService:Start()
 			then SELL
 			elseif where == "Shop" then SHOP
 			elseif where == "Eggs" and CORE.Eggs and CORE.Eggs.Enabled then { Position = CORE.Eggs.GoTo } -- (B2)
+			elseif where == "Fusion" and CORE.Eggs and CORE.Eggs.Enabled then { Position = CORE.Eggs.Fusion.GoTo } -- (launch changes: the fuse prompt)
 			else nil
-		if target then -- (Addendum 6 Stage 3: the pad in the zone you're in)
+		if target and where ~= "Fusion" then -- (Addendum 6 Stage 3: the pad in the zone you're in)
 			target = { Position = target.Position + CoreLadder.ZoneOffset(CoreLoopService.ZoneOf(player)) }
 		end
 		if not target or not PlayerDataService.IsLoaded(player) then
@@ -1273,14 +1304,31 @@ function CoreLoopService:Start()
 			return
 		end
 		humanoid.Sit = false
+		if where == "Fusion" and CoreLoopService.ZoneOf(player) ~= 1 then
+			travel(player, 1) -- (the one fusion machine stands in zone 1)
+		end
 		-- land a little up (feet clear of the rim): on the sell pad facing the lanes (-Z), on the shop circle
 		-- facing the booth's counter (+Z), in front of the first egg facing it (-Z, B2)
 		local at = target.Position + Vector3.new(0, humanoid.HipHeight + CORE.Teleport.Height, 0)
-		local look = if where == "Shop" then Vector3.new(0, 0, 1) else Vector3.new(0, 0, -1)
+		local look = if where == "Shop"
+			then Vector3.new(0, 0, 1)
+			elseif where == "Fusion" then Vector3.new(1, 0, 0) -- (facing the machine, which faces west)
+			else Vector3.new(0, 0, -1)
 		character:PivotTo(CFrame.lookAt(at, at + look))
 		SessionLog.Moment(player, "Teleported to " .. where)
 	end)
 	goRemote.Parent = soldRemote.Parent
+
+	-- Launch changes: the AUTO SELL button switches the AUTO SELL pass on and off
+	local autoSellRemote = Instance.new("RemoteEvent")
+	autoSellRemote.Name = "SetAutoSell"
+	autoSellRemote.OnServerEvent:Connect(function(player, on)
+		player:SetAttribute("AutoSell", on == true)
+		if on == true and autoSells(player) and CoreLoopService.IsFull(player) then
+			sell(player, CoreLoopService.ZoneOf(player), true)
+		end
+	end)
+	autoSellRemote.Parent = soldRemote.Parent
 
 	local gateRemote = Instance.new("RemoteFunction")
 	gateRemote.Name = "CoreGate"
@@ -1323,7 +1371,8 @@ function CoreLoopService:Start()
 				travel(player, last)
 			end)
 		end
-		for _, key in { "BagLevel", "ThrowSpeedLevel", "EquippedMascots", "Rebirths" } do -- (B1: pets change bag + speed; C: rebirths)
+		player:SetAttribute("AutoSell", true) -- (launch changes: on while the AUTO SELL pass is owned; the button turns it off)
+		for _, key in { "BagLevel", "ThrowSpeedLevel", "EquippedMascots", "Rebirths", "Passes" } do -- (B1: pets change bag + speed; C: rebirths; INFINITE BAG)
 			player:GetAttributeChangedSignal(key):Connect(function()
 				publish(player)
 			end)

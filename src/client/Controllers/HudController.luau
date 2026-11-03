@@ -835,9 +835,17 @@ function HudController:Start()
 	if Config.CoreLoop.Enabled then
 		local sold = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CoreSold", 30) :: RemoteEvent?
 		if sold then
-			sold.OnClientEvent:Connect(function(amount)
+			local lastAuto = 0
+			sold.OnClientEvent:Connect(function(amount, _multiplier, _sources, _value, auto)
 				if type(amount) ~= "number" or amount <= 0 then
 					return
+				end
+				-- (launch changes: automatic sells fly coins at most once a second)
+				if auto == true then
+					if os.clock() - lastAuto < 1 then
+						return
+					end
+					lastAuto = os.clock()
 				end
 				local phone = HudKit.Phone()
 				local screen = UiFx.Layer().AbsoluteSize

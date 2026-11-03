@@ -703,7 +703,8 @@ function CoreHudController:Start()
 		local share = math.clamp(amount / size, 0, 1)
 		if bagBar then
 			-- V2: green, orange from 80%, red FULL! (board A progress bar); the bag icon follows your bag level
-			bagBar:Set(amount, size, if share >= 1 then "FULL!" else Currency.Format(amount) .. "/" .. Currency.Format(size) .. " PINS", amount > lastBag)
+			-- (launch changes: the INFINITE BAG pass shows INFINITE on an empty bar)
+			bagBar:Set(amount, size, if size >= 1e17 then "INFINITE" elseif share >= 1 then "FULL!" else Currency.Format(amount) .. "/" .. Currency.Format(size) .. " PINS", amount > lastBag)
 			local icon = bag:FindFirstChild("Icon") :: ImageLabel
 			icon.Image = (Kit :: any).Icon(("bag_%02d"):format(math.clamp(CoreLadder.BagLevel(player:GetAttribute("BagLevel")), 1, 10)))
 		else
@@ -797,12 +798,23 @@ function CoreHudController:Start()
 	end)
 
 	-- Sold at the station: coins fly up from the bag
-	remotes:WaitForChild("CoreSold").OnClientEvent:Connect(function(amount, multiplier, _sources)
+	local lastAutoPop = 0
+	remotes:WaitForChild("CoreSold").OnClientEvent:Connect(function(amount, multiplier, _sources, _value, auto)
 		guideUntil = 0
 		soldOnce = true
-		Sfx.Play("Coin", 1, 1.4)
-		Sfx.Play("SpinWin", 1.2, 0.6)
-		UiFx.Flash(GREEN, 0.15, 0.25)
+		-- (launch changes: AUTO SELL / INFINITE BAG sells: at most one pop a second, quiet, no flash)
+		if auto == true then
+			if os.clock() - lastAutoPop < 1 then
+				return
+			end
+			lastAutoPop = os.clock()
+			Sfx.Play("Coin", 1, 0.5)
+		end
+		if auto ~= true then
+			Sfx.Play("Coin", 1, 1.4)
+			Sfx.Play("SpinWin", 1.2, 0.6)
+			UiFx.Flash(GREEN, 0.15, 0.25)
+		end
 		-- A green tag with the amount rises in the middle, above THROW (the left column is full of buttons)
 		local phone = HudKit.Phone()
 		local pop, popFace = plate(gui, "SoldPop", GREEN, 8)

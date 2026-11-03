@@ -32,6 +32,7 @@ local Sfx = require(Modules:WaitForChild("Sfx"))
 local UiFx = require(Modules:WaitForChild("UiFx"))
 local HudKit = require(Modules:WaitForChild("HudKit"))
 local RewardKit = require(Modules:WaitForChild("RewardKit"))
+local MomentKit = require(Modules:WaitForChild("MomentKit"))
 local UiKit = require(Modules:WaitForChild("UiKit"))
 local CrateKit = require(Modules:WaitForChild("CrateKit"))
 local PetsV2 = require(Modules:WaitForChild("PetsV2"))
@@ -137,7 +138,8 @@ local function eggState(egg: any?): (boolean, string?, boolean)
 		level,
 		Mascots.EggZone(player:GetAttribute("ZonesOpen"), player:GetAttribute("CoreZonesOpen"))
 	)
-	local affordable = (player:GetAttribute("Coins") or 0) >= egg.Price or freeEggs(egg) > 0
+	-- (launch changes: a Robux egg, the OP Egg, can always be bought)
+	local affordable = egg.Robux ~= nil or (player:GetAttribute("Coins") or 0) >= egg.Price or freeEggs(egg) > 0
 	return unlocked, why, affordable
 end
 
@@ -1128,6 +1130,7 @@ function MascotController:Start()
 	end
 
 	local doHatch: (egg: any?, count: number?) -> ()
+	local robuxEggWanted: any = nil -- (launch changes: the Robux egg whose purchase prompt is open)
 
 	local autoHatch = false
 	local autoNext: () -> ()
@@ -1536,6 +1539,24 @@ function MascotController:Start()
 			showToast(("Need %s coins"):format(formatNumber(egg.Price)))
 			return
 		end
+		-- (launch changes) a Robux egg with no bought hatch waiting: open the purchase; when it goes through, the
+		-- store's result hatches it (below)
+		if egg.Robux and freeEggs(egg) <= 0 then
+			if autoHatch then
+				stopAuto()
+			end
+			local storeBuy = remotes:FindFirstChild("StoreBuy") :: RemoteEvent?
+			if storeBuy and Store.Active() then
+				robuxEggWanted = egg
+				storeBuy:FireServer(egg.Robux)
+			else
+				showToast("THE STORE IS CLOSED")
+			end
+			return
+		end
+		if egg.Single then
+			count = 1
+		end
 		hatching = true
 		local ok, result = pcall(hatchRemote.InvokeServer, hatchRemote, egg.Id, count)
 		if ok and result and result.Ok then
@@ -1545,6 +1566,22 @@ function MascotController:Start()
 		end
 		hatching = false
 	end
+
+	-- (launch changes) a Robux egg hatch bought: hatch it straight away (it waits at the stand if that doesn't work)
+	task.spawn(function()
+		local result = remotes:WaitForChild("StoreResult", 30) :: RemoteEvent?
+		if not result then
+			return
+		end
+		result.OnClientEvent:Connect(function(data)
+			local egg = type(data) == "table" and data.Egg and Mascots.GetEgg(data.Egg)
+			if egg and robuxEggWanted == egg then
+				robuxEggWanted = nil
+				task.wait(0.3) -- (the free hatch attribute arrives with it)
+				doHatch(egg, 1)
+			end
+		end)
+	end)
 
 	-- Merge: the copies shake together in a gold glow, squeeze into one, flash, and the Shiny pops out
 	local merging = false
@@ -1941,6 +1978,111 @@ function MascotController:Start()
 		fusionWin:Open()
 	end
 
+	-- Launch changes (owner 2026-11-03): FUSE PROMPT. When a pet reaches enough copies for its Shiny (and on join when
+	-- one already has), a big YOU CAN FUSE! popup says which, with GO FUSE! (takes you to the fusion machine and opens
+	-- the fuse window) and LATER. Once per pet a session; it waits for hatches, auto hatch and open windows to finish.
+	do
+		local layer = MomentKit.Layer("FusePromptUI", 44)
+		local popup = MomentKit.Popup(layer)
+		local holder = Instance.new("Frame")
+		holder.Name = "FuseButtons"
+		holder.BackgroundTransparency = 1
+		holder.AnchorPoint = Vector2.new(0.5, 0)
+		holder.Position = UDim2.new(0.5, 0, 0.23, 96)
+		holder.Size = UDim2.fromOffset(380, 66)
+		holder.Visible = false
+		holder.ZIndex = 5
+		holder.Parent = layer
+		local go = RewardKit.Button(holder, "GO FUSE!", "Gold", 230, 62, 28)
+		go.Holder.Position = UDim2.fromOffset(0, 0)
+		local later = RewardKit.Button(holder, "LATER", "Grey", 136, 62, 22)
+		later.Holder.Position = UDim2.fromOffset(244, 0)
+		local token = 0
+		local function hide()
+			token += 1
+			holder.Visible = false
+		end
+		go.Activated:Connect(function()
+			hide()
+			Sfx.Play("Teleport", 1.1, 0.6)
+			if goRemote then
+				goRemote:FireServer("Fusion")
+			end
+			task.delay(0.7, function()
+				if MascotController.OpenFusion then
+					MascotController.OpenFusion()
+				end
+			end)
+		end)
+		later.Activated:Connect(hide)
+
+		local prompted: { [string]: boolean } = {}
+		local queued = false
+		local function readyIds(): { string }
+			local list = {}
+			for id, count in owned() do
+				local mascot = Mascots.Get(id)
+				if mascot and not mascot.Shiny and count >= (Mascots.MergeCost(mascot) or math.huge) and not prompted[id] then
+					table.insert(list, id)
+				end
+			end
+			table.sort(list, function(a, b)
+				return Mascots.RarityIndex(Mascots.Get(a).Rarity) > Mascots.RarityIndex(Mascots.Get(b).Rarity)
+			end)
+			return list
+		end
+		local function busyNow(): boolean
+			return hatching or overlay.Visible or hatchV2 ~= nil or autoHatch or merging
+				or (fuseV2 ~= nil and fuseV2.IsOpen()) or fusionWin:IsOpen()
+		end
+		local function check()
+			if queued or not Config.Fusion.Enabled or #readyIds() == 0 then
+				return
+			end
+			queued = true
+			task.spawn(function()
+				task.wait(1.2)
+				while busyNow() do
+					task.wait(0.5)
+				end
+				queued = false
+				local list = readyIds()
+				if #list == 0 then
+					return
+				end
+				for _, id in list do
+					prompted[id] = true
+				end
+				local mascot = Mascots.Get(list[1])
+				local cost = Mascots.MergeCost(mascot) or ECONOMY.ShinyMerge
+				Sfx.Play("Reveal")
+				popup({
+					Text = "YOU CAN FUSE!",
+					Color = GOLD,
+					Sub = ("%d %s = SHINY %s (x%s STATS)"):format(
+						cost,
+						string.upper(mascot.Name),
+						string.upper(mascot.Name),
+						tostring(ECONOMY.ShinyMultiplier)
+					),
+					Big = true,
+					Icon = "Hud:Paw",
+				})
+				token += 1
+				local mine = token
+				holder.Visible = true
+				UiFx.Pop(holder, 0.6, 0.3)
+				task.delay(9, function()
+					if token == mine then
+						holder.Visible = false
+					end
+				end)
+			end)
+		end
+		player:GetAttributeChangedSignal("Mascots"):Connect(check)
+		task.delay(20, check) -- (pets already waiting to be fused when you join)
+	end
+
 	-- Polish P4: a pointing hand on EQUIP BEST the first time it would change your pets (Config.EquipBestHint).
 	-- It stays until EQUIP BEST is tapped once; the server remembers that in the save (EquipBestHinted).
 	local HINT = Config.EquipBestHint
@@ -2073,6 +2215,14 @@ function MascotController:Start()
 			end,
 			FuseText = ("%d COPIES = 1 SHINY! FUSE THEM AT THE FUSION MACHINE"):format(ECONOMY.ShinyMerge),
 			LockTexts = lockTexts,
+			BuyPass = function(id: string) -- (launch changes: a locked Robux slot opens the +2 PET SLOTS purchase)
+				local storeBuy = remotes:FindFirstChild("StoreBuy") :: RemoteEvent?
+				if storeBuy and Store.Active() then
+					storeBuy:FireServer(id)
+				else
+					showToast("THE STORE IS CLOSED")
+				end
+			end,
 			Locked = function(): (string?, string?)
 				if petsLocked then
 					return lockedHead.Text, lockedLine.Text
@@ -2169,9 +2319,11 @@ function MascotController:Start()
 			)
 			return
 		end
-		local standEgg = MascotView.Egg(egg.Id, spot.Size.Y)
+		-- (launch changes: every egg Config.EggBoard.EggScale bigger than its spot, its bottom kept in the cradle)
+		local eggScale = Config.EggBoard.EggScale or 1
+		local standEgg = MascotView.Egg(egg.Id, spot.Size.Y * eggScale)
 		standEgg.Name = "StandEgg"
-		standEgg:PivotTo(spot.CFrame)
+		standEgg:PivotTo(spot.CFrame + Vector3.new(0, spot.Size.Y * (eggScale - 1) / 2, 0))
 		local base = spot.Position
 		local shell = standEgg.PrimaryPart :: BasePart
 		local light = Instance.new("PointLight")
@@ -2180,6 +2332,87 @@ function MascotController:Start()
 		light.Brightness = 1.5
 		light.Parent = shell
 		standEgg.Parent = pad
+
+		-- Launch changes (owner 2026-11-03): the OP Egg's green power-up aura (Config.OpAura): rising green flames
+		-- round the egg, sparks, a pulsing green glow and outline
+		local AURA = Config.OpAura
+		if AURA and egg.Id == AURA.Egg then
+			local auraCf, auraSize = standEgg:GetBoundingBox()
+			local h = auraSize.Y
+			local shellPart = Instance.new("Part")
+			shellPart.Name = "OpAura"
+			shellPart.Anchored = true
+			shellPart.CanCollide = false
+			shellPart.CanQuery = false
+			shellPart.CanTouch = false
+			shellPart.Transparency = 1
+			shellPart.Size = Vector3.new(auraSize.X * 1.15, h * 0.9, auraSize.Z * 1.15)
+			shellPart.CFrame = CFrame.new(auraCf.Position - Vector3.new(0, h * 0.1, 0))
+			shellPart.Parent = pad
+			local function seq(a: number, b: number, c: number): NumberSequence
+				return NumberSequence.new({
+					NumberSequenceKeypoint.new(0, a),
+					NumberSequenceKeypoint.new(0.4, b),
+					NumberSequenceKeypoint.new(1, c),
+				})
+			end
+			local flames = Instance.new("ParticleEmitter")
+			flames.Name = "Flames"
+			flames.Texture = "rbxasset://textures/particles/fire_main.dds"
+			flames.Shape = Enum.ParticleEmitterShape.Cylinder
+			flames.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+			flames.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
+			flames.Color = ColorSequence.new(AURA.Core, AURA.Color)
+			flames.LightEmission = 1
+			flames.LightInfluence = 0
+			flames.Rate = AURA.FlameRate
+			flames.Lifetime = NumberRange.new(AURA.FlameLife * 0.7, AURA.FlameLife)
+			flames.Speed = NumberRange.new(h * AURA.FlameRise * 0.6, h * AURA.FlameRise)
+			flames.SpreadAngle = Vector2.new(6, 6)
+			flames.EmissionDirection = Enum.NormalId.Top
+			flames.Acceleration = Vector3.new(0, h * 1.2, 0)
+			flames.Size = seq(h * AURA.FlameSize * 0.6, h * AURA.FlameSize, 0)
+			flames.Transparency = seq(0.25, 0.35, 1)
+			flames.RotSpeed = NumberRange.new(-60, 60)
+			flames.Rotation = NumberRange.new(0, 360)
+			flames.ZOffset = 1
+			flames.Parent = shellPart
+			local sparks = Instance.new("ParticleEmitter")
+			sparks.Name = "Sparks"
+			sparks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+			sparks.Color = ColorSequence.new(AURA.Color, AURA.Core)
+			sparks.LightEmission = 1
+			sparks.LightInfluence = 0
+			sparks.Rate = AURA.SparkRate
+			sparks.Lifetime = NumberRange.new(0.5, 0.9)
+			sparks.Speed = NumberRange.new(h * 1.5, h * 3)
+			sparks.SpreadAngle = Vector2.new(25, 25)
+			sparks.EmissionDirection = Enum.NormalId.Top
+			sparks.Size = seq(h * 0.12, h * 0.08, 0)
+			sparks.Parent = shellPart
+			local glow = Instance.new("PointLight")
+			glow.Name = "AuraLight"
+			glow.Color = AURA.Color
+			glow.Range = AURA.LightRange
+			glow.Brightness = 3
+			glow.Shadows = false
+			glow.Parent = shellPart
+			local outline = Instance.new("Highlight")
+			outline.Name = "AuraOutline"
+			outline.FillColor = AURA.Color
+			outline.OutlineColor = AURA.Core
+			outline.FillTransparency = 0.7
+			outline.OutlineTransparency = 0.1
+			outline.DepthMode = Enum.HighlightDepthMode.Occluded
+			outline.Adornee = standEgg
+			outline.Parent = standEgg
+			RunService.Heartbeat:Connect(function()
+				local t = (math.sin(os.clock() * math.pi * 2 / AURA.PulseSeconds) + 1) / 2
+				glow.Brightness = 2 + t * 3
+				outline.FillTransparency = 0.55 + (1 - t) * 0.3
+				flames.Rate = AURA.FlameRate * (0.75 + t * 0.5)
+			end)
+		end
 
 		local prompt = Instance.new("ProximityPrompt")
 		prompt.Name = "HatchPrompt"
@@ -2196,7 +2429,7 @@ function MascotController:Start()
 		local board = Instance.new("BillboardGui")
 		board.Name = "EggInfo"
 		board.Size = UDim2.fromOffset(220, 32)
-		board.StudsOffset = Vector3.new(0, spot.Size.Y * 1.28, 0)
+		board.StudsOffset = Vector3.new(0, spot.Size.Y * eggScale * 1.28, 0)
 		board.MaxDistance = 70
 		board.LightInfluence = 0
 		board.Parent = shell
@@ -2207,15 +2440,17 @@ function MascotController:Start()
 		local function refreshStand()
 			local unlocked, why = eggState(egg)
 			local free = freeEggs(egg)
+			local robux = egg.Robux and Store.Product(egg.Robux) -- (launch changes: the OP Egg's Robux price)
+			local cost = if robux then Store.PriceText(robux.Robux) else formatNumber(egg.Price) .. " COINS"
 			boardPrice.Text = if not unlocked
 				then "REACH " .. tostring(why)
 				elseif free > 0 then ("FREE EGG x%d"):format(free)
-				else formatNumber(egg.Price) .. " COINS"
+				else cost
 			boardPrice.TextColor3 = if not unlocked then GREY elseif free > 0 then LIME else GOLD
 			prompt.ActionText = if not unlocked
 				then "Locked"
 				elseif free > 0 then "Hatch (FREE)"
-				else ("Hatch (%s)"):format(formatNumber(egg.Price))
+				else ("Hatch (%s)"):format(if robux then Store.PriceText(robux.Robux) else formatNumber(egg.Price))
 		end
 		player:GetAttributeChangedSignal("RankLevel"):Connect(refreshStand)
 		player:GetAttributeChangedSignal("ZonesOpen"):Connect(refreshStand)
@@ -2296,6 +2531,7 @@ function MascotController:Start()
 					end
 				end,
 				Toast = showToast,
+				RobuxPrice = egg.Robux and Store.Product(egg.Robux) and Store.Product(egg.Robux).Robux or nil, -- (launch changes: OP Egg)
 				AutoDeleteRemote = if Config.AutoDelete.Enabled then autoDeleteRemote else nil,
 			})
 			-- the little price line over the egg only shows while the board is away

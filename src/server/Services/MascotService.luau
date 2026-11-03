@@ -150,6 +150,23 @@ end
 -- Rolls a rarity with the plan's odds, then a mascot of that rarity from this egg (all equally likely).
 -- If the egg has no mascot of the rolled rarity, the closest commoner one it has is used.
 local function roll(eggId: string, luck: number)
+	-- (launch changes: an egg with Weights, the OP Egg, picks the pet straight from them; luck doesn't change them)
+	local weights = Mascots.EggWeights(eggId)
+	if weights then
+		local pool = Mascots.InEgg(eggId)
+		local total = 0
+		for _, mascot in pool do
+			total += weights[mascot.Id] or 0
+		end
+		local pick = math.random() * total
+		for _, mascot in pool do
+			pick -= weights[mascot.Id] or 0
+			if pick <= 0 then
+				return mascot
+			end
+		end
+		return pool[1]
+	end
 	-- Phase X: only the rarities this egg has pets of count (zone 3 and 4 eggs start at Rare and Epic)
 	local present = {}
 	for _, mascot in Mascots.InEgg(eggId) do
@@ -264,6 +281,12 @@ local function hatch(player: Player, eggId: any, want: any)
 	end
 	local freeEggs = getFreeEggs(player)
 	local free = (freeEggs[egg.Id] or 0) > 0 -- a free hatch from a playtime gift goes first
+	-- (launch changes: a Robux egg, the OP Egg, hatches only from a bought hatch, kept in FreeEggs; the client asks
+	-- the store for one first)
+	local product = Mascots.EggProduct(egg.Id)
+	if product and not free then
+		return { Ok = false, Error = "Buy it with Robux", Product = product }
+	end
 	if not free and not PlayerDataService.CanAfford(player, "Coins", egg.Price) then
 		return { Ok = false, Error = "Not enough coins" }
 	end
@@ -273,7 +296,7 @@ local function hatch(player: Player, eggId: any, want: any)
 
 	-- TRIPLE HATCH game pass: 3 at once when the player can pay for all 3 (free hatches go one at a time)
 	local count = Store.HatchCount(player)
-	if want == 1 or free or not PlayerDataService.CanAfford(player, "Coins", egg.Price * count) then
+	if want == 1 or free or egg.Single or not PlayerDataService.CanAfford(player, "Coins", egg.Price * count) then
 		count = 1
 	end
 	if free then

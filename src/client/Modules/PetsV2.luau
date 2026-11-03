@@ -985,6 +985,10 @@ function PetsV2.Start(ctx: { [string]: any })
 				local label = word(chip, if robux then ROBUX_GLYPH .. " PASS" else why, if small then 12 else 15)
 				label.ZIndex = 13
 				box.Activated:Connect(function()
+					if robux and ctx.BuyPass then
+						ctx.BuyPass("PetSlots") -- (launch changes: the Robux slots open the +2 PET SLOTS purchase)
+						return
+					end
 					SlKit.Shake(box, 5, 6)
 					ctx.Toast(
 						if robux

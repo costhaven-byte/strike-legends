@@ -51,6 +51,13 @@ function Store.Owns(player: Player, passId: string): boolean
 	return type(text) == "string" and string.find(text, ";" .. passId .. ";", 1, true) ~= nil
 end
 
+-- Launch changes (owner 2026-11-03): the owned pass that makes this one useless (pass.Excludes: AUTO SELL and
+-- INFINITE BAG), or nil. Its card greys out and the server won't sell it.
+function Store.ExcludedBy(player: Player, pass): any
+	local other = pass and pass.Excludes and passes[pass.Excludes]
+	return if other and Store.Owns(player, other.Id) then other else nil
+end
+
 -- Every owned pass's `field` multiplied together (1 with none)
 local function product(player: Player, field: string): number
 	local multiplier = 1

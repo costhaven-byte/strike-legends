@@ -912,6 +912,7 @@ function EggV2.GridBoard(ctx: { [string]: any }): { [string]: any }
 	)
 	price.Holder.AnchorPoint = Vector2.new(0, 0.5)
 	price.Holder.Position = UDim2.fromOffset(cardX + cardW + 12, cardTop + (cardH + 6) / 2)
+	local priceFont = price.Label.FontFace
 
 	-- Pet tiles, 3 across (a short last row is centred)
 	local slots = {}
@@ -1072,8 +1073,15 @@ function EggV2.GridBoard(ctx: { [string]: any }): { [string]: any }
 		Inside = if computer and ctx.Prompt then "E" else "x1",
 		Label = "OPEN 1",
 	})
-	table.insert(order, auto)
-	table.insert(order, triple)
+	-- (launch changes: a Single egg, the OP Egg, opens one at a time: no AUTO, no OPEN 3)
+	local single1 = ctx.Egg.Single == true
+	if single1 then
+		auto.Holder.Visible = false
+		triple.Holder.Visible = false
+	else
+		table.insert(order, auto)
+		table.insert(order, triple)
+	end
 	table.insert(order, single)
 	local rowSpan = (#order - 1) * BTN_STEP
 	for i, b in order do
@@ -1104,9 +1112,16 @@ function EggV2.GridBoard(ctx: { [string]: any }): { [string]: any }
 		else
 			price:SetState("normal")
 			price:Repaint(if affordable then PAINT.Green else PAINT.Red)
-			price:SetText(if free > 0 then ("FREE x%d"):format(free) else Currency.Format(ctx.Egg.Price))
+			-- (launch changes: a Robux egg shows its Robux price; the Robux glyph only draws in Builder Sans)
+			local robux = ctx.RobuxPrice and free <= 0
+			price:SetText(
+				if free > 0 then ("FREE x%d"):format(free)
+				elseif robux then ROBUX_GLYPH .. " " .. tostring(ctx.RobuxPrice)
+				else Currency.Format(ctx.Egg.Price)
+			)
+			price.Label.FontFace = if robux then Font.fromEnum(Enum.Font.BuilderSansBold) else priceFont
 			if price.Icon then
-				price.Icon.Visible = free <= 0
+				price.Icon.Visible = free <= 0 and not robux
 			end
 		end
 		price.Label.TextSize = if #price.Label.Text > 7 then 20 else 26
@@ -1121,7 +1136,7 @@ function EggV2.GridBoard(ctx: { [string]: any }): { [string]: any }
 			auto.Inside.Text = if autoOn then "ON" else "OFF"
 		end
 		local owns = ctx.TripleOwned()
-		badge.Visible = not owns
+		badge.Visible = not owns and not single1
 		triple:SetState(if owns and not ready then "locked" else "normal")
 		gear:Repaint(if deleteMode then PAINT.Red else PAINT.Blue)
 		gear.Label.Text = if deleteMode then "TAP PETS!" else "AUTO-DELETE"
@@ -1137,7 +1152,7 @@ function EggV2.GridBoard(ctx: { [string]: any }): { [string]: any }
 		local luck = ctx.Luck()
 		luckLine.Parent.Visible = luck > 1
 		luckLine.Text = ("x%s LUCK"):format((("%.1f"):format(luck):gsub("%.0$", "")))
-		tripleLine.Parent.Visible = owns
+		tripleLine.Parent.Visible = owns and not single1
 	end
 
 	gear.Holder.Activated:Connect(function()
@@ -1304,6 +1319,9 @@ function EggV2.GridBoard(ctx: { [string]: any }): { [string]: any }
 	-- T = AUTO, R = OPEN 3 while the board is up (E is the stand's own prompt)
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if processed or not shown then
+			return
+		end
+		if single1 then
 			return
 		end
 		if input.KeyCode == Enum.KeyCode.T then

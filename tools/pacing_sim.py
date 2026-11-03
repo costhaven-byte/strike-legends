@@ -86,7 +86,7 @@ LADDER_POWER = num(r"LadderPower", REB)
 
 EGGS = []
 for row in re.split(r"\n\t\t\t\{", block(r"\n\tEggs = \{", CORE))[1:]:
-    if "Odds" not in row:
+    if "Odds" not in row or "Robux =" in row:  # (launch changes: the Robux OP Egg is not part of free play)
         continue
     EGGS.append(
         {

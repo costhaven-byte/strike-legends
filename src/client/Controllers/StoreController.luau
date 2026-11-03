@@ -126,6 +126,8 @@ local ICONS = {
 	SuperLucky = "PassSuperLucky",
 	TripleHatch = "PassTriple",
 	PetSlots = "PassPets",
+	AutoSell = "V2_hud_sell", -- (launch changes 2026-11-03)
+	InfiniteBag = "V2_bag_10",
 	CoinBoost = "Boost15",
 	GemsSmall = "Gems60",
 	GemsMedium = "Gems300",
@@ -1158,7 +1160,10 @@ function StoreController:Start()
 		function ref.Refresh()
 			local robux, done = item.Robux, nil
 			if kind == "Pass" then
-				done = if Store.Owns(player, item.Id) then "OWNED" else nil
+				done = if Store.Owns(player, item.Id)
+					then "OWNED"
+					elseif Store.ExcludedBy(player, item) then "NOT NEEDED" -- (launch changes: AUTO SELL vs INFINITE BAG)
+					else nil
 			elseif kind == "Ladder" then
 				local level = Store.LadderLevel(player, item.Ladder)
 				local step = Store.NextStep(player, item.Ladder)

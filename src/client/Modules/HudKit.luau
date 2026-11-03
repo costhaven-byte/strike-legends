@@ -238,6 +238,10 @@ if V2 then
 		for key, row in NO_SHOP_LAYOUT do
 			HudKit.Layout[key] = row
 		end
+		-- (launch changes: no PASSES button, Config.Ui.PassesButton = false: TELEPORT takes its grid spot)
+		if Config.Ui.PassesButton == false then
+			HudKit.Layout.Teleport = NO_SHOP_LAYOUT.Passes
+		end
 	end
 end
 

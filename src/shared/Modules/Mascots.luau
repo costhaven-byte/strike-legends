@@ -204,6 +204,15 @@ end
 -- Store.LuckyOdds). Only rarities the egg has pets of count; pets of one rarity are equally likely. The server's
 -- roll uses the same maths; the hatch card ("1 IN X", Polish P2) and the stand's odds bubbles (P3) show it.
 function Mascots.Chance(eggId: string, mascot, odds: { [string]: number }): number
+	-- (launch changes: an egg with Weights picks pets by those, no rarity odds, no luck)
+	local weights = Mascots.EggWeights(eggId)
+	if weights then
+		local total = 0
+		for _, other in Mascots.InEgg(eggId) do
+			total += weights[other.Id] or 0
+		end
+		return if total > 0 then (weights[mascot.Id] or 0) / total else 0
+	end
 	local present = {}
 	local same = 0
 	for _, other in Mascots.InEgg(eggId) do
@@ -220,6 +229,18 @@ function Mascots.Chance(eggId: string, mascot, odds: { [string]: number }): numb
 		return 0
 	end
 	return (odds[mascot.Rarity] or 0) / total / same
+end
+
+-- Launch changes (owner 2026-11-03): an egg's own per-pet chances (Config.CoreLoop.Eggs.List Weights, the OP Egg), or nil
+function Mascots.EggWeights(eggId: string): { [string]: number }?
+	local egg = eggById[eggId]
+	return if CORE_EGGS and egg then egg.Weights else nil
+end
+
+-- Launch changes: the Config.Monetization product that buys one hatch of this egg (the OP Egg), or nil (coins)
+function Mascots.EggProduct(eggId: string): string?
+	local egg = eggById[eggId]
+	return if CORE_EGGS and egg then egg.Robux else nil
 end
 
 -- An egg has mascots to hatch (eggs for zones 2 to 5 get theirs later)
@@ -350,10 +371,16 @@ end
 -- Equip slots: StartSlots, +1 for each of SlotRebirths reached, never fewer than kept (save PetSlotsKept: what an
 -- old save had under the old rank-level rule), up to MaxSlots, plus extra (the +2 PET SLOTS game pass,
 -- Config.Monetization) on top of that
--- Addendum 5 B1 (pet stats on): StartSlots + slots bought with coins (bought), no rebirth slots.
+-- Addendum 5 B1 (pet stats on): StartSlots + slots bought with coins (bought) + (launch changes 2026-11-03) the
+-- SlotRebirths slots; coin slots are off while Config.PetStats.SlotPrices is empty.
 function Mascots.Slots(rebirths: number, extra: number?, kept: number?, bought: number?): number
 	if Mascots.StatsOn() then
 		local count = ECONOMY.StartSlots + math.clamp(math.floor(bought or 0), 0, #STATS.SlotPrices)
+		for _, needed in ECONOMY.SlotRebirths do
+			if (rebirths or 0) >= needed then
+				count += 1
+			end
+		end
 		return math.max(count, kept or 0) + (extra or 0)
 	end
 	local count = ECONOMY.StartSlots
@@ -374,6 +401,14 @@ function Mascots.SlotLocks(rebirths: number, open: number): { string }
 		for i, price in STATS.SlotPrices do
 			if ECONOMY.StartSlots + i > open then
 				table.insert(list, Currency.Format(price))
+			end
+		end
+		-- (launch changes: then the rebirth slots, "3 REBIRTHS")
+		local count = ECONOMY.StartSlots + #STATS.SlotPrices
+		for _, needed in ECONOMY.SlotRebirths do
+			count += 1
+			if (rebirths or 0) < needed and count > open then
+				table.insert(list, if needed == 1 then "REBIRTH" else ("%d REBIRTHS"):format(needed))
 			end
 		end
 		return list

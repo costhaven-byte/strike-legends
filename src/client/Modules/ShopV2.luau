@@ -83,6 +83,7 @@ local LOOK: { [string]: Look } = {
 	Legendary = { c = hex("FFC93A"), l = hex("FFE07A"), chip = hex("FFC93A") },
 	Mythic = { c = hex("FF4F8B"), l = hex("FF8DB4"), chip = hex("FF4F8B") },
 	PetSlot = { c = hex("FF4FA3"), l = hex("FF8CC4"), chip = hex("FF4FA3") },
+	InfBag = { c = hex("3CCB3F"), l = hex("8BE68D"), chip = hex("3CCB3F") }, -- (launch changes: the INFINITE BAG pass card)
 }
 local DIM: Look = { c = hex("17345C"), l = hex("22477A"), chip = hex("17345C") }
 local STRIPES = { hex("FF4F8B"), hex("FFC93A"), hex("4BE07A"), hex("3AA8FF"), hex("B45CFF") }
@@ -837,6 +838,11 @@ function ShopV2.Start(ctx: { [string]: any })
 	local function paintButton(card: Card, paint: { Color3 }, words: string, icon: string?)
 		card.Button:Paint(paint)
 		card.ButtonText.Text = words
+		-- (the Robux glyph only draws in Builder Sans)
+		card.ButtonFont = card.ButtonFont or card.ButtonText.FontFace
+		card.ButtonText.FontFace = if string.find(words, ROBUX_GLYPH, 1, true)
+			then Font.fromEnum(Enum.Font.BuilderSansBold)
+			else card.ButtonFont
 		card.ButtonIcon.Visible = icon ~= nil
 		if icon then
 			card.ButtonIcon.Image = SlKit.Icon(icon)
@@ -854,7 +860,7 @@ function ShopV2.Start(ctx: { [string]: any })
 				view.ImageColor3 = tint
 			end
 		else
-			card.BagImage.Image = SlKit.Icon(if kind == "PetSlot" then "hud_pets" else bagIcon(step))
+			card.BagImage.Image = SlKit.Icon(if kind == "PetSlot" then "hud_pets" else bagIcon(step)) -- (InfBag: step = the top bag)
 			card.BagImage.ImageColor3 = tint
 		end
 	end
@@ -951,6 +957,36 @@ function ShopV2.Start(ctx: { [string]: any })
 		card.Lock.Visible = false
 	end
 
+	-- Launch changes (owner 2026-11-03): the INFINITE BAG pass card at the end of the Bags tab (Robux, buys anywhere)
+	local function fillInfBag(card: Card)
+		local pass = Store.Pass("InfiniteBag")
+		local owned = Store.Owns(player, "InfiniteBag")
+		local excluded = Store.ExcludedBy(player, pass)
+		card.Kind, card.Step, card.State = "InfBag", 1, if owned then "Owned" else "Next"
+		card.Owned, card.Equipped, card.Afford = owned or excluded ~= nil, false, true
+		local look = LOOK.InfBag
+		setLook(card, look)
+		setRing(card, look, false, "InfBag", false)
+		setNext(card, false)
+		showModel(card, "Bag", #CORE.BagSizes, WHITE)
+		setChip(card.Next, nil)
+		setChip(card.Best, nil)
+		setChip(card.Skipped, nil)
+		setChip(card.Rarity, nil)
+		card.Tick.Visible = owned
+		card.Name.Text = "INFINITE BAG"
+		card.StatIcon.Image = SlKit.Icon("hud_sell")
+		card.Stat.Text = "NO LIMIT, SELLS ITSELF"
+		if owned then
+			paintButton(card, PAINT.Navy, "OWNED", "ui_tick")
+		elseif excluded then
+			paintButton(card, PAINT.Navy, "NOT NEEDED", nil)
+		else
+			paintButton(card, PAINT.Green, ROBUX_GLYPH .. " " .. tostring(pass and pass.Robux or 0), nil)
+		end
+		card.Lock.Visible = false
+	end
+
 	-- What the current zone page shows: its steps (+ the PET SLOT card on the Bags tab)
 	local function pageItems(): { { Kind: string, Step: number } }
 		local kind = kindOf(currentTab)
@@ -960,8 +996,11 @@ function ShopV2.Start(ctx: { [string]: any })
 				table.insert(items, { Kind = kind, Step = step })
 			end
 		end
-		if kind == "Bag" and Mascots.StatsOn() then
+		if kind == "Bag" and Mascots.StatsOn() and #Config.PetStats.SlotPrices > 0 then
 			table.insert(items, { Kind = "PetSlot", Step = 1 })
+		end
+		if kind == "Bag" and Store.Active() and Store.Ready(Store.Pass("InfiniteBag")) then
+			table.insert(items, { Kind = "InfBag", Step = 1 })
 		end
 		return items
 	end
@@ -1735,6 +1774,8 @@ function ShopV2.Start(ctx: { [string]: any })
 			end
 			if item.Kind == "PetSlot" then
 				fillPetSlot(card)
+			elseif item.Kind == "InfBag" then
+				fillInfBag(card)
 			else
 				fillLadder(card, item.Kind, item.Step)
 			end
@@ -2024,6 +2065,18 @@ function ShopV2.Start(ctx: { [string]: any })
 			return
 		end
 		local kind = card.Kind
+		if kind == "InfBag" then
+			-- (launch changes: a Robux pass, bought anywhere through the STORE's purchase)
+			if not card.Owned then
+				local storeBuy = ReplicatedStorage:WaitForChild("Remotes"):FindFirstChild("StoreBuy") :: RemoteEvent?
+				if storeBuy then
+					storeBuy:FireServer("InfiniteBag")
+				end
+			else
+				SlKit.Shake(card.Holder, 8, 0, 0.3)
+			end
+			return
+		end
 		if card.State == "Locked" then
 			Sfx.Play("Error", 1, 0.6)
 			SlKit.Shake(card.Holder, 8, 0, 0.3)

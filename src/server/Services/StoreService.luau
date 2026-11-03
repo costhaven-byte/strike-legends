@@ -30,6 +30,7 @@ local Analytics = require(script.Parent.Analytics)
 local BallService = require(script.Parent.BallService)
 local CosmeticService = require(script.Parent.CosmeticService)
 local Cosmetics = require(Shared.Modules.Cosmetics)
+local MascotService = require(script.Parent.MascotService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local PotionService = require(script.Parent.PotionService)
 local RateLimit = require(script.Parent.Parent.Modules.RateLimit)
@@ -125,6 +126,10 @@ local function grantProduct(player: Player, product)
 		local key = Store.LadderKeys[product.Ladder]
 		PlayerDataService.Set(player, key, math.max(PlayerDataService.Get(player, key) or 0, product.Step))
 	end
+	if product.Egg then
+		-- (launch changes: one OP Egg hatch, waiting at its stand like a free egg; the client hatches it straight away)
+		MascotService.GiveFreeEgg(player, product.Egg, 1)
+	end
 	if product.Once then
 		PlayerDataService.Set(player, product.Id, 1) -- StarterPack = 1
 	end
@@ -136,8 +141,9 @@ local function grantProduct(player: Player, product)
 			elseif product.Ladder == "Xp" then "XP BOOST is now " .. Store.MultText(
 				Store.XpBoostMultiplier(player)
 			)
+			elseif product.Egg then "Hatching your " .. product.Name .. "!"
 			else product.Name .. " is yours"
-		resultEvent:FireClient(player, { Id = product.Id, Text = text })
+		resultEvent:FireClient(player, { Id = product.Id, Text = text, Egg = product.Egg })
 	end
 end
 
@@ -200,6 +206,9 @@ local function onBuy(player: Player, id: any)
 	if pass and owned[player] and owned[player][pass.Id] then
 		return
 	end
+	if pass and pass.Excludes and Store.Owns(player, pass.Excludes) then
+		return -- (launch changes: AUTO SELL and INFINITE BAG make each other useless)
+	end
 	if product and product.Once and (PlayerDataService.Get(player, product.Id) or 0) > 0 then
 		return
 	end
@@ -228,6 +237,10 @@ local function onBuy(player: Player, id: any)
 		if resultEvent then
 			resultEvent:FireClient(player, { Id = pass.Id, Text = pass.Name .. " is yours (Studio test: no pass ID yet)" })
 		end
+		return
+	end
+	if product and number <= 0 and RunService:IsStudio() then
+		grantProduct(player, product) -- (launch changes) Studio only: a product not made in Creator Hub yet is free for this test
 		return
 	end
 	if number <= 0 then
