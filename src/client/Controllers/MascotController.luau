@@ -992,6 +992,7 @@ function MascotController:Start()
 	end
 
 	-- Every hatch and merge uses the same card; onStand = AUTO sits next to OK
+	local currentEgg = EGG -- the egg being hatched right now (Phase X; up here so the card layout sees it)
 	local function cardLayout(onStand: boolean)
 		revealRarity.Visible = onStand
 		revealRarity.Text = ""
@@ -1000,7 +1001,7 @@ function MascotController:Start()
 		for _, side in sides do
 			side.Holder.Visible = false
 		end
-		placeButtons(onStand)
+		placeButtons(onStand and not (currentEgg and currentEgg.Single)) -- (a Single egg, the OP Egg: no AUTO, OK centred)
 		autoButton.Visible = false
 		skipHint.Visible = false
 	end
@@ -1111,7 +1112,6 @@ function MascotController:Start()
 	-- Phase X: one stand per egg (Config.EggStands); currentEgg = the egg being hatched right now
 	type Site = { Stand: Model, Spot: BasePart, Egg: Model, Prompt: ProximityPrompt }
 	local stands: { [string]: Site } = {}
-	local currentEgg = EGG
 	local standBusy = false
 	local hatchesThisSession = 0
 	local sceneContext: any = nil
@@ -1209,7 +1209,7 @@ function MascotController:Start()
 		skipHint.Visible = false
 		doneButton.Visible = true
 		UiFx.Pop(doneButton, 0.6, 0.3)
-		if sceneContext then
+		if sceneContext and not (currentEgg and currentEgg.Single) then
 			paintAuto()
 			autoButton.Visible = true
 			if not autoHatch then

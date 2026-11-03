@@ -108,6 +108,7 @@ function TutorialController:Start()
 			Size = UDim2.fromScale(1, 1),
 			BackgroundColor3 = C.Window,
 		}, holder)
+		make("UIAspectRatioConstraint", {}, tile) -- (square; the holder is wider for the task line under it)
 		make("UICorner", { CornerRadius = UDim.new(0.24, 0) }, tile)
 		local rim = make("UIStroke", { Color = C.Ink, Thickness = 3 }, tile)
 		local scale = make("UIScale", {}, tile)
@@ -140,7 +141,25 @@ function TutorialController:Start()
 			Visible = false,
 			ZIndex = 6,
 		})
-		tiles[i] = { Holder = holder, Tile = tile, Rim = rim, Scale = scale, Icon = iconSlot, Amount = amount, Tick = tick }
+		-- what to do for it, under the tile (owner 2026-11-03)
+		local taskLabel = SlKit.Text(holder, step.Task or step.Word, 14, C.White, {
+			Name = "Task",
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 1, 5),
+			TextWrapped = true,
+			TextYAlignment = Enum.TextYAlignment.Top,
+			ZIndex = 5,
+		})
+		tiles[i] = {
+			Holder = holder,
+			Tile = tile,
+			Rim = rim,
+			Scale = scale,
+			Icon = iconSlot,
+			Amount = amount,
+			Tick = tick,
+			Task = taskLabel,
+		}
 	end
 
 	-- ===== Hand + word =====
@@ -163,12 +182,15 @@ function TutorialController:Start()
 	HudKit.OnLayout(function(phone)
 		phoneNow = phone
 		local side = if phone then 40 else 64
+		local wide = side + (if phone then 24 else 44)
 		for _, t in tiles do
-			t.Holder.Size = UDim2.fromOffset(side, side)
+			t.Holder.Size = UDim2.fromOffset(wide, side)
+			t.Task.TextSize = if phone then 10 else 15
+			t.Task.Size = UDim2.new(1, 0, 0, if phone then 24 else 36)
 			t.Amount.TextSize = if phone then 11 else 16
 			t.Tick.TextSize = if phone then 20 else 30
 		end
-		strip.Size = UDim2.fromOffset((side + 10) * #STEPS, side)
+		strip.Size = UDim2.fromOffset((wide + 10) * #STEPS, side)
 		strip.Position = UDim2.new(0.5, 0, 0, if phone then 88 else 104)
 		hand.TextSize = if phone then 34 else 56
 		hand.Size = UDim2.fromOffset(if phone then 42 else 70, if phone then 42 else 70)
@@ -185,6 +207,7 @@ function TutorialController:Start()
 			t.Tick.Visible = isDone
 			t.Icon.Visible = not isDone
 			t.Amount.Visible = not isDone
+			t.Task.TextColor3 = if isDone then GREEN elseif isNow then C.Header else C.White
 		end
 	end
 	paintTiles(done())

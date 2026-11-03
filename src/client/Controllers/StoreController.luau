@@ -713,9 +713,9 @@ function StoreController:Start()
 	end
 	local pills = {}
 	local pillPhone = nil
-	-- computer pill sizes x1.25 (owner 2026-11-03: "slightly bigger"); phones keep theirs
+	-- computer pill sizes x1.8 (owner 2026-11-03: "even bigger", was x1.25); phones keep theirs
 	local function pc(n: number): number
-		return math.round(n * 1.25)
+		return math.round(n * 1.8)
 	end
 	local function buildPills()
 		for _, pill in pills do
@@ -782,20 +782,32 @@ function StoreController:Start()
 					end
 				end
 			end
-			local top = label(face, "", HEAD, if phone then 16 else pc(13), if SUNNY then C.White else ladder.Color, if phone then 5 else pc(4))
-			top.Size = UDim2.new(1, 0, 0, if phone then 16 else pc(13))
-			HudKit.Fit(top, if phone then 16 else pc(13)) -- long texts like "x1.75 COINS" must fit too
-			top.Position = UDim2.fromOffset(0, if phone then 4 else pc(3))
+			-- Both lines sit inside the face (pill height - outlines - lip) and clear the round ends
+			local faceH = h - 2 * (if phone then 3 else pc(2.5)) - 3
+			local topSize = if phone then 16 else math.floor(faceH * 0.44)
+			local priceSize = if phone then 15 else math.floor(faceH * 0.38)
+			local topY = if phone then 4 else math.floor((faceH - topSize - priceSize - 2) / 2)
+			local top = label(face, "", HEAD, topSize, if SUNNY then C.White else ladder.Color, if phone then 5 else 4)
+			top.AnchorPoint = Vector2.new(0.5, 0)
+			top.Size = UDim2.new(1, -math.floor(h * 0.4), 0, topSize)
+			if phone then
+				HudKit.Fit(top, topSize) -- long texts like "x1.75 COINS" must fit too
+			else
+				-- (computer: Fit measures the HUD-scaled width against the unscaled size and shrinks too much; the
+				-- ladder texts, "x4 COINS" at most, fit this wide pill at full size)
+				top.TextScaled = false
+			end
+			top.Position = UDim2.new(0.5, 0, 0, topY)
 			local priceRow = make("Frame", {
 				BackgroundTransparency = 1,
-				Position = UDim2.fromOffset(0, if phone then 20 else pc(14)),
-				Size = UDim2.new(1, 0, 0, if phone then 15 else pc(12)),
+				Position = UDim2.fromOffset(0, if phone then 20 else topY + topSize + 2),
+				Size = UDim2.new(1, 0, 0, priceSize),
 				ZIndex = 4,
 			}, face)
 			local layout = list(priceRow, true, if phone then 3 else pc(2))
 			layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-			image(priceRow, "Robux", if phone then 14 else pc(11), { LayoutOrder = 1, ZIndex = 4 })
-			local price = label(priceRow, "", NUM, if phone then 15 else pc(12), C.White, if phone then 4 else pc(3.5))
+			image(priceRow, "Robux", if phone then 14 else priceSize - 1, { LayoutOrder = 1, ZIndex = 4 })
+			local price = label(priceRow, "", NUM, priceSize, C.White, if phone then 4 else 3.5)
 			price.LayoutOrder = 2
 			price.AutomaticSize = Enum.AutomaticSize.X
 			price.Size = UDim2.fromScale(0, 1)

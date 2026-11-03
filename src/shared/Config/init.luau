@@ -247,6 +247,7 @@ Config.CoreLoop = {
 	Teleport = {
 		Cooldown = 1.5,
 		Height = 3, -- studs above the pad floor the character lands
+		ZonesAfterRebirths = 1, -- the TELEPORT button (any opened zone) shows from this many rebirths (owner 2026-11-03)
 	},
 	-- Stage 3b plaza props: copies of existing models (the originals stay where they are), placed at server start in
 	-- <Folder>.Plaza. From = path from Workspace, At = floor point under the model's middle, Turn = degrees around Y.
@@ -366,7 +367,7 @@ Config.CoreLoop = {
 				Single = true,
 				From = { "ServerStorage", "ZoneKits", "Zone1", "OPEgg" },
 				At = Vector3.new(60, 848.65, -3438),
-				Turn = 90,
+				Turn = 180, -- faces the display cases (owner 2026-11-03; was 90 = west)
 				Odds = { Legendary = 85, Mythic = 15 },
 				Weights = { OpCloudBumper = 55, OpMoony = 30, OpTitanJr = 10, OpCosmo = 4.5, OpPerfecto = 0.5 },
 				Pets = { "OpCloudBumper", "OpMoony", "OpTitanJr", "OpCosmo", "OpPerfecto" },
@@ -4609,12 +4610,13 @@ Config.Tutorial = {
 	Enabled = true,
 	Hand = "\u{1F446}", -- (pointing-up hand, drawn under the target)
 	DoneSeconds = 2.5, -- the strip stays this long after the last step, then slides away
+	-- Task = what to do, written under each reward tile (owner 2026-11-03: the tiles didn't say how to get them)
 	Steps = {
-		{ Id = "Throw", Word = "HOLD", Target = "Throw", Stats = { "CoreThrows" }, AtLeast = 1, Reward = { Coins = 20 } },
-		{ Id = "Sell", Word = "SELL", Target = "Sell", Stats = { "CoreSells" }, AtLeast = 1, Reward = { Coins = 30 } },
-		{ Id = "Ball", Word = "NEW BALL", Target = "Goal", Stats = { "BallStep" }, AtLeast = 2, Reward = { Coins = 120 } },
+		{ Id = "Throw", Task = "THROW", Word = "HOLD", Target = "Throw", Stats = { "CoreThrows" }, AtLeast = 1, Reward = { Coins = 20 } },
+		{ Id = "Sell", Task = "SELL", Word = "SELL", Target = "Sell", Stats = { "CoreSells" }, AtLeast = 1, Reward = { Coins = 30 } },
+		{ Id = "Ball", Task = "BUY A BALL", Word = "NEW BALL", Target = "Goal", Stats = { "BallStep" }, AtLeast = 2, Reward = { Coins = 120 } },
 		-- one more buy (ball 3 or bag 2): BallStep + BagLevel start at 1 + 1
-		{ Id = "Upgrade", Word = "UPGRADE", Target = "Goal", Stats = { "BallStep", "BagLevel" }, AtLeast = 4, Reward = { Egg = "Speckled" } },
+		{ Id = "Upgrade", Task = "BUY BALL OR BAG", Word = "UPGRADE", Target = "Goal", Stats = { "BallStep", "BagLevel" }, AtLeast = 4, Reward = { Egg = "Speckled" } },
 	},
 }
 

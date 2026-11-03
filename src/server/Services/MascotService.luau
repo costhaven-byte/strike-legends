@@ -113,6 +113,10 @@ local function publish(player: Player)
 	for _, egg in Config.Economy.Eggs do
 		player:SetAttribute("FreeEgg_" .. egg.Id, free[egg.Id] or 0)
 	end
+	-- (the roof eggs too: a bought OP Egg hatch waits here, and the client only hatches it once it sees it)
+	for _, egg in Mascots.CoreEggs() do
+		player:SetAttribute("FreeEgg_" .. egg.Id, free[egg.Id] or 0)
+	end
 	local equipped = getEquipped(player)
 	player:SetAttribute("Mascots", Mascots.EncodeOwned(getOwned(player)))
 	-- Polish v2 U3: the pets ever found, for the egg boards' black silhouettes

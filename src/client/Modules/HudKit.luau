@@ -239,10 +239,19 @@ if V2 then
 			HudKit.Layout[key] = row
 		end
 		-- (launch changes: no PASSES button, Config.Ui.PassesButton = false: TELEPORT takes its grid spot)
-		-- (owner 2026-11-03, computer: REBIRTH right under DAILY + PROFILE, TELEPORT under REBIRTH once zone 2 opens)
+		-- (owner 2026-11-03, computer: REBIRTH right under DAILY + PROFILE, AUTO + AUTO SELL under REBIRTH
+		-- (MultiplierController); GIFTS, SETTINGS and TELEPORT (from 1 rebirth) in one column top-right, so the
+		-- lane event / NEXT GOAL / streak column under them moves down 80)
 		if Config.Ui.PassesButton == false then
+			HudKit.Layout.Gifts = { Pc = { 1816, 24, 80, 80, "R", "T" }, Phone = HudKit.Layout.Gifts.Phone }
+			HudKit.Layout.Settings = { Pc = { 1816, 116, 80, 80, "R", "T" }, Phone = HudKit.Layout.Settings.Phone }
+			for _, key in { "Modifier", "Goal", "Streak" } do
+				local pc = table.clone(HudKit.Layout[key].Pc)
+				pc[2] += 80
+				HudKit.Layout[key] = { Pc = pc, Phone = HudKit.Layout[key].Phone }
+			end
 			HudKit.Layout.Teleport = {
-				Pc = { 24, 592, 96, 96, "L", "T" },
+				Pc = { 1816, 208, 80, 80, "R", "T" },
 				Phone = NO_SHOP_LAYOUT.Passes.Phone,
 			}
 			HudKit.Layout.CoreRebirth = {

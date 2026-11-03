@@ -1282,7 +1282,28 @@ function CoreLoopService:Start()
 	-- Addendum 5 A2: SELL / GO TO SHOP teleport you onto that pad (the pad loop below sells; the shop opens itself)
 	local goRemote = Instance.new("RemoteEvent")
 	goRemote.Name = "CoreGoTo"
-	goRemote.OnServerEvent:Connect(function(player, where)
+	goRemote.OnServerEvent:Connect(function(player, where, zone)
+		-- (owner 2026-11-03) the TELEPORT button: any opened zone, from 1 rebirth on (not out of the boss fight)
+		if where == "Zone" then
+			zone = math.floor(tonumber(zone) or 0)
+			if
+				not PlayerDataService.IsLoaded(player)
+				or (PlayerDataService.Get(player, "Rebirths") or 0) < CORE.Teleport.ZonesAfterRebirths
+				or zone < 1
+				or zone > CoreLadder.ZonesOpen(PlayerDataService.Get(player, "CoreZonesOpen"))
+				or zone == CoreLoopService.ZoneOf(player)
+				or player:GetAttribute("BossFighting")
+				or not RateLimit.Allow(player, "CoreGoTo", CORE.Teleport.Cooldown)
+			then
+				return
+			end
+			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				humanoid.Sit = false
+			end
+			travel(player, zone)
+			return
+		end
 		local target = if where == "Sell"
 			then SELL
 			elseif where == "Shop" then SHOP

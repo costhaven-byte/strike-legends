@@ -14,6 +14,7 @@ local Config = require(Shared.Config)
 local Currency = require(Shared.Modules.Currency)
 local LaneUtil = require(Shared.Modules.LaneUtil)
 local Zones = require(Shared.Modules.Zones)
+local CoreLadder = require(Shared.Modules.CoreLadder)
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules:WaitForChild("Sfx"))
 local UiFx = require(Modules:WaitForChild("UiFx"))
@@ -134,9 +135,21 @@ local function picture(parent: Instance, zone: number, paint: { Color3 }): Frame
 end
 
 function TeleportController:Start()
--- (switched off in the Addendum 4 core loop: the rooftop is the only zone)
-	if Config.CoreLoop.Enabled then
-		return
+	-- Core loop (owner 2026-11-03): back on for today's zones (CoreLadder): shows from Config.CoreLoop.Teleport
+	-- ZonesAfterRebirths rebirths, jumps to any opened zone through the server (CoreGoTo "Zone")
+	local CORE = Config.CoreLoop.Enabled
+	local goRemote = if CORE then ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CoreGoTo") :: RemoteEvent else nil
+	local function zonesOpen(): number
+		return if CORE
+			then CoreLadder.ZonesOpen(player:GetAttribute("CoreZonesOpen"))
+			else player:GetAttribute("ZonesOpen") or 1
+	end
+	local function isOpen(zone: number): boolean
+		return if CORE then zone <= zonesOpen() else Zones.Unlocked(zonesOpen(), zone)
+	end
+	local function zoneName(zone: number): string
+		local info = CORE and CoreLadder.ZoneInfo(zone)
+		return if info then info.Name else Zones.Name(zone)
 	end
 	local playerGui = player:WaitForChild("PlayerGui")
 	local hud = playerGui:WaitForChild("HUD") :: ScreenGui
@@ -186,11 +199,19 @@ function TeleportController:Start()
 		if not root or not humanoid or humanoid.Health <= 0 or os.clock() - lastTeleport < COOLDOWN then
 			return
 		end
-		if not Zones.Unlocked(player:GetAttribute("ZonesOpen"), zone) then
+		if not isOpen(zone) then
 			return
 		end
 		-- No teleporting out of the Pin Titan fight (BossService brings you back to the roof after it)
 		if player:GetAttribute("BossFighting") then
+			return
+		end
+		if goRemote then
+			lastTeleport = os.clock()
+			goRemote:FireServer("Zone", zone)
+			win:Close()
+			UiFx.Flash((ZONE_PAINT[zone] or FALLBACK_PAINT)[1], 0.6, 0.4)
+			Sfx.Play("Teleport")
 			return
 		end
 		local spot = arrival(zone)
@@ -209,7 +230,7 @@ function TeleportController:Start()
 	end
 
 	local cards = {}
-	local built = math.min(Config.Zones.BuiltZones, 4) -- launch = zones 1-4: the grid holds four
+	local built = math.min(if CORE then CoreLadder.ZoneCount() else Config.Zones.BuiltZones, 4) -- the grid holds four
 	for zone = 1, built do
 		local paint = ZONE_PAINT[zone] or FALLBACK_PAINT
 		local col, row = (zone - 1) % 2, (zone - 1) // 2
@@ -246,7 +267,7 @@ function TeleportController:Start()
 			ZIndex = 6,
 		})
 
-		local name = RewardKit.Label(face, Zones.Name(zone):upper(), UiKit.Head, 24, C.White, 2.5, 132, 10, 146, 54)
+		local name = RewardKit.Label(face, zoneName(zone):upper(), UiKit.Head, 24, C.White, 2.5, 132, 10, 146, 54)
 		name.TextWrapped = true
 		name.TextXAlignment = Enum.TextXAlignment.Left
 		RewardKit.Fit(name, 24, 140, 54)
@@ -268,7 +289,9 @@ function TeleportController:Start()
 		})
 		local pay = RewardKit.Label(
 			chip.Face,
-			("%s COINS"):format(Currency.FormatMultiplier(Zones.CoinPay(zone))),
+			("%s COINS"):format(
+				Currency.FormatMultiplier(if CORE then CoreLadder.ZoneValue(zone) else Zones.CoinPay(zone))
+			),
 			UiKit.Head,
 			18,
 			C.Gold,
@@ -302,11 +325,13 @@ function TeleportController:Start()
 	end
 
 	local function refresh()
-		local zonesOpen = player:GetAttribute("ZonesOpen") or 1
-		openButton.Visible = zonesOpen >= 2
-		local here = hereZone()
+		openButton.Visible = if CORE
+			then (player:GetAttribute("Rebirths") or 0) >= (Config.CoreLoop.Teleport.ZonesAfterRebirths or 1)
+			else zonesOpen() >= 2
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local here = if CORE then (if root then CoreLadder.ZoneAt(root.Position) else nil) else hereZone()
 		for zone, card in cards do
-			local open = Zones.Unlocked(zonesOpen, zone)
+			local open = isOpen(zone)
 			local state = if not open then "Locked" elseif zone == here then "Here" else "Open"
 			card.State = state
 			card.Shade.Visible = not open
@@ -323,7 +348,7 @@ function TeleportController:Start()
 				go:SetText("YOU ARE HERE")
 			else
 				go:Paint(C.Grey, C.GreyLip, C.LockedText)
-				go:SetText(Zones.NeedText(zone))
+				go:SetText(if CORE then "OPEN AT GATE" else Zones.NeedText(zone))
 			end
 			go:SetPressable(state ~= "Here")
 		end
@@ -346,7 +371,7 @@ function TeleportController:Start()
 			open()
 		end
 	end)
-	for _, key in { "ZonesOpen", "Rebirths" } do
+	for _, key in { "ZonesOpen", "CoreZonesOpen", "Rebirths" } do
 		player:GetAttributeChangedSignal(key):Connect(refresh)
 	end
 	refresh()

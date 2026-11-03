@@ -709,7 +709,18 @@ function MultiplierController:Start()
 			local label = text(auto, "Label", FONT, LIME)
 			label.Position = UDim2.fromScale(0.08, 0.15)
 			label.Size = UDim2.fromScale(0.84, 0.7)
+			local sellBeside = false -- AUTO SELL right of AUTO instead of under it
 			HudKit.OnLayout(function(phone)
+				sellBeside = false
+				if v2Kit and not phone and Config.Ui.PassesButton == false and Config.CoreLoop.Enabled then
+					-- (owner 2026-11-03, computer) AUTO + AUTO SELL side by side right under the REBIRTH bar
+					local position, size = HudKit.Spot("CoreRebirth", phone)
+					local w = ((size :: UDim2).X.Offset - 12) / 2
+					auto.Position = position + UDim2.fromOffset(0, (size :: UDim2).Y.Offset + 12)
+					auto.Size = UDim2.fromOffset(math.floor(w), 52)
+					sellBeside = true
+					return
+				end
 				if v2Kit then
 					-- V2: right of the gem pill
 					local position, size = HudKit.Spot("Gems", phone)
@@ -757,7 +768,8 @@ function MultiplierController:Start()
 					local tag = text(auto, "FreeTag", FONT, GOLD_TAG)
 					tag.Text = "FREE!"
 					tag.Size = UDim2.fromScale(0.7, 0.55)
-					tag.Position = UDim2.fromScale(0.65, -0.35)
+					-- (under the button when it sits under the REBIRTH bar, so it doesn't cover the bar)
+					tag.Position = if sellBeside then UDim2.fromScale(0.15, 0.85) else UDim2.fromScale(0.65, -0.35)
 					tag.Rotation = 8
 					task.delay(AUTO_TAG_SECONDS, tag.Destroy, tag)
 				end
@@ -790,12 +802,15 @@ function MultiplierController:Start()
 				end
 				autoSell.Parent = hud
 				local sellLabel = autoSell:FindFirstChild("Label") :: TextLabel
-				HudKit.OnLayout(function()
+				local function placeSell()
 					autoSell.Size = auto.Size
-					autoSell.Position = auto.Position + UDim2.fromOffset(0, auto.Size.Y.Offset + 6)
-				end)
-				autoSell.Size = auto.Size
-				autoSell.Position = auto.Position + UDim2.fromOffset(0, auto.Size.Y.Offset + 6)
+					autoSell.Position = auto.Position
+						+ if sellBeside
+							then UDim2.fromOffset(auto.Size.X.Offset + 12, 0)
+							else UDim2.fromOffset(0, auto.Size.Y.Offset + 6)
+				end
+				HudKit.OnLayout(placeSell)
+				placeSell()
 				local function showSell()
 					local pass = Store.Pass("AutoSell")
 					local owns = Store.Owns(player, "AutoSell")
