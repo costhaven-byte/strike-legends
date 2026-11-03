@@ -117,7 +117,7 @@ function PlaytimeController:Start()
 		("ONE NOW, THEN ONE EVERY %d MIN. NEW ONES EACH DAY"):format(
 			PLAYTIME.Rewards[2].Minutes - PLAYTIME.Rewards[1].Minutes
 		),
-		C.Pink
+		if UiKit.V2 then C.Gold else C.Pink
 	)
 	local COUNT = #PLAYTIME.Rewards
 	local TILE_W, TILE_H = 169, 119

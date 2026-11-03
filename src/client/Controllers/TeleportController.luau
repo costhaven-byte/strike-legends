@@ -173,7 +173,7 @@ function TeleportController:Start()
 		DisplayOrder = 12,
 	}, playerGui) :: ScreenGui
 	local win = RewardKit.Window(windowGui, W, H)
-	local cover, closeX = RewardKit.Cover(win.Panel, W, H, "TELEPORT", "JUMP TO ANY ZONE YOU HAVE OPENED", C.Cyan)
+	local cover, closeX = RewardKit.Cover(win.Panel, W, H, "TELEPORT", "JUMP TO ANY ZONE YOU HAVE OPENED", if UiKit.V2 then C.Gold else C.Cyan)
 	closeX.Activated:Connect(function()
 		win:Close()
 	end)

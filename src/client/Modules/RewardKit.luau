@@ -32,6 +32,8 @@ RewardKit.Paint = {
 	Grey = { C.Grey, C.GreyLip },
 	Fever = { UiKit.Hex("FF7A1A"), UiKit.Hex("C2410C") }, -- FEVER MODE (Config.Fever)
 }
+-- An idle tab: grey, or a navy tile in the V2 look (Polish v2 U4, like the SHOP and STORE tabs)
+RewardKit.Paint.Idle = if UiKit.V2 then { C.Card, C.Page } else RewardKit.Paint.Grey
 
 -- Largest text size (up to max) whose wrapped text fits w x h design px. Measured on the design size, so it is right
 -- under any UIScale (HudKit.Fit measures on screen, which a shrunk window would shrink twice).

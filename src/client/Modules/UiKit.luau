@@ -76,6 +76,34 @@ if Config.Ui.Sunny == true then
 	C.Grey, C.GreyLip = S.Grey, S.GreyLip
 end
 
+-- Polish v2 U4 (Config.Ui.WindowsV2): the windows built with this kit take the V2 look of the SHOP and STORE (navy
+-- window and cards, white text, SlKit paints). Same names, so every screen follows; SunKit.Daylight leaves white text
+-- on navy alone.
+UiKit.V2 = Config.Ui.WindowsV2 == true
+if UiKit.V2 then
+	local SlKit = require(script.Parent:WaitForChild("SlKit"))
+	local K, P = SlKit.C, SlKit.Paints
+	C.Ink = K.Ink
+	C.Cover = K.Window
+	C.Page = K.TileLip
+	C.Card = K.Tile
+	C.Missing = K.TileLip
+	C.Chip = K.TileLip
+	C.Slot = K.TileLip
+	C.Dash = K.TileStrip
+	C.Label = K.White
+	C.Muted = hex("BFD3F0")
+	C.Faded = hex("8FA6C8")
+	C.MissingTrait = hex("BFD3F0")
+	C.LockedText = hex("BFD3F0")
+	C.Gold, C.GoldLip = P.Gold[1], P.Gold[2]
+	C.Cyan, C.CyanLip = P.Blue[1], P.Blue[2]
+	C.Pink, C.PinkLip = P.Pink[1], P.Pink[2]
+	C.Lime, C.LimeLip = P.Green[1], P.Green[2]
+	C.Red = P.Red[1]
+	C.Grey, C.GreyLip = P.Disabled[1], P.Disabled[2]
+end
+
 -- Rarity tab colours (fill, lip), by Config.Rarities name
 UiKit.Rarity = {
 	Common = { hex("B8C0D4"), hex("7A839C") },

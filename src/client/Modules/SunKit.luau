@@ -285,7 +285,56 @@ end
 -- A night-look board in the world (lane scoreboards, the leaderboard wall), repainted on this screen: navy
 -- screens turn cream (nested ones sand), the dark backdrop gradient turns flat sky, neon frame rings turn ink,
 -- then Daylight darkens the text. Studio-built boards, so the place file keeps the night look (Sunny off = as is).
+-- Polish v2 U4 (Config.Ui.WindowsV2): the board in the V2 window look instead: navy backdrop, tile panels, darker
+-- rows, ink rings, no gradients. Text keeps its night colours (light on navy); gold / silver / bronze / YOU rings stay.
+local function boardV2(gui: LayerCollector)
+	local K = require(script.Parent:WaitForChild("SlKit")).C
+	local function filled(object: Instance): boolean
+		return object:IsA("Frame") and object.BackgroundTransparency < 0.4
+	end
+	local muted = Color3.fromHex("BFD3F0")
+	for _, object in gui:GetDescendants() do
+		if object:IsA("UIGradient") then
+			object.Enabled = false
+		elseif object:IsA("TextLabel") then
+			local c = object.TextColor3
+			if chroma(c) < 0.25 and luma(c) > 0.35 and luma(c) < 0.85 then
+				object.TextColor3 = muted -- the night kit's lavender greys -> the V2 light blue-grey
+			end
+		elseif filled(object) then
+			local frame = object :: Frame
+			local color = frame.BackgroundColor3
+			local tinted = frame:FindFirstChildWhichIsA("UIGradient") ~= nil
+			if frame.Name == "Background" or luma(color) < 0.2 or tinted then
+				local depth = 0
+				local node = frame.Parent
+				while node and node ~= gui do
+					if filled(node) and node.Name ~= "Background" then
+						depth += 1
+					end
+					node = node.Parent
+				end
+				frame.BackgroundColor3 = if frame.Name == "Background"
+					then K.Window
+					elseif frame.Name == "AvatarFrame" then K.Ink
+					elseif depth == 0 then K.Tile
+					else K.TileLip
+				frame.BackgroundTransparency = 0
+				for _, child in frame:GetChildren() do
+					if child:IsA("UIStroke") and chroma(child.Color) < 0.3 then
+						child.Color = K.Ink
+					end
+				end
+			end
+		end
+	end
+end
+
 function SunKit.Board(gui: LayerCollector)
+	if Config.Ui.WindowsV2 == true then
+		boardV2(gui)
+		return
+	end
 	if Config.Ui.Sunny ~= true then
 		return
 	end

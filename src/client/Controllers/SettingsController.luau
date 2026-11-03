@@ -190,7 +190,7 @@ function SettingsController:Start()
 		DisplayOrder = 12,
 	}, playerGui) :: ScreenGui
 	local win = RewardKit.Window(windowGui, W, H)
-	local cover, closeX = RewardKit.Cover(win.Panel, W, H, "SETTINGS", "SAVED FOR NEXT TIME", C.White)
+	local cover, closeX = RewardKit.Cover(win.Panel, W, H, "SETTINGS", "SAVED FOR NEXT TIME", if UiKit.V2 then C.Gold else C.White)
 	closeX.Activated:Connect(function()
 		win:Close()
 	end)

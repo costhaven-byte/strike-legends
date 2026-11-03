@@ -404,12 +404,12 @@ function MilestoneController:Start()
 			Position = UDim2.new(0.5, 0, 0, 14),
 			Size = UDim2.new(0.9, 0, 0, 26),
 			BackgroundTransparency = 1,
-			FontFace = UiKit.Body,
+			FontFace = if UiKit.V2 then UiKit.Num else UiKit.Body, -- (U4: the V2 look's Fredoka One)
 			TextSize = 20,
 			TextColor3 = C.White,
 			TextTransparency = 1,
 			TextStrokeTransparency = 1,
-			TextStrokeColor3 = Color3.new(0, 0, 0),
+			TextStrokeColor3 = C.Ink,
 			Text = ("You made %s coins while you were gone"):format(Currency.Format(coins)),
 			ZIndex = 50,
 		}, toastGui)

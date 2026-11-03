@@ -231,3 +231,23 @@ Before: File > Save to Roblox As a copy (restore = git tag `restore-polish-v2-be
 - 8 BUY BEST calls at once: 1 handled, 7 refused "Too fast, wait a sec"; no double charge, no double step.
 - Buying away from the stall: refused "Buy it at the shop". Bad buy arguments: refused safely ("That didn't work").
 - 3 SELL teleports on an empty bag: no sell counted, coins unchanged.
+
+## T1 + T2 full bug hunt and fixes (d1582c3, tag restore-pl-T2-before)
+- Whole loop played from zero in Studio through the real remotes and clicks; every finding is in BUG_HUNT_REPORT.md.
+- 6 bugs fixed: NaN buy/equip guard, REBIRTH try away from the shop used up the rate limit, GIFTS tile titles were
+  black blobs (dark text lost its ink outline), tutorial strip drew over windows, STORE showed "XP x1", PETS NEW
+  count hid under the close X.
+- Not tested (Studio limits): two players on the shared lane, a real phone, real Robux purchases.
+
+## U4 last windows in the V2 look (tag restore-pl-U4-before)
+- `Config.Ui.WindowsV2 = true`: the older window kits (UiKit, HudKit, RewardKit) take the SHOP / STORE look: navy
+  window, navy cards, white text, SlKit button paints. One switch, so GIFTS, PROFILE (boosts, stats, achievements),
+  SETTINGS and every other window built with those kits changed together. false = the cream windows come back.
+- Window titles GIFTS / SETTINGS / TELEPORT are gold like SHOP and STORE; PROFILE idle tabs are navy tiles.
+- Roof leaderboard wall: navy backdrop, tile panels, darker rows, ink rings, gradients off, light text (was cream on
+  sky). Lane scoreboards use the same paint.
+- Away coins line ("You made X coins while you were gone") uses Fredoka One with an ink outline.
+- Decisions: re-skin, not rebuild (same reason as U2: keeps every working button and claim). TELEPORT window and the
+  spin wheel are switched off in the core loop (unreachable), so they only got the palette, not a visual check.
+- Checked in Play: SETTINGS, GIFTS, PROFILE x3 tabs (screenshots), leaderboard colours read back (3D view not drawing
+  in captures this session). Console: only the known warnings.

@@ -583,7 +583,7 @@ function ProfileController:Start()
 		current = name
 		for key, page in pages do
 			page.Visible = key == name
-			local paint = if key == name then RewardKit.Paint.Gold else RewardKit.Paint.Grey
+			local paint = if key == name then RewardKit.Paint.Gold else RewardKit.Paint.Idle
 			tabs[key]:Paint(paint[1], paint[2])
 		end
 		if name == "Boosts" then

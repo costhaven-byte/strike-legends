@@ -103,6 +103,25 @@ if SUNNY then
 	HudKit.Body = SunKit.Body
 end
 
+-- Polish v2 U4 (Config.Ui.WindowsV2): panels and cards navy like the SHOP and STORE, buttons in the SlKit paints
+if Config.Ui.WindowsV2 == true then
+	local Kit = require(script.Parent:WaitForChild("SlKit"))
+	local K, P = Kit.C, Kit.Paints
+	C.Panel, C.Card, C.CardLip = K.Window, K.Tile, K.TileLip
+	C.Ink, C.Divider = K.Ink, K.TileStrip
+	C.Gold, C.GoldLip = P.Gold[1], P.Gold[2]
+	C.Cyan, C.CyanLip = P.Blue[1], P.Blue[2]
+	C.Pink, C.PinkLip = P.Pink[1], P.Pink[2]
+	C.Lime, C.LimeLip = P.Green[1], P.Green[2]
+	C.Red, C.RedLip = P.Red[1], P.Red[2]
+	C.Grey, C.GreyLip = P.Disabled[1], P.Disabled[2]
+	C.Purple, C.PurpleLip = P.Purple[1], P.Purple[2]
+	C.Cream, C.CreamLip = K.Tile, K.TileLip
+	for name, pair in HudKit.Paints do
+		pair[1], pair[2] = C[name], C[if name == "Card" then "CardLip" elseif name == "Cream" then "CreamLip" else name .. "Lip"]
+	end
+end
+
 -- "Coin" -> the HudCoin image (AssetSlots.Images)
 function HudKit.Icon(name: string): string
 	return AssetSlots.Image("Hud" .. name)
