@@ -4665,6 +4665,21 @@ Config.MascotFx = {
 	ShelfHover = 1.6, -- studs above the shelf (placeholder pets and pets that fly: Config.PetIdle Floats); walkers stand on it
 }
 
+-- Polish v2 D7: the living world (client only, WorldLifeController). Only the zone your camera is in moves, updated
+-- Rate times a second. Palm leaves bob, bunting flags flutter, kites and the hot-air balloon float, waterfall sheets
+-- flow (a scrolling vapour texture) with foam at their feet, and the shop / sell pads pulse when you step on them.
+Config.WorldLife = {
+	Enabled = true,
+	Rate = 30, -- updates per second
+	Near = 450, -- studs from a zone's middle (flat) for its things to move
+	Palm = { Angle = 4, Speed = 0.8 }, -- degrees a leaf bobs, swings per second
+	Bunting = { Angle = 12, Speed = 1.4 },
+	Kite = { Bob = 0.8, Roll = 8, Speed = 0.5 }, -- studs up/down, degrees of roll
+	Balloon = { Bob = 1.5, Speed = 0.3 },
+	Waterfall = { Speed = 10, Tile = 8, Transparency = 0.45, Foam = 10 }, -- studs/second down, foam puffs/second
+	PadPulse = { Grow = 1.8, Time = 0.5, Sound = "Tap" },
+}
+
 -- Polish v2 D4: how pets move (MascotFollowController, the egg stands, the egg board)
 Config.PetMotion = {
 	Freq = 2.4, -- follow spring (per second): a little lag behind you and a small overshoot when you stop

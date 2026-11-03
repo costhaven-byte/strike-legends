@@ -360,3 +360,20 @@ Before: File > Save to Roblox As a copy (restore = git tag `restore-polish-v2-be
 - Checked in Play: throw shake x/y movement 89% along one line, 11 swings in 0.5 s, dying out; the bigger shake rings
   out the same way. The DAILY curve wasn't watched live (Studio wasn't drawing frames); it uses the same curve maths
   as the sell coins, checked in D2.
+
+## D7 living world (tag restore-pl-D7-before)
+- New `WorldLifeController` (numbers in `Config.WorldLife`), client only: only the zone your camera is in moves, 30
+  updates a second, one BulkMoveTo per frame; leaving a zone puts everything back exactly.
+  - Palm leaves (zones 2-4) bob up and down on their crown, each palm a little out of step with the next.
+  - Bunting flags (zones 2-4) flutter on their rope, the movement running along the rope like a wave.
+  - Zone 2's kites and zone 4's hot-air balloon float up and down with a slow roll.
+  - Zone 3's waterfall sheets flow: a vapour texture scrolls down both faces, and mist puffs up from the foam.
+  - The shop and sell pads pulse a ring in their colour with a soft tap the moment you step on (every zone).
+- SETTINGS > EFFECTS off stops the world moving (the pad pulse stays: it's feedback).
+- Already moving, not touched: the ferris wheel, the egg rock (D4), pets. Not done: water surfaces/waves (the
+  boardwalk has no sea part to move; the jungle pool and oasis are flat parts), birds and clouds (there's one pigeon
+  coop prop and no bird models: adding new birds is new art, so it's on the list for the owner, not invented here),
+  stall idles (the stalls' coins and balls are welded into the owner's models).
+- Checked in Play (zone 2, a Heartbeat copy because Studio wasn't drawing frames): a palm leaf swings 9 degrees end
+  to end, a flag 0.2 studs, a kite 1.2 studs; 9 waterfall sheets got their flow; stepping on the sell pad made the
+  ring. Console clean (one parse error came from a broken test copy of mine, not the game).
