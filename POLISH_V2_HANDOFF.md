@@ -3,7 +3,7 @@
 Updated after every stage. If you're picking this up: read CLAUDE.md, PROJECT_STATE.md, POLISH_PLAN_V2.md,
 POLISH_V2_REPORT.md (what's done), then this file (where it stopped).
 
-## Where it stands (2026-11-03)
+## Where it stands (2026-11-03, end of first session: weekly usage ~92%, context nearly full)
 - Run started with weekly usage at 87%. Stop rule from the owner: stop at 95% of the 5-hour limit or 98% weekly.
 - DONE: L0 (before the run, ffe84c0), U1 (492a81d), TUT tutorial (7346708; owner's extra ask mid-run: "really
   concise tutorial, show not tell, reward each step" = Config.Tutorial, TutorialService, TutorialController, save v39).
@@ -14,6 +14,7 @@ POLISH_V2_REPORT.md (what's done), then this file (where it stopped).
 - BUY BEST bug from the tutorial test: NOT reproducible through the CoreBuy remote (bought ball 6 fine). Re-check the
   real tap in T1.
 - DONE: U2 STORE in V2 look (re-skin, Config.Ui.StoreV2).
+- DONE: T1 early abuse checks (buy/sell spam safe), owner playtest for the done stages written in the report.
 - DONE: U3 part 1b = rarity names under board pets + AUTO-DELETE gear mode (see report).
 - NEXT: U3 part 2 (reference picture = Documents/Strike Legends Assets/refforpethatch.png: small white card of 3-across
   pet tiles with % on top + rarity name under, price pill right of it, round AUTO-DELETE / T AUTO / R OPEN 3 /

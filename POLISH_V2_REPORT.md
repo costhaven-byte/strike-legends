@@ -107,3 +107,8 @@ Before: File > Save to Roblox As a copy (restore = git tag `restore-polish-v2-be
    Hatch the free egg: that pet turns coloured. Tap a pet: nothing. Tap the blue gear (turns red), then tap a pet:
    red X. Gear off again: taps do nothing.
 7. Phone size (Studio device emulator): same checks 1, 2, 5.
+
+## T1 early abuse checks (server side, through the remotes)
+- 8 BUY BEST calls at once: 1 handled, 7 refused "Too fast, wait a sec"; no double charge, no double step.
+- Buying away from the stall: refused "Buy it at the shop". Bad buy arguments: refused safely ("That didn't work").
+- 3 SELL teleports on an empty bag: no sell counted, coins unchanged.
