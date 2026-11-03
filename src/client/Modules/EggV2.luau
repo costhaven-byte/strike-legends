@@ -22,6 +22,7 @@ local MascotView = require(script.Parent.MascotView)
 local PetsV2 = require(script.Parent.PetsV2)
 local SlKit = require(script.Parent.SlKit)
 local Sfx = require(script.Parent.Sfx)
+local Motion = require(script.Parent.Motion)
 
 local player = Players.LocalPlayer
 local make = SlKit.Make
@@ -33,6 +34,7 @@ local WHITE = C.White
 local NIGHT = hex("0B1A33")
 local ROBUX_GLYPH = utf8.char(0xE002)
 local BOARD = Config.EggBoard
+local PET_MOTION = Config.PetMotion
 
 local EggV2 = {}
 
@@ -1158,8 +1160,42 @@ function EggV2.GridBoard(ctx: { [string]: any }): { [string]: any }
 	player:GetAttributeChangedSignal("AutoDelete"):Connect(refreshMarks)
 
 	-- Pets you've never found are black (chance still shows: honest odds); the rarest unfound one says "???".
-	-- A pet found just now pops back into colour.
+	-- Polish v2 D4: a pet found just now flips over from black to colour (Config.PetMotion.BoardFlip). Found during a
+	-- hatch (the board hides then), it flips the next time the board shows.
 	local wasFound: { [any]: boolean } = {}
+	local pendingFlips: { [any]: boolean } = {}
+	local function flip(refs: { [string]: any })
+		local frame = refs.View.Parent :: GuiObject
+		refs.Base = refs.Base or frame.Size
+		local base = refs.Base :: UDim2
+		Motion.Drive(frame, "Flip", 1, -1, {
+			Time = PET_MOTION.BoardFlip,
+			Style = Enum.EasingStyle.Sine,
+			Dir = Enum.EasingDirection.InOut,
+		}, function(p)
+			local w = math.max(math.abs(p), 0.03)
+			frame.Size = UDim2.new(base.X.Scale * w, base.X.Offset * w, base.Y.Scale, base.Y.Offset)
+			refs.View.ImageColor3 = if p < 0 then WHITE else Color3.new(0, 0, 0)
+		end, function()
+			frame.Size = base
+			refs.View.ImageColor3 = WHITE
+			SlKit.Pulse(refs.Column, 1.25, 0.4)
+		end)
+	end
+	local function playFlips()
+		local list = {}
+		for mascot in pendingFlips do
+			table.insert(list, mascot)
+		end
+		table.clear(pendingFlips)
+		table.sort(list, function(a, b)
+			return Mascots.RarityIndex(a.Rarity) < Mascots.RarityIndex(b.Rarity)
+		end)
+		Motion.Stagger(list, function(mascot)
+			flip(foundViews[mascot])
+			Sfx.Play("Reveal", 0.5)
+		end, 0.2, 0.25)
+	end
 	local function refreshFound()
 		local found = {}
 		for _, id in string.split(player:GetAttribute("PetsFound") or "", ",") do
@@ -1168,18 +1204,21 @@ function EggV2.GridBoard(ctx: { [string]: any }): { [string]: any }
 		local rarest, rarestRank = nil, -1
 		for mascot, refs in foundViews do
 			local isFound = found[mascot.Id] == true
-			refs.View.ImageColor3 = if isFound then WHITE else Color3.new(0, 0, 0)
+			if isFound and wasFound[mascot] == false then
+				pendingFlips[mascot] = true
+			end
+			refs.View.ImageColor3 = if isFound and not pendingFlips[mascot] then WHITE else Color3.new(0, 0, 0)
 			refs.Mystery.Visible = false
 			if not isFound and Mascots.RarityIndex(mascot.Rarity) > rarestRank then
 				rarest, rarestRank = mascot, Mascots.RarityIndex(mascot.Rarity)
-			end
-			if isFound and wasFound[mascot] == false then
-				SlKit.Pulse(refs.Column, 1.25, 0.4)
 			end
 			wasFound[mascot] = isFound
 		end
 		if rarest then
 			foundViews[rarest].Mystery.Visible = true
+		end
+		if next(pendingFlips) and gui.Enabled and not ctx.Busy() then
+			playFlips()
 		end
 	end
 	refreshFound()
@@ -1250,6 +1289,9 @@ function EggV2.GridBoard(ctx: { [string]: any }): { [string]: any }
 			refresh()
 			pop.Scale = 0.7
 			SlKit.Tween(pop, 0.2, "Over", { Scale = 1 })
+			if next(pendingFlips) then
+				playFlips() -- (pets found while it was hidden)
+			end
 		else
 			SlKit.Tween(pop, 0.12, "Snap", { Scale = 0.7 })
 			task.delay(0.12, function()

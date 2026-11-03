@@ -4597,6 +4597,29 @@ Config.MascotFx = {
 	ShelfHover = 1.6, -- studs above the shelf (placeholder pets and pets that fly: Config.PetIdle Floats); walkers stand on it
 }
 
+-- Polish v2 D4: how pets move (MascotFollowController, the egg stands, the egg board)
+Config.PetMotion = {
+	Freq = 2.4, -- follow spring (per second): a little lag behind you and a small overshoot when you stop
+	Damp = 0.72, -- (1 = no overshoot)
+	Snap = 40, -- studs: further than this from its spot (a teleport) = the pet jumps straight there
+	Bank = 0.16, -- leaning into turns: degrees of lean per degree/second of turning...
+	MaxBank = 24, -- ...at most this (walkers lean half as much)
+	Pitch = 1.4, -- flyers dip their nose when flying fast: degrees per stud/second...
+	MaxPitch = 14, -- ...at most this
+	Hop = 0.55, -- walkers hop while they move: studs high...
+	HopRate = 0.32, -- ...hops per stud travelled
+	Face = 7, -- how fast pets turn to face where they're going
+	LookPins = 0.8, -- seconds after the ball reaches the pins that pets keep watching the lane
+	SleepAfter = 30, -- seconds without moving or throwing: pets doze (stop their idle, sink, tilt, z z z)
+	SleepSink = 0.5, -- studs flyers sink while asleep
+	SleepTilt = 12, -- degrees a dozing pet leans over
+	SleepZ = 1.8, -- seconds for each z to float up
+	EquipKick = 16, -- a new pet hops out of you at this upward speed (studs/second)...
+	EquipGravity = 55, -- ...and falls back under this (studs/second/second): about 2.3 studs high
+	EggWobble = { Every = 4, Time = 0.75, Angle = 6, Rocks = 2 }, -- eggs on their stands rock now and then
+	BoardFlip = 0.5, -- seconds a pet found for the first time takes to flip from black to colour on the egg board
+}
+
 -- Real pet models (the owner's Claude Design pets, 2026-10-21): ReplicatedStorage.PetModels.<mascot Id> (and Egg_<egg Id>),
 -- built in Studio from the imported .glb files and repainted from their colours. Sized for Config.MascotFx.Size; a
 -- mascot without a model falls back to the placeholder ball. Each pet's idle motion follows its design's idle pose.

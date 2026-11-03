@@ -6,6 +6,9 @@
 -- Reaction in Config.Mascots; Shiny ones also burst gold sparkles), then fly back as the camera returns.
 -- Real pet models (2026-10-21) play their design's idle pose (Shared.Config.PetIdle, Modules.PetIdle): walkers stay on
 -- the ground, floaters (Floats) hover at Config.MascotFx.Hover.
+-- Polish v2 D4 (Config.PetMotion): pets follow on a spring (lag, a small overshoot when you stop), face where they go,
+-- lean into turns, flyers dip their nose, walkers hop as they move; they watch the lane while your ball rolls, cheer
+-- on a LUCKY hit, doze when you stand still for a while (z z z), and a new pet hops out of you.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -19,6 +22,7 @@ local PetIdle = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChil
 
 local FX = Config.MascotFx
 local IDLE = Config.PetIdle
+local MOTION = Config.PetMotion
 local PER_ROW = 3
 
 local MascotFollowController = {}
@@ -28,11 +32,23 @@ type Pet = {
 	Id: string,
 	Rig: PetIdle.Rig?,
 	Position: Vector3?,
+	Velocity: Vector3,
+	Yaw: number?,
+	Bank: number,
+	Hop: number,
+	HopAmp: number,
+	Zs: BillboardGui?,
+	Air: number?, -- upward speed while hopping out of you (studs/second), nil once landed
+	AirY: number,
 	Phase: number,
 	ReactAt: number?,
 	ReactsLeft: number?,
 }
 local pets: { [Player]: { Pet } } = {}
+-- What each owner is doing: last time they moved or threw, and the lane spot their pets watch while a ball rolls
+type Owner = { Active: number, LookAt: Vector3?, LookUntil: number, Sleep: number }
+local owners: { [Player]: Owner } = {}
+local built: { [Player]: boolean } = {}
 -- A strike cheer in progress: where each mascot stands (by index) and when it starts and ends (os.clock)
 type Cheer = { From: number, Until: number, Spots: { CFrame } }
 local cheers: { [Player]: Cheer } = {}
@@ -44,6 +60,8 @@ local function clear(player: Player)
 	end
 	pets[player] = nil
 	cheers[player] = nil
+	owners[player] = nil
+	built[player] = nil
 end
 
 -- Rebuilds a player's mascots when their equipped list changes (keeps the ones that didn't change)
@@ -64,7 +82,25 @@ local function refresh(player: Player)
 				model.Name = player.Name .. "_" .. id
 				local rig = PetIdle.Rig(model, (mascot.Base or mascot).Model or (mascot.Base or mascot).Id, 1)
 				model.Parent = folder
-				table.insert(list, { Model = model, Id = id, Rig = rig, Position = nil, Phase = index * 1.7 })
+				local pet: Pet = {
+					Model = model,
+					Id = id,
+					Rig = rig,
+					Position = nil,
+					Velocity = Vector3.zero,
+					Bank = 0,
+					Hop = 0,
+					HopAmp = 0,
+					AirY = 0,
+					Phase = index * 1.7,
+				}
+				-- (Polish v2 D4) a pet equipped now (not the ones you joined with) hops out of you
+				local root = built[player] and player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+				if root then
+					pet.Position = root.Position
+					pet.Air = MOTION.EquipKick
+				end
+				table.insert(list, pet)
 			end
 		end
 	end
@@ -72,6 +108,7 @@ local function refresh(player: Player)
 		pet.Model:Destroy()
 	end
 	pets[player] = list
+	built[player] = true
 end
 
 -- Starts every mascot of this player celebrating, `delay` seconds from now
@@ -141,15 +178,71 @@ local function slotOffset(index: number, count: number): Vector3
 	return Vector3.new(x, 0, FX.FollowDistance + row * FX.Spacing)
 end
 
+-- A small "z" floating up over a dozing pet (made the first time it dozes, lives in the pet's model)
+local function zsOf(pet: Pet): BillboardGui?
+	local zs = pet.Zs
+	if zs and zs.Parent then
+		return zs
+	end
+	local rig = pet.Rig
+	local adornee = (if rig then rig.Root else pet.Model.PrimaryPart) :: BasePart?
+	if not adornee then
+		return nil
+	end
+	local board = Instance.new("BillboardGui")
+	board.Name = "Zs"
+	board.Size = UDim2.fromOffset(40, 40)
+	board.LightInfluence = 0
+	board.MaxDistance = 60
+	board.Adornee = adornee
+	board.Enabled = false
+	local label = Instance.new("TextLabel")
+	label.Name = "Z"
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.fromScale(1, 1)
+	label.Text = "z"
+	label.TextScaled = true
+	label.FontFace = Font.new("rbxasset://fonts/families/FredokaOne.json")
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.TextStrokeColor3 = Color3.fromRGB(16, 23, 46)
+	label.TextStrokeTransparency = 0
+	label.Parent = board
+	board.Parent = pet.Model
+	pet.Zs = board
+	return board
+end
+
+-- Wraps an angle into -pi..pi
+local function wrap(angle: number): number
+	return (angle + math.pi) % (2 * math.pi) - math.pi
+end
+
 local function step(dt: number)
+	dt = math.min(dt, 0.1)
 	local camera = Workspace.CurrentCamera
 	local now = os.clock()
 	local alpha = 1 - math.exp(-FX.FollowSpeed * dt)
+	local w = 2 * math.pi * MOTION.Freq
+	local springSteps = math.max(1, math.ceil(dt * 120))
+	local h = dt / springSteps
+	local faceAlpha = 1 - math.exp(-MOTION.Face * dt)
+	local leanAlpha = 1 - math.exp(-8 * dt)
 	for player, list in pets do
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		local far = not root or (camera and (root.Position - camera.CFrame.Position).Magnitude > FX.ShowDistance)
+		local owner = owners[player]
+		if not owner then
+			owner = { Active = now, LookUntil = 0, Sleep = 0 }
+			owners[player] = owner
+		end
+		if root and (root.AssemblyLinearVelocity * Vector3.new(1, 0, 1)).Magnitude > 0.5 then
+			owner.Active = now
+		end
+		local dozing = now - owner.Active > MOTION.SleepAfter
+		owner.Sleep = math.clamp(owner.Sleep + (if dozing then dt / 1.5 else -dt / 0.3), 0, 1)
+		local sleep = owner.Sleep
 		for index, pet in list do
 			if far then
 				if pet.Model.Parent then
@@ -165,6 +258,8 @@ local function step(dt: number)
 			local target: Vector3
 			local cheer = cheers[player]
 			local spot = cheer and now >= cheer.From and now < cheer.Until and cheer.Spots[index]
+			local rig = pet.Rig
+			local floats = not rig or rig.Floats
 			if spot then
 				-- Cheering by the pins
 				target = spot.Position
@@ -175,22 +270,85 @@ local function step(dt: number)
 				local offset = slotOffset(index, #list)
 				target = (basis * CFrame.new(offset)).Position
 				-- Real pets: walkers stand on the ground, floaters hover (never low enough to touch it)
-				local rig = pet.Rig
 				local height = if not rig
 					then FX.Hover
 					elseif rig.Floats then math.max(FX.Hover, rig.HalfHeight + 0.3)
 					else rig.HalfHeight
+				if floats then
+					height -= MOTION.SleepSink * sleep
+				end
 				target = Vector3.new(target.X, ground + height, target.Z)
+				-- (while your ball rolls they watch the lane)
+				local lookAt = owner.LookAt
+				if lookAt and now < owner.LookUntil then
+					local toward = (lookAt - target) * Vector3.new(1, 0, 1)
+					if toward.Magnitude > 1 then
+						look = toward.Unit
+					end
+				end
 			end
-			local position = if pet.Position then pet.Position:Lerp(target, alpha) else target
+			-- Polish v2 D4: a spring towards the spot (up/down without overshoot, so walkers never sink into the floor)
+			local position = pet.Position
+			local velocity = pet.Velocity
+			if position and pet.Air and pet.AirY == 0 and not spot then
+				-- (just equipped: it starts at your middle; the follow keeps its own height and the hop carries the rest)
+				pet.AirY = math.max(0, position.Y - target.Y)
+				position = Vector3.new(position.X, target.Y, position.Z)
+			end
+			if not position or (target - position).Magnitude > MOTION.Snap or spot then
+				if position and spot then
+					position = position:Lerp(target, alpha)
+				else
+					position = target
+				end
+				velocity = Vector3.zero
+			else
+				local x, v = position, velocity
+				for _ = 1, springSteps do
+					local pull = target - x
+					local accel = Vector3.new(
+						pull.X * w * w - v.X * 2 * MOTION.Damp * w,
+						pull.Y * w * w - v.Y * 2 * w,
+						pull.Z * w * w - v.Z * 2 * MOTION.Damp * w
+					)
+					v += accel * h
+					x += v * h
+				end
+				position, velocity = x, v
+			end
 			pet.Position = position
-			local bob, turn = 0, CFrame.identity
-			local rig = pet.Rig
+			pet.Velocity = velocity
+
+			-- Face where it's going when it moves; otherwise the way you (or the lane) face
+			local flat = velocity * Vector3.new(1, 0, 1)
+			local speed = flat.Magnitude
+			local want = if speed > 1.5 and not spot then flat.Unit else look
+			local wantYaw = math.atan2(-want.X, -want.Z)
+			local yaw = pet.Yaw or wantYaw
+			local turn = wrap(wantYaw - yaw) * faceAlpha
+			yaw = wrap(yaw + turn)
+			pet.Yaw = yaw
+			-- lean into the turn (walkers half as much), flyers dip their nose with speed
+			local yawRate = math.deg(turn) / math.max(dt, 1 / 240)
+			local maxBank = if floats then MOTION.MaxBank else MOTION.MaxBank / 2
+			local bankTarget = math.clamp(yawRate * MOTION.Bank, -maxBank, maxBank)
+			pet.Bank += (bankTarget - pet.Bank) * leanAlpha
+			local pitch = if floats then -math.min(speed * MOTION.Pitch, MOTION.MaxPitch) else 0
+			-- walkers hop along while they move
+			local hop = 0
+			if not floats then
+				pet.HopAmp += ((if speed > 1 then 1 else 0) - pet.HopAmp) * leanAlpha
+				pet.Hop += speed * MOTION.HopRate * dt
+				hop = math.abs(math.sin(pet.Hop * math.pi)) * MOTION.Hop * pet.HopAmp
+			end
+
+			local bob, idleTurn = 0, CFrame.identity
 			if rig then
-				bob, turn = rig:Body(now)
+				bob, idleTurn = rig:Body(now)
 			else
 				bob = math.sin((now + pet.Phase) * FX.BobSpeed * math.pi * 2) * FX.BobHeight
 			end
+			bob *= 1 - 0.7 * sleep
 			local reactAt = pet.ReactAt
 			if reactAt and now >= reactAt then
 				local p = (now - reactAt) / FX.ReactTime
@@ -202,20 +360,48 @@ local function step(dt: number)
 					local mascot = Mascots.Get(pet.Id)
 					local lift, pose = reactionPose(mascot and mascot.Reaction, p)
 					bob += lift
-					turn *= pose
+					idleTurn *= pose
 				end
 			end
-			local at = position + Vector3.new(0, bob, 0)
-			local placed = CFrame.lookAt(at, at + look) * turn
+			-- (hopping out of you on equip: up and back down under gravity, on top of the follow)
+			local air = pet.Air
+			if air then
+				pet.AirY += air * dt
+				pet.Air = air - MOTION.EquipGravity * dt
+				if pet.AirY <= 0 and air < 0 then
+					pet.AirY, pet.Air = 0, nil
+				end
+			end
+			local at = position + Vector3.new(0, bob + hop + pet.AirY, 0)
+			local placed = CFrame.new(at)
+				* CFrame.Angles(0, yaw, 0)
+				* CFrame.Angles(math.rad(pitch), 0, math.rad(pet.Bank + MOTION.SleepTilt * sleep))
+				* idleTurn
+			local near = camera ~= nil and (position - camera.CFrame.Position).Magnitude <= IDLE.ShowDistance
 			if rig then
-				-- Moves the whole pet and plays its idle pose (only near your camera)
-				local near = camera and (position - camera.CFrame.Position).Magnitude <= IDLE.ShowDistance
-				rig:Step(now, near == true, placed)
+				-- Moves the whole pet and plays its idle pose (only near your camera; a dozing pet keeps still)
+				rig:Step(now, near and sleep < 0.6, placed)
 			else
 				pet.Model:PivotTo(placed)
 			end
 			if not pet.Model.Parent then
 				pet.Model.Parent = folder
+			end
+			-- z z z over a dozing pet
+			local zs = if sleep > 0.5 and near then zsOf(pet) else pet.Zs
+			if zs then
+				zs.Enabled = sleep > 0.5 and near
+				if zs.Enabled then
+					local p = ((now + pet.Phase) / MOTION.SleepZ) % 1
+					zs.StudsOffset = Vector3.new(0.4 + p * 0.6, 1.2 + p * 1.6, 0)
+					zs.Size = UDim2.fromOffset(16 + p * 22, 16 + p * 22)
+					local label = zs:FindFirstChild("Z") :: TextLabel?
+					if label then
+						local fade = math.max(0, (p - 0.6) / 0.4)
+						label.TextTransparency = fade
+						label.TextStrokeTransparency = fade
+					end
+				end
 			end
 		end
 	end
@@ -236,7 +422,7 @@ function MascotFollowController:Start()
 	-- Strikes (anyone's): their mascots celebrate as the pins fly
 	local remotes = ReplicatedStorage:WaitForChild("Remotes")
 	remotes:WaitForChild("ThrowResult").OnClientEvent:Connect(function(data)
-		if type(data) ~= "table" or (data.Tier ~= "Strike" and data.Tier ~= "PerfectStrike") then
+		if type(data) ~= "table" then
 			return
 		end
 		local thrower = Players:GetPlayerByUserId(data.UserId)
@@ -246,6 +432,26 @@ function MascotFollowController:Start()
 		end
 		local now = os.clock()
 		local rollTime = data.RollTime or 0
+		-- (Polish v2 D4) every throw: the pets watch the ball down the lane and stay awake
+		local owner = owners[thrower]
+		if owner then
+			owner.Active = now
+			local pinSpot = typeof(data.Lane) == "Instance" and data.Lane:FindFirstChild("PinSpot") :: BasePart?
+			if pinSpot then
+				owner.LookAt = pinSpot.Position
+				owner.LookUntil = now + rollTime + MOTION.LookPins
+			end
+		end
+		-- the core loop has no strikes: a LUCKY hit gets the cheer, right where the pets are
+		if data.Core then
+			if data.Lucky then
+				react(thrower, rollTime + FX.ReactDelay)
+			end
+			return
+		end
+		if data.Tier ~= "Strike" and data.Tier ~= "PerfectStrike" then
+			return
+		end
 		local spots = typeof(data.Lane) == "Instance" and cheerSpots(data.Lane, #list)
 		if spots then
 			-- Dash down as the ball arrives; fly back as the pins reset (the camera comes back then too)

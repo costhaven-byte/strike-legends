@@ -296,3 +296,24 @@ Before: File > Save to Roblox As a copy (restore = git tag `restore-polish-v2-be
 - Checked in Play: the wipe band (23 frames, covered then gone) on a zone 2 jump; shop window flies from the stall
   (837,407 -> 335,1, overshoot 1.07 -> 1.00); all 10 cards back at full size; rebirth held through the SHOP's
   REBIRTH tab -> moment shows, pop and chips at 1.00; console = only the known avatar warning.
+
+## D4 pets + eggs (tag restore-pl-D4-before)
+- Pets follow you on a spring (`Config.PetMotion`): a little lag, a small overshoot when you stop, they face where
+  they're going, lean into turns (flyers more than walkers), flyers dip their nose at speed, walkers hop along as
+  they walk. A teleport still puts them straight next to you.
+- Every throw: your pets turn to watch the ball down the lane, then look back. A LUCKY hit makes them cheer (their
+  own Hop / Spin / Flip / Wiggle) right where they are; the core loop has no strikes, so that's the big moment.
+- Stand still for 30 s (no moving, no throwing): your pets doze off: they stop their idle wiggle, flyers sink a
+  little, they lean over and a "z" floats up. Move or throw and they wake at once.
+- A pet you equip hops out of you (starts at your middle, arcs ~2 studs up, lands at its spot).
+- PETS window: the green EQUIPPED tick pops on.
+- Eggs on their stands rock on their base every ~4 s (like something inside wants out); they rest while a hatch
+  plays.
+- Egg board: a pet found for the first time flips over from black to colour (edge-on in the middle), one after
+  another, rarest last. Found during a hatch (the board hides), it flips when the board shows again.
+- Left as they were: the hatch (V7, already on the owner's storyboard) and the FUSE window (V6, bouncing FUSE).
+  Crates aren't in the core loop (the crate shop is hidden), so no crate work.
+- Checked in Play: walking hop 0.55 studs, none standing; pets face the pins during a throw (dot 1.00) and back
+  after (0.04); doze + z after 33 s still; egg rocks up to 5 degrees and settles back exactly (0.000 drift); board
+  flip after a real hatch (Breezy: 100 px black -> 3 px -> 100 px colour); equip hop peaks ~2.3 studs over its
+  start (tested with a Heartbeat copy: Studio stopped drawing frames when its window was hidden). Console clean.

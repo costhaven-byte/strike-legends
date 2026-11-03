@@ -356,6 +356,12 @@ function PetsV2.Card(parent: Instance?, mascot): { [string]: any }
 		ZIndex = 20,
 		Visible = false,
 	})
+	-- (Polish v2 D4) equipping pops the tick on
+	tick:GetPropertyChangedSignal("Visible"):Connect(function()
+		if tick.Visible then
+			SlKit.PopIn(tick)
+		end
+	end)
 	-- new copies: red number, top right
 	local new = make("Frame", {
 		Name = "New",

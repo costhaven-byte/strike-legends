@@ -2524,13 +2524,43 @@ function MascotController:Start()
 
 		-- Idle (hatch storyboard frame 1): the core pulses slowly while the camera is near
 		local rig = PetIdle.Rig(standEgg, "Egg_" .. egg.Id, 1)
-		if rig then
-			RunService.RenderStepped:Connect(function()
-				local camera = Workspace.CurrentCamera
-				local near = camera ~= nil and (camera.CFrame.Position - base).Magnitude <= Config.PetIdle.ShowDistance
-				rig:Step(os.clock(), near and not standBusy) -- the hatch drives the egg itself
-			end)
-		end
+		-- Polish v2 D4: every few seconds the egg rocks on its base, like something inside wants out
+		-- (Config.PetMotion.EggWobble); it rests while a hatch drives the egg itself
+		local WOBBLE = Config.PetMotion.EggWobble
+		local rest = if rig then rig.Root.CFrame else standEgg:GetPivot() -- (a rig places the egg by its Root)
+		local _, eggSize = standEgg:GetBoundingBox()
+		local foot = CFrame.new(0, -eggSize.Y / 2, 0) -- (the egg rocks on its bottom, not its middle)
+		local nextWobble = os.clock() + math.random() * WOBBLE.Every
+		local tilted = false
+		RunService.RenderStepped:Connect(function()
+			local camera = Workspace.CurrentCamera
+			local near = camera ~= nil and (camera.CFrame.Position - base).Magnitude <= Config.PetIdle.ShowDistance
+			local now = os.clock()
+			local tilt = 0
+			if near and not standBusy then
+				if now >= nextWobble + WOBBLE.Time then
+					nextWobble = now + WOBBLE.Every * (0.7 + math.random() * 0.6)
+				end
+				local t = now - nextWobble
+				if t >= 0 and t < WOBBLE.Time then
+					local p = t / WOBBLE.Time
+					tilt = math.sin(p * math.pi * 2 * WOBBLE.Rocks) * (1 - p) * math.rad(WOBBLE.Angle)
+				end
+			end
+			local at: CFrame? = nil
+			if tilt ~= 0 then
+				at = rest * foot * CFrame.Angles(0, 0, tilt) * foot:Inverse()
+				tilted = true
+			elseif tilted and not standBusy then
+				at = rest
+				tilted = false
+			end
+			if rig then
+				rig:Step(now, near and not standBusy, at) -- the hatch drives the egg itself
+			elseif at then
+				standEgg:PivotTo(at)
+			end
+		end)
 	end
 	for _, row in Config.EggStands do
 		task.spawn(buildStand, row)
