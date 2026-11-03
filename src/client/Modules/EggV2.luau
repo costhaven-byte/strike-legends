@@ -291,6 +291,7 @@ function EggV2.Board(ctx: { [string]: any }): { [string]: any }
 	local rowW = n * colW + (n - 1) * gap
 	local slots = {}
 	local foundViews = {}
+	local deleteMode = false
 	local spinners: { Model } = {}
 	local marked: { [string]: boolean } = {}
 	for index, mascot in pets do
@@ -370,6 +371,13 @@ function EggV2.Board(ctx: { [string]: any }): { [string]: any }
 			ZIndex = 7,
 		});
 		(percent:FindFirstChildOfClass("UIStroke") :: UIStroke).Thickness = 3
+		-- Polish v2 U3 (owner's reference): the rarity name under the chance, in its colour
+		text(column, string.upper(mascot.Rarity), 17, color, {
+			Name = "Rarity",
+			Position = UDim2.fromOffset(-6, 130),
+			Size = UDim2.new(1, 12, 0, 22),
+			ZIndex = 7,
+		})
 		-- auto-delete: slot 70% dark + red X tile
 		local dark = make("Frame", {
 			Name = "Deleted",
@@ -405,6 +413,9 @@ function EggV2.Board(ctx: { [string]: any }): { [string]: any }
 		if ctx.AutoDeleteRemote then
 			circle.Activated:Connect(function()
 				local AUTO_DELETE = Config.AutoDelete
+				if not deleteMode then
+					return -- (Polish v2 U3: tapping pets does nothing until the AUTO-DELETE gear is on)
+				end
 				if Mascots.RarityIndex(mascot.Rarity) > Mascots.RarityIndex(AUTO_DELETE.MaxRarity) then
 					ctx.Toast(AUTO_DELETE.TooRare:format(string.upper(mascot.Rarity)))
 					SlKit.Shake(column, 6, 0, 0.25)
@@ -432,10 +443,14 @@ function EggV2.Board(ctx: { [string]: any }): { [string]: any }
 	-- One small line between the slots and the buttons: LUCKY odds and the auto-delete hint
 	local note = text(inner, "", 20, hex("9FB3D1"), {
 		Name = "Note",
-		Position = UDim2.fromOffset(24, 246),
-		Size = UDim2.new(1, -48, 0, 40),
+		Position = UDim2.fromOffset(24 + 54, 254),
+		Size = UDim2.new(1, -48 - 54, 0, 36),
 		ZIndex = 6,
 	})
+	-- Polish v2 U3: AUTO-DELETE gear (owner's reference): on = tap pets to mark them X, off = taps do nothing
+	local gear = button(inner, { Name = "AutoDeleteGear", Paint = PAINT.Blue, W = 48, H = 44, Icon = "hud_settings", IconSize = 30, ZIndex = 4 })
+	gear.Holder.Position = UDim2.fromOffset(24, 250)
+	gear.Holder.Visible = ctx.AutoDeleteRemote ~= nil
 
 	-- HATCH 290 (key E) / AUTO 176 / x3 178 (+ Robux badge)
 	local computer = UserInputService.KeyboardEnabled and not UserInputService.TouchEnabled
@@ -509,9 +524,19 @@ function EggV2.Board(ctx: { [string]: any }): { [string]: any }
 			slot.Percent.TextColor3 = if chance <= 0.01 then slot.Color else WHITE
 		end
 		local luck = ctx.LuckText()
-		local hint = if ctx.AutoDeleteRemote then Config.AutoDelete.Hint else ""
+		local hint = if not ctx.AutoDeleteRemote then ""
+			elseif deleteMode then "TAP PETS TO AUTO-DELETE THEM"
+			else "GEAR = AUTO-DELETE"
 		note.Text = if luck ~= "" and hint ~= "" then luck .. "  ·  " .. hint else luck .. hint
 	end
+
+	gear.Holder.Activated:Connect(function()
+		deleteMode = not deleteMode
+		Sfx.Play("Click")
+		gear:Paint(if deleteMode then PAINT.Red else PAINT.Blue)
+		SlKit.Pulse(gear.Holder, 1.15, 0.2)
+		refresh()
+	end)
 
 	local function refreshMarks()
 		marked = {}

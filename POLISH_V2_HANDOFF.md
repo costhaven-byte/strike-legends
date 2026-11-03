@@ -14,7 +14,10 @@ POLISH_V2_REPORT.md (what's done), then this file (where it stopped).
 - BUY BEST bug from the tutorial test: NOT reproducible through the CoreBuy remote (bought ball 6 fine). Re-check the
   real tap in T1.
 - DONE: U2 STORE in V2 look (re-skin, Config.Ui.StoreV2).
-- NEXT: U3 part 2 (reference layout; find the owner's reference picture first), then L2/L3/L4 (needs Studio visible), D2, Q3 fixes, T1-T3.
+- DONE: U3 part 1b = rarity names under board pets + AUTO-DELETE gear mode (see report).
+- NEXT: U3 part 2 (reference picture = Documents/Strike Legends Assets/refforpethatch.png: small white card of 3-across
+  pet tiles with % on top + rarity name under, price pill right of it, round AUTO-DELETE / T AUTO / R OPEN 3 /
+  E OPEN 1 buttons under it, buff lines above), then L2/L3/L4 (needs Studio visible), D2, Q3 fixes, T1-T3.
 - T1 suspect: second BUY BEST tap with 10K coins ("+140 5.3K") bought nothing (CoreBuy remote works directly).
 - NOT STARTED: L1, L3-L6, U4-U5, D1-D7, Q1-Q3, T1-T3. Must-finish order from the plan: L2, L3, L4, U2, U3, D2, Q3, T1-T3.
 - Saves: v39 Tutorial, v40 PetsFound. Next save change = v41.

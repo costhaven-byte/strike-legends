@@ -77,3 +77,17 @@ Already done before this run (ffe84c0).
 - The tutorial hides while the STORE or PETS window is open.
 - Decision: a re-skin of the working STORE, not a rebuild with SlKit blocks (cheaper and keeps every buy path).
   StoreV2 = false brings the cream look back. Not checked: phone size.
+
+## U3 part 1b: two pieces of the reference board
+- Each pet on the egg boards now shows its rarity name under its chance, in the rarity colour (COMMON / RARE ...).
+- AUTO-DELETE gear (blue, left of the note line): tapping pets marks them X only while the gear is on (red); off =
+  taps do nothing (no accidental deletes). Note line says GEAR = AUTO-DELETE / TAP PETS TO AUTO-DELETE THEM.
+- Self-test: all 4 boards build with the gear + rarity names, no errors. Tapping on a board not tried (Studio 3D view
+  not drawing); in the owner playtest.
+- Still left from the reference (U3 part 2): 3-across square tile grid, price pill beside the card, round
+  T AUTO / R OPEN 3 / E OPEN 1 buttons with key letters, buff lines above (2X LUCK...). Reference picture:
+  Documents/Strike Legends Assets/refforpethatch.png.
+
+## Console notes for T1 (seen on every join)
+- "rbxassetid://203785492 failed due to: Asset type does not match requested type" x4.
+- "[ShowcaseController] zone 4: 10 balls to show but only 6 slots".
