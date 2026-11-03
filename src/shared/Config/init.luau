@@ -628,17 +628,48 @@ Config.CoreLoop = {
 	-- Daytime repaint of the night rooftop, on every screen (the place file keeps the night colours, so Enabled =
 	-- false brings them back): old colour hex -> new colour for SkylineLanes parts; Neon parts in DayNeon colours
 	-- (lit windows, floodlight heads) turn into plain glass/plastic; lights in DayLightsOff switch off.
-	DayColors = {
-		["7a5aa8"] = Color3.fromRGB(150, 205, 240), -- city blocks: sky blue
-		["5a3e8c"] = Color3.fromRGB(236, 206, 158), -- sand
-		["3f2f6e"] = Color3.fromRGB(242, 160, 122), -- coral
-		["6b4ba0"] = Color3.fromRGB(160, 222, 190), -- mint
-		["8a64b0"] = Color3.fromRGB(246, 236, 212), -- cream
-		["1c1630"] = Color3.fromRGB(150, 178, 120), -- the ground far below: park green
-		["3b2f6b"] = Color3.fromRGB(70, 120, 190), -- gutters
-		["2e2a4a"] = Color3.fromRGB(96, 104, 120), -- helipad deck
-		["221a3d"] = Color3.fromRGB(80, 86, 104), -- pit
-		["090f30"] = Color3.fromRGB(40, 80, 150), -- helicopter body
+	-- Polish v2 L2: the colours come from Zone1Palette (taken from the owner's zone 1 stalls: sky-blue steel, warm
+	-- wood, cream, slate, gold) instead of one-off hex picks. Was: city sky blue 150,205,240 / sand 236,206,158 /
+	-- coral 242,160,122 / mint 160,222,190 / cream 246,236,212, ground 150,178,120, gutters 70,120,190, helipad
+	-- 96,104,120, pit 80,86,104, helicopter 40,80,150; roof floor 76707e, tower walls e4ddf0, glass b0d6f0 and the
+	-- approach 968474 kept the place's own colours.
+	DayColors = {}, -- (filled from Zone1Paint just below)
+	Zone1Palette = {
+		Sky = Color3.fromHex("4FB3EC"), -- the stalls' steel and canvas
+		SkyDeep = Color3.fromHex("2C86C9"),
+		SkyGlass = Color3.fromHex("A9DDF8"),
+		Wood = Color3.fromHex("B8743E"),
+		WoodLight = Color3.fromHex("D08F52"),
+		Cream = Color3.fromHex("F7F3EA"),
+		Sand = Color3.fromHex("D8C6AC"),
+		Slate = Color3.fromHex("8A97A4"),
+		SlateDark = Color3.fromHex("59646F"),
+		Gold = Color3.fromHex("F5B82E"),
+		-- the big surfaces, mixed from the ones above
+		Concrete = Color3.fromHex("8F8B85"), -- the roof floor: warm mid concrete, so the teal lane and the stalls pop
+		Approach = Color3.fromHex("A88A66"), -- the bowlers' approach: warm maple (lighter glared white in the sun)
+		Stone = Color3.fromHex("ECE3D2"), -- tower walls and far blocks: cream stone (white would blow out in the sun)
+		Brick = Color3.fromHex("C9855A"), -- far blocks: warm brick (between Wood and WoodLight)
+		CitySky = Color3.fromHex("6FA9D6"), -- far blocks: the stalls' sky blue, a step darker so it isn't the sky
+		Park = Color3.fromHex("8CC06A"), -- the ground far below
+		Pit = Color3.fromHex("4A505C"),
+	},
+	-- old colour hex (place file) -> Zone1Palette name
+	Zone1Paint = {
+		["7a5aa8"] = "Stone", -- city blocks (the most of them)
+		["5a3e8c"] = "Sand",
+		["3f2f6e"] = "Brick",
+		["6b4ba0"] = "CitySky",
+		["8a64b0"] = "Cream",
+		["1c1630"] = "Park", -- the ground far below
+		["3b2f6b"] = "SlateDark", -- gutters
+		["2e2a4a"] = "SlateDark", -- helipad deck
+		["221a3d"] = "Pit",
+		["090f30"] = "SkyDeep", -- helicopter body
+		["76707e"] = "Concrete", -- the roof floor (was lilac grey)
+		["e4ddf0"] = "Stone", -- the tower's walls (were lilac white)
+		["b0d6f0"] = "SkyGlass", -- the tower's glass
+		["968474"] = "Approach", -- the bowlers' approach (was khaki)
 	},
 	DayNeon = {
 		["ffc65a"] = { Color = Color3.fromRGB(196, 228, 248), Material = Enum.Material.Glass }, -- lit city windows
@@ -649,6 +680,11 @@ Config.CoreLoop = {
 	DayLightsOff = { "FillLight", "HeliLight" }, -- the night fill lights over the lanes and the helipad lamp
 	ThrowRate = 0.33, -- the server never takes core throws faster than this (CooldownFloor is the real limit)
 }
+
+-- Polish v2 L2: zone 1's day paint by palette name (Config.CoreLoop.Zone1Paint -> Zone1Palette)
+for oldHex, name in Config.CoreLoop.Zone1Paint do
+	Config.CoreLoop.DayColors[oldHex] = Config.CoreLoop.Zone1Palette[name]
+end
 
 -- The throw (from the Throw Lab, approved 2026-10-18): hold to charge, let go in the gold.
 -- Lab sizes were bigger than the alley's, so pin speeds and pin gravity are scaled down to match automatically.
@@ -5455,20 +5491,24 @@ Config.Zones = {
 			Id = "SkylineLanes",
 			Folder = "SkylineLanes",
 			Area = { Center = Vector3.new(0, 870, -3500), Size = Vector3.new(220, 60, 236) },
+			-- Polish v2 L2: a later sun (longer shadows that read on the lane, the tower's front in shade), a sky-blue
+			-- fill in the shadows instead of grey, less exposure so cream and white don't blow out, more contrast,
+			-- a thinner haze. Was ClockTime 14, Brightness 2.4, Ambient 120,128,140, Outdoor 150,160,175, Exposure
+			-- 0.1, Saturation 0.25, Contrast 0.08, Haze density 0.22 / 0.6, Bloom 0.08.
 			Look = {
-				ClockTime = 14,
-				Brightness = 2.4,
-				Ambient = Color3.fromRGB(120, 128, 140),
-				OutdoorAmbient = Color3.fromRGB(150, 160, 175),
-				Exposure = 0.1,
-				Saturation = 0.25,
-				Contrast = 0.08,
+				ClockTime = 15.3,
+				Brightness = 2,
+				Ambient = Color3.fromRGB(112, 110, 106),
+				OutdoorAmbient = Color3.fromRGB(136, 156, 190),
+				Exposure = -0.05,
+				Saturation = 0.2,
+				Contrast = 0.14,
 				Tint = Color3.fromRGB(255, 252, 240),
 				HazeColor = Color3.fromHex("BFE3FF"),
 				HazeDecay = Color3.fromHex("FFF1D6"),
-				HazeDensity = 0.22,
-				Haze = 0.6,
-				Bloom = 0.08,
+				HazeDensity = 0.26,
+				Haze = 0.35,
+				Bloom = 0.06,
 			},
 		},
 	},
