@@ -4868,6 +4868,14 @@ Config.Brightness = {
 	PlayerFill = { Brightness = 0.8, Range = 12, Color = Color3.fromRGB(255, 244, 230) },
 }
 
+-- Polish v2 Q3: cheap speed wins on every screen (PerfController). Anchored parts in these folders whose longest
+-- side is under NoShadowBelow studs stop casting shadows (~1,900 small decor parts measured 2026-11-03).
+Config.Perf = {
+	Enabled = true,
+	NoShadowBelow = 3, -- studs
+	Folders = { "SkylineLanes", "SunsetBoardwalk", "JungleFalls", "CanyonOasis" },
+}
+
 -- Coins per minute under the coin counter (polish P1, the green "+12K/min"). Server: AwayService.PerMinute.
 -- = coins of your throws in the last WindowMinutes, with the always-on multipliers taken out, x the ones on now
 -- (so buying a Power Level or a pet raises it at once). Fewer than MinThrows throws = a guess from a typical throw.

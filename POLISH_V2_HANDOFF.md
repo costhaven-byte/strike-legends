@@ -20,7 +20,8 @@ POLISH_V2_REPORT.md (what's done), then this file (where it stopped).
 - DONE: L2 zone 1 colours + lighting (b7a976c).
 - DONE: L3 zones 2-4 own light (9c7cbaa).
 - DONE: L4 sell/shop pads per zone (d58d354). Left from L4: egg rings, gate landings, beams, sign style.
-- NEXT: Q3 fixes (biggest win: move the old loop's areas MainStreetLanes/BackAlley/NeonAlley/Hub/Showcase out of
+- DONE: Q3 part 1 small-decor shadows off (Config.Perf, PerfController).
+- NEXT: Q3 rest (biggest win: move the old loop's areas MainStreetLanes/BackAlley/NeonAlley/Hub/Showcase out of
   Workspace carefully; CastShadow off on ~1,900 small parts), D2, T1-T3. Studio is visible: screen_capture works.
 - Testing tricks: TEST panel remote `ReplicatedStorage.Remotes.TestPanel:InvokeServer("Coins")` (x10 coins) and
   `("Pass", "TripleHatch")` (toggle a pass). Camera: RunService:BindToRenderStep at Last+10 setting cam.CFrame.

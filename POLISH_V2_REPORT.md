@@ -149,6 +149,14 @@ Already done before this run (ffe84c0).
 - Not done from L4: egg stand rings, gate landings, rebirth spot, display case bases, per-zone hint beams, one
   style for every station billboard.
 
+## Q3 part 1: small decor stops casting shadows (tag restore-pl-Q3-before)
+- New `Config.Perf` + client `PerfController`: anchored parts in the four zones whose longest side is under 3 studs
+  no longer cast shadows (string-light bulbs, bolts, leaves, small trims). Pins, balls, pets and players aren't
+  anchored decor, so they keep their shadows. Enabled = false turns it off.
+- Self-test: 7,087 zone parts without shadows, 4,305 still with; 60 fps on this PC; no errors.
+- Still to do from Q3: move the old loop's areas (MainStreetLanes, BackAlley, NeonAlley, Hub, Showcase, ~5,500 parts
+  nobody can reach) out of Workspace (careful: old services still look for them), phone-size frame rate per zone.
+
 ## Console notes for T1 (seen on every join)
 - "rbxassetid://203785492 failed due to: Asset type does not match requested type" x4.
 - "[ShowcaseController] zone 4: 10 balls to show but only 6 slots".
