@@ -36,3 +36,15 @@ Already done before this run (ffe84c0).
   free egg). Not checked: phone size, the egg tile's 3D egg (viewports don't show in play captures).
 - Found while testing (for T1): a second BUY BEST tap (10K coins, "+140 5.3K") bought nothing; the buy remote
   itself works. Needs a look in the bug hunt.
+
+## U3 part 1: pets you haven't found are black (tag restore-pl-U3-before)
+- New save field `PetsFound` (every pet ever hatched or given; kept after fusing or auto-delete), SchemaVersion 40.
+  Old saves: filled from the pets they own (a Shiny counts its plain pet too).
+- Every egg board: pets never found = black silhouette, chance still shown (honest odds); the rarest unfound pet on
+  each board shows "???". Getting a pet turns it back to colour with a pop.
+- The hatch card's NEW! now means "never found before" (was "none owned right now").
+- Self-test: fresh player = all 18 board pets black, ??? on Sunspot / Surf Otter / Temple Monkey / Scarab; test
+  pet Pinch -> Pinny's tile turned coloured. Not seen on screen (Studio's 3D view wasn't drawing in captures).
+- NOT DONE (U3 part 2, for the next account): the reference layout (3-across square tiles with rarity name, price
+  pill, round AUTO-DELETE / AUTO (T) / OPEN 3 (R) / OPEN 1 (E) buttons, buff lines). Needs the owner's reference
+  picture; the current V6 board layout stays.

@@ -290,6 +290,7 @@ function EggV2.Board(ctx: { [string]: any }): { [string]: any }
 	local gap = if n > 1 then math.min(60, (W - 48 - n * colW) / (n - 1)) else 0
 	local rowW = n * colW + (n - 1) * gap
 	local slots = {}
+	local foundViews = {}
 	local spinners: { Model } = {}
 	local marked: { [string]: boolean } = {}
 	for index, mascot in pets do
@@ -351,8 +352,17 @@ function EggV2.Board(ctx: { [string]: any }): { [string]: any }
 			ZIndex = 6,
 		}, circle)
 		local model = MascotView.Mascot(mascot, 2, false)
-		MascotView.Viewport(petFrame, model, BOARD.PetFill).ZIndex = 6
+		local view = MascotView.Viewport(petFrame, model, BOARD.PetFill)
+		view.ZIndex = 6
 		table.insert(spinners, model)
+		-- Polish v2 U3: not found yet = a black silhouette; the rarest one not found also gets "???"
+		local mystery = text(circle, "???", 30, WHITE, {
+			Name = "Mystery",
+			Size = UDim2.fromScale(1, 1),
+			Visible = false,
+			ZIndex = 8,
+		})
+		foundViews[mascot] = { View = view, Mystery = mystery, Column = column }
 		local percent = text(column, "", 24, WHITE, {
 			Name = "Chance",
 			Position = UDim2.fromOffset(0, 104),
@@ -514,6 +524,34 @@ function EggV2.Board(ctx: { [string]: any }): { [string]: any }
 		end
 	end
 	player:GetAttributeChangedSignal("AutoDelete"):Connect(refreshMarks)
+
+	-- Polish v2 U3: pets you've never found are black (chance still shows: honest odds); the rarest unfound one says
+	-- "???". A pet found just now pops back into colour.
+	local wasFound: { [any]: boolean } = {}
+	local function refreshFound()
+		local found = {}
+		for _, id in string.split(player:GetAttribute("PetsFound") or "", ",") do
+			found[id] = true
+		end
+		local rarest, rarestRank = nil, -1
+		for mascot, refs in foundViews do
+			local isFound = found[mascot.Id] == true
+			refs.View.ImageColor3 = if isFound then WHITE else Color3.new(0, 0, 0)
+			refs.Mystery.Visible = false
+			if not isFound and Mascots.RarityIndex(mascot.Rarity) > rarestRank then
+				rarest, rarestRank = mascot, Mascots.RarityIndex(mascot.Rarity)
+			end
+			if isFound and wasFound[mascot] == false then
+				SlKit.Pulse(refs.Column, 1.25, 0.4)
+			end
+			wasFound[mascot] = isFound
+		end
+		if rarest then
+			foundViews[rarest].Mystery.Visible = true
+		end
+	end
+	refreshFound()
+	player:GetAttributeChangedSignal("PetsFound"):Connect(refreshFound)
 	refreshMarks()
 
 	hatch.Holder.Activated:Connect(function()

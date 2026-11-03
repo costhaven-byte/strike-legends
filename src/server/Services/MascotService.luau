@@ -115,6 +115,13 @@ local function publish(player: Player)
 	end
 	local equipped = getEquipped(player)
 	player:SetAttribute("Mascots", Mascots.EncodeOwned(getOwned(player)))
+	-- Polish v2 U3: the pets ever found, for the egg boards' black silhouettes
+	local found = {}
+	for id in PlayerDataService.Get(player, "PetsFound") or {} do
+		table.insert(found, id)
+	end
+	table.sort(found)
+	player:SetAttribute("PetsFound", table.concat(found, ","))
 	player:SetAttribute("EquippedMascots", Mascots.EncodeEquipped(equipped))
 	player:SetAttribute("MascotSlots", slots(player))
 	local stats = Mascots.TotalStats(equipped)
@@ -188,9 +195,22 @@ end
 
 -- Adds one mascot to the player's pets. A free slot gets it straight away, so the bonus shows on the very next throw.
 -- Returns whether it's new and whether it was equipped.
+-- Polish v2 U3: remembers a pet as found for good (save PetsFound; a Shiny marks its plain pet too). Returns true
+-- the first time.
+local function markFound(player: Player, mascotId: string): boolean
+	local found = PlayerDataService.Get(player, "PetsFound")
+	if type(found) ~= "table" or found[mascotId] then
+		return false
+	end
+	found[mascotId] = true
+	found[(mascotId:gsub("_Shiny$", ""))] = true
+	return true
+end
+
 local function addMascot(player: Player, mascot): (boolean, boolean)
 	local owned = getOwned(player)
-	local isNew = (owned[mascot.Id] or 0) == 0
+	-- NEW! = never found before (Polish v2 U3), not just "none owned right now"
+	local isNew = markFound(player, mascot.Id)
 	owned[mascot.Id] = (owned[mascot.Id] or 0) + 1
 	local equipped = getEquipped(player)
 	local autoEquipped = #equipped < slots(player)
@@ -280,11 +300,14 @@ local function hatch(player: Player, eggId: any)
 	local isNew, autoEquipped = false, false
 	if not deleted then
 		isNew, autoEquipped = addMascot(player, mascot)
+	else
+		markFound(player, mascot.Id)
 	end
 	local extraResults = {}
 	local deletedCount = if deleted then 1 else 0
 	for _, other in extras do
 		if autoDeletes(player, other) then
+			markFound(player, other.Id)
 			deletedCount += 1
 			table.insert(extraResults, { MascotId = other.Id, IsNew = false, Deleted = true })
 		else

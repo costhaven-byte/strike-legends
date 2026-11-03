@@ -5,14 +5,15 @@ POLISH_V2_REPORT.md (what's done), then this file (where it stopped).
 
 ## Where it stands (2026-11-03)
 - Run started with weekly usage at 87%. Stop rule from the owner: stop at 95% of the 5-hour limit or 98% weekly.
-- DONE: L0 (before the run, ffe84c0), U1 (492a81d).
-- IN PROGRESS: TUT = owner's extra ask mid-run (2026-11-03): "a really concise tutorial, more show not tell, but a
-  tutorial nonetheless, reward the player with each step". Tag `restore-pl-TUT-before`.
-  Plan: 4 steps THROW > SELL > BUY BALL > BUY BAG, shown with a ghost hand / world beams, one word each, a reward
-  pop per step (coins / gems / free egg). Server gives rewards (new save field, SchemaVersion bump). Builds on the
-  existing V2 guidance in CoreHudController (guideStep, sellGuide/shopGuide beams, SELL HERE! bubble).
-- NOT STARTED: L1-L6, U2-U5, D1-D7, Q1-Q3, T1-T3. Must-finish order from the plan: L2, L3, L4, U2, U3, D2, Q3, T1-T3.
-- Note: U3 (egg board PetsFound) planned SchemaVersion 39; if TUT takes 39, U3 uses the next one.
+- DONE: L0 (before the run, ffe84c0), U1 (492a81d), TUT tutorial (7346708; owner's extra ask mid-run: "really
+  concise tutorial, show not tell, reward each step" = Config.Tutorial, TutorialService, TutorialController, save v39).
+- DONE: U3 part 1 = PetsFound save v40 + black unfound pets + ??? (see report).
+- SKIPPED FOR NOW: L2 zone 1 colours + lighting (tag restore-pl-L2-before): Studio's 3D view was not drawing in
+  screen captures (window minimized?), so lighting can't be judged. Ask the owner to keep Studio visible, then do it.
+- NEXT: U3 part 2 (reference layout; find the owner's reference picture first), U2 STORE in V2 look, L2/L3/L4.
+- T1 suspect: second BUY BEST tap with 10K coins ("+140 5.3K") bought nothing (CoreBuy remote works directly).
+- NOT STARTED: L1, L3-L6, U2-U5, D1-D7, Q1-Q3, T1-T3. Must-finish order from the plan: L2, L3, L4, U2, U3, D2, Q3, T1-T3.
+- Saves: v39 Tutorial, v40 PetsFound. Next save change = v41.
 
 ## How to sync code into Studio (Rojo is often not applying)
 1. In the project folder: `python -m http.server 35311 --bind 127.0.0.1` (pick a fresh port if 35311 answers 404).

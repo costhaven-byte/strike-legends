@@ -238,6 +238,19 @@ local function migrate(saved: any): { [string]: any }
 		CoreLadder.Zone("Bag", CoreLadder.BagLevel(data.BagLevel))
 	)
 	data.CoreZone = math.min(CoreLadder.ZonesOpen(data.CoreZone), data.CoreZonesOpen)
+	-- Polish v2 U3 (v40 PetsFound): every pet you own counts as found (fills it for old saves, and keeps it right for
+	-- any later save); a Shiny counts its plain pet too
+	if type(data.PetsFound) ~= "table" then
+		data.PetsFound = {}
+	end
+	if type(data.Mascots) == "table" then
+		for id, count in data.Mascots do
+			if type(id) == "string" and (tonumber(count) or 0) > 0 then
+				data.PetsFound[id] = true
+				data.PetsFound[(id:gsub("_Shiny$", ""))] = true
+			end
+		end
+	end
 	-- Money comes back through Currency, so a future number format can read old plain-number saves here
 	for _, key in Config.Numbers.Currencies do
 		data[key] = Currency.Decode(data[key])
