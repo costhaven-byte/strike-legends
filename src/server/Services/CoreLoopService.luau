@@ -211,7 +211,7 @@ local function buy(player: Player, kind: any, step: any)
 		step = nextStep
 	end
 	step = math.floor(tonumber(step) or 0)
-	if step < 1 or step > count then
+	if step ~= step or step < 1 or step > count then -- (step ~= step: NaN)
 		return { Ok = false, Error = "That didn't work. Try again" }
 	end
 	if CoreLadder.Owns(mask, step) or step == best then
@@ -260,7 +260,7 @@ local function equipLook(player: Player, step: any)
 		return { Ok = false, Error = "Too fast, wait a sec" }
 	end
 	step = math.floor(tonumber(step) or 0)
-	if step < 1 or step > #CORE.Balls or not CoreLadder.Owns(ownedMask(player, "Ball"), step) then
+	if step ~= step or step < 1 or step > #CORE.Balls or not CoreLadder.Owns(ownedMask(player, "Ball"), step) then
 		return { Ok = false, Error = "You don't own that one" }
 	end
 	PlayerDataService.Set(player, "CoreLook", if step == CoreLoopService.BallStep(player) then 0 else step)

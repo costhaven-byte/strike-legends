@@ -159,7 +159,16 @@ function UiKit.Text(parent: Instance, text: string, font: Font, size: number, co
 		TextColor3 = color,
 	}, parent)
 	if (stroke or 2.5) > 0 then
-		make("UIStroke", { Color = C.Ink, Thickness = stroke or 2.5, LineJoinMode = Enum.LineJoinMode.Round }, label)
+		local outline =
+			make("UIStroke", { Color = C.Ink, Thickness = stroke or 2.5, LineJoinMode = Enum.LineJoinMode.Round }, label)
+		-- (Polish v2 T2: dark text drops its ink outline, also when recoloured later: in the sunny look C.Label is ink,
+		-- and ink text in an ink outline read as a black blob)
+		local function check()
+			local c = label.TextColor3
+			outline.Enabled = 0.299 * c.R + 0.587 * c.G + 0.114 * c.B >= 0.3
+		end
+		check()
+		label:GetPropertyChangedSignal("TextColor3"):Connect(check)
 	end
 	return label
 end

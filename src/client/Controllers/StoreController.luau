@@ -1492,8 +1492,10 @@ function StoreController:Start()
 			{ BackgroundTransparency = 1, Size = UDim2.fromOffset(if phone then 1 else 2, 1), LayoutOrder = 3 },
 			chip
 		)
-		chipPart("XP", 4, BLACK, if phone then 10 else 11, C.Body)
-		chipValues.Xp = chipPart("", 5, NUM, if phone then 16 else 18, C.Cyan, 4)
+		if not NO_LEVELS then -- (Polish v2 T2: no XP in the core loop, so no XP x1 either)
+			chipPart("XP", 4, BLACK, if phone then 10 else 11, C.Body)
+			chipValues.Xp = chipPart("", 5, NUM, if phone then 16 else 18, C.Cyan, 4)
+		end
 
 		-- Close: red X
 		local closeHolder, closeFace, closeBody = chunky(rightSide, {
@@ -1691,7 +1693,9 @@ function StoreController:Start()
 		end
 		if chipValues.Coins then
 			chipValues.Coins.Text = Store.MultText(Store.BoostMultiplier(player))
-			chipValues.Xp.Text = Store.MultText(Store.XpBoostMultiplier(player))
+			if chipValues.Xp then
+				chipValues.Xp.Text = Store.MultText(Store.XpBoostMultiplier(player))
+			end
 		end
 	end
 

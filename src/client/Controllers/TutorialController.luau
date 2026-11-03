@@ -223,6 +223,26 @@ function TutorialController:Start()
 		return not node or not node:IsA("ScreenGui") or node.Enabled
 	end
 	-- a big window or a cut-scene is up: the hand and the strip wait (the shop has its own spot, BUY BEST)
+	-- Polish v2 T2: any window with a dimmed Backdrop counts too (GIFTS, DAILY, PROFILE, SETTINGS ...), checked a
+	-- few times a second instead of every frame
+	local backdropAt, backdropUp = 0, false
+	local function anyBackdrop(): boolean
+		local now = os.clock()
+		if now - backdropAt < 0.25 then
+			return backdropUp
+		end
+		backdropAt, backdropUp = now, false
+		for _, screen in playerGui:GetChildren() do
+			if screen:IsA("ScreenGui") and screen.Enabled and screen ~= gui then
+				local backdrop = screen:FindFirstChild("Backdrop", true)
+				if backdrop and backdrop:IsA("GuiObject") and shown(backdrop) then
+					backdropUp = true
+					break
+				end
+			end
+		end
+		return backdropUp
+	end
 	local function busy(): boolean
 		local camera = Workspace.CurrentCamera
 		if camera and camera.CameraType == Enum.CameraType.Scriptable then
@@ -238,7 +258,7 @@ function TutorialController:Start()
 				return true
 			end
 		end
-		return false
+		return anyBackdrop()
 	end
 
 	-- ===== A step is done: the tile pops, the reward rises off it, the next one lights up =====

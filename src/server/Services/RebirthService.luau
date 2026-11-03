@@ -33,11 +33,15 @@ local RebirthService = {}
 
 -- ===== Addendum 5 step C: the core loop rebirth =====
 local function coreRebirth(player: Player)
-	if not PlayerDataService.IsLoaded(player) or not RateLimit.Allow(player, "Rebirth") then
-		return { Ok = false, Error = "That didn't work. Try again" }
+	if not PlayerDataService.IsLoaded(player) then
+		return { Ok = false, Error = "Hang on, still loading" }
 	end
+	-- (Polish v2 T2: the shop check first, so a try away from the shop doesn't use up the rate limit)
 	if not CoreLoopService.AtShop(player) then
 		return { Ok = false, Error = "Rebirth at the ball shop" }
+	end
+	if not RateLimit.Allow(player, "Rebirth") then
+		return { Ok = false, Error = "Too fast, wait a sec" }
 	end
 	local done = PlayerDataService.Get(player, "Rebirths") or 0
 	local price = Rebirth.CorePrice(done)

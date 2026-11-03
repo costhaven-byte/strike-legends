@@ -176,9 +176,26 @@ Already done before this run (ffe84c0).
   Shot: screenshots/polish_v2/after/sell_coins_arc.jpg.
 - Done: the "+25" pin gains fly into the bag on a curve too (Config.CoreLoop.Gains.Bow); the bag already pops on
   each catch. Shot: screenshots/polish_v2/after/gain_arc.jpg.
-- Not done (out of usage this run): items 1-3 of AN2 (4-step throw approach, meter spring, ball hook + lane
-  glint, pin weight, strike letters slam) and a true squash of the bag (kept the even pop: resizing HUD icons
-  fights HudKit's layout).
+- Not done in part 1: items 1-3 of AN2 (done in part 2 below) and a true squash of the bag (kept the even pop:
+  resizing HUD icons fights HudKit's layout).
+
+## D2 part 2: the throw, the hit, the pins (af1f33b, tag restore-pl-D2-2-before)
+What the core loop really shows was measured first: while you hold THROW the camera sits at the pins, the power
+meter is hidden (no charge in hold-to-throw) and there are no strikes (LUCKY! is the big moment). So:
+- The swing: every hold-to-throw throw now winds up first (0.1 s: weight rocks back, arm swings back), swings down
+  and slides forward into the lunge, then the follow-through swings a little past its pose and settles
+  (Config.Throw.WindUpTime, FollowOvershoot). Low ball steps still throw "scuffed" on purpose (stiff, wobbly).
+  Other players see your swing, and their ball leaves their hand at the release too.
+- Your ball waits for your swing: it leaves the hand at the bottom of the down-swing instead of appearing the moment
+  you press (ThrowPose.Lead, ~0.15 s in Studio, less with real ping); the pin counter and "+25" wait the same.
+- The hit: a soft puff in the zone's ground colour where the ball meets the pins (rooftop concrete dust, boardwalk
+  sand, jungle spray, canyon sand; Config.Throw.ImpactDust), a softer second clatter as the pins land.
+- LUCKY!: a hit-stop (the ball and pins freeze for 0.05 s before the burst), a camera punch, and the bowler hops.
+- Pins tumble end over end along their flight (Config.Throw.PinTumble 0.75) instead of spinning on a random axis.
+- Not done (no meter / no strikes in the core loop): meter spring, "STRIKE!" letter slam, ball hook and lane glint
+  (the ball only enters the pin camera for its last ~0.05 s, so a hook can't be seen).
+- Self-test: held THROW ~2 s, sampled the arm joint: wind-up back, release, follow-through, ball appeared at the
+  release; console clean (client + server). The LUCKY freeze wasn't caught live (random roll).
 
 ## Console notes for T1 (seen on every join)
 - "rbxassetid://203785492 failed due to: Asset type does not match requested type" x4.

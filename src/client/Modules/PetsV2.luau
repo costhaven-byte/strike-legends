@@ -600,7 +600,7 @@ function PetsV2.Start(ctx: { [string]: any })
 		sortButtons[id] = button
 	end
 	local newDot = SlKit.Dot(sortButtons.New.Holder, 0, true)
-	newDot.Position = UDim2.new(1, -4, 0, 4)
+	newDot.Position = UDim2.new(0, 4, 0, 4) -- (top-left: the window's close X sits over the top-right corner)
 	newDot.Visible = false
 
 	-- ===== Strip: slots, boosts, EQUIP BEST =====
