@@ -91,3 +91,19 @@ Already done before this run (ffe84c0).
 ## Console notes for T1 (seen on every join)
 - "rbxassetid://203785492 failed due to: Asset type does not match requested type" x4.
 - "[ShowcaseController] zone 4: 10 balls to show but only 6 slots".
+
+## Owner playtest for what's done so far (about 5 minutes)
+Before: File > Save to Roblox As a copy (restore = git tag `restore-polish-v2-before`). TEST panel: START FROM ZERO.
+1. HUD (computer): no SHOP button. Left grid = PETS, STORE / DAILY, PROFILE / PASSES (+ TELEPORT once zone 2 opens).
+   GIFTS + SETTINGS top-right. Silent failure: a gap in the grid, or PASSES missing.
+2. Tutorial: a row of 4 reward tiles under PINS DOWN (+20, +30, +120, egg). A hand presses THROW with HOLD over it.
+   Throw once: the first tile turns green with a tick, +20 rises off it, coins go up by 20.
+3. Hand moves to SELL: tap it, +30. Hand moves to the NEXT GOAL card: tap it = you land at the shop, shop opens, the
+   hand sits on BUY BEST with NEW BALL: buy, +120. Buy one more thing (ball or bag): FREE EGG!, the strip slides away.
+   Silent failures: the hand covering a window (it should hide while STORE / PETS are open), rewards paid twice.
+4. SHOP: only BALLS / BAGS / REBIRTH tabs.
+5. PASSES button: STORE opens scrolled to GAME PASSES. STORE is navy like the SHOP (no cream, no fading tints).
+6. Walk to the Rooftop Egg: every pet on the board is black, the rarest says ???, each pet shows its rarity name.
+   Hatch the free egg: that pet turns coloured. Tap a pet: nothing. Tap the blue gear (turns red), then tap a pet:
+   red X. Gear off again: taps do nothing.
+7. Phone size (Studio device emulator): same checks 1, 2, 5.
