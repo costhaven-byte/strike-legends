@@ -539,7 +539,7 @@ function ShopV2.Start(ctx: { [string]: any })
 	local bestPrice =
 		hrow(bestLine, 4, { Name = "Price", AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1) })
 	bestPrice.LayoutOrder = 2
-	SlKit.Image(bestPrice, "cur_coin", 30, { LayoutOrder = 1 })
+	local bestPriceIcon = SlKit.Image(bestPrice, "cur_coin", 30, { LayoutOrder = 1 })
 	local bestPriceText = word(bestPrice, "", 22)
 	local goShop = SlKit.Button(footer, {
 		Name = "GoToShop",
@@ -976,6 +976,7 @@ function ShopV2.Start(ctx: { [string]: any })
 		if step then
 			buyBest:Paint(PAINT.Green)
 			bestStat.Visible = true
+			bestPriceIcon.Visible = true
 			local amount = Currency.Format(CoreLadder.Stat(kind, step))
 			bestStatText.Text = if kind == "Ball" then "+" .. amount else amount
 			bestPriceText.Text = Currency.Format(price)
@@ -988,7 +989,13 @@ function ShopV2.Start(ctx: { [string]: any })
 			else
 				nextStep, nextPrice = CoreLadder.NextBag(have, rebirths)
 			end
-			bestPriceText.Text = if nextStep then Currency.Format(nextPrice) else "MAX"
+			-- (Polish v2 T1: the next one is in a zone that isn't open: say so, not a price you may already have)
+			local locked = nextStep ~= nil and not CoreLadder.ZoneOpen(kind, nextStep, zones)
+			bestPriceIcon.Visible = not locked
+			bestPriceText.Text = if not nextStep
+				then "MAX"
+				elseif locked then ("OPEN ZONE %d"):format(CoreLadder.Zone(kind, nextStep))
+				else Currency.Format(nextPrice)
 		end
 	end
 

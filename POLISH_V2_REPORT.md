@@ -160,6 +160,16 @@ Already done before this run (ffe84c0).
 ## Console notes for T1 (seen on every join)
 - "rbxassetid://203785492 failed due to: Asset type does not match requested type" x4.
 - "[ShowcaseController] zone 4: 10 balls to show but only 6 slots".
+- The 203785492 warning is not any property in the game (searched every instance): most likely the Studio test
+  avatar's clothing. Nothing to fix in the place.
+
+## T1 found early: BUY BEST "second tap does nothing"
+- Checked with real clicks and click counters: every tap reaches the button, and a second tap in the same spot
+  buys again when there is something to buy. Not a tap bug.
+- What it really was: once you own every ball of your open zones, BUY BEST goes grey and showed the NEXT ball's
+  price (e.g. 4.8M for zone 2's first ball). A player holding 35M reads that as "I can afford it" and the tap
+  only shakes. Fixed (ShopV2 fillFooter): the grey button now says OPEN ZONE 2 (no coin icon) when the next one
+  is in a closed zone. Shot: screenshots/polish_v2/after/shop_buybest_locked.jpg.
 
 ## Owner playtest for what's done so far (about 5 minutes)
 Before: File > Save to Roblox As a copy (restore = git tag `restore-polish-v2-before`). TEST panel: START FROM ZERO.
