@@ -6,6 +6,7 @@
 -- Config.CoreLoop.Zones List[z].Map picks the builder ("Boardwalk" = zone 2, Sunset Boardwalk).
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
@@ -61,6 +62,22 @@ local function add(groupName: string, name: string, size: Vector3, cframe: CFram
 	CollectionService:AddTag(p, "ZoneArt")
 	p.Parent = group(groupName)
 	return p
+end
+
+-- 2026-11-03 v2 models: the owner's designed prop (ServerStorage.ZoneKits.Zone<zone>.<name>, pivot at its bottom
+-- centre, front -Z) put in the group at the floor point `at`, turned `turn` degrees. False = no design: build parts.
+local function design(zone: number, name: string, at: Vector3, turn: number): boolean
+	local folder = ServerStorage:FindFirstChild("ZoneKits")
+	folder = folder and folder:FindFirstChild("Zone" .. zone)
+	local kit = folder and folder:FindFirstChild(name)
+	if not kit or not kit:IsA("Model") then
+		return false
+	end
+	local copy = kit:Clone()
+	copy.Name = "Design"
+	copy:PivotTo(CFrame.new(at) * CFrame.Angles(0, math.rad(turn), 0))
+	copy.Parent = group(name)
+	return true
 end
 
 -- A cylinder standing up (Roblox cylinders run along X)
@@ -408,17 +425,19 @@ local function buildBoardwalk(info: any)
 	for i, hz in { -3400, -3420, -3440, -3460, -3480 } do
 		hut(Vector3.new(196, TOP, hz), hutColors[i], -90)
 	end
-	-- lifeguard tower
+	-- lifeguard tower (the owner's SL_Z2_Hero_LifeguardTower x1.2 since 2026-11-03, facing the pier)
 	local tower = Vector3.new(170, TOP, -3530)
-	for _, o in { { -2, -2 }, { 2, -2 }, { -2, 2 }, { 2, 2 } } do
-		add("Lifeguard", "Leg", Vector3.new(0.5, 8, 0.5), CFrame.new(tower + Vector3.new(o[1], 4, o[2])), WHITE)
+	if not design(2, "Lifeguard", tower, 90) then
+		for _, o in { { -2, -2 }, { 2, -2 }, { -2, 2 }, { 2, 2 } } do
+			add("Lifeguard", "Leg", Vector3.new(0.5, 8, 0.5), CFrame.new(tower + Vector3.new(o[1], 4, o[2])), WHITE)
+		end
+		add("Lifeguard", "Platform", Vector3.new(6, 0.5, 6), CFrame.new(tower + Vector3.new(0, 8, 0)), Color3.fromRGB(240, 70, 70))
+		add("Lifeguard", "Cabin", Vector3.new(5, 4, 5), CFrame.new(tower + Vector3.new(0, 10.3, 0.4)), Color3.fromRGB(240, 70, 70))
+		add("Lifeguard", "CabinRoof", Vector3.new(6.4, 0.5, 6.4), CFrame.new(tower + Vector3.new(0, 12.5, 0.4)), WHITE)
+		add("Lifeguard", "Ramp", Vector3.new(2, 0.4, 10), CFrame.new(tower + Vector3.new(0, 4, -7)) * CFrame.Angles(math.rad(-48), 0, 0), WHITE)
+		post("Lifeguard", "FlagPole", tower + Vector3.new(2.6, 12.6, 2.6), 5, 0.12, WHITE)
+		add("Lifeguard", "Flag", Vector3.new(0.1, 1.6, 2.4), CFrame.new(tower + Vector3.new(2.6, 16.6, 1.4)), Color3.fromRGB(255, 220, 60), { Collide = false })
 	end
-	add("Lifeguard", "Platform", Vector3.new(6, 0.5, 6), CFrame.new(tower + Vector3.new(0, 8, 0)), Color3.fromRGB(240, 70, 70))
-	add("Lifeguard", "Cabin", Vector3.new(5, 4, 5), CFrame.new(tower + Vector3.new(0, 10.3, 0.4)), Color3.fromRGB(240, 70, 70))
-	add("Lifeguard", "CabinRoof", Vector3.new(6.4, 0.5, 6.4), CFrame.new(tower + Vector3.new(0, 12.5, 0.4)), WHITE)
-	add("Lifeguard", "Ramp", Vector3.new(2, 0.4, 10), CFrame.new(tower + Vector3.new(0, 4, -7)) * CFrame.Angles(math.rad(-48), 0, 0), WHITE)
-	post("Lifeguard", "FlagPole", tower + Vector3.new(2.6, 12.6, 2.6), 5, 0.12, WHITE)
-	add("Lifeguard", "Flag", Vector3.new(0.1, 1.6, 2.4), CFrame.new(tower + Vector3.new(2.6, 16.6, 1.4)), Color3.fromRGB(255, 220, 60), { Collide = false })
 	for i, sx in { 160, 163, 166, 169 } do
 		surfboard(Vector3.new(sx, TOP, -3548), ({ BOARD.Coral, BOARD.Turquoise, BOARD.Yellow, Color3.fromRGB(180, 140, 255) })[i], 10 * i)
 	end
@@ -442,52 +461,58 @@ local function buildBoardwalk(info: any)
 		add("Beach", "BeachBall", Vector3.one * 2.2, CFrame.new(Vector3.new(at.X, TOP + 1.1, at.Z)), ({ BOARD.Coral, BOARD.Yellow, BOARD.Turquoise })[i], { Shape = Enum.PartType.Ball })
 	end
 
-	-- The ferris wheel on the beach, south-east, facing the lane (seen over the right side of the arch)
+	-- The ferris wheel on the beach, south-east, facing the lane (seen over the right side of the arch). Since
+	-- 2026-11-03 the owner's SL_Z2_Hero_FerrisWheel x2 (its wheel turns: client ZonePropsController)
 	local hub = Vector3.new(140, TOP + 30, -3628)
-	local R = 24
-	local spokes = 16
-	local wheelColor = { WHITE, BOARD.Coral }
-	for side, dz in { -1.6, 1.6 } do
-		local centre = CFrame.new(hub + Vector3.new(0, 0, dz))
-		for i = 0, spokes - 1 do
-			local a = math.rad(i * 360 / spokes)
-			add("FerrisWheel", "Spoke", Vector3.new(0.35, R, 0.35), centre * CFrame.Angles(0, 0, a) * CFrame.new(0, R / 2, 0), WHITE, { Collide = false })
-			local mid = a + math.pi / spokes
-			local seg = 2 * R * math.sin(math.pi / spokes)
-			add("FerrisWheel", "Rim", Vector3.new(seg + 0.4, 0.8, 0.8), centre * CFrame.Angles(0, 0, mid) * CFrame.new(0, R * math.cos(math.pi / spokes), 0), wheelColor[side], { Collide = false })
+	if not design(2, "FerrisWheel", Vector3.new(hub.X, TOP, hub.Z), 180) then
+		local R = 24
+		local spokes = 16
+		local wheelColor = { WHITE, BOARD.Coral }
+		for side, dz in { -1.6, 1.6 } do
+			local centre = CFrame.new(hub + Vector3.new(0, 0, dz))
+			for i = 0, spokes - 1 do
+				local a = math.rad(i * 360 / spokes)
+				add("FerrisWheel", "Spoke", Vector3.new(0.35, R, 0.35), centre * CFrame.Angles(0, 0, a) * CFrame.new(0, R / 2, 0), WHITE, { Collide = false })
+				local mid = a + math.pi / spokes
+				local seg = 2 * R * math.sin(math.pi / spokes)
+				add("FerrisWheel", "Rim", Vector3.new(seg + 0.4, 0.8, 0.8), centre * CFrame.Angles(0, 0, mid) * CFrame.new(0, R * math.cos(math.pi / spokes), 0), wheelColor[side], { Collide = false })
+			end
 		end
-	end
-	add("FerrisWheel", "Hub", Vector3.new(5, 4, 4), CFrame.new(hub) * CFrame.Angles(0, math.rad(90), 0) * UP, BOARD.Yellow, { Shape = Enum.PartType.Cylinder, Collide = false })
-	local cabins = { BOARD.Coral, BOARD.Turquoise, BOARD.Yellow, Color3.fromRGB(180, 140, 255) }
-	for i = 0, spokes - 1, 2 do
-		local a = math.rad(i * 360 / spokes)
-		local at = (CFrame.new(hub) * CFrame.Angles(0, 0, a) * CFrame.new(0, R, 0)).Position
-		add("FerrisWheel", "Cabin", Vector3.new(3, 3, 3.6), CFrame.new(at - Vector3.new(0, 2.4, 0)), cabins[(i // 2) % #cabins + 1], { Collide = false })
-		add("FerrisWheel", "CabinRoof", Vector3.new(3.6, 0.4, 4.2), CFrame.new(at - Vector3.new(0, 0.7, 0)), WHITE, { Collide = false })
-	end
-	for _, s in { -1, 1 } do
-		for _, dz in { -4, 4 } do
-			local foot = Vector3.new(hub.X + s * 14, TOP, hub.Z + dz)
-			local topAt = hub + Vector3.new(0, 0, dz * 0.5)
-			local mid = (foot + topAt) / 2
-			add("FerrisWheel", "Leg", Vector3.new(1.2, 1.2, (topAt - foot).Magnitude), CFrame.lookAt(mid, topAt), WHITE)
+		add("FerrisWheel", "Hub", Vector3.new(5, 4, 4), CFrame.new(hub) * CFrame.Angles(0, math.rad(90), 0) * UP, BOARD.Yellow, { Shape = Enum.PartType.Cylinder, Collide = false })
+		local cabins = { BOARD.Coral, BOARD.Turquoise, BOARD.Yellow, Color3.fromRGB(180, 140, 255) }
+		for i = 0, spokes - 1, 2 do
+			local a = math.rad(i * 360 / spokes)
+			local at = (CFrame.new(hub) * CFrame.Angles(0, 0, a) * CFrame.new(0, R, 0)).Position
+			add("FerrisWheel", "Cabin", Vector3.new(3, 3, 3.6), CFrame.new(at - Vector3.new(0, 2.4, 0)), cabins[(i // 2) % #cabins + 1], { Collide = false })
+			add("FerrisWheel", "CabinRoof", Vector3.new(3.6, 0.4, 4.2), CFrame.new(at - Vector3.new(0, 0.7, 0)), WHITE, { Collide = false })
+		end
+		for _, s in { -1, 1 } do
+			for _, dz in { -4, 4 } do
+				local foot = Vector3.new(hub.X + s * 14, TOP, hub.Z + dz)
+				local topAt = hub + Vector3.new(0, 0, dz * 0.5)
+				local mid = (foot + topAt) / 2
+				add("FerrisWheel", "Leg", Vector3.new(1.2, 1.2, (topAt - foot).Magnitude), CFrame.lookAt(mid, topAt), WHITE)
+			end
 		end
 	end
 
-	-- The lighthouse on a rocky island past the pit (rocks are Terrain, see ZoneMaps.Terrain)
+	-- The lighthouse on a rocky island past the pit (rocks are Terrain, see ZoneMaps.Terrain). Since 2026-11-03 the
+	-- owner's SL_Z2_Hero_Lighthouse x3.2 (its own rocks at the foot), door toward the bowlers
 	local light = LIGHTHOUSE
-	local rings = 8
-	for i = 0, rings - 1 do
-		local r = 9 - i * 0.5
-		post("Lighthouse", "Ring", light + Vector3.new(0, i * 8, 0), 8, r, if i % 2 == 0 then Color3.fromRGB(236, 64, 64) else WHITE)
+	if not design(2, "Lighthouse", light, 180) then
+		local rings = 8
+		for i = 0, rings - 1 do
+			local r = 9 - i * 0.5
+			post("Lighthouse", "Ring", light + Vector3.new(0, i * 8, 0), 8, r, if i % 2 == 0 then Color3.fromRGB(236, 64, 64) else WHITE)
+		end
+		local topY = light.Y + rings * 8
+		post("Lighthouse", "Gallery", Vector3.new(light.X, topY, light.Z), 1, 6.6, Color3.fromRGB(40, 50, 64))
+		post("Lighthouse", "Lamp", Vector3.new(light.X, topY + 1, light.Z), 6, 4, Color3.fromRGB(255, 236, 160), { Material = Enum.Material.Glass, Transparency = 0.2 })
+		post("Lighthouse", "LampCore", Vector3.new(light.X, topY + 2.4, light.Z), 3, 1.8, Color3.fromRGB(255, 220, 110), { Material = Enum.Material.Neon })
+		post("Lighthouse", "Cap", Vector3.new(light.X, topY + 7, light.Z), 2, 4.8, Color3.fromRGB(236, 64, 64))
+		add("Lighthouse", "Spire", Vector3.one * 2.6, CFrame.new(light.X, topY + 10.2, light.Z), BOARD.Yellow, { Shape = Enum.PartType.Ball })
+		add("Lighthouse", "Door", Vector3.new(3.4, 6, 0.4), CFrame.new(light.X, light.Y + 3, light.Z + 8.8), Color3.fromRGB(40, 50, 64))
 	end
-	local topY = light.Y + rings * 8
-	post("Lighthouse", "Gallery", Vector3.new(light.X, topY, light.Z), 1, 6.6, Color3.fromRGB(40, 50, 64))
-	post("Lighthouse", "Lamp", Vector3.new(light.X, topY + 1, light.Z), 6, 4, Color3.fromRGB(255, 236, 160), { Material = Enum.Material.Glass, Transparency = 0.2 })
-	post("Lighthouse", "LampCore", Vector3.new(light.X, topY + 2.4, light.Z), 3, 1.8, Color3.fromRGB(255, 220, 110), { Material = Enum.Material.Neon })
-	post("Lighthouse", "Cap", Vector3.new(light.X, topY + 7, light.Z), 2, 4.8, Color3.fromRGB(236, 64, 64))
-	add("Lighthouse", "Spire", Vector3.one * 2.6, CFrame.new(light.X, topY + 10.2, light.Z), BOARD.Yellow, { Shape = Enum.PartType.Ball })
-	add("Lighthouse", "Door", Vector3.new(3.4, 6, 0.4), CFrame.new(light.X, light.Y + 3, light.Z + 8.8), Color3.fromRGB(40, 50, 64))
 
 	-- Boats and buoys on the water, kites over the beach and the sea
 	local water = BOARD.WaterTop

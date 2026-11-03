@@ -256,6 +256,8 @@ Config.CoreLoop = {
 	-- blank board the price goes on). A missing kit or zone = the plain part-built booth.
 	Kits = {
 		[1] = { Sell = "Sell", Shop = "Shop", Gate = "Gate", GateShift = Vector3.new(0, 0, -1.6), GateBoard = "PriceBoard_Blank" },
+		-- zone 2 (owner's SL_Z2 beach-hut stalls + driftwood arch; GateSign = its blank board that names the next zone)
+		[2] = { Sell = "Sell", Shop = "Shop", Gate = "Gate", GateBoard = "PriceBoard_Blank", GateSign = "DestinationSign_Blank" },
 	},
 	Plaza = {
 		Props = {
@@ -309,15 +311,16 @@ Config.CoreLoop = {
 				Pets = { "Gus", "Pebble", "Bumper", "Breezy", "Sunspot" },
 			},
 			{
-				Id = "Alley", -- the Neon Egg
+				Id = "Alley", -- the Sunset Egg (was the Neon Egg; Id kept so saves keep working)
 				Zone = 2,
 				Price = 33000000,
-				From = { "Hub", "EggPad" },
+				-- 2026-11-03: the owner's pier-post stand (SL_Z2_SunsetEgg_full; was the Hub's Neon stand, sign NEON EGG)
+				From = { "ServerStorage", "ZoneKits", "Zone2", "SunsetEgg" },
 				At = Vector3.new(26, 848.65, -3438),
-				Turn = -90,
-				Sign = "NEON EGG",
+				Turn = 90, -- its steps face west, toward the shop
 				Odds = { Uncommon = 60, Rare = 33, Epic = 7 },
-				Pets = { "Pinny", "LanePup", "Strikey", "Splitz", "Hambone", "NeonBat" },
+				-- (Neon Bat left 2026-11-03: the zone 2 designs are 5 pets; owners keep it)
+				Pets = { "Pinny", "LanePup", "Strikey", "Splitz", "Hambone" },
 			},
 			{
 				Id = "Arcade", -- the Main Street Egg
@@ -3892,13 +3895,13 @@ Config.Mascots = {
 	{
 		Id = "Pinny",
 		Stats = { Coins = 0.2 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
-		Name = "Pinny",
+		Name = "Pinch", -- was "Pinny" (2026-11-03: zone 2 design SL_Z2_Pet_PINCH; Id kept)
 		Egg = "Alley",
 		Rarity = "Uncommon", -- Phase X: was Common (zone 2 starts at Uncommon); BaseBonus keeps its old +2%
 		BaseBonus = 0.2,
-		Color = Color3.fromRGB(245, 245, 250),
-		Accent = Color3.fromRGB(230, 50, 60),
-		Reaction = "Hop",
+		Color = Color3.fromHex("FF6B4E"),
+		Accent = Color3.fromHex("FFE2C6"),
+		Reaction = "Wiggle",
 	},
 	{
 		Id = "Gus",
@@ -3914,11 +3917,11 @@ Config.Mascots = {
 	{
 		Id = "LanePup",
 		Stats = { Bag = 0.15, Speed = 0.1 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
-		Name = "Lane Pup",
+		Name = "Gully", -- was "Lane Pup" (2026-11-03: zone 2 design SL_Z2_Pet_GULLY; Id kept)
 		Egg = "Alley",
 		Rarity = "Uncommon",
-		Color = Color3.fromRGB(110, 220, 120),
-		Accent = Color3.fromRGB(255, 240, 120),
+		Color = Color3.fromHex("F7F5F0"),
+		Accent = Color3.fromHex("FFC233"),
 		Reaction = "Hop",
 	},
 	{
@@ -3935,38 +3938,39 @@ Config.Mascots = {
 	{
 		Id = "Strikey",
 		Stats = { Pins = 0.4 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
-		Name = "Strikey",
+		Name = "Jellybop", -- was "Strikey" (2026-11-03: zone 2 design SL_Z2_Pet_JELLYBOP; Id kept)
 		Egg = "Alley",
 		Rarity = "Rare",
-		Color = Color3.fromRGB(60, 140, 255),
-		Accent = Color3.fromRGB(255, 255, 255),
-		Reaction = "Flip",
+		Color = Color3.fromHex("FF9FCB"),
+		Accent = Color3.fromHex("C493FF"),
+		Reaction = "Hop",
 	},
 	{
 		Id = "Splitz",
 		Stats = { Coins = 0.35, Pins = 0.25 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
-		Name = "Splitz",
+		Name = "Shellby", -- was "Splitz" (2026-11-03: zone 2 design SL_Z2_Pet_SHELLBY; Id kept)
 		Egg = "Alley",
 		Rarity = "Rare",
-		Color = Color3.fromRGB(60, 230, 230),
-		Accent = Color3.fromRGB(255, 120, 40),
+		Color = Color3.fromHex("FFB47E"),
+		Accent = Color3.fromHex("B79BE8"),
 		Reaction = "Wiggle",
 	},
 	{
 		Id = "Hambone",
 		Stats = { Coins = 1 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
-		Name = "Hambone",
+		Name = "Surf Otter", -- was "Hambone" (2026-11-03: zone 2 design SL_Z2_Pet_SURFOTTER; Id kept)
 		Egg = "Alley",
 		Rarity = "Epic",
-		Color = Color3.fromRGB(170, 70, 255),
-		Accent = Color3.fromRGB(255, 200, 40),
-		Reaction = "Hop",
+		Color = Color3.fromHex("A8714A"),
+		Accent = Color3.fromHex("FF8FB1"),
+		Reaction = "Flip",
 	},
 	{
 		Id = "NeonBat",
 		Stats = { Pins = 0.6, Speed = 0.25 }, -- Addendum 5 B1 (Config.PetStats); B2 re-rated for the egg ladder
 		Name = "Neon Bat",
-		Egg = "Alley",
+		Egg = nil, -- 2026-11-03: out of the Sunset Egg (zone 2 designs = 5 pets); owners keep it. Was Egg = "Alley"
+		BonusEgg = "Alley", -- its bonus stays the Neon Egg's (owners' pets don't change)
 		Rarity = "Epic",
 		Color = Color3.fromRGB(110, 40, 200),
 		Accent = Color3.fromRGB(60, 255, 220),
@@ -4118,7 +4122,8 @@ Config.AutoBowl = {
 
 -- Egg names and colours (prices, unlocks and odds: Config.Economy.Eggs / Config.Economy.Mascots)
 Config.EggLooks = {
-	Alley = { Name = "Neon Egg", Color = Color3.fromRGB(255, 58, 208), Spots = Color3.fromRGB(63, 240, 255) }, -- design: #ff3ad0 / #3ff0ff
+	-- 2026-11-03: the owner's Sunset Egg (PetModels.Egg_Alley, SL_Z2_SunsetEgg_full); was the Neon Egg #ff3ad0 / #3ff0ff
+	Alley = { Name = "Sunset Egg", Color = Color3.fromRGB(255, 226, 198), Spots = Color3.fromRGB(255, 122, 92) },
 	Neon = { Name = "Neon Egg", Color = Color3.fromRGB(80, 230, 255), Spots = Color3.fromRGB(255, 60, 210) },
 	Arcade = { Name = "Main Street Egg", Color = Color3.fromRGB(224, 165, 38), Spots = Color3.fromRGB(150, 30, 40) }, -- Phase X: zone 3's egg (Id kept)
 	Skyline = { Name = "Skyline Egg", Color = Color3.fromRGB(255, 79, 139), Spots = Color3.fromRGB(245, 184, 46) }, -- zone 4's egg
@@ -4424,13 +4429,14 @@ local PET_CYAN = Color3.fromRGB(40, 230, 255)
 local PET_VIOLET = Color3.fromRGB(170, 60, 255)
 Config.PetIdle = {
 	ShowDistance = 60, -- studs: pets further from your camera than this keep still (saves phone battery)
-	Pinny = {
-		Body = { Bob = 0.08, BobSpeed = 1.4, Sway = 6, SwaySpeed = 0.7 },
+	Pinny = { -- Pinch (zone 2 design, 2026-11-03)
+		Body = { Sway = 6, SwaySpeed = 0.9 },
 		Moves = {
-			{ Kind = "Lift", Parts = { "^foot_right" }, Height = 0.12, Speed = 1.4 },
-			{ Kind = "Lift", Parts = { "^foot_left" }, Height = 0.12, Speed = 1.4, Phase = 0.5 },
-			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.2 },
-			{ Kind = "Pulse", Parts = { "^neck_" }, Speed = 0.6, Min = 0.6, Max = 1 },
+			{ Kind = "Swing", Parts = { "^arm", "^claw", "^pincer" }, Axis = Vector3.xAxis, Angle = 14, Speed = 1.2, Mirror = true },
+			{ Kind = "Lift", Parts = { "^leg_L" }, Height = 0.08, Speed = 2 },
+			{ Kind = "Lift", Parts = { "^leg_R" }, Height = 0.08, Speed = 2, Phase = 0.5 },
+			{ Kind = "Swing", Parts = { "^stalk", "^eye" }, Axis = Vector3.zAxis, Angle = 8, Speed = 0.7, Mirror = true },
+			{ Kind = "Blink", Parts = { "^eye" }, Every = 3.3 },
 		},
 	},
 	-- 2026-11-03: zone 1's own designs (SL_Z1 pets; Gus = Pidge, Pebble = Gravel, Bumper = Vent Puff, Breezy = Kite
@@ -4468,29 +4474,12 @@ Config.PetIdle = {
 			{ Kind = "Blink", Parts = { "^eye_" }, Every = 4 },
 		},
 	},
-	LanePup = {
-		Body = { Bob = 0.04, BobSpeed = 0.6, Hop = { Every = 3, Height = 0.6, Time = 0.45 } },
+	LanePup = { -- Gully (zone 2 design, 2026-11-03)
+		Body = { Bob = 0.05, BobSpeed = 0.9, Hop = { Every = 2.8, Height = 0.35, Time = 0.3 } },
 		Moves = {
-			{
-				Kind = "Swing",
-				Parts = {
-					"^skull",
-					"^snout",
-					"^nose",
-					"^eye_",
-					"^pupil_",
-					"^ear_",
-					"^cheeks",
-					"^tongue",
-					"^lane_arrow",
-				},
-				Axis = Vector3.zAxis,
-				Angle = 8,
-				Speed = 0.35,
-			},
-			{ Kind = "Swing", Parts = { "^ear_" }, Axis = Vector3.zAxis, Angle = 12, Speed = 1.5, Mirror = true },
-			{ Kind = "Swing", Parts = { "^tail_" }, Axis = Vector3.yAxis, Angle = 30, Speed = 4 },
-			{ Kind = "Blink", Parts = { "^eye_", "^pupil_" }, Every = 3.5 },
+			{ Kind = "Swing", Parts = { "^wing" }, Axis = Vector3.zAxis, Angle = 16, Speed = 1.6, Mirror = true },
+			{ Kind = "Swing", Parts = { "^skull", "^beak", "^eye_", "^blush" }, Axis = Vector3.yAxis, Angle = 12, Speed = 0.45 },
+			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.4 },
 		},
 	},
 	Bumper = { -- Vent Puff
@@ -4500,55 +4489,31 @@ Config.PetIdle = {
 			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3 },
 		},
 	},
-	Strikey = {
-		Body = { Bob = 0.1, BobSpeed = 0.8 },
+	Strikey = { -- Jellybop (zone 2 design, 2026-11-03)
+		Floats = true,
+		Body = { Bob = 0.25, BobSpeed = 0.7 },
 		Moves = {
-			{ Kind = "Blink", Parts = { "^eye_white", "^pupil", "^iris_ring", "^eye_highlight" }, Every = 3.4 },
-			{ Kind = "Swing", Parts = { "^tail_bolt" }, Axis = Vector3.yAxis, Angle = 20, Speed = 1 },
-			{ Kind = "Swing", Parts = { "^ear" }, Axis = Vector3.zAxis, Angle = 10, Speed = 0.4, Mirror = true },
-			{ Kind = "Pulse", Parts = { "^x_mark" }, Speed = 0.7, Min = 0.7, Max = 1 },
+			{ Kind = "Swing", Parts = { "^tentacle" }, Axis = Vector3.xAxis, Angle = 14, Speed = 1.4 },
+			{ Kind = "Blink", Parts = { "^eye_" }, Every = 3.6 },
 		},
 	},
-	Splitz = {
-		Body = { Bob = 0.08, BobSpeed = 0.8, Sway = 5, SwaySpeed = 0.5 },
+	Splitz = { -- Shellby (zone 2 design, 2026-11-03)
+		Body = { Sway = 4, SwaySpeed = 0.6 },
 		Moves = {
-			{ Kind = "Swing", Parts = { "^arm_" }, Axis = Vector3.xAxis, Angle = 20, Speed = 0.8, Mirror = true },
-			-- The two halves open and close (everything named _L / _R except the arms)
-			{
-				Kind = "Slide",
-				Parts = { "^shell_", "^stripe_", "^ear_", "^finger_", "^grin_", "^eye_", "^brow_" },
-				Outward = 0.06,
-				Speed = 0.5,
-			},
-			{ Kind = "Pulse", Parts = { "^split_" }, Speed = 1, Min = 0.5, Max = 1 },
-			{ Kind = "Blink", Parts = { "^eye_R_" }, Every = 3 },
+			{ Kind = "Swing", Parts = { "^claw", "^pincer" }, Axis = Vector3.xAxis, Angle = 16, Speed = 0.9 },
+			{ Kind = "Lift", Parts = { "^leg_L" }, Height = 0.08, Speed = 1.6 },
+			{ Kind = "Lift", Parts = { "^leg_R" }, Height = 0.08, Speed = 1.6, Phase = 0.5 },
+			{ Kind = "Swing", Parts = { "^stalk", "^eye" }, Axis = Vector3.zAxis, Angle = 8, Speed = 0.6 },
+			{ Kind = "Blink", Parts = { "^eye" }, Every = 3.8 },
 		},
 	},
-	Hambone = {
-		Body = { Bob = 0.04, BobSpeed = 0.6, Hop = { Every = 1.4, Height = 0.2, Time = 0.45 } },
+	Hambone = { -- Surf Otter (zone 2 design, 2026-11-03)
+		Body = { Bob = 0.06, BobSpeed = 0.8, Sway = 5, SwaySpeed = 0.5 },
 		Moves = {
-			{
-				Kind = "Swing",
-				Parts = { "^head", "^snout", "^nostril_", "^eye", "^pupil", "^cheek", "^brow", "^ear" },
-				Axis = Vector3.zAxis,
-				Angle = 7,
-				Speed = 0.4,
-			},
-			{ Kind = "Swing", Parts = { "^ear" }, Axis = Vector3.xAxis, Angle = 15, Speed = 0.9, Mirror = true },
-			{ Kind = "Swing", Parts = { "^tail" }, Axis = Vector3.yAxis, Angle = 25, Speed = 3 },
-			{ Kind = "Swing", Parts = { "^tag_loop", "^bone_" }, Axis = Vector3.xAxis, Angle = 15, Speed = 1.2 },
-		},
-		Hide = { "^sparkle" },
-		Particles = {
-			{
-				At = "^tail$",
-				Colors = { Color3.fromRGB(255, 80, 190), Color3.fromRGB(255, 150, 40) },
-				Rate = 8,
-				Size = 0.18,
-				Life = 1,
-				Speed = 0.5,
-				Up = 1.2,
-			},
+			{ Kind = "Swing", Parts = { "^tail" }, Axis = Vector3.yAxis, Angle = 22, Speed = 1 },
+			{ Kind = "Swing", Parts = { "^arm", "^paw" }, Axis = Vector3.xAxis, Angle = 12, Speed = 0.8, Mirror = true },
+			{ Kind = "Swing", Parts = { "^sun_charm", "^bead", "^necklace" }, Axis = Vector3.xAxis, Angle = 10, Speed = 1.2 },
+			{ Kind = "Blink", Parts = { "^eye_" }, Every = 4 },
 		},
 	},
 	NeonBat = {
@@ -5237,7 +5202,7 @@ Config.Spin = {
 	CheckInterval = 30, -- seconds between "is it a new day?" checks while playing
 	Slices = {
 		{ Label = "COIN POTION", Potion = "CoinSmall", Chance = 24, Color = Color3.fromRGB(255, 190, 40) },
-		{ Label = "NEON EGG", Egg = "Alley", Chance = 10, Color = Color3.fromRGB(255, 70, 200) },
+		{ Label = "SUNSET EGG", Egg = "Alley", Chance = 10, Color = Color3.fromRGB(255, 122, 92) }, -- (was NEON EGG until 2026-11-03)
 		{ Label = "XP POTION", Potion = "XpSmall", Chance = 22, Color = Color3.fromRGB(60, 220, 255) },
 		{ Label = "BRONZE CRATE", Crate = "Bronze", Chance = 16, Color = Color3.fromRGB(205, 125, 60) },
 		{ Label = "MEGA COIN", Potion = "CoinBig", Chance = 10, Color = Color3.fromRGB(255, 130, 20) },

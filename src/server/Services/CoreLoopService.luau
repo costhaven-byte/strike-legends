@@ -1017,6 +1017,18 @@ local function buildGate(zone: number, target: number, at: Vector3)
 	gradient.Color = ColorSequence.new(palette.Accent, palette.Edge)
 	gradient.Rotation = 90
 	gradient.Parent = title
+	-- a design's blank destination board (Kits GateSign, zone 2's driftwood arch) names the zone it leads to
+	local dest = board and kit.GateSign and model:FindFirstChild(kit.GateSign, true)
+	if dest and dest:IsA("BasePart") then
+		local destGui = Instance.new("SurfaceGui")
+		destGui.Name = "Words"
+		destGui.Face = Enum.NormalId.Front
+		destGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		destGui.PixelsPerStud = 40
+		destGui.LightInfluence = 0
+		destGui.Parent = dest
+		label(destGui, info.Name:upper(), UDim2.fromScale(0.92, 0.8), UDim2.fromScale(0.04, 0.1), Color3.fromRGB(46, 36, 66), 0)
+	end
 	local sub = label(surface, ("Zone %d"):format(target), UDim2.fromScale(0.9, 0.32), UDim2.fromScale(0.05, 0.64), palette.Edge, 3)
 	sub.Name = "Sub" -- (the client writes the price here while the zone is shut)
 	local prompt = Instance.new("ProximityPrompt")
