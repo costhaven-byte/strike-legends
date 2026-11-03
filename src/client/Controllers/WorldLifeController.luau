@@ -398,6 +398,7 @@ local function watchFalls()
 		elseif lastSafe and root.Position.Y < lastSafe.Position.Y - LIFE.FallRescue then
 			root.AssemblyLinearVelocity = Vector3.zero
 			character:PivotTo(lastSafe + Vector3.new(0, 3, 0))
+			Sfx.Play("Teleport", 1.2, 0.6) -- (Polish v2 Q1: the rescue gets the soft teleport whoosh)
 		end
 	end)
 end

@@ -69,6 +69,15 @@ AssetSlots.Music = {
 		[3] = { Music = 123751743815421, Ambience = 111551983188757 }, -- Main Street Lanes: Jukebox Lanes
 		[4] = { Music = 85041686095962, Ambience = 132852478973411 }, -- Skyline Lanes: Rooftop Triumph
 	},
+	-- Polish v2 Q1: the zones of today (Config.CoreLoop.Zones, found by where you stand). Zone 1 keeps the roof's track
+	-- it always played; each outdoor zone gets its own track. The 4 ambiences above are indoor halls + city roof wind,
+	-- so the outdoor zones play music only (a beach/jungle/canyon ambience can go in Ambience = id later).
+	CoreZones = {
+		[1] = { Music = 85041686095962, Ambience = 132852478973411 }, -- Skyline roof: Rooftop Triumph + roof wind
+		[2] = { Music = 114039983553092 }, -- Sunset Boardwalk: Vinyl Cradle (what played there before)
+		[3] = { Music = 139456294570935 }, -- Jungle Falls: Neon Arcade Run
+		[4] = { Music = 123751743815421 }, -- Canyon Oasis: Jukebox Lanes
+	},
 	Boss = { Music = 119351362768094 }, -- Pin Titan fight: Final Stand
 }
 

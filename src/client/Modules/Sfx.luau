@@ -53,10 +53,26 @@ local function getTemplate(name: string): Sound?
 	return sound
 end
 
+-- Polish v2 Q1: when each sound last started in each place, so the same sound in the same place can't start again
+-- within Config.Juice.SameSoundGap (fast taps, count-ups that tick every frame) and pile up into one loud blast
+local lastStarted: { [Instance]: { [string]: number } } = setmetatable({}, { __mode = "k" }) :: any
+
 local function start(name: string, parent: Instance, pitch: number?, volumeScale: number?): Sound?
 	local template = getTemplate(name)
 	if not template then
 		return nil
+	end
+	if not template.Looped then
+		local now = os.clock()
+		local started = lastStarted[parent]
+		if not started then
+			started = {}
+			lastStarted[parent] = started
+		end
+		if now - (started[name] or -math.huge) < Config.Juice.SameSoundGap then
+			return nil
+		end
+		started[name] = now
 	end
 	local sound = template:Clone()
 	sound.PlaybackSpeed = (pitch or 1) * (template:GetAttribute("Pitch") or 1)

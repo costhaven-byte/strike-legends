@@ -1,6 +1,7 @@
 -- Background music and zone ambience (Shared.AssetSlots.Music). Every 0.5 s it checks where your
--- character stands (the Config.Zones.Gated areas = zones 2-4, anywhere else = zone 1, the Pin Titan
--- fight = Boss) and cross-fades the music and the ambience loop to that place's tracks.
+-- character stands (today's zones = AssetSlots.Music.CoreZones by CoreLadder.ZoneAt; with those off, the old
+-- Config.Zones.Gated areas; the Pin Titan fight = Boss) and cross-fades the music and the ambience loop to that
+-- place's tracks.
 -- Both play through the "MusicVolume" SoundGroup, which the SETTINGS slider MUSIC sets.
 -- During your FEVER MODE (Config.Fever) the music plays Config.Fever.MusicSpeed faster.
 local Players = game:GetService("Players")
@@ -12,6 +13,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local AssetSlots = require(Shared.AssetSlots)
+local CoreLadder = require(Shared.Modules.CoreLadder)
 local Settings = require(script.Parent.Parent:WaitForChild("Modules"):WaitForChild("Settings"))
 
 local MUSIC = AssetSlots.Music
@@ -45,6 +47,11 @@ local function currentSpot()
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local position = if root then root.Position else Workspace.CurrentCamera.CFrame.Position
+	-- Polish v2 Q1: today's zones (roof + 3 outdoor zones) are found by CoreLadder, not the old building areas
+	local zones = Config.CoreLoop.Zones
+	if zones and zones.Enabled and MUSIC.CoreZones then
+		return MUSIC.CoreZones[CoreLadder.ZoneAt(position)] or MUSIC.CoreZones[1]
+	end
 	for _, gate in Config.Zones.Gated do
 		if inArea(gate.Area, position) then
 			return MUSIC.Zones[gate.Zone] or MUSIC.Zones[1]

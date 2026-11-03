@@ -388,3 +388,22 @@ Before: File > Save to Roblox As a copy (restore = git tag `restore-polish-v2-be
   after landed in zone 2 (not pulled back).
 - Not done (needs eyes on the 3D view): part-built leftovers next to designed models, hero prop scale, gaps,
   z-fighting, unused display cases in zones 2-3. These go to the owner's playtest walk-around (each zone's edges).
+
+## Q1 sounds (tag restore-pl-Q1-before)
+- Bug found: the zone music still followed the OLD building areas, so the roof (zone 1) played the old zone 4 track
+  and all three outdoor zones played the same track. Now music follows today's zones
+  (`AssetSlots.Music.CoreZones`): zone 1 roof = Rooftop Triumph + roof wind (as before), Sunset Boardwalk = Vinyl
+  Cradle (as before), Jungle Falls = Neon Arcade Run, Canyon Oasis = Jukebox Lanes. Outdoor zones play music only:
+  the 4 ambiences are indoor halls and city roof wind, which don't fit a beach, jungle or canyon (a new ambience id
+  can go in each zone's `Ambience` slot). Music still cross-fades over 2 s on teleports and rebirths.
+- The same sound in the same place can't start twice within `Config.Juice.SameSoundGap` (0.05 s): fast taps and
+  count-ups that ticked every frame (crate coin count-up) no longer pile up into one loud blast. Pin hits on
+  different pins still all play; looping sounds are never skipped.
+- Falling off the roof and being put back (L5) now plays the soft teleport whoosh.
+- Checked in Play: 5 clicks in one frame = 1 sound, another 0.06 s later plays; Coin + Tap together both play;
+  zone 1 -> zone 2 switched Rooftop Triumph to Vinyl Cradle; MUSIC slider at 30% sets the music group to 0.3;
+  SOUND EFFECTS off sets the effects group to 0 and back on to 1.
+- Volumes left as they are: frequent sounds are quiet (Click 0.4, Coin 0.3), big moments loud (strike, boss 1.0),
+  music 0.22 under the 70% slider.
+- New things from this run all have sounds (pad pulse Tap, zone open Cheer, tutorial SpinWin, board flip Reveal,
+  rebirth ticks, fall rescue Teleport).

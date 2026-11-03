@@ -1289,6 +1289,9 @@ Config.Juice = {
 	-- of random jitter: ShakeFreq swings per second, ShakeJitter = the share of leftover jitter on top
 	ShakeFreq = 11,
 	ShakeJitter = 0.25,
+	-- Polish v2 Q1: seconds before the same sound (in the same place) can start again, so fast taps and per-frame
+	-- count-ups never stack one sound into a loud blast (pin hits on different pins still all play)
+	SameSoundGap = 0.05,
 
 	ConfettiAmount = 60, -- confetti pieces in the alley on a strike
 	PerfectFireworks = 3, -- firework bursts on a Perfect Strike
