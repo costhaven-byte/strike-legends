@@ -20,3 +20,19 @@ Already done before this run (ffe84c0).
 - The world beams (shop/sell pointers) still guide new players to the stalls.
 - Decision (owner can reverse): "remove shop" read as the SHOP button, not STORE. PASSES button kept, moved into the grid.
 - Placeholders: STORE still in the older Store Kit look (U2 restyles it).
+
+## TUT Tutorial (owner's extra ask mid-run, 2026-11-03; tag restore-pl-TUT-before)
+"A really concise tutorial, more show not tell, reward the player with each step."
+- 4 steps, in order: THROW (+20 coins) > SELL (+30 coins) > NEW BALL (+120 coins) > UPGRADE = one more ball or bag
+  (FREE Rooftop Egg). Numbers in `Config.Tutorial` (Enabled = false turns it off).
+- Show, not tell: a row of 4 reward tiles top-centre shows what each step pays (current one bobs with a gold rim,
+  done = green tick). A hand presses the thing to press (press-and-hold on THROW, tap on SELL, tap on the NEXT GOAL
+  card; inside the shop it moves onto BUY BEST) with one word over it (HOLD / SELL / NEW BALL / UPGRADE).
+- Each step done: the tile pops, the reward rises off it (+20, FREE EGG!) with a sound; after the last step the strip
+  slides away. Hidden in cut-scenes and while other windows are open.
+- Server pays (TutorialService watches the saved throws/sells/ball/bag); new save field `Tutorial`, SchemaVersion 39.
+  Old saves that already sold, bought or rebirthed count as done (no rewards). Analytics event TutorialStep.
+- Self-test (Studio, fresh player): all 4 steps paid (coins 20 > 63 after sell > +120 after ball 2; step 4 gave the
+  free egg). Not checked: phone size, the egg tile's 3D egg (viewports don't show in play captures).
+- Found while testing (for T1): a second BUY BEST tap (10K coins, "+140 5.3K") bought nothing; the buy remote
+  itself works. Needs a look in the bug hunt.

@@ -900,6 +900,7 @@ Config.StartingData = {
 	ThrowSpeedLevel = 0, -- throw speed upgrades: each takes CooldownStep off the hold-to-throw cooldown
 	CoreThrows = 0, -- core loop throws ever (first and 10th throw are logged once per player)
 	CoreSells = 0, -- sells ever (the first is logged once per player)
+	Tutorial = 0, -- Polish v2: tutorial steps done (Config.Tutorial; each pays once; v39)
 	Pacing = {}, -- Addendum 5 step E: time to each ball / bag / egg / rebirth and income per run (Config.Pacing; v36)
 }
 
@@ -908,7 +909,7 @@ Config.Data = {
 	-- "PlayerData_A4": every account starts from zero for the Addendum 4 loop (owner 2026-11-01). The old saves are
 	-- still in "PlayerData" (set it back to bring them back).
 	StoreName = "PlayerData_A4",
-	SchemaVersion = 38, -- v38 CoreZonesOpen + CoreZone (Addendum 6 Stage 3 zones; start at 1, nothing to upgrade). v37 CoreBallsOwned + CoreBagsOwned + CoreLook (Addendum 6 2.2 buy any ball / bag; old saves own every step up to their best, look = best). v36 Pacing (Addendum 5 E pacing record; starts empty, nothing to upgrade). v35 PetSlotsBought (Addendum 5 B1 coin pet slots; starts at 0, nothing to upgrade). v34 BallStep (Addendum 4 Stage 2 ball ladder; starts at 1, nothing to upgrade). v33 Bag, BagLevel, ThrowSpeedLevel, CoreThrows, CoreSells (Addendum 4 core loop; start at 0/1, every old field kept, nothing to upgrade). v32 BestLevel + BestRank (batch D1 rebirth resets levels; old saves start at their RankLevel / Rank). v31 AutoDelete (batch C3 X'd pets on the egg odds boards; starts empty, nothing to upgrade or delete). v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
+	SchemaVersion = 39, -- v39 Tutorial (Polish v2 tutorial steps done; old saves that already sold or bought count as done, no rewards). v38 CoreZonesOpen + CoreZone (Addendum 6 Stage 3 zones; start at 1, nothing to upgrade). v37 CoreBallsOwned + CoreBagsOwned + CoreLook (Addendum 6 2.2 buy any ball / bag; old saves own every step up to their best, look = best). v36 Pacing (Addendum 5 E pacing record; starts empty, nothing to upgrade). v35 PetSlotsBought (Addendum 5 B1 coin pet slots; starts at 0, nothing to upgrade). v34 BallStep (Addendum 4 Stage 2 ball ladder; starts at 1, nothing to upgrade). v33 Bag, BagLevel, ThrowSpeedLevel, CoreThrows, CoreSells (Addendum 4 core loop; start at 0/1, every old field kept, nothing to upgrade). v32 BestLevel + BestRank (batch D1 rebirth resets levels; old saves start at their RankLevel / Rank). v31 AutoDelete (batch C3 X'd pets on the egg odds boards; starts empty, nothing to upgrade or delete). v30 PetSlotsKept + EggPrompted (batch C1 pet slots by rebirths; old saves keep the slots the old rank-level rule gave them; EggPrompted starts at 0). v29 PlaytimeDay/PlaytimeSeconds/PlaytimeGot (batch B4 playtime gifts once a day; start at 0 / empty = a fresh day, nothing to upgrade). v28 PolishHinted (batch B3; starts at 0, nothing to upgrade). v27 Settings (SETTINGS window switches; starts empty = all on, nothing to upgrade). v26 TotalThrows/TotalStrikes/TotalPerfects/LifetimeCoins/BossWins/AchievementTiers (Polish P5 profile; start at 0 / empty, nothing to upgrade). v25 EquipBestHinted (Polish P4; starts at 0, nothing to upgrade). v24 ZonesOpen + ZoneVisited (zones open by rebirths, owner 2026-10-27; old saves keep the zones they reached). v23 Cosmetics + EquippedCosmetics (step 12b). v22 CoinBoostLevel + XpBoostLevel (doubling ladders, owner). v21 RobuxBoost + VipGiftDay (step 12a rework). v20 Purchases + StarterPack + StarterOffered (Addendum 2 step 12a). v19 LastOnline + AwayRate (Addendum 2 step 11a). v18 BossNextAt + Rebirths (Phase X). v2 added balls and crates, v3 daily reward and leaderboard stats, v4 saved Rank (Rank Trials), v5 free crates, v6 PlayTime, v7 SessionLog, v8 PowerLevel, v9 Onboarding, v10 5 crates (CratePity, Polish, CratesOpened), v11 CratesBought, v12 RankLevel (60 levels), v13 Mascots/EquippedMascots/EggsHatched, v14 ZoneSeen, v15 Potions/Boosts, v16 FreeEggs, v17 SpinDay. Bump when the save format changes, and add an upgrade step in SaveStore
 	AutosaveInterval = 60, -- seconds between automatic saves
 	MaxRetries = 5, -- attempts per load/save before giving up
 	RetryDelay = 2, -- seconds; waits longer after each failed attempt
@@ -4274,6 +4275,24 @@ Config.PolishHint = {
 	SubNoGems = "COSTS GEMS - LEVEL UP TO EARN THEM", -- shown when you can't pay yet
 }
 -- Rank trial button: the label flips between "RANK TRIAL READY!" and TapText, and a hand bobs next to it
+-- Polish v2 (owner 2026-11-03): a really short show-not-tell tutorial for new players. The steps go in order; a hand
+-- shows what to press (Target: Throw = THROW button, Sell = SELL button, Goal = NEXT GOAL card, which takes you to
+-- the shop), one word says it, and a strip of reward tiles at the top shows what each step pays. A step is done when
+-- the saved Stats add up to AtLeast; TutorialService pays its Reward right then (Coins, Gems or a free Egg) and saves
+-- the count in Tutorial (v39). Players who rebirthed or sold before v39 skip it. Enabled = false = no tutorial.
+Config.Tutorial = {
+	Enabled = true,
+	Hand = "\u{1F446}", -- (pointing-up hand, drawn under the target)
+	DoneSeconds = 2.5, -- the strip stays this long after the last step, then slides away
+	Steps = {
+		{ Id = "Throw", Word = "HOLD", Target = "Throw", Stats = { "CoreThrows" }, AtLeast = 1, Reward = { Coins = 20 } },
+		{ Id = "Sell", Word = "SELL", Target = "Sell", Stats = { "CoreSells" }, AtLeast = 1, Reward = { Coins = 30 } },
+		{ Id = "Ball", Word = "NEW BALL", Target = "Goal", Stats = { "BallStep" }, AtLeast = 2, Reward = { Coins = 120 } },
+		-- one more buy (ball 3 or bag 2): BallStep + BagLevel start at 1 + 1
+		{ Id = "Upgrade", Word = "UPGRADE", Target = "Goal", Stats = { "BallStep", "BagLevel" }, AtLeast = 4, Reward = { Egg = "Speckled" } },
+	},
+}
+
 Config.TrialHint = {
 	Enabled = true,
 	TapText = "TAP TO START!",
@@ -5265,6 +5284,7 @@ Config.Analytics = {
 		"SessionEnd", -- value = session minutes; labels = last action before leaving, minutes played in total
 		"Throw", -- value = pins; labels = tier, ball
 		"FirstCoins",
+		"TutorialStep", -- Polish v2 tutorial: value = steps done; labels = step Id
 		"StreakRecord", -- value = new best strike streak
 		"RankUp", -- value = new rank; labels = rank name
 		"LevelUp", -- value = new rank level (1-60)

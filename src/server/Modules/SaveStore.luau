@@ -205,6 +205,14 @@ local function migrate(saved: any): { [string]: any }
 			end
 			data.PetSlotsKept = math.max(tonumber(data.PetSlotsKept) or 0, math.min(kept, V29_SLOTS.Max))
 		end
+		-- v39 added Tutorial (Polish v2): a save from before it that already sold, bought or rebirthed knows the loop,
+		-- so it counts as done (no rewards); one that never sold starts at 0
+		if version < 39 then
+			local knows = (tonumber(data.CoreSells) or 0) > 0
+				or (tonumber(data.BallStep) or 1) >= 2
+				or (tonumber(data.Rebirths) or 0) > 0
+			data.Tutorial = if knows then #Config.Tutorial.Steps else 0
+		end
 	end
 	-- Rebirths done always keep their zones open (also when a later update moves a zone's rebirth count)
 	data.ZonesOpen =
