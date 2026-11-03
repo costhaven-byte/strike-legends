@@ -245,11 +245,31 @@ function Motion.Float(object: GuiObject, px: number?, period: number?): () -> ()
 end
 
 -- ===== Windows grow out of the button you pressed and shrink back into it =====
-local lastPress: { Button: GuiObject?, At: number } = { Button = nil, At = 0 }
+local lastPress: { Button: GuiObject?, Point: Vector2?, At: number } = { Button = nil, Point = nil, At = 0 }
 
 -- Called on every button press (UiFxController)
 function Motion.NotePress(button: GuiObject)
 	lastPress.Button = button
+	lastPress.Point = nil
+	lastPress.At = os.clock()
+end
+
+-- A window about to open for something in the world (the SHOP on its stall pad): it grows out of that spot on screen
+-- (a spot behind you or off screen = the nearest screen edge in its direction)
+function Motion.NoteWorld(position: Vector3)
+	local camera = workspace.CurrentCamera
+	if not camera then
+		return
+	end
+	local view = camera.ViewportSize
+	local p, inFront = camera:WorldToViewportPoint(position)
+	local point = Vector2.new(p.X, p.Y)
+	if not inFront then
+		point = view - point -- behind the camera: mirrored
+	end
+	point = Vector2.new(math.clamp(point.X, 0, view.X), math.clamp(point.Y, 0, view.Y))
+	lastPress.Button = nil
+	lastPress.Point = point
 	lastPress.At = os.clock()
 end
 
@@ -286,6 +306,7 @@ end
 
 local rests: { [GuiObject]: UDim2 } = setmetatable({}, { __mode = "k" }) :: any
 local origins: { [GuiObject]: GuiObject? } = setmetatable({}, { __mode = "k" }) :: any
+local points: { [GuiObject]: Vector2? } = setmetatable({}, { __mode = "k" }) :: any
 
 type Geometry = { Centre: Vector2, Size: Vector2, Anchor: Vector2, K: number, Rest: UDim2 }
 
@@ -336,14 +357,17 @@ function Motion.WindowOpen(holder: GuiObject, scale: UIScale)
 	Motion.Stop(holder, "Window")
 	scale.Scale = 1
 	holder.Visible = true
-	local button = if os.clock() - lastPress.At <= MOTION.PressMemory then lastPress.Button else nil
+	local recent = os.clock() - lastPress.At <= MOTION.PressMemory
+	local button = if recent then lastPress.Button else nil
 	if button and (button == holder or button:IsDescendantOf(holder) or not usable(button)) then
 		button = nil
 	end
+	local point = if recent and not button then lastPress.Point else nil
 	origins[holder] = button
+	points[holder] = point
 	local geo = measure(holder, rest)
-	local from = if button then centre(button) else nil -- (screen space, like the geometry)
-	local s0 = if button then MOTION.FromButtonScale else MOTION.InPlaceScale
+	local from = if button then centre(button) else point -- (screen space, like the geometry)
+	local s0 = if from then MOTION.FromButtonScale else MOTION.InPlaceScale
 	place(holder, scale, geo, from, s0, 0)
 	Motion.Drive(holder, "Window", 0, 1, "Window", function(p)
 		place(holder, scale, geo, from, s0, p)
@@ -364,8 +388,8 @@ function Motion.WindowClose(holder: GuiObject, scale: UIScale, done: (() -> ())?
 	local current = scale.Scale
 	scale.Scale = 1
 	local geo = measure(holder, rest)
-	local from = if button then centre(button :: GuiObject) else nil
-	local s0 = if button then MOTION.FromButtonScale else MOTION.CloseScale
+	local from = if button then centre(button :: GuiObject) else points[holder]
+	local s0 = if from then MOTION.FromButtonScale else MOTION.CloseScale
 	-- start from where it is now (a close during the open)
 	local p0 = math.clamp((current - s0) / (1 - s0), 0, 1)
 	place(holder, scale, geo, from, s0, p0)

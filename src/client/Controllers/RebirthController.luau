@@ -28,6 +28,7 @@ local UiKit = require(Modules:WaitForChild("UiKit"))
 local CrateKit = require(Modules:WaitForChild("CrateKit"))
 local RewardKit = require(Modules:WaitForChild("RewardKit"))
 local MomentKit = require(Modules:WaitForChild("MomentKit"))
+local Motion = require(Modules:WaitForChild("Motion"))
 
 local player = Players.LocalPlayer
 
@@ -213,8 +214,9 @@ local function celebration(): (number, number?) -> ()
 		tween(shade, 0.25, Enum.EasingStyle.Linear, { BackgroundTransparency = 0.12 })
 		flash.BackgroundTransparency = 0.2
 		tween(flash, 0.7, Enum.EasingStyle.Quad, { BackgroundTransparency = 1 })
-		popScale.Scale = 0.6
-		tween(popScale, 0.3, Enum.EasingStyle.Back, { Scale = 1 })
+		-- Polish v2 D3: the whole moment slams in on a spring (overshoots, settles), the arrows land with a wobble and
+		-- the chips pop in one after another
+		Motion.PopIn(popScale, 0.55, "Slam")
 		RewardKit.Stamp(titleBox)
 		-- the arrows spin in fast, then keep turning slowly
 		local arrowScale = UiKit.ScaleOf(arrows)
@@ -222,14 +224,35 @@ local function celebration(): (number, number?) -> ()
 		arrows.Rotation = -360
 		task.delay(0.2, function()
 			tween(arrows, 0.6, Enum.EasingStyle.Quint, { Rotation = 0 })
-			tween(arrowScale, 0.35, Enum.EasingStyle.Back, { Scale = 1.15 }).Completed:Wait()
-			tween(arrowScale, 0.12, Enum.EasingStyle.Quad, { Scale = 1 })
-			task.wait(0.3)
+			Motion.PopIn(arrowScale, 0.01, "Slam")
+			task.wait(0.75)
 			if screen.Visible and not stopSpin then
 				stopSpin = HudKit.Spin(arrows, 6)
 			end
 		end)
-		RewardKit.Stagger({ nameBox, chips, continue.Holder }, 0.12, 0.45)
+		local pops: { GuiObject } = { nameBox }
+		local list = {}
+		for _, child in chips:GetChildren() do
+			if child:IsA("GuiObject") then
+				table.insert(list, child)
+			end
+		end
+		table.sort(list, function(a, b)
+			return a.LayoutOrder < b.LayoutOrder
+		end)
+		for _, child in list do
+			table.insert(pops, child)
+		end
+		table.insert(pops, continue.Holder)
+		for _, object in pops do
+			UiKit.ScaleOf(object).Scale = 0.01
+		end
+		Motion.Stagger(pops, function(object)
+			Motion.PopIn(UiKit.ScaleOf(object), 0.3)
+			if object.Parent == chips then
+				Sfx.Play("ReelTick", 0.5)
+			end
+		end, 0.12, 0.45)
 		if stopTwinkle then
 			stopTwinkle()
 		end

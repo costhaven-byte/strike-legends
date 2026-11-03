@@ -1,11 +1,13 @@
 -- Gives every button on screen press feedback (shrink and spring back) and a click sound,
 -- including buttons added later. Also starts loading all the sound effects.
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
 local Modules = script.Parent.Parent:WaitForChild("Modules")
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
 local Motion = require(Modules.Motion)
+local WIPE = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config")).Motion.Wipe
 
 -- These play their own sound when pressed
 local SILENT_BUTTONS = {
@@ -61,6 +63,24 @@ function UiFxController:Start()
 		setup(object)
 	end
 	playerGui.DescendantAdded:Connect(setup)
+
+	-- Polish v2 D3: a teleport (the character jumps far in one frame) plays the wipe, so the move isn't a hard cut.
+	-- Checked on Heartbeat, right after the new position lands and before it is drawn.
+	local lastRoot: BasePart? = nil
+	local lastAt = Vector3.zero
+	RunService.Heartbeat:Connect(function()
+		local character = Players.LocalPlayer.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not root then
+			lastRoot = nil
+			return
+		end
+		local at = root.Position
+		if root == lastRoot and (at - lastAt).Magnitude > WIPE.Jump then
+			UiFx.Wipe()
+		end
+		lastRoot, lastAt = root, at
+	end)
 end
 
 return UiFxController

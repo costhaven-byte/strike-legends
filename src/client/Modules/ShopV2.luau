@@ -2186,6 +2186,22 @@ function ShopV2.Start(ctx: { [string]: any })
 			refresh()
 			Motion.WindowOpen(win, openScale) -- (Polish v2 D1: grows out of the button you pressed, or pops in place)
 			Sfx.Play("Click", 1.1)
+			-- (Polish v2 D3) the cards pop in one after another, top row first
+			local shown = {}
+			for _, card in cards do
+				if card.Holder.Visible then
+					table.insert(shown, card.Holder)
+				end
+			end
+			table.sort(shown, function(a, b)
+				return a.LayoutOrder < b.LayoutOrder
+			end)
+			for i = 1, math.min(12, #shown) do
+				SlKit.ScaleOf(shown[i]).Scale = 0.2
+			end
+			Motion.Stagger({ table.unpack(shown, 1, math.min(12, #shown)) }, function(holder)
+				SlKit.PopIn(holder)
+			end, nil, 0.08)
 			task.delay(0.3, scrollToFocus)
 		else
 			Motion.WindowClose(win, openScale, function() -- (Polish v2 D1: back into the button that opened it)

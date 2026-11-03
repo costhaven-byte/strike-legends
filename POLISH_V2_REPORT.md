@@ -282,3 +282,17 @@ Before: File > Save to Roblox As a copy (restore = git tag `restore-polish-v2-be
 - Checked in Play: GIFTS caught mid-flight coming out of its button, settles at the same spot as before; close /
   re-open / fast open-close taps on PETS end clean (hidden, scale 1, at rest); STORE, PROFILE; held THROW and
   4 s of throws; console = only the known avatar warning.
+
+## D3 shop, rebirth, gates, teleports (tag restore-pl-D3-before)
+- The SHOP window now grows out of the stall you walked onto (its spot on screen), not just in place, and the ball /
+  bag cards pop in one after another, top row first.
+- REBIRTH! moment: the whole card slams in on a spring (overshoots, settles), the arrows land with a wobble before
+  they start turning, and the name, each chip (coins, pins, rank) and CONTINUE pop in one by one with a tick.
+- Every teleport (SELL, the shop card, GO TO SHOP, gates, rebirth, TEST jumps) hides its cut behind a navy band
+  that covers the screen on the frame you land and sweeps off to the right (0.38 s, `Config.Motion.Wipe`). It
+  reacts to the character jumping more than 40 studs in one frame, so any future teleport gets it for free.
+- Gates keep U5's ZONE n OPEN! banner. No camera fly-through: the plan's idea, but taking the camera away right
+  after you choose to travel felt like a cutscene you can't skip; the wipe + banner do the job.
+- Checked in Play: the wipe band (23 frames, covered then gone) on a zone 2 jump; shop window flies from the stall
+  (837,407 -> 335,1, overshoot 1.07 -> 1.00); all 10 cards back at full size; rebirth held through the SHOP's
+  REBIRTH tab -> moment shows, pop and chips at 1.00; console = only the known avatar warning.

@@ -45,6 +45,7 @@ local HudKit = require(Modules.HudKit)
 local ShopV2 = require(Modules.ShopV2)
 local Sfx = require(Modules.Sfx)
 local UiFx = require(Modules.UiFx)
+local Motion = require(Modules:WaitForChild("Motion"))
 
 local CORE = Config.CoreLoop
 local SHOP = CORE.Shop
@@ -1879,6 +1880,8 @@ function CoreShopController:Start()
 						refresh()
 						UiFx.Pop(window, 1.04, 0.2)
 					else
+						-- (Polish v2 D3: the window flies out of the stall you walked up to)
+						Motion.NoteWorld(SHOP.Position + CoreLadder.ZoneOffset(CoreLadder.ZoneAt(root.Position)) + Vector3.new(0, 5, 0))
 						setOpen(true)
 					end
 				elseif open or (V2 and ShopV2.IsOpen()) then

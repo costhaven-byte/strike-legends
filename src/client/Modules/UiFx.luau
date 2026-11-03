@@ -60,6 +60,48 @@ function UiFx.Flash(color: Color3?, strength: number?, time: number?)
 	TweenService:Create(frame, TweenInfo.new(time or 0.35), { BackgroundTransparency = 1 }):Play()
 end
 
+-- Polish v2 D3: a teleport's cut hides behind a navy band that covers the screen on the frame you land and sweeps off
+-- to the right (Config.Motion.Wipe)
+local wipeGui: ScreenGui? = nil
+local wipeBand: Frame? = nil
+function UiFx.Wipe()
+	local WIPE = MOTION.Wipe
+	if not wipeGui or not wipeGui.Parent then
+		local gui = Instance.new("ScreenGui")
+		gui.Name = "WipeUI"
+		gui.DisplayOrder = 40
+		gui.IgnoreGuiInset = true
+		gui.ResetOnSpawn = false
+		local band = Instance.new("Frame")
+		band.Name = "Band"
+		band.AnchorPoint = Vector2.new(0.5, 0.5)
+		band.Size = UDim2.fromScale(1.7, 2.2)
+		band.BackgroundColor3 = WIPE.Color
+		band.BorderSizePixel = 0
+		band.Rotation = WIPE.Tilt
+		band.Visible = false
+		local edge = Instance.new("Frame")
+		edge.Name = "Edge"
+		edge.AnchorPoint = Vector2.new(1, 0)
+		edge.Position = UDim2.fromScale(0, 0)
+		edge.Size = UDim2.new(0, 18, 1, 0)
+		edge.BackgroundColor3 = WIPE.Edge
+		edge.BorderSizePixel = 0
+		edge.Parent = band
+		band.Parent = gui
+		gui.Parent = player:WaitForChild("PlayerGui")
+		wipeGui, wipeBand = gui, band
+	end
+	local band = wipeBand :: Frame
+	band.Position = UDim2.fromScale(0.5, 0.5)
+	band.Visible = true
+	Motion.Drive(band, "Wipe", 0, 1, { Time = WIPE.Time, Style = Enum.EasingStyle.Quad, Dir = Enum.EasingDirection.In }, function(p)
+		band.Position = UDim2.fromScale(0.5 + p * 1.75, 0.5)
+	end, function()
+		band.Visible = false
+	end)
+end
+
 local function getScale(object: GuiObject): UIScale
 	local scale = object:FindFirstChildOfClass("UIScale")
 	if not scale then

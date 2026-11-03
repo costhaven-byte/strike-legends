@@ -1328,6 +1328,9 @@ Config.Motion = {
 	ButtonDown = 0.92, -- button press scale
 	ButtonKick = 1.6, -- spring kick on release (the little overshoot past full size)
 	ToastGap = 8, -- px between stacked toasts
+	-- Polish v2 D3: any teleport (shop, sell, gates, rebirth) hides its cut behind a navy band that sweeps off the
+	-- screen. A jump is the character moving more than Jump studs in one frame.
+	Wipe = { Jump = 40, Time = 0.38, Tilt = 10, Color = Color3.fromRGB(23, 52, 92), Edge = Color3.fromRGB(16, 23, 46) },
 }
 
 Config.Ui = {
