@@ -1,6 +1,6 @@
 -- Polish v2 tutorial (owner 2026-11-03: "really concise, more show not tell, reward the player with each step").
 -- Shows only; TutorialService decides and pays. Two pieces:
--- * a strip of reward tiles top-centre (under PINS DOWN), one per step, showing what each step pays: done = green
+-- * a strip of reward tiles in the top row right of PINS DOWN (owner 2026-11-05: was under it, mid-screen), one per step, showing what each step pays: done = green
 --   tick, the current one bobs with a gold rim
 -- * a hand on what to press now (THROW: press and hold, SELL: tap, NEXT GOAL card: tap = go to the shop) with one
 --   word over it (Config.Tutorial Steps Word). It hides while you throw, while a window is open and in cut-scenes.
@@ -87,13 +87,13 @@ function TutorialController:Start()
 	-- ===== Reward strip =====
 	local strip = make("Frame", {
 		Name = "Strip",
-		AnchorPoint = Vector2.new(0.5, 0),
+		AnchorPoint = if HudKit.V2 then Vector2.zero else Vector2.new(0.5, 0),
 		BackgroundTransparency = 1,
 		Position = UDim2.new(0.5, 0, 0, 104),
 	}, gui)
-	make("UIListLayout", {
+	local list = make("UIListLayout", {
 		FillDirection = Enum.FillDirection.Horizontal,
-		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		HorizontalAlignment = if HudKit.V2 then Enum.HorizontalAlignment.Left else Enum.HorizontalAlignment.Center,
 		VerticalAlignment = Enum.VerticalAlignment.Center,
 		Padding = UDim.new(0, 10),
 		SortOrder = Enum.SortOrder.LayoutOrder,
@@ -178,24 +178,33 @@ function TutorialController:Start()
 		ZIndex = 30,
 	})
 
+	-- V2: smaller tiles in the top row, shrinking with the HUD on small phones and tablets (HudKit.FitFrame)
 	local phoneNow = false
 	HudKit.OnLayout(function(phone)
 		phoneNow = phone
-		local side = if phone then 40 else 64
-		local wide = side + (if phone then 24 else 44)
+		local side = if HudKit.V2 then (if phone then 32 else 52) else (if phone then 40 else 64)
+		local wide = if HudKit.V2 then (if phone then 46 else 92) else side + (if phone then 24 else 44)
+		local gap = if HudKit.V2 then (if phone then 3 else 8) else 10
 		for _, t in tiles do
 			t.Holder.Size = UDim2.fromOffset(wide, side)
-			t.Task.TextSize = if phone then 10 else 15
-			t.Task.Size = UDim2.new(1, 0, 0, if phone then 24 else 36)
-			t.Amount.TextSize = if phone then 11 else 16
-			t.Tick.TextSize = if phone then 20 else 30
+			t.Task.TextSize = if phone then 9 else (if HudKit.V2 then 13 else 15)
+			t.Task.Size = UDim2.new(1, 0, 0, if phone then 22 else 36)
+			t.Amount.TextSize = if phone then 10 else (if HudKit.V2 then 14 else 16)
+			t.Tick.TextSize = if phone then 18 else 30
 		end
-		strip.Size = UDim2.fromOffset((wide + 10) * #STEPS, side)
-		strip.Position = UDim2.new(0.5, 0, 0, if phone then 88 else 104)
+		list.Padding = UDim.new(0, gap)
+		strip.Size = UDim2.fromOffset((wide + gap) * #STEPS - gap, side)
+		if not HudKit.V2 then
+			strip.Position = UDim2.new(0.5, 0, 0, if phone then 88 else 104)
+		end
 		hand.TextSize = if phone then 34 else 56
 		hand.Size = UDim2.fromOffset(if phone then 42 else 70, if phone then 42 else 70)
 		word.TextSize = if phone then 18 else 30
 	end)
+
+	if HudKit.V2 then
+		HudKit.FitFrame(strip, "Tutorial")
+	end
 
 	local function paintTiles(count: number)
 		for i, t in tiles do
