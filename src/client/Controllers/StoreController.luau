@@ -855,7 +855,10 @@ function StoreController:Start()
 				pill.Top.Text = Store.MultText(step.Mult or 1) .. " " .. pill.Ladder.What
 				pill.Price.Text = formatRobux(step.Robux)
 			end
-			local show = step ~= nil
+			-- (owner 2026-11-05: phones hide these, Config.Ui.ScreenFit.PhoneBoostPills; they're in the STORE too)
+			local fit = Config.Ui.ScreenFit
+			local phoneHidden = compact() and fit ~= nil and fit.Enabled ~= false and fit.PhoneBoostPills == false
+			local show = step ~= nil and not phoneHidden
 			if pill.Shown ~= show then
 				moved = true
 				local holder = pill.Holder

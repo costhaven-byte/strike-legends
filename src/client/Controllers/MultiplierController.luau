@@ -712,12 +712,19 @@ function MultiplierController:Start()
 			local sellBeside = false -- AUTO SELL right of AUTO instead of under it
 			HudKit.OnLayout(function(phone)
 				sellBeside = false
-				if v2Kit and not phone and Config.Ui.PassesButton == false and Config.CoreLoop.Enabled then
+				if
+					v2Kit
+					and (not phone or HudKit.TidyPhone)
+					and Config.Ui.PassesButton == false
+					and Config.CoreLoop.Enabled
+				then
 					-- (owner 2026-11-03, computer) AUTO + AUTO SELL side by side right under the REBIRTH bar
+					-- (owner 2026-11-05: phones too, they sat top-centre next to PINS DOWN)
 					local position, size = HudKit.Spot("CoreRebirth", phone)
-					local w = ((size :: UDim2).X.Offset - 12) / 2
-					auto.Position = position + UDim2.fromOffset(0, (size :: UDim2).Y.Offset + 12)
-					auto.Size = UDim2.fromOffset(math.floor(w), 52)
+					local gap = if phone then 8 else 12
+					local w = ((size :: UDim2).X.Offset - gap) / 2
+					auto.Position = position + UDim2.fromOffset(0, (size :: UDim2).Y.Offset + (if phone then 6 else 12))
+					auto.Size = UDim2.fromOffset(math.floor(w), if phone then 34 else 52)
 					sellBeside = true
 					return
 				end
@@ -806,7 +813,7 @@ function MultiplierController:Start()
 					autoSell.Size = auto.Size
 					autoSell.Position = auto.Position
 						+ if sellBeside
-							then UDim2.fromOffset(auto.Size.X.Offset + 12, 0)
+							then UDim2.fromOffset(auto.Size.X.Offset + (if HudKit.Phone() then 8 else 12), 0)
 							else UDim2.fromOffset(0, auto.Size.Y.Offset + 6)
 				end
 				HudKit.OnLayout(placeSell)

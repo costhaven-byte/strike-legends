@@ -1364,6 +1364,24 @@ Config.Motion = {
 
 Config.Ui = {
 	CompactHeight = 500, -- screens shorter than this (phones held sideways) use the compact phone layout
+	-- Phone + tablet fit (owner 2026-11-05: HUD too big and crowding the middle on phones and tablets; HudKit.HudScale).
+	-- Phones: the phone layout shrinks to fit a screen smaller than its 844x390 design (never below PhoneMin, never
+	-- grows). NotchTrimLeft/Right: the design's side margins give back up to this many pixels when Roblox already
+	-- keeps the HUD out of the notch. Tablets + computers: the HUD also shrinks when the screen is narrower than
+	-- PcMinWidth design pixels (4:3 tablets). Enabled = false = the old fixed sizes.
+	ScreenFit = {
+		Enabled = true,
+		PhoneMin = 0.6,
+		NotchTrimLeft = 32,
+		NotchTrimRight = 8,
+		PcMinWidth = 1600,
+		-- Tidy phone layout (owner 2026-11-05 screenshot: "too cluttery, the auto buttons are in the middle"): gems
+		-- under the coins, smaller button grid, REBIRTH under it, AUTO + AUTO SELL side by side under REBIRTH, so the
+		-- top-centre only holds PINS DOWN and the tutorial strip. false = the B2 mockup spots.
+		TidyPhone = true,
+		-- The x2 COINS / XP quick-buy pills on phones (they're also in the STORE). false = hidden on phones.
+		PhoneBoostPills = false,
+	},
 	-- Addendum 4 Stage 3d: the sunny look (Modules/SunKit palette + 2 fonts, no gloss, light panels with dark text).
 	-- false = the old night HUD Kit colours and fonts come back.
 	Sunny = true,

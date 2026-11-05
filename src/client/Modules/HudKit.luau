@@ -217,6 +217,9 @@ local V2_LAYOUT = {
 	Bag = { Pc = { 28, 956, 440, 96, "L", "B" }, Phone = { 218, 330, 212, 46, "L", "B" } },
 	Sell = { Pc = { 474, 956, 200, 96, "L", "B" }, Phone = { 436, 326, 108, 50, "L", "B" } },
 	Hold = { Pc = { 790, 928, 340, 120, "C", "B" }, Phone = { 676, 310, 152, 66, "R", "B" } },
+	-- Tutorial reward strip (owner 2026-11-05: it sat in the middle of the screen, "in your face"): in the top row,
+	-- right of PINS DOWN, top edge level with it (TutorialController; the strip sizes itself)
+	Tutorial = { Pc = { 1096, 14, nil, nil, "C", "T" }, Phone = { 478, 38, nil, nil, "C", "T" } },
 }
 -- Polish v2 U1 (Config.Ui.ShopButton = false): no SHOP button, so the grid closes up from the top-left and the
 -- PASSES button joins the grid (TELEPORT last, as it hides until zone 2); GIFTS + SETTINGS slide right into the corner it left
@@ -262,6 +265,42 @@ if V2 then
 	end
 end
 
+-- Tidy phone layout (Config.Ui.ScreenFit.TidyPhone, owner 2026-11-05): the left column holds coins, gems under
+-- them, a 3-wide grid of smaller buttons, REBIRTH, then AUTO + AUTO SELL (MultiplierController); the top-centre only
+-- has PINS DOWN and the tutorial strip. Phone spots only; computer spots stay.
+local PHONE_TIDY = {
+	Coins = { 40, 44, 166, 44, "L", "T" },
+	Income = { 82, 70, 110, 14, "L", "T" },
+	Gems = { 40, 94, 124, 34, "L", "T" },
+	Balls = { 40, 136, 44, 44, "L", "T" },
+	Pets = { 40, 136, 44, 44, "L", "T" },
+	Store = { 94, 136, 44, 44, "L", "T" },
+	Daily = { 148, 136, 44, 44, "L", "T" },
+	Profile = { 40, 188, 44, 44, "L", "T" },
+	Passes = { 94, 188, 44, 44, "L", "T" },
+	Teleport = { 94, 188, 44, 44, "L", "T" },
+	Power = { 40, 240, 166, 42, "L", "T" },
+	CoreRebirth = { 40, 240, 166, 42, "L", "T" },
+}
+local fitConfig = Config.Ui.ScreenFit
+if V2 and fitConfig and fitConfig.Enabled ~= false and fitConfig.TidyPhone then
+	for key, phone in PHONE_TIDY do
+		local row = HudKit.Layout[key]
+		if row then
+			HudKit.Layout[key] = { Pc = row.Pc, Phone = phone }
+		end
+	end
+	-- (with no SHOP button the grid starts at PETS; with one, BALLS keeps the first spot and the rest move on)
+	if not (Config.Ui.ShopButton == false and Config.CoreLoop.Enabled) then
+		HudKit.Layout.Pets.Phone = { 94, 136, 44, 44, "L", "T" }
+		HudKit.Layout.Store.Phone = { 148, 136, 44, 44, "L", "T" }
+		HudKit.Layout.Daily.Phone = { 40, 188, 44, 44, "L", "T" }
+		HudKit.Layout.Profile.Phone = { 94, 188, 44, 44, "L", "T" }
+		HudKit.Layout.Teleport.Phone = { 148, 188, 44, 44, "L", "T" }
+	end
+end
+HudKit.TidyPhone = V2 and fitConfig ~= nil and fitConfig.Enabled ~= false and fitConfig.TidyPhone == true
+
 -- Phones held sideways (short screens) get the phone layout
 local hudGui: ScreenGui? = nil
 local function hud(): ScreenGui
@@ -297,14 +336,52 @@ local FIT_GUIS = {
 }
 local FIT_MIN = 0.5
 
+-- ===== Phone + tablet fit (owner 2026-11-05: "not properly fit to phone and tablet screens, buttons too big") =====
+-- Config.Ui.ScreenFit. Phones: the phone layout is drawn for one 844x390 phone, so on a smaller or squarer phone the
+-- buttons were too big and the corners crowded toward the middle; it now shrinks to fit (never grows). The design's
+-- left/right margins already leave room for a notch, and Roblox keeps the HUD out of the notch too, so that room was
+-- counted twice: the margins give back up to NotchTrimLeft/Right pixels of whatever notch room Roblox already left.
+-- Tablets (computer layout): shrink by width as well as height, so a 4:3 screen doesn't push the corners together.
+local FIT = Config.Ui.ScreenFit or {}
+
+-- How much of the notch room Roblox already took out of the HUD (left, right): the phone margins shrink by this
+local function notchTrim(): (number, number)
+	if FIT.Enabled == false then
+		return 0, 0
+	end
+	local gui = hud()
+	local camera = workspace.CurrentCamera
+	if not camera or gui.AbsoluteSize.X <= 0 then
+		return 0, 0
+	end
+	local left = math.max(gui.AbsolutePosition.X, 0)
+	local right = math.max(camera.ViewportSize.X - gui.AbsolutePosition.X - gui.AbsoluteSize.X, 0)
+	return math.min(left, FIT.NotchTrimLeft or 0), math.min(right, FIT.NotchTrimRight or 0)
+end
+
 -- How much the HUD is shrunk right now (1 = the design's size)
 function HudKit.HudScale(): number
-	if not V2 or HudKit.Phone() then
+	if not V2 then
 		return 1
 	end
-	local height = hud().AbsoluteSize.Y
-	local designHeight = SCREENS.Pc.H - SCREENS.Pc.Bar
-	return if height > 0 then math.clamp(height / designHeight, FIT_MIN, 1) else 1
+	local size = hud().AbsoluteSize
+	if size.X <= 0 or size.Y <= 0 then
+		return 1
+	end
+	if HudKit.Phone() then
+		if FIT.Enabled == false then
+			return 1
+		end
+		local trimLeft, trimRight = notchTrim()
+		local needWidth = SCREENS.Phone.W - trimLeft - trimRight
+		local needHeight = SCREENS.Phone.H - SCREENS.Phone.Bar
+		return math.clamp(math.min(size.X / needWidth, size.Y / needHeight), FIT.PhoneMin or FIT_MIN, 1)
+	end
+	local fit = size.Y / (SCREENS.Pc.H - SCREENS.Pc.Bar)
+	if FIT.Enabled ~= false and FIT.PcMinWidth then
+		fit = math.min(fit, size.X / FIT.PcMinWidth)
+	end
+	return math.clamp(fit, FIT_MIN, 1)
 end
 
 local fitScales: { UIScale } = {}
@@ -423,6 +500,15 @@ function HudKit.Spot(key: string, phone: boolean?): (UDim2, UDim2?, { any })
 		return UDim2.new(1, 30, 0, more[2] - screen.Bar), UDim2.fromOffset(row[3], row[4]), row
 	end
 	local x, y, w, h, edgeX, edgeY = row[1], row[2], row[3], row[4], row[5], row[6]
+	if phone then
+		-- (the notch room Roblox already left: the side margins give it back, Config.Ui.ScreenFit)
+		local trimLeft, trimRight = notchTrim()
+		if edgeX == "L" then
+			x -= trimLeft
+		elseif edgeX == "R" then
+			x += trimRight
+		end
+	end
 	local px = if edgeX == "R"
 		then UDim.new(1, x - screen.W)
 		elseif edgeX == "C" then UDim.new(0.5, x - screen.W / 2)
