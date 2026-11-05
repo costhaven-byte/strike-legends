@@ -1,6 +1,6 @@
 -- Polish v2 Q3: cheap speed wins on this screen (Config.Perf). Small anchored decor in the four zones (string-light
 -- bulbs, bolts, leaves, rails' little bits) stops casting shadows: on a phone each shadow caster costs, and shadows
--- that small don't read anyway. Pins, balls, pets and players are never anchored decor, so they keep theirs.
+-- that small don't read anyway. Pins are small and anchored too but they are skipped: their shadows ground them.
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -11,7 +11,7 @@ local CORE_ON = Config.CoreLoop ~= nil and Config.CoreLoop.Enabled == true
 local PerfController = {}
 
 local function trim(part: Instance)
-	if part:IsA("BasePart") and part.Anchored and part.CastShadow then
+	if part:IsA("BasePart") and part.Anchored and part.CastShadow and not part:FindFirstAncestor("Pins") then
 		local size = part.Size
 		if math.max(size.X, size.Y, size.Z) < PERF.NoShadowBelow then
 			part.CastShadow = false

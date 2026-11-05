@@ -431,6 +431,27 @@ local function cleanPin(pin: Model)
 	pin.Parent = nil
 end
 
+-- Config.HitHero.Pin: a pin the sun can actually shade. Darker ivory body, real shadow, no glowing rings.
+local function relight(pin: Model)
+	local look = Config.HitHero.Enabled and Config.HitHero.Pin
+	if not look then
+		return
+	end
+	local body = pin.PrimaryPart
+	for _, part in pin:GetDescendants() do
+		if part:IsA("BasePart") and part.Name ~= "FloorGlow" then
+			if part == body then
+				part.Color = Color3.new(part.Color.R * look.BodyScale, part.Color.G * look.BodyScale, part.Color.B * look.BodyScale)
+				part.Reflectance = 0
+				part.CastShadow = look.CastShadow
+			end
+			if part.Material == Enum.Material.Neon then
+				part.Material = Enum.Material.SmoothPlastic
+			end
+		end
+	end
+end
+
 -- Addendum 5 step C: the rebirth tier's colour on a pin's neck rings or band (nil = the pin's own colours)
 local TINTED = { RingBottom = true, RingTop = true, Neck = true, Band = true } -- (Band = the zone pin sets, the roof)
 local function tintPin(pin: Model, color: Color3?)
@@ -466,6 +487,7 @@ function PinRack:_takePin(index: number): Model
 		pin:PivotTo(spot * (pin:GetAttribute("Stand") :: CFrame? or CFrame.identity))
 	else
 		pin = buildMeshPin(spot, self.Scale, false, self.Zone) or buildPin(spot, self.Scale)
+		relight(pin)
 		-- how the pin's pivot sits on its spot, so a pooled pin stands the same way again
 		pin:SetAttribute("Stand", spot:ToObjectSpace(pin:GetPivot()))
 		if self.Tint then
@@ -615,8 +637,8 @@ function PinRack:Reset()
 	end
 end
 
--- A short glowing streak behind a flying pin
-local function addTrail(body: BasePart)
+-- A short glowing streak behind a flying pin (core loop: thin, in the colour of the hit)
+local function addTrail(body: BasePart, color: Color3?)
 	local a0 = Instance.new("Attachment")
 	a0.Position = Vector3.new(0, 0.3, 0)
 	a0.Parent = body
@@ -631,6 +653,14 @@ local function addTrail(body: BasePart)
 	trail.LightEmission = 0.6
 	trail.Lifetime = 0.25
 	trail.FaceCamera = true
+	if color then
+		local look = Config.HitHero.PinTrail
+		trail.Color = ColorSequence.new(color)
+		trail.Transparency = NumberSequence.new(look.Alpha, 1)
+		trail.LightEmission = 0
+		trail.LightInfluence = 0
+		trail.Lifetime = look.Life
+	end
 	trail.Parent = body
 end
 
@@ -666,11 +696,16 @@ function PinRack:Knock(index: number, from: Vector3, force: number): number?
 	if away.Magnitude < 0.05 then
 		away = forward
 	end
-	local direction = (away.Unit + forward * 0.6 + right * ((math.random() - 0.5) * 0.8)).Unit
+	local hero = if self.Core and Config.HitHero.Enabled then Config.HitHero else nil
+	local direction = (
+		away.Unit
+		+ forward * (if hero then hero.PinForward else 0.6)
+		+ right * ((math.random() - 0.5) * (if hero then hero.PinSide else 0.8))
+	).Unit
 	local f = force * (0.85 + math.random() * 0.3)
 	local velocity = direction * T.PinLaunchForce * k * f
 		-- upward grows a bit slower than sideways, so pins from the strongest balls still come back into view
-		+ Vector3.new(0, T.PinLaunchUpward * k * f ^ 0.7 * (0.8 + math.random() * 0.4), 0)
+		+ Vector3.new(0, T.PinLaunchUpward * (if hero then hero.PinUp else 1) * k * f ^ 0.7 * (0.8 + math.random() * 0.4), 0)
 	-- Polish v2 D2: pins tumble end over end along their flight (top pitching forward), with a little random wobble,
 	-- instead of spinning on a random axis (reads as a heavy pin, not a tossed stick)
 	local tumble = Vector3.yAxis:Cross(Vector3.new(direction.X, 0, direction.Z))
@@ -681,7 +716,7 @@ function PinRack:Knock(index: number, from: Vector3, force: number): number?
 		* math.sqrt(f)
 		* (0.7 + math.random() * 0.6)
 
-	addTrail(body)
+	addTrail(body, if hero then self.TrailColor or hero.Gold else nil)
 	body.Anchored = false
 	local attachment = Instance.new("Attachment")
 	attachment.Name = "Pull"

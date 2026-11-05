@@ -24,6 +24,7 @@ local HudKit = require(Modules.HudKit)
 local ResultText = require(Modules.ResultText)
 local CameraShake = require(Modules.CameraShake)
 local ThrowFx = require(Modules.ThrowFx)
+local HeroShot = require(Modules.HeroShot)
 
 local THROW = Config.Throw
 local player = Players.LocalPlayer
@@ -1091,8 +1092,10 @@ function ThrowController:Start()
 				hintThrows += 1
 				lastAction = coreSentAt
 				coreThrowRemote:FireServer()
-				-- (Addendum 5 A1: the pose follows your ball step; levels are gone)
-				ThrowPose.Release(player.Character, CoreLadder.Pose(player:GetAttribute("BallStep")))
+				-- (Addendum 5 A1: the pose follows your ball step; levels are gone. A hero shot holds the pose it caught.)
+				if not HeroShot.Playing() then
+					ThrowPose.Release(player.Character, CoreLadder.Pose(player:GetAttribute("BallStep")))
+				end
 			end
 		elseif state == "Throwing" then
 			setState("Ready")
@@ -1111,6 +1114,16 @@ function ThrowController:Start()
 				camLane = currentLane
 			end
 			camBlend = math.clamp(camBlend + (if want then dt else -dt) / CORE.CameraBlend, 0, 1)
+			HeroShot.Watching = currentLane ~= nil and state == "Throwing"
+			-- Big moments: a short low-camera shot takes over (Modules/HeroShot)
+			local heroView, heroFov = HeroShot.Camera(dt)
+			if heroView then
+				camHeld = true
+				camera.CameraType = Enum.CameraType.Scriptable
+				camera.CFrame = heroView * CameraShake.Offset(dt) * ThrowFx.CameraOffset(dt)
+				camera.FieldOfView = heroFov :: number
+				return
+			end
 			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 			local lane = camLane
 			if camBlend <= 0 or not root or not lane then

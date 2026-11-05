@@ -1407,6 +1407,10 @@ Config.Ui = {
 	-- spin card, toasts...) take the V2 look of the SHOP and STORE: navy window and cards, white text, SlKit paints.
 	-- false = the cream sunny windows come back.
 	WindowsV2 = true,
+	-- Thumbnail hatch (owner 2026-11-05): the egg splits in two on a full-screen sunburst, the pet climbs out of the
+	-- shell (Modules/HatchHero, numbers in Config.HatchHero). Eggs without PetModels.EggSplit_<Id> play the V7 hatch.
+	-- false = the V7 hatch for every egg.
+	HatchHero = true,
 	HatchV2Quick = 2, -- AUTO HATCH (and after Config.MascotFx.Hatch.AutoSkipAfter hatches) plays it this many times faster; Mythic never
 	-- Tuck while bowling (owner 2026-10-28: on phones the HUD hid the lane): from the moment you start a throw, these
 	-- HUD pieces slide off the nearest screen edge; IdleSeconds after your last throw they slide back (Time = slide
@@ -5057,6 +5061,141 @@ Config.PetIdle = {
 	},
 }
 
+-- Thumbnail look on every throw (Modules/HitHero, PinRack): studs and seconds unless noted. Visual only.
+Config.HitHero = {
+	Enabled = true,
+	Gold = Color3.fromHex("FFC21F"),
+	Orange = Color3.fromHex("FF6A0D"),
+	GoldMix = 0.6, -- how much gold goes into a ball's own colour
+	-- Pins: real light instead of a white shape. Each zone's sun sits on a 251-white body and clips it flat, so the body
+	-- is painted a darker ivory (the sun brings it back up and the shaded side stays visible), and it casts a shadow.
+	Pin = { BodyScale = 0.74, CastShadow = true },
+	PinUp = 1.25, -- pins fly this much higher than the Throw Lab numbers...
+	PinSide = 1.3, -- ...with this much sideways luck (Lab 0.8)...
+	PinForward = 0.25, -- ...and less straight away from the camera (Lab 0.6)
+	PinTrail = { Life = 0.14, Alpha = 0.5 }, -- thin streak behind a flying pin, in the hit's colour
+	PunchEach = 0.1, -- share of Config.Throw.CameraPunch on every throw
+	BallLights = false, -- a rolling ball's own lights: they lit the pins up white as it reached them, so they stay off
+	LuckySize = 1.45, -- a LUCKY throw's burst is this much bigger
+	BurstSize = 15, -- the sunburst's width at strength 0, full rack
+	BurstGrow = 6, -- wider by this at strength 1
+	BurstUp = 2, -- centre this far above the middle of the rack
+	GlintSize = 0.3, -- share of the burst
+	GlintFade = 0.12,
+	Burst = { From = 0.3, Grow = 0.09, Hold = 0.03, Fade = 0.2, Spin = 14, Rays = 14, RaysBig = 20, Brightness = 1.4 },
+	Roll = { Life = 0.24, Width = 1.4, OuterAlpha = 0.15, InnerAlpha = 0.05, SparkSize = 0.32, SparkRate = 30, SparkRateGrow = 60 },
+	Sparks = { Count = 12, Grow = 20, Size = 0.2, Speed = 34, Gravity = 55 },
+	Chips = { Count = 6, PerPin = 0.5, Size = 0.17, Speed = 26, Gravity = 75, Color = Color3.fromRGB(205, 198, 184) },
+	Coins = { PerPin = 0.15, Min = 2, Max = 6, Size = 0.48, Speed = 20, Gravity = 62 },
+	Light = { Range = 12, Brightness = 0.5, Time = 0.22, Up = 3, Back = 2 },
+}
+
+-- Hero shots on big moments (Modules/HeroShot): studs and seconds unless noted. Visual only: throws keep counting.
+Config.HeroShot = {
+	Enabled = true,
+	Gap = 45, -- a LUCKY throw gets one if the last was at least this long ago...
+	FirstAfter = 20, -- ...and you joined at least this long ago
+	NewBallGap = 5, -- the first throw with a different ball always gets one, unless the last was this recent
+	MaxTime = 4, -- safety: whatever happens, the normal camera is back by then
+	Stretch = 2.5, -- the hit's bits (burst, sparks, chips, coins, streak) last this many times longer
+	-- RUSH: on the lane, looking back at the bowler, the ball coming at the camera
+	Rush = { Ahead = 15, PassBy = 1.5, Side = 2.2, Up = 0.9, LookUp = 3.6, Fov = 62, Time = 0.55, Drift = 1.5 },
+	-- HIT: low beside the rack. PushIn = share of the way to the rack the camera moves; Stop = the freeze at the hit;
+	-- PinScale = pins' speed (1 = normal); Hold = seconds after the hit until the normal camera; Spread = pins take off
+	-- this many times further apart
+	Hit = {
+		RunIn = 15,
+		RunTime = 0.2,
+		Back = 6.5,
+		Side = 3.2,
+		Up = 0.8,
+		LookUp = 1.4,
+		Fov = 52,
+		PushIn = 0.12,
+		Roll = 4,
+		Stop = 0.07,
+		PinScale = 0.28,
+		Hold = 0.85,
+		Spread = 3,
+		FlashStrength = 0.9,
+		FlashTime = 0.1,
+		Shake = 0.4,
+		LinesAfter = 0.3,
+	},
+	-- Speed lines around the screen edge. Inner, Width = share of the distance from the middle to a corner.
+	Lines = { Count = 26, PerSecond = 20, Inner = 0.5, InnerRandom = 0.25, Width = 0.02, Fade = 0.2 },
+}
+
+-- Thumbnail hatch (Modules/HatchHero): times in seconds at normal speed, sizes in design pixels unless noted
+local function heroHex(dark: string, light: string): { Color3 }
+	return { Color3.fromHex(dark), Color3.fromHex(light) }
+end
+Config.HatchHero = {
+	Colors = {
+		-- { backdrop, rays }. Build = every egg before the hit (the rarity only shows in the crack light and after)
+		Build = heroHex("E8860A", "FFB81F"),
+		Common = heroHex("2A9BD8", "58C1EE"),
+		Uncommon = heroHex("1F9E46", "4BE07A"),
+		Rare = heroHex("1666C4", "3AA8FF"),
+		Epic = heroHex("C2339E", "F35CCF"),
+		Legendary = heroHex("E8860A", "FFC51F"),
+		Mythic = heroHex("14060E", "FF4F8B"),
+		Crack = Color3.fromHex("FFF3B0"), -- first light through the crack, for every rarity
+	},
+	ConfettiColors = {
+		Color3.fromHex("FFC93A"),
+		Color3.fromHex("FF4F8B"),
+		Color3.fromHex("3AA8FF"),
+		Color3.fromHex("4BE07A"),
+		Color3.new(1, 1, 1),
+	},
+	-- camera
+	FieldOfView = 22,
+	CameraDistance = 40, -- studs (fixes the scene's scale only)
+	CameraTilt = 0.1, -- how far it looks down into the shell
+	Ambient = Color3.fromRGB(205, 195, 180),
+	-- build-up
+	DropTime = 0.34,
+	Gaps = { 0.012, 0.03, 0.075 }, -- top half lift at crack 1, crack 2, end of the build-up (share of the egg height)
+	BuildTime = 0.45,
+	Swell = 0.07, -- egg grows this share during the build-up...
+	Pull = 0.12, -- ...then pulls back this share just before the hit
+	CoreSize = 0.42, -- the light ball inside the egg (share of the egg height)
+	Beams = 12,
+	BeamFade = 0.3, -- beam see-through
+	EggShare = 0.62, -- egg height as a share of the screen height
+	SpinRate = 7, -- sunburst degrees per second
+	SpinRush = 70, -- extra at the end of the build-up
+	GlintSize = 170,
+	GlintTime = 0.2,
+	-- the hit
+	HitStop = 0.05,
+	FlashOut = 0.2,
+	SpeedLines = 18,
+	Shards = 18,
+	Confetti = 50,
+	Punch = 0.1, -- the camera jumps in this share at the hit, then eases back
+	PunchTime = 0.4,
+	InsideFade = 0.35, -- after the hit the inside of the shell stops glowing: rarity colour mixed with this much white
+	TopFly = 0.42, -- the top half's flight
+	TopHang = { 0.27, 0.2 }, -- where it hangs (share of the screen)
+	TopTurn = 38, -- degrees it tips over
+	TopLean = -0.18, -- leans back (radians): negative keeps its painted side to the camera
+	-- the pet
+	PopTime = 0.34,
+	PetFill = 1.05, -- pet height as a share of its slot
+	ShellFill = 0.56, -- pet height while sitting in the shell, as a share of the egg
+	ShellSit = 0.3, -- pet centre above the shell's rim (share of the pet's height)
+	HoldPose = 0.62, -- the thumbnail pose is held this long
+	SettleTime = 0.28,
+	-- shake (design pixels)
+	LandKick = 14,
+	CrackKick = 8,
+	BuildKick = 9,
+	HitKick = 42,
+	KickDecay = 9,
+	TeaseText = "SOMETHING RARE IS INSIDE...", -- Epic and up, before the hit
+}
 Config.PetIdle.Egg_Volcano = Config.PetIdle.Egg_Alley -- (Addendum 5 B2: the re-tinted Neon Egg pulses the same)
 
 -- Daily reward: a 7-day calendar. Claim once per day (days change at midnight UTC).

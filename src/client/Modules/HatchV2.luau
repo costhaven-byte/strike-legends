@@ -16,6 +16,7 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Mascots = require(Shared.Modules.Mascots)
+local HatchHero = require(script.Parent.HatchHero)
 local MascotView = require(script.Parent.MascotView)
 local SlKit = require(script.Parent.SlKit)
 local Sfx = require(script.Parent.Sfx)
@@ -446,7 +447,9 @@ function HatchV2.Play(opts: { [string]: any })
 		Position = UDim2.fromOffset(eggCentre.X, eggCentre.Y),
 		ZIndex = 5,
 	}, canvas)
-	local eggModel = MascotView.Egg(opts.EggId or "Alley", 4)
+	-- Config.Ui.HatchHero: the egg really splits on a sunburst (Modules/HatchHero) when it has an EggSplit model
+	local useHero = HatchHero.Available(opts.EggId or "Alley")
+	local eggModel = if useHero then Instance.new("Model") else MascotView.Egg(opts.EggId or "Alley", 4)
 	local eggView, eggCamera = MascotView.Viewport(eggHolder, eggModel, 1.5) -- (fill counts the box diagonal; 1.5 = the egg fills the slot)
 	eggView.ZIndex = 5
 	eggView.Ambient = Color3.fromRGB(210, 210, 225)
@@ -517,6 +520,35 @@ function HatchV2.Play(opts: { [string]: any })
 		end
 	end
 
+	local stage: any = nil
+	if useHero then
+		stage = HatchHero.New({
+			EggId = opts.EggId or "Alley",
+			Rarity = leakRarity,
+			Mythic = mythic,
+			Canvas = canvas,
+			Width = cw,
+			Height = ch,
+			Phone = phone,
+			EggCentre = Vector2.new(cw / 2, ch / 2),
+			EggPx = ch * Config.HatchHero.EggShare,
+			Dim = dim,
+			Flash = flash,
+			Bright = Config.HatchHero.Colors[leakRarity][2], -- (the crack light; R's Common grey looks dull on the sunburst)
+			Speed = speed,
+			Anim = anim,
+			SpawnAnim = spawnAnim,
+			Wait = wait,
+			Alive = function()
+				return alive
+			end,
+			ShowBolts = showBolts,
+			BoltRed = BOLT_RED,
+			BoltPink = BOLT_PINK,
+		})
+		table.insert(cleanups, stage.Close)
+	end
+
 	-- ===== Pets + cards (built hidden, placed where they end) =====
 	local petSize = if phone then (if triple then 150 else 210) else (if triple then 230 else 330)
 	local plateW = if phone then (if triple then 330 else 400) else (if triple then 360 else 440)
@@ -564,11 +596,15 @@ function HatchV2.Play(opts: { [string]: any })
 		make("UIStroke", { Color = INK, Thickness = 6 }, col.PetFrame)
 		make("UIScale", { Name = "Pop" }, col.PetFrame)
 		col.Model = MascotView.Mascot(mascot, 2, false)
-		local petView = MascotView.Viewport(col.PetFrame, col.Model, 0.85)
-		petView.AnchorPoint = Vector2.new(0.5, 0.5)
-		petView.Position = UDim2.fromScale(0.5, 0.46)
-		petView.Size = UDim2.fromScale(1.2, 1.2)
-		petView.ZIndex = 12
+		if stage then
+			stage.AddPet(col, col.Model)
+		else
+			local petView = MascotView.Viewport(col.PetFrame, col.Model, 0.85)
+			petView.AnchorPoint = Vector2.new(0.5, 0.5)
+			petView.Position = UDim2.fromScale(0.5, 0.46)
+			petView.Size = UDim2.fromScale(1.2, 1.2)
+			petView.ZIndex = 12
+		end
 		col.Root = make("Frame", {
 			Name = "Card",
 			BackgroundTransparency = 1,
@@ -587,7 +623,7 @@ function HatchV2.Play(opts: { [string]: any })
 	local spinConnection = RunService.RenderStepped:Connect(function(dt)
 		spin += dt * math.pi * 2 / 6
 		for _, col in columns do
-			if col.PetFrame.Visible then
+			if col.PetFrame.Visible then -- (never in the hero hatch: its pets stand in the scene)
 				col.Model:PivotTo(CFrame.Angles(0, math.sin(spin) * 0.7, 0))
 			end
 		end
@@ -683,7 +719,9 @@ function HatchV2.Play(opts: { [string]: any })
 		eggRays.Visible = false
 		cracks:Show(false)
 		showBolts(false)
-		dim.BackgroundTransparency = if mythic then 0 else 0.1
+		if not stage then
+			dim.BackgroundTransparency = if mythic then 0 else 0.1
+		end
 		local tier = Mascots.RarityIndex(main.Rarity)
 		Sfx.Play(if tier >= Mascots.RarityIndex("Epic") then "RevealBig" else "Reveal")
 		if tier >= Mascots.RarityIndex("Legendary") then
@@ -692,47 +730,59 @@ function HatchV2.Play(opts: { [string]: any })
 		if mythic then
 			Sfx.Play("Firework", 1, 0.8)
 		end
-		-- pets pop (single: at the egg; triple: in place, sides 0.15 s apart, the middle last)
 		local popOrder = if triple then { columns[1], columns[3], columns[2] } else { columns[1] }
-		for i, col in popOrder do
-			task.delay((i - 1) * 0.15 / speed, function()
-				if not alive then
-					return
-				end
-				local start = if triple then col.PetAt else eggCentre
-				placePet(col, start)
-				col.PetFrame.Visible = true
-				col.Rays.Visible = true
-				local pop = col.PetFrame:FindFirstChild("Pop") :: UIScale
-				anim(0.3, function(u)
-					local s = ease(u, Enum.EasingStyle.Back) * 1.15
-					pop.Scale = s
-					local rays = col.Rays
-					rays.Size = UDim2.fromOffset(
-						col.PetPx * col.Zoom * (if triple then 2.2 else 3) * math.min(s, 1),
-						col.PetPx * col.Zoom * (if triple then 2.2 else 3) * math.min(s, 1)
-					)
+		if stage then
+			-- the hit: the top flies off, the pet climbs out of the shell, hold that pose, then shell away + card
+			stage.Burst(popOrder, if triple then columns[2] else columns[1])
+			wait(Config.HatchHero.HoldPose)
+			if not alive then
+				return
+			end
+			stage.Settle()
+		else
+			-- pets pop (single: at the egg; triple: in place, sides 0.15 s apart, the middle last)
+			for i, col in popOrder do
+				task.delay((i - 1) * 0.15 / speed, function()
+					if not alive then
+						return
+					end
+					local start = if triple then col.PetAt else eggCentre
+					placePet(col, start)
+					col.PetFrame.Visible = true
+					col.Rays.Visible = true
+					local pop = col.PetFrame:FindFirstChild("Pop") :: UIScale
+					anim(0.3, function(u)
+						local s = ease(u, Enum.EasingStyle.Back) * 1.15
+						pop.Scale = s
+						local rays = col.Rays
+						rays.Size = UDim2.fromOffset(
+							col.PetPx * col.Zoom * (if triple then 2.2 else 3) * math.min(s, 1),
+							col.PetPx * col.Zoom * (if triple then 2.2 else 3) * math.min(s, 1)
+						)
+					end)
 				end)
-			end)
-		end
-		confetti()
-		-- rays turn (Mythic striped: 8 s loop; the rest slower)
-		for _, col in columns do
-			table.insert(cleanups, SlKit.Spin(col.Rays, if col.Pet.Mascot.Rarity == "Mythic" then 8 else 20))
-		end
-		wait(if triple then 0.7 else 0.3)
-		if not alive then
-			return
+			end
+			confetti()
+			-- rays turn (Mythic striped: 8 s loop; the rest slower)
+			for _, col in columns do
+				table.insert(cleanups, SlKit.Spin(col.Rays, if col.Pet.Mascot.Rarity == "Mythic" then 8 else 20))
+			end
+			wait(if triple then 0.7 else 0.3)
+			if not alive then
+				return
+			end
 		end
 		-- F9: pet rises into place (scale back to 1), card slides up, stamp drops on, buttons
 		for _, col in columns do
 			local from = if triple then col.PetAt else eggCentre
 			local pop = col.PetFrame:FindFirstChild("Pop") :: UIScale
-			spawnAnim(0.25, function(u)
-				local k = ease(u, Enum.EasingStyle.Back)
-				placePet(col, from:Lerp(col.PetAt, k))
-				pop.Scale = 1.15 - 0.15 * ease(u, Enum.EasingStyle.Quad)
-			end)
+			if not stage then
+				spawnAnim(0.25, function(u)
+					local k = ease(u, Enum.EasingStyle.Back)
+					placePet(col, from:Lerp(col.PetAt, k))
+					pop.Scale = 1.15 - 0.15 * ease(u, Enum.EasingStyle.Quad)
+				end)
+			end
 			col.Root.Visible = true
 			spawnAnim(0.25, function(u)
 				local k = ease(u, Enum.EasingStyle.Back)
@@ -878,7 +928,9 @@ function HatchV2.Play(opts: { [string]: any })
 	end
 
 	local prelude = task.spawn(function()
-		if mythic then
+		if stage then
+			stage.Prelude()
+		elseif mythic then
 			mythicPrelude()
 		else
 			single()

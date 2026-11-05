@@ -640,12 +640,12 @@ function impacts.Sand(c)
 		Count = 6 + 24 * t,
 		Size = 1,
 		EndSize = 2 + t,
-		Life = { 0.4, 0.8 },
+		Life = { 0.25, 0.5 },
 		Speed = { 4, 10 + 10 * t },
 		Spread = 70,
 		Accel = Vector3.new(0, -8, 0),
 		Emission = 0,
-		Fade = 0.3,
+		Fade = 0.6,
 	})
 	ThrowFx.Shockwave(c.Floor, c.Color, 3 + 7 * t, 0.3)
 end

@@ -1,5 +1,7 @@
 # Asset prompts (updated 2026-10-28)
 
+> **SUPERSEDED 2026-11-02 by ASSET_PROMPTS_V2.md** (this file describes zones that are no longer in the game).
+
 Everything in the game that is still a placeholder, and a ready-to-paste prompt for each. Launch = zones 1 to 4.
 Finished prompts are in git history: zone 1/3/4 worlds, Back Alley balls/pins/crate, Rizzo, Store, HUD, Ball Book, Crate Kit, zone 3 + 4 balls, all crates and crate counters, zone 3 + 4 eggs, stands and pets, Titan Jr., display cases, pet fusion machine, Pin Titan + arena + helicopter. Part numbers kept as before (parts 3, 4 and 6 are done).
 

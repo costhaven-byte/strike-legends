@@ -28,6 +28,8 @@ local BallFx = require(Modules.BallFx)
 local TraitFx = require(Modules.TraitFx)
 local ThrowFx = require(Modules.ThrowFx)
 local BallSignature = require(Modules.BallSignature)
+local HitHero = require(Modules.HitHero)
+local HeroShot = require(Modules.HeroShot)
 local ThrowPose = require(Modules.ThrowPose)
 local Settings = require(Modules.Settings)
 
@@ -455,6 +457,9 @@ local function rollCoreThrow(data)
 		return
 	end
 	local isOwn = data.UserId == Players.LocalPlayer.UserId
+	if isOwn and HeroShot.Playing() then
+		return -- (the server has counted it; a hero shot on screen draws just its own ball)
+	end
 	rack.Throw = (rack.Throw or 0) + 1
 
 	local ballStart = lane.BallStart :: BasePart
@@ -473,9 +478,43 @@ local function rollCoreThrow(data)
 		then BallFx.Attach(ball, data.BallId, "Lane", forward, { Level = level, Others = not isOwn })
 		else nil
 	BallFx.Dim(ball)
+	if Config.HitHero.Enabled and not Config.HitHero.BallLights then
+		for _, item in ball:GetDescendants() do
+			if item:IsA("Light") then
+				item.Enabled = false
+			end
+		end
+	end
 	local signature = if isOwn then BallSignature.For(data.BallId) else nil
 	local strength = BallSignature.Strength(data.Count or #data.Pins)
 	local roll = BallSignature.Roll(ball, signature, strength, forward)
+	-- The thumbnail look (Config.HitHero): a streak on the lane now, a sunburst behind the rack at the hit
+	local hero = isOwn and Config.HitHero.Enabled
+	local heroColor = signature and CORE.BallEffects.Effects[signature] and CORE.BallEffects.Effects[signature].Color or nil
+	local floorY = ballStart.Position.Y - LANE.BallDiameter / 2
+	-- Big moments only: a short low-camera shot (Modules/HeroShot, Config.HeroShot)
+	local shot = nil
+	if hero then
+		local look = HitHero.Palette(heroColor, data.Lucky == true)
+		shot = HeroShot.Try({
+			Rack = rack,
+			Forward = forward,
+			Right = ballStart.CFrame.RightVector,
+			Start = start,
+			Head = rack.HeadPinCFrame.Position,
+			Center = rack.HeadPinCFrame.Position + forward * (CORE.Rack.Rows - 1) * PinRack.Spacing() * math.sqrt(3) / 2 * 0.4,
+			FloorY = floorY,
+			HeadDistance = headDistance,
+			Speed = speed,
+			BallId = data.BallId,
+			Lucky = data.Lucky == true,
+			Color = look.Core,
+			Flash = look.Core,
+		})
+	end
+	local streak = if hero
+		then HitHero.Roll(ball.Size.X, forward, floorY, heroColor, strength, data.Lucky == true, if shot then shot.Stretch else nil)
+		else nil
 	local thrower = Players:GetPlayerByUserId(data.UserId)
 	if thrower and thrower.Character and not isOwn then
 		ThrowPose.Release(thrower.Character, data.Pose or 1)
@@ -491,15 +530,33 @@ local function rollCoreThrow(data)
 	local force = THROW.Levels[level].Force * (if lucky then 1.3 else 1)
 	local hold = 0 -- seconds the signature holds the pins before they fly (the black hole pulls first)
 	-- Polish v2 D2: a LUCKY throw freezes for a beat at the hit (hit-stop), then the pins burst
-	local stop = if lucky and isOwn then THROW.HitStop else 0
+	local stop = if shot then shot.Stop elseif lucky and isOwn then THROW.HitStop else 0
 	local frozenUntil = 0
 
 	local function impact()
 		local hitPoint = rack.HeadPinCFrame.Position - forward * 1 + Vector3.new(0, 0.4, 0)
-		local big = lucky and shown >= CORE.BigClear
+		local big = shot ~= nil or (lucky and shown >= CORE.BigClear)
 		frozenUntil = os.clock() + stop
-		if isOwn then
+		if isOwn and not streak then
 			impactDust(lane, hitPoint - Vector3.new(0, 0.3, 0), strength)
+		end
+		if streak then
+			streak.Stop()
+			rack.TrailColor = if lucky or not heroColor then Config.HitHero.Gold else heroColor
+			local depth = (CORE.Rack.Rows - 1) * PinRack.Spacing() * math.sqrt(3) / 2
+			HitHero.Impact({
+				Hit = hitPoint,
+				Center = rack.HeadPinCFrame.Position + forward * depth * 0.4,
+				Forward = forward,
+				FloorY = floorY,
+				T = strength,
+				Lucky = lucky,
+				Shown = shown,
+				Paid = paid > 0,
+				Color = heroColor,
+				Stretch = if shot then shot.Stretch else nil,
+			})
+			ThrowFx.Punch(THROW.CameraPunch * Config.HitHero.PunchEach)
 		end
 		if lucky and thrower and thrower.Character then
 			ThrowPose.Hop(thrower.Character)
@@ -532,6 +589,9 @@ local function rollCoreThrow(data)
 			hold = BallSignature.Impact(signature, context)
 			knockFrom, knockForce = BallSignature.Knock(signature, context)
 		end
+		if shot then
+			shot.Hit(hold, stop)
+		end
 		local popped = 0
 		for _, index in data.Pins do
 			local pin = rack.Pins[index]
@@ -539,10 +599,11 @@ local function rollCoreThrow(data)
 			if body then
 				if isOwn then
 					local distance = (body.Position - hitPoint).Magnitude
-					task.delay(hold + stop + THROW.PinSpreadTime * math.clamp(distance / 12, 0, 1), function()
+					local spread = THROW.PinSpreadTime * (if shot then shot.Spread else 1)
+					task.delay(hold + stop + spread * math.clamp(distance / 12, 0, 1), function()
 						rack:Knock(index, knockFrom, force * knockForce)
 					end)
-					if paid > 0 and popped < CORE.PopsPerThrow then
+					if paid > 0 and popped < CORE.PopsPerThrow and not shot then -- (a hero shot shows only the big total)
 						popped += 1
 						ThrowFx.NumberPop(
 							body.Position + Vector3.new(0, 1, 0),
@@ -594,7 +655,10 @@ local function rollCoreThrow(data)
 		if os.clock() < frozenUntil then
 			return -- hit-stop
 		end
-		travelled += speed * dt * (if hit then 0.5 else 1)
+		travelled += speed * dt * (if hit then 0.5 else 1) * (if shot then shot.Rate() else 1)
+		if shot then
+			travelled = shot.Advance(travelled)
+		end
 		local position = start + forward * travelled
 		if roll.Lift and not hit then
 			position += Vector3.new(0, roll.Lift(travelled / headDistance), 0)
@@ -606,10 +670,14 @@ local function rollCoreThrow(data)
 		if roll.Step then
 			roll.Step(position)
 		end
+		if streak then
+			streak.Step(position)
+		end
 		if not hit and travelled >= headDistance - 0.5 then
 			hit = true
 			impact()
-			task.delay(hold + stop + (data.ResetDelay or CORE.RefillDelay), function()
+			local refill = if shot then Config.HeroShot.Hit.Hold else data.ResetDelay or CORE.RefillDelay
+			task.delay(hold + stop + refill, function()
 				rack:Refill()
 			end)
 		end

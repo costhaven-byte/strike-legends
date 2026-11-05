@@ -15,7 +15,6 @@ local Settings = require(script.Parent.Settings)
 
 local THROW = Config.Throw
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
-local UPRIGHT = CFrame.Angles(0, 0, math.rad(90))
 
 local ThrowFx = {}
 
@@ -58,29 +57,38 @@ function ThrowFx.Burst(position: Vector3, color: Color3, count: number, speed: n
 	e:Emit(math.floor(count))
 end
 
--- A flat glowing ring that rushes outward along the floor
+-- A flat glowing ring that rushes outward along the floor (a hard-edged ring, not a see-through disc: a disc mixed
+-- with the lane's colour, gold on teal read as green)
 function ThrowFx.Shockwave(position: Vector3, color: Color3, radius: number, time: number?)
 	if not Settings.Get("Vfx") then
 		return
 	end
 	local ring = Instance.new("Part")
-	ring.Shape = Enum.PartType.Cylinder
 	ring.Anchored = true
 	ring.CanCollide = false
 	ring.CanQuery = false
 	ring.CanTouch = false
 	ring.CastShadow = false
-	ring.Material = Enum.Material.Neon
-	ring.Color = color
-	ring.Transparency = 0.2
-	ring.Size = Vector3.new(0.12, 1, 1)
-	ring.CFrame = CFrame.new(position) * UPRIGHT
+	ring.Transparency = 1
+	ring.Size = Vector3.new(1, 0.05, 1)
+	ring.CFrame = CFrame.new(position)
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Top
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
+	gui.CanvasSize = Vector2.new(256, 256)
+	gui.LightInfluence = 0
+	gui.Parent = ring
+	local image = Instance.new("ImageLabel")
+	image.BackgroundTransparency = 1
+	image.Size = UDim2.fromScale(1, 1)
+	image.Image = Config.BallVfx.Images.Ring
+	image.ImageColor3 = color
+	image.Parent = gui
 	ring.Parent = folder
 	local t = time or 0.3
-	TweenService:Create(ring, TweenInfo.new(t, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Size = Vector3.new(0.12, radius * 2, radius * 2),
-		Transparency = 1,
-	}):Play()
+	local info = TweenInfo.new(t, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	TweenService:Create(ring, info, { Size = Vector3.new(radius * 2, 0.05, radius * 2) }):Play()
+	TweenService:Create(image, info, { ImageTransparency = 1 }):Play()
 	Debris:AddItem(ring, t + 0.05)
 end
 
