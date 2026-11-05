@@ -265,6 +265,42 @@ if V2 then
 	end
 end
 
+-- Tidy phone layout (Config.Ui.ScreenFit.TidyPhone, owner 2026-11-05): the left column holds coins, gems under
+-- them, a 3-wide grid of smaller buttons, REBIRTH, then AUTO + AUTO SELL (MultiplierController); the top-centre only
+-- has PINS DOWN and the tutorial strip. Phone spots only; computer spots stay.
+local PHONE_TIDY = {
+	Coins = { 40, 44, 166, 44, "L", "T" },
+	Income = { 82, 70, 110, 14, "L", "T" },
+	Gems = { 40, 94, 124, 34, "L", "T" },
+	Balls = { 40, 136, 44, 44, "L", "T" },
+	Pets = { 40, 136, 44, 44, "L", "T" },
+	Store = { 94, 136, 44, 44, "L", "T" },
+	Daily = { 148, 136, 44, 44, "L", "T" },
+	Profile = { 40, 188, 44, 44, "L", "T" },
+	Passes = { 94, 188, 44, 44, "L", "T" },
+	Teleport = { 94, 188, 44, 44, "L", "T" },
+	Power = { 40, 240, 166, 42, "L", "T" },
+	CoreRebirth = { 40, 240, 166, 42, "L", "T" },
+}
+local fitConfig = Config.Ui.ScreenFit
+if V2 and fitConfig and fitConfig.Enabled ~= false and fitConfig.TidyPhone then
+	for key, phone in PHONE_TIDY do
+		local row = HudKit.Layout[key]
+		if row then
+			HudKit.Layout[key] = { Pc = row.Pc, Phone = phone }
+		end
+	end
+	-- (with no SHOP button the grid starts at PETS; with one, BALLS keeps the first spot and the rest move on)
+	if not (Config.Ui.ShopButton == false and Config.CoreLoop.Enabled) then
+		HudKit.Layout.Pets.Phone = { 94, 136, 44, 44, "L", "T" }
+		HudKit.Layout.Store.Phone = { 148, 136, 44, 44, "L", "T" }
+		HudKit.Layout.Daily.Phone = { 40, 188, 44, 44, "L", "T" }
+		HudKit.Layout.Profile.Phone = { 94, 188, 44, 44, "L", "T" }
+		HudKit.Layout.Teleport.Phone = { 148, 188, 44, 44, "L", "T" }
+	end
+end
+HudKit.TidyPhone = V2 and fitConfig ~= nil and fitConfig.Enabled ~= false and fitConfig.TidyPhone == true
+
 -- Phones held sideways (short screens) get the phone layout
 local hudGui: ScreenGui? = nil
 local function hud(): ScreenGui
